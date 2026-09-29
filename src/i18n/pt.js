@@ -292,4 +292,5 @@ export default {
   'reader.hint': 'E / ESC  fechar · a roda rola',
   'reader.freeNote': 'modo Livre: aqui nada se aprende · E / ESC  fechar',
   'reader.learned': 'entendido agora: {words}',
+  'reader.fragment': 'leitor portátil: um fragmento · célula −{cost}% · E / ESC  fechar',
 };

@@ -292,4 +292,5 @@ export default {
   'reader.hint': 'E / ESC  close · wheel scrolls',
   'reader.freeNote': 'Free mode: nothing is learned here · E / ESC  close',
   'reader.learned': 'now understood: {words}',
+  'reader.fragment': 'portable reader: a fragment · cell −{cost}% · E / ESC  close',
 };

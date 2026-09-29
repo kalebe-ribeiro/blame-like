@@ -80,13 +80,16 @@ const ctx = {
   saving: persist && !choosing,
   worldState: new WorldState(slot),
   // um mundo novo da Peregrinação começa com pouca carga (ver o cofre, Inicio-do-mundo)
-  player: createPlayerState(slot.player ?? (mode === 'pilgrimage' ? { energy: { value: 0.35 } } : null)),
+  // e com o leitor portátil (a primeira ferramenta)
+  player: createPlayerState(slot.player ?? (mode === 'pilgrimage' ? { energy: { value: 0.35 }, inventory: ['reader'] } : null)),
   autostart: params.get('autostart') === '1',
   resumed: !!slot.pos,
   seed: params.get('seed') ? parseInt(params.get('seed'), 36) : slot.seed,
   time: 0,
   settings: loadSettings(),
 };
+// a Peregrinação sempre tem o leitor portátil (mundos salvos antes dele também)
+if (mode === 'pilgrimage' && !ctx.player.inventory.includes('reader')) ctx.player.inventory.push('reader');
 // flags de desenvolvimento (--fog / --dist): valem só para esta sessão
 if (params.get('fog') !== null) ctx.settings.fog = Number(params.get('fog'));
 if (params.get('dist') !== null) ctx.settings.renderDistance = Number(params.get('dist'));
