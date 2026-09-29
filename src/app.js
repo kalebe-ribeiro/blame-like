@@ -26,7 +26,9 @@ import { AudioEngine } from './audio/audio.js';
 import { HUD } from './ui/hud.js';
 import { t } from './i18n/index.js';
 import { loadSettings } from './ui/settings.js';
-import { loadSave } from './ui/journey.js';
+import { loadProfile, migrateLegacy, loadSlot, newSlot, storeSlot, WorldState } from './app/saves.js';
+import { rulesFor } from './app/modes.js';
+import { createPlayerState } from './app/player.js';
 import { createRenderer, setupRender, renderFrame } from './app/render.js';
 import { createBody } from './app/body.js';
 import { createWorldSound } from './app/sound.js';
@@ -43,14 +45,38 @@ const params = new URLSearchParams(location.search);
 // só o `npm start` normal (sem nenhuma flag) lê e grava a travessia — sessões de
 // teste/captura não tocam no seu salvamento nem no seu diário
 const persist = [...params.keys()].every((k) => k === 'autostart');
-const saved = persist ? loadSave() : null;
+const randomSeed = () => Math.floor(Math.random() * 2 ** 31);
+
+// ─── perfil, modo de jogo e o mundo salvo daquele modo (app/saves.js) ───────
+const profile = loadProfile();
+if (persist) migrateLegacy(profile);
+// --game=free|pilgrimage nas sessões de desenvolvimento; senão, o modo ativo do perfil
+const chosenMode = persist ? profile.activeMode : params.get('game') ?? 'free';
+// primeira vez: nenhum modo escolhido — a tela de entrada pede a escolha; até
+// lá um mundo Livre aparece por trás, sem ser salvo
+const choosing = persist && !chosenMode;
+const mode = chosenMode ?? 'free';
+let slot = persist && chosenMode ? loadSlot(mode) : null;
+if (!slot) {
+  slot = newSlot(mode, params.get('seed') ? parseInt(params.get('seed'), 36) : randomSeed());
+  if (persist && !choosing) storeSlot(slot);
+}
 
 const ctx = {
   params,
   persist,
+  profile,
+  mode,
+  rules: rulesFor(mode),
+  slot,
+  choosing,
+  /** Grava a travessia? (só no npm start normal, com um mundo escolhido) */
+  saving: persist && !choosing,
+  worldState: new WorldState(slot),
+  player: createPlayerState(slot.player),
   autostart: params.get('autostart') === '1',
-  resumed: !!saved,
-  seed: params.get('seed') ? parseInt(params.get('seed'), 36) : saved?.seed ?? Math.floor(Math.random() * 2 ** 31),
+  resumed: !!slot.pos,
+  seed: params.get('seed') ? parseInt(params.get('seed'), 36) : slot.seed,
   time: 0,
   settings: loadSettings(),
 };
@@ -72,6 +98,7 @@ ctx.scene.add(ctx.dust);
 // ─── corpo e controles ──────────────────────────────────────────────────────
 const controls = (ctx.controls = new NoclipControls(ctx.camera, ctx.canvas));
 controls.walker = new Walker(new CollisionWorld(ctx.world));
+controls.canFly = ctx.rules.fly;
 controls.setView(VIEWS[params.get('view')] ?? VIEWS.spawn);
 if (params.get('pos')) {
   const [x, y, z, yaw = 0, pitch = 0] = params.get('pos').split(',').map(Number);
@@ -83,9 +110,9 @@ if (params.get('autopilot')) {
   controls.setMode('fly');
 }
 if (params.get('mode') === 'fly') controls.setMode('fly');
-if (saved) {
-  controls.setView({ pos: new THREE.Vector3(...saved.pos), yaw: saved.yaw, pitch: saved.pitch, scale: 1 });
-  if (saved.mode === 'fly') controls.setMode('fly');
+if (slot.pos) {
+  controls.setView({ pos: new THREE.Vector3(...slot.pos), yaw: slot.yaw, pitch: slot.pitch, scale: 1 });
+  if (slot.move === 'fly') controls.setMode('fly');
 }
 
 ctx.audio = new AudioEngine();
@@ -145,7 +172,8 @@ function frame() {
   ctx.sound.update(dt);
 
   // caiu no abismo por tempo demais: realoca (só se ligado nas configurações)
-  if (ctx.settings.fallRescue && controls.mode === 'walk' && controls.walker.airTime > FALL_RESCUE_AFTER) {
+  const rescue = ctx.rules.fallRescue === 'always' || ctx.settings.fallRescue;
+  if (rescue && controls.mode === 'walk' && controls.walker.airTime > FALL_RESCUE_AFTER) {
     const landing = world.findLanding(camera.position);
     if (landing) {
       controls.placeFeet(landing);

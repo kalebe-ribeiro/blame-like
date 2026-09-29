@@ -1,18 +1,21 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  A travessia: salvamento (continuar de onde parou), diário e mapa.
-//  Só o `npm start` normal (ctx.persist) lê e grava — sessões de teste e de
-//  captura não tocam no seu salvamento.
+//  Tudo vai para o mundo salvo do modo atual (ctx.slot — app/saves.js).
+//  Só grava quando ctx.saving: o `npm start` normal com um mundo escolhido —
+//  sessões de teste e de captura não tocam no seu salvamento.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { storeSave, Diary } from '../ui/journey.js';
+import { Diary } from '../ui/journey.js';
+import { storeSlot } from './saves.js';
 import { TrailMap } from '../ui/trailmap.js';
 import { t } from '../i18n/index.js';
 
 export function createTravel(ctx) {
   const { world, camera, controls } = ctx;
-  const diary = new Diary(ctx.persist);
-  const trail = new TrailMap(ctx.persist);
-  trail.useSeed(ctx.seed);
+  const slot = ctx.slot;
+  const diary = new Diary(slot.diary);
+  const trail = new TrailMap();
+  trail.load(slot.trail);
   const last = new THREE.Vector3();
   const g = new THREE.Vector3();
   let hasLast = false;
@@ -20,11 +23,19 @@ export function createTravel(ctx) {
   let regionTimer = 0;
 
   function save() {
-    if (!ctx.persist) return;
+    if (!ctx.saving) return;
     world.toGlobal(camera.position, g);
-    storeSave({ seed: ctx.seed, pos: [g.x, g.y, g.z], yaw: controls.yaw, pitch: controls.pitch, mode: controls.mode });
-    diary.save();
-    trail.save();
+    Object.assign(slot, {
+      seed: ctx.seed,
+      pos: [g.x, g.y, g.z],
+      yaw: controls.yaw,
+      pitch: controls.pitch,
+      move: controls.mode,
+      diary: diary.d,
+      trail: trail.toJSON(),
+      player: ctx.player,
+    });
+    storeSlot(slot);
   }
   window.addEventListener('beforeunload', save);
 
@@ -56,10 +67,12 @@ export function createTravel(ctx) {
     save,
     renderDiary,
     here: () => world.toGlobal(camera.position, new THREE.Vector3()),
-    /** Mundo novo: rastro novo, nada de "salto" contado como distância. */
+    /** Mundo novo na hora (R, modo Livre): rastro e mudanças do mundo zerados; o diário continua. */
     newWorld() {
       hasLast = false;
-      trail.useSeed(ctx.seed);
+      trail.load(null);
+      slot.seed = ctx.seed;
+      slot.changes = {};
     },
     update(dt) {
       world.toGlobal(camera.position, g);

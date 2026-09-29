@@ -25,6 +25,7 @@
 //    electron . --autopilot=6  → começa em piloto automático (N = multiplicador de velocidade)
 //    electron . --pos=x,y,z,yaw,pitch  → começa num ponto global qualquer
 //    electron . --mode=fly               → começa voando (o padrão é andar)
+//    electron . --game=pilgrimage        → modo de jogo desta sessão (free | pilgrimage)
 //    electron . --fog=0.3 --dist=1500     → sobrescreve névoa/distância nesta sessão (não salva)
 // ─────────────────────────────────────────────────────────────────────────────
 const { app, BrowserWindow, Menu, protocol, session } = require('electron');
@@ -122,6 +123,7 @@ function createWindow() {
   if (startPos) query.set('pos', startPos);
   if (mode) query.set('mode', mode);
   if (gotoKind) query.set('goto', gotoKind);
+  if (argValue('game')) query.set('game', argValue('game')); // modo de jogo: free | pilgrimage
   if (argValue('outage')) query.set('outage', argValue('outage'));
   if (argValue('collapse')) query.set('collapse', argValue('collapse'));
   if (checkMode) {

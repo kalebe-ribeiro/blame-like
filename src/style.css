@@ -102,7 +102,7 @@ html, body {
 .gate-settings:hover { border-color: rgba(200, 196, 184, 0.8); color: #e2ded4; }
 
 /* ── Painel de configurações ────────────────────────────────────────────── */
-#settings, #transport {
+#settings, #transport, #worlds {
   position: fixed;
   inset: 0;
   display: none;
@@ -113,7 +113,7 @@ html, body {
   font-family: "Consolas", "Courier New", monospace;
   color: #b2bcac;
 }
-#settings.open, #transport.open { display: flex; }
+#settings.open, #transport.open, #worlds.open { display: flex; }
 
 .settings-box {
   width: min(560px, 90vw);
@@ -180,3 +180,28 @@ html, body {
 }
 .transport-grid button:hover { border-color: rgba(176, 118, 62, 0.8); color: #e2ded4; }
 .transport-status { margin-top: 16px; min-height: 14px; }
+
+/* ── Painel de mundos (modos de jogo) ───────────────────────────────────── */
+.worlds-row {
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(178, 188, 172, 0.08);
+  display: grid;
+  gap: 6px;
+}
+.worlds-name { font-size: 14px; letter-spacing: 0.4em; color: #d8d4cc; }
+.worlds-current { font-size: 10px; letter-spacing: 0.2em; color: #b0763e; margin-left: 10px; }
+.worlds-desc { font-size: 11px; color: rgba(200, 196, 184, 0.7); line-height: 1.5; max-width: 560px; }
+.worlds-status { font-size: 10px; color: rgba(150, 146, 136, 0.7); letter-spacing: 0.1em; }
+.worlds-actions { display: flex; gap: 10px; margin-top: 4px; }
+.worlds-actions button {
+  background: none;
+  border: 1px solid rgba(178, 188, 172, 0.3);
+  color: rgba(200, 196, 184, 0.85);
+  font: 11px "Consolas", "Courier New", monospace;
+  letter-spacing: 0.2em;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.worlds-actions button:hover { border-color: rgba(200, 196, 184, 0.8); color: #e2ded4; }
+.worlds-actions button.warn { border-color: rgba(176, 118, 62, 0.8); color: #d09a60; }
+.gate-mode { font-size: 10px; letter-spacing: 0.35em; color: rgba(150, 146, 136, 0.7); }

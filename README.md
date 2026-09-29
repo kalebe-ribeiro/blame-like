@@ -1,6 +1,6 @@
 # CYBERCOSMIC
 
-Simulador contemplativo 3D de **cybercosmicismo**: o horror de uma construção humana que não parou mais. Um brutalismo megalomaníaco, na linhagem da Cidade de *Blame!*: concreto sem fim, poeira, luzes de sódio que ninguém mantém. Não há objetivo, só um sistema grande demais para ser compreendido, e você dentro dele. **O mundo não acaba**: nem para cima, nem para baixo, nem para os lados. **E dá pra andar nele**: existe uma rede aleatória e infinita de plataformas, pontes, escadas e tubos.
+Simulador contemplativo 3D de **cybercosmicismo**: o horror de uma construção humana que não parou mais. Um brutalismo megalomaníaco, na linhagem da Cidade de *Blame!*: concreto sem fim, poeira, luzes de sódio que ninguém mantém. Um sistema grande demais para ser compreendido, e você dentro dele. **O mundo não acaba**: nem para cima, nem para baixo, nem para os lados. **E dá pra andar nele**: existe uma rede aleatória e infinita de plataformas, pontes, escadas e tubos.
 
 Feito com **Electron + Three.js**. Roda tudo local, sem servidor e sem assets externos: geometria, texturas e som são 100% procedurais.
 
@@ -9,7 +9,18 @@ npm install
 npm start
 ```
 
+## Modos de jogo e idiomas
+
+Na primeira vez, a tela de entrada pede para escolher o modo (botão **MUNDOS**). Cada modo tem **um mundo salvo**, e um mundo nunca troca de modo:
+
+- **Livre**: contemplação e exploração sem regras. Voo, transporte para qualquer tipo de lugar, mundo novo com R, a leitura de instrumento na tela.
+- **Peregrinação**: a pé, sem transporte e quase nada na tela. É o modo com progressão, em construção fase por fase: ler a Cidade, seguir o que ela deixou, religar setores e, no futuro, os Safeguards e os raros vivos, à maneira de *Blame!*.
+
+O jogo é em **inglês** por padrão, com **português** como opção nas configurações. Os textos ficam em `src/i18n/` (um arquivo por idioma).
+
 ## Controles
+
+Os do modo Livre. Na Peregrinação não há voo (F, P), transporte (T), mundo novo (R) nem interface (H).
 
 | tecla | ação |
 |---|---|
@@ -22,7 +33,7 @@ npm start
 | SHIFT | correr (andando) · acelerar 6× (voando) |
 | P | piloto automático em voo: deriva sozinho, curvando devagar (modo contemplação) |
 | R | regenerar o mundo com nova seed |
-| H | mostrar/ocultar a interface alienígena |
+| H | mostrar/ocultar a interface (posição, região, seed e o registro de acontecimentos) |
 | O | configurações (também pelo botão na tela de entrada) |
 | T | transporte: ir a uma região, estrutura ou aos Construtores (também pelo botão na tela de entrada) |
 | M | mapa da travessia: o caminho que você fez neste mundo, em 3D (arrastar gira, roda aproxima) |
@@ -159,9 +170,9 @@ Detalhes da implementação:
 
 ## A travessia
 
-- **Continuar de onde parou:** o jogo guarda sozinho a seed, a posição, a direção do olhar e o modo (a cada 5 s e ao fechar). Ao abrir, você volta exatamente ali, e a tela de entrada diz "continuar a travessia". O botão **NOVO MUNDO** recomeça do zero.
+- **Continuar de onde parou:** o jogo guarda sozinho, no mundo salvo do modo, a seed, a posição, a direção do olhar, o diário, o mapa e o que mudou no mundo (a cada 5 s e ao fechar). Ao abrir, você volta exatamente ali. No painel **MUNDOS** dá para continuar o mundo do outro modo ou começar um mundo novo (substitui o daquele modo, com confirmação). O salvamento de antes dos modos vira o mundo do modo Livre.
 - **Mapa da travessia** (M): o caminho deste mundo guardado entre sessões, um ponto a cada ~8 m. Aparece como uma linha de luz em 3D, com trilhos, teleportes tracejados, quedas e fotos marcadas, escala e extensão.
-- **Diário da travessia**, na tela de entrada e acumulado entre sessões: distância a pé, em deriva e sobre trilhos (e número de viagens), maior queda, ponto mais fundo e mais alto, regiões visitadas, apagões e colapsos testemunhados, fotos e tempo na Cidade.
+- **Diário da travessia**, na tela de entrada e acumulado no mundo: distância a pé, em deriva e sobre trilhos (e número de viagens), maior queda, ponto mais fundo e mais alto, regiões visitadas, apagões e colapsos testemunhados, fotos e tempo na Cidade.
 - Só o `npm start` normal lê e grava isso. Qualquer flag de desenvolvimento (`--seed`, `--pos`, `--capture`…) roda uma sessão avulsa que não mexe no seu salvamento. `--profile=pasta` usa um perfil separado.
 
 ### Controle de videogame
@@ -226,6 +237,11 @@ src/
   app/body.js               o corpo: passos, água, queda, vagões, vibração
   app/sound.js              sons e avisos dos acontecimentos do mundo
   app/travel.js             salvamento, diário e mapa da travessia
+  app/saves.js              perfil global + um mundo salvo por modo (o que mudou, por id estável)
+  app/modes.js              modos de jogo (Livre, Peregrinação) e suas regras
+  app/player.js             estado do corpo: energia, ferramentas, acesso (ainda sem efeito)
+  core/events.js            barramento de eventos (mundo e corpo → som, interface, diário)
+  i18n/                     textos da interface: en.js (padrão), pt.js
   app/ui.js                 tela de entrada, painéis, teclas, teleporte, novo mundo
   app/dev.js                flags de desenvolvimento
   dev/check.js              teste de fumaça (npm run check)
@@ -250,7 +266,8 @@ src/
   world/transitCars.js      vagões dos transportadores (horário determinístico, relógio por linha)
   world/colossi.js          máquinas colossais nas trincheiras sob as camadas
   world/terminals.js        terminais mortos (registros procedurais, horário dos vagões)
-  ui/journey.js             continuar de onde parou + diário da travessia
+  ui/journey.js             diário da travessia
+  ui/worlds.js              painel MUNDOS (escolher o modo, continuar, mundo novo)
   ui/trailmap.js            mapa da travessia (M)
   gen/floods.js             setores inundados (água e diques)
   render/reflection.js      reflexo planar da água
@@ -273,7 +290,7 @@ src/
   shaders/materials.js      superfícies, feixes, cascatas, poeira, céu
   shaders/post.js           filme: dessaturação, grão, vinheta
   audio/audio.js            áudio procedural (Web Audio)
-  ui/glyphs.js, ui/hud.js   alfabeto procedural e interface "mal traduzida"
+  ui/hud.js                 leitura de instrumento do modo Livre
   ui/settings.js            painel de configurações (tecla O)
   ui/transport.js           painel de transporte (tecla T)
 ```
@@ -325,6 +342,7 @@ Não use `material.clone()`, porque ele desconecta os uniforms compartilhados.
 
 ```bash
 npm run check
+npm run check:pilgrimage
 ```
 Teste de fumaça: numa seed fixa, visita todos os destinos do painel de transporte. Em cada um espera o terreno carregar, mede o fps (média e pior quadro) e confere se o corpo não atravessou o chão. No meio do roteiro força um apagão e um colapso. Erros de script, de shader e de WebGL reprovam. Sai com código 0 (passou) ou 1, e não toca no seu salvamento. `--check=trelica,escadaria --pos=x,y,z` roda só esses destinos, nessa ordem, partindo desse ponto.
 

@@ -13,6 +13,27 @@ export default {
   'gate.transport': 'TRANSPORT',
   'gate.settings': 'SETTINGS',
   'gate.newWorld': 'NEW WORLD',
+  'gate.worlds': 'WORLDS',
+  'gate.choose': 'choose how to enter the City',
+  'gate.keys.pilgrimage':
+    '<span>WASD</span> move &nbsp;·&nbsp; <span>MOUSE</span> look &nbsp;·&nbsp; <span>SPACE</span> jump &nbsp;·&nbsp; ' +
+    '<span>SHIFT</span> run<br />' +
+    '<span>O</span> settings &nbsp;·&nbsp; <span>F2</span> photo &nbsp;·&nbsp; <span>M</span> map &nbsp;·&nbsp; ' +
+    '<span>F11</span> fullscreen &nbsp;·&nbsp; <span>ESC</span> release',
+
+  // ── modos de jogo e mundos salvos ──
+  'mode.free': 'FREE',
+  'mode.free.desc': 'Contemplation and exploration with no rules: fly, transport to any kind of place, regenerate the world at will.',
+  'mode.pilgrimage': 'PILGRIMAGE',
+  'mode.pilgrimage.desc': 'On foot, with no transport and almost nothing on screen. Read the City, follow what it left behind. (Taking shape: more with each phase.)',
+  'worlds.title': 'WORLDS',
+  'worlds.current': 'OPEN NOW',
+  'worlds.empty': 'no world yet',
+  'worlds.slot': 'seed {seed} · {dist} crossed · {time}',
+  'worlds.continue': 'CONTINUE',
+  'worlds.new': 'NEW WORLD',
+  'worlds.confirmNew': 'REPLACE THIS WORLD?',
+  'worlds.hint': 'one saved world per mode · a world never changes mode',
 
   // ── configurações ──
   'settings.title': 'SETTINGS',

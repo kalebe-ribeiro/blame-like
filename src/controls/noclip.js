@@ -37,6 +37,7 @@ export class NoclipControls {
     this.onPadButton = null; // (nome) — botões de ação que o app trata (foto, interface…)
     this.onPadStart = null; // primeiro uso do controle (sai da tela de entrada)
     this.mode = 'walk';
+    this.canFly = true; // o modo de jogo decide (app/modes.js): na Peregrinação não se voa
     this._euler = new THREE.Euler(0, 0, 0, 'YXZ');
     this._fwd = new THREE.Vector3();
     this._right = new THREE.Vector3();
@@ -44,6 +45,7 @@ export class NoclipControls {
 
     document.addEventListener('keydown', (e) => {
       if (e.code === 'KeyP' && !e.repeat) {
+        if (!this.canFly) return;
         this.autopilot = !this.autopilot;
         if (this.autopilot) this.setMode('fly');
       } else if (e.code === 'KeyF' && !e.repeat) {
@@ -76,6 +78,7 @@ export class NoclipControls {
   }
 
   setMode(mode) {
+    if (mode === 'fly' && !this.canFly) mode = 'walk';
     if (mode === this.mode) return;
     if (mode === 'walk' && this.walker) {
       this.walker.syncFromCamera(this.camera, this.scale, this.velocity);
@@ -153,7 +156,7 @@ export class NoclipControls {
       this.autopilot = false;
       this.setMode(this.mode === 'walk' ? 'fly' : 'walk'); // X
     }
-    if (edge(12)) {
+    if (edge(12) && this.canFly) {
       this.autopilot = !this.autopilot; // direcional ↑
       if (this.autopilot) this.setMode('fly');
     }

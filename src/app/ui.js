@@ -1,12 +1,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  Interface: tela de entrada, painéis (configurações, transporte), mapa,
-//  teclas globais, controle de videogame, teleporte e "novo mundo".
+//  Interface: tela de entrada, painéis (mundos, configurações, transporte),
+//  mapa, teclas globais, controle de videogame, teleporte e "novo mundo".
+//  O que cada modo de jogo permite vem de ctx.rules (app/modes.js).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { VIEWS } from '../world/world.js';
 import { t, setLang, applyDom, fmtDist } from '../i18n/index.js';
 import { SettingsPanel } from '../ui/settings.js';
 import { TransportPanel } from '../ui/transport.js';
+import { WorldsPanel } from '../ui/worlds.js';
+import { storeProfile, newSlot, storeSlot } from './saves.js';
 import { findDestination } from '../world/teleport.js';
 import { takePhoto, onWorldBuilt, resize } from './render.js';
 
@@ -15,17 +18,27 @@ export function createUI(ctx) {
   const gate = document.getElementById('gate');
   const gateSub = document.querySelector('.gate-sub');
   const trail = ctx.travel.trail;
+  const rules = ctx.rules;
 
   // ─── tela de entrada ───
   setLang(ctx.settings.lang);
+  hud.setEnabled(rules.hud);
+  document.querySelector('.gate-keys').dataset.i18nHtml = rules.fly ? 'gate.keys' : 'gate.keys.pilgrimage';
+  document.getElementById('open-transport').style.display = rules.teleport ? '' : 'none';
+  const gateMode = document.getElementById('gate-mode');
+  const showMode = () => {
+    gateMode.textContent = ctx.choosing ? '' : `${t(`mode.${ctx.mode}`)} · ${ctx.seed.toString(36).toUpperCase()}`;
+  };
   applyDom();
   gate.addEventListener('click', () => {
+    // primeira vez: antes de entrar, escolher o modo
+    if (ctx.choosing) return openWorlds();
     audio.start();
     controls.lock();
   });
   controls.onLockChange = (locked) => {
     // com um painel aberto, a tela de entrada fica escondida atrás dele
-    gate.classList.toggle('hidden', locked || settings.isOpen || transport.isOpen || trail.open);
+    gate.classList.toggle('hidden', locked || settings.isOpen || transport.isOpen || worlds.isOpen || trail.open);
     if (!locked) {
       ctx.travel.renderDiary();
       ctx.travel.save();
@@ -36,8 +49,45 @@ export function createUI(ctx) {
     audio.start();
   }
   ctx.travel.renderDiary();
-  if (ctx.resumed) gateSub.dataset.i18n = 'gate.continue';
+  gateSub.dataset.i18n = ctx.choosing ? 'gate.choose' : ctx.resumed ? 'gate.continue' : 'gate.enter';
   applyDom(gate);
+  showMode();
+
+  // ─── mundos: escolher o modo, continuar ou começar um mundo (recarrega o jogo) ───
+  const worlds = new WorldsPanel({
+    current: ctx.choosing ? null : ctx.mode,
+    onContinue: (mode) => switchWorld(mode, null),
+    onNew: (mode) => switchWorld(mode, newSlot(mode, Math.floor(Math.random() * 2 ** 31))),
+  });
+  worlds.onClose = () => gate.classList.remove('hidden');
+  document.getElementById('open-worlds').addEventListener('click', (e) => {
+    e.stopPropagation();
+    openWorlds();
+  });
+  function openWorlds() {
+    document.exitPointerLock?.();
+    if (settings.isOpen) settings.close();
+    if (transport.isOpen) transport.close();
+    gate.classList.add('hidden');
+    worlds.open();
+  }
+  /** Abre o mundo salvo do modo (ou o mundo novo dado). O jogo recarrega inteiro. */
+  function switchWorld(mode, fresh) {
+    ctx.travel.save(); // guarda o mundo de agora antes de sair dele
+    ctx.saving = false; // e nada mais grava por cima durante a troca
+    if (ctx.persist) {
+      if (fresh) storeSlot(fresh);
+      ctx.profile.activeMode = mode;
+      storeProfile(ctx.profile);
+      location.reload();
+    } else {
+      // sessão de desenvolvimento: troca pela query (--game)
+      const q = new URLSearchParams(location.search);
+      q.set('game', mode);
+      if (fresh) q.delete('seed');
+      location.search = q.toString();
+    }
+  }
 
   // ─── configurações ───
   const settings = new SettingsPanel(ctx.settings, (s, key) => applySettings(s, key));
@@ -49,6 +99,7 @@ export function createUI(ctx) {
   function openSettings() {
     document.exitPointerLock?.();
     if (transport.isOpen) transport.close();
+    if (worlds.isOpen) worlds.close();
     gate.classList.add('hidden');
     settings.open();
   }
@@ -58,6 +109,7 @@ export function createUI(ctx) {
     if (is('lang')) {
       setLang(s.lang);
       ctx.travel.renderDiary();
+      showMode();
     }
     if (is('renderDistance') || is('fog')) world.setView({ renderDistance: s.renderDistance, fog: s.fog });
     if (is('fov')) {
@@ -94,6 +146,7 @@ export function createUI(ctx) {
   function openTransport() {
     document.exitPointerLock?.();
     if (settings.isOpen) settings.close();
+    if (worlds.isOpen) worlds.close();
     gate.classList.add('hidden');
     transport.open();
   }
@@ -152,38 +205,37 @@ export function createUI(ctx) {
     controls.setView(VIEWS.spawn);
     onWorldBuilt(ctx);
     applySettings(ctx.settings);
-  }
-  document.getElementById('new-world').addEventListener('click', (e) => {
-    e.stopPropagation();
-    regenerate();
+    showMode();
     ctx.travel.save();
-    gateSub.dataset.i18n = 'gate.enter';
-    applyDom(gate);
-  });
+  }
 
   // ─── controle de videogame ───
   controls.onPadStart = () => {
     // o controle não precisa (nem consegue) travar o mouse: entra direto
     audio.start();
-    if (!settings.isOpen && !transport.isOpen) gate.classList.add('hidden');
+    if (ctx.choosing) return openWorlds();
+    if (!settings.isOpen && !transport.isOpen && !worlds.isOpen) gate.classList.add('hidden');
     hud.push(t('hud.gamepad'));
   };
   controls.onPadButton = (name) => {
     if (name === 'photo') photo();
-    if (name === 'hud') hud.toggle();
+    if (name === 'hud' && rules.hud) hud.toggle();
   };
 
   // ─── teclas globais ───
   document.addEventListener('keydown', (e) => {
     if (e.repeat) return;
-    if (e.code === 'KeyR') regenerate();
-    if (e.code === 'KeyH') hud.toggle();
+    if (e.code === 'KeyR' && rules.regenerate && !ctx.choosing) regenerate();
+    if (e.code === 'KeyH' && rules.hud) hud.toggle();
     if (e.code === 'KeyO') openSettings();
-    if (e.code === 'KeyT') openTransport();
+    if (e.code === 'KeyT' && rules.teleport) openTransport();
     if (e.code === 'F2') photo();
     if (e.code === 'KeyM') toggleMap();
     if (e.code === 'Escape' && trail.open) toggleMap();
   });
+
+  // primeira vez: o painel de mundos já aberto
+  if (ctx.choosing) openWorlds();
 
   return { teleport, regenerate, toggleMap, photo };
 }

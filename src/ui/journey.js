@@ -1,47 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  A travessia: onde você parou e o que já atravessou.
+//  Diário da travessia: números acumulados neste mundo — distância andada,
+//  voada e percorrida sobre trilhos, a maior queda, o ponto mais fundo e o
+//  mais alto, regiões visitadas, apagões e colapsos testemunhados, fotos,
+//  tempo. Mostrado em silêncio na tela de entrada.
 //
-//  • Salvamento: a cada poucos segundos (e ao fechar) guarda a seed, a posição
-//    GLOBAL, a direção do olhar e o modo. Ao abrir, o mundo volta exatamente
-//    ali; o botão NOVO MUNDO na tela de entrada recomeça do zero.
-//  • Diário: números acumulados em todas as sessões — distância andada,
-//    voada e percorrida sobre trilhos, a maior queda, o ponto mais fundo e o
-//    mais alto, regiões visitadas, apagões e colapsos testemunhados, fotos,
-//    tempo. Mostrado em silêncio na tela de entrada.
-//
-//  Tudo em localStorage (fica no perfil do Electron, na máquina).
+//  Os dados vivem no mundo salvo (app/saves.js); aqui só a lógica e o texto.
+//  (Na fase 2 do plano o diário vira arquivo: registros, léxico, pistas.)
 // ─────────────────────────────────────────────────────────────────────────────
-
 import { t, fmtNum, fmtDist } from '../i18n/index.js';
-
-const SAVE_KEY = 'cybercosmic.save.v1';
-const DIARY_KEY = 'cybercosmic.diary.v1';
-
-const read = (k) => {
-  try {
-    const raw = localStorage.getItem(k);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-const write = (k, v) => {
-  try {
-    localStorage.setItem(k, JSON.stringify(v));
-  } catch {
-    /* sem armazenamento */
-  }
-};
-
-export function loadSave() {
-  const s = read(SAVE_KEY);
-  if (!s || typeof s.seed !== 'number' || !Array.isArray(s.pos)) return null;
-  return s;
-}
-
-export function storeSave(s) {
-  write(SAVE_KEY, s);
-}
 
 const EMPTY = {
   walked: 0, flown: 0, rode: 0, rides: 0,
@@ -54,10 +20,9 @@ const EMPTY = {
 const REGIONS = ['ponte', 'abismo', 'altura', 'deriva', 'galeria', 'poco', 'estrato', 'colmeia', 'camada', 'macico', 'vazio', 'conduto'];
 
 export class Diary {
-  /** @param {boolean} persist  false = sessão de teste: começa do zero e não grava */
-  constructor(persist = true) {
-    this.persist = persist;
-    this.d = { ...EMPTY, ...((persist && read(DIARY_KEY)) || {}) };
+  /** @param {object|null} data  o diário do mundo salvo (null = começa do zero) */
+  constructor(data) {
+    this.d = { ...EMPTY, ...(data ?? {}) };
     this.d.sessions++;
     this._regions = new Set(this.d.regions);
     this._dirty = true;
@@ -82,10 +47,6 @@ export class Diary {
     this._regions.add(r);
     this.d.regions = [...this._regions];
     return true;
-  }
-
-  save() {
-    if (this.persist) write(DIARY_KEY, this.d);
   }
 
   /** Linhas do diário para a tela de entrada. */

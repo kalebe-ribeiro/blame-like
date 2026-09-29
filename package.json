@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "check": "electron . --check"
+    "check": "electron . --check",
+    "check:pilgrimage": "electron . --check --game=pilgrimage"
   },
   "dependencies": {
     "three": "^0.170.0",

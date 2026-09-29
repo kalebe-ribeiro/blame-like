@@ -5,22 +5,18 @@
 //
 //  Registro: um ponto a cada ~8 m (e sempre que algo acontece). Saltos
 //  (transporte, novo lugar) viram tracejado. Marcos: quedas grandes, viagens
-//  de trilho, fotos. Guardado por seed no localStorage (só no `npm start`
-//  normal — ver PERSIST em app.js).
+//  de trilho, fotos. Guardado no mundo salvo (app/saves.js).
 //
 //  A vista gira devagar sozinha; arrastar gira, a roda aproxima.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { t, fmtNum, fmtDist, applyDom } from '../i18n/index.js';
 
-const KEY = 'cybercosmic.trail.v1';
 const STEP = 8; // m entre pontos
 const MAX = 40000;
 
 export class TrailMap {
-  constructor(persist) {
-    this.persist = persist;
-    this.seed = null;
+  constructor() {
     this.pts = []; // [x, y, z, tipo] — tipo: 0 andar/voar, 1 trilho, 2 salto (começa tracejado)
     this.marks = []; // { x, y, z, kind: 'queda'|'foto'|'trilho', v }
     this._last = null;
@@ -31,32 +27,16 @@ export class TrailMap {
     this.open = false;
   }
 
-  /** Troca para o rastro deste mundo (carrega o salvo, se houver). */
-  useSeed(seed) {
-    if (this.seed === seed) return;
-    this.seed = seed;
-    this.pts = [];
-    this.marks = [];
+  /** Carrega o rastro do mundo salvo (null = começa vazio). */
+  load(data) {
+    this.pts = data?.pts ?? [];
+    this.marks = data?.marks ?? [];
     this._last = null;
-    if (!this.persist) return;
-    try {
-      const d = JSON.parse(localStorage.getItem(KEY) ?? 'null');
-      if (d && d.seed === seed) {
-        this.pts = d.pts ?? [];
-        this.marks = d.marks ?? [];
-      }
-    } catch {
-      /* sem armazenamento */
-    }
   }
 
-  save() {
-    if (!this.persist) return;
-    try {
-      localStorage.setItem(KEY, JSON.stringify({ seed: this.seed, pts: this.pts, marks: this.marks }));
-    } catch {
-      /* cheio: fica só na memória */
-    }
+  /** Para o mundo salvo (app/saves.js). */
+  toJSON() {
+    return { pts: this.pts, marks: this.marks };
   }
 
   /** Chamado a cada quadro com a posição GLOBAL. kind: 0 normal, 1 sobre trilho. */

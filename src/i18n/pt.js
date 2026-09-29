@@ -13,6 +13,27 @@ export default {
   'gate.transport': 'TRANSPORTE',
   'gate.settings': 'CONFIGURAÇÕES',
   'gate.newWorld': 'NOVO MUNDO',
+  'gate.worlds': 'MUNDOS',
+  'gate.choose': 'escolha como entrar na Cidade',
+  'gate.keys.pilgrimage':
+    '<span>WASD</span> mover &nbsp;·&nbsp; <span>MOUSE</span> olhar &nbsp;·&nbsp; <span>ESPAÇO</span> pular &nbsp;·&nbsp; ' +
+    '<span>SHIFT</span> correr<br />' +
+    '<span>O</span> configurações &nbsp;·&nbsp; <span>F2</span> foto &nbsp;·&nbsp; <span>M</span> mapa &nbsp;·&nbsp; ' +
+    '<span>F11</span> tela cheia &nbsp;·&nbsp; <span>ESC</span> soltar',
+
+  // ── modos de jogo e mundos salvos ──
+  'mode.free': 'LIVRE',
+  'mode.free.desc': 'Contemplação e exploração sem regras: voar, ir a qualquer tipo de lugar pelo transporte, regenerar o mundo quando quiser.',
+  'mode.pilgrimage': 'PEREGRINAÇÃO',
+  'mode.pilgrimage.desc': 'A pé, sem transporte e quase nada na tela. Ler a Cidade, seguir o que ela deixou. (Em construção: mais a cada fase.)',
+  'worlds.title': 'MUNDOS',
+  'worlds.current': 'ABERTO AGORA',
+  'worlds.empty': 'nenhum mundo ainda',
+  'worlds.slot': 'seed {seed} · {dist} percorridos · {time}',
+  'worlds.continue': 'CONTINUAR',
+  'worlds.new': 'NOVO MUNDO',
+  'worlds.confirmNew': 'SUBSTITUIR ESTE MUNDO?',
+  'worlds.hint': 'um mundo salvo por modo · um mundo nunca troca de modo',
 
   // ── configurações ──
   'settings.title': 'CONFIGURAÇÕES',
