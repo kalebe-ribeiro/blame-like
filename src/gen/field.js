@@ -75,6 +75,18 @@ export const COLOSSUS = { prob: 0.3, half: 80, depth: 56, spacing: 5200, fill: 0
  * Até ~36 m de altura: acima disso começam passarelas, nós e blocos.
  */
 export const RELIEF = { cell: 160, maxH: 36 };
+/**
+ * Setores de energia: distritos de formas e tamanhos irregulares (nada de
+ * grade). Voronoi com pesos sobre uma grade de pontos sorteados — pesos
+ * grandes fazem setores enormes, pequenos fazem setores minúsculos. Na
+ * vertical, só as camadas separam setores: um setor é um distrito entre duas
+ * lajes. Cada setor está permanentemente apagado, instável (a luz vai e vem
+ * em ondas) ou com energia.
+ *
+ * A MESMA conta roda no shader (shaders/chunks.js → sectorPower), com o mesmo
+ * hash inteiro — as lâmpadas (CPU) e as janelas (GPU) concordam.
+ */
+export const SECTOR = { cell: 900, dark: 0.3, unstable: 0.15, salt: 910 };
 export const HIVE = 48; // célula da colmeia (uma sala)
 
 export const MEGA = {
@@ -238,6 +250,46 @@ export class Field {
     const P = MEGA.passage;
     const p = this.passage(b.n, Math.floor(x / P), Math.floor(z / P));
     return !(p && Math.abs(x - p.x) < p.size / 2 && Math.abs(z - p.z) < p.size / 2);
+  }
+
+  // ── setores de energia ───────────────────────────────────────────────────
+
+  /** Setor em (x, y, z): { id, band, i, k, state: 'dark'|'unstable'|'powered', phase }. */
+  sectorAt(x, y, z) {
+    const C = SECTOR.cell;
+    const band = Math.floor((y - MEGA.barrierTop0) / MEGA.barrier);
+    const ci = Math.floor(x / C);
+    const ck = Math.floor(z / C);
+    let best = Infinity;
+    let bi = ci;
+    let bk = ck;
+    for (let i = ci - 1; i <= ci + 1; i++) {
+      for (let k = ck - 1; k <= ck + 1; k++) {
+        const h = Math.floor(hash4(this.seed, i, band, k, SECTOR.salt) * 4294967296);
+        const px = (i + (h & 1023) / 1024) * C;
+        const pz = (k + ((h >>> 10) & 1023) / 1024) * C;
+        const w = (((h >>> 20) & 1023) / 1024) * C * 0.8;
+        const d = (x - px) * (x - px) + (z - pz) * (z - pz) - w * w;
+        if (d < best) {
+          best = d;
+          bi = i;
+          bk = k;
+        }
+      }
+    }
+    const r = hash4(this.seed, bi, band, bk, SECTOR.salt + 1);
+    const state = r < SECTOR.dark ? 'dark' : r < SECTOR.dark + SECTOR.unstable ? 'unstable' : 'powered';
+    return { id: `S${band},${bi},${bk}`, band, i: bi, k: bk, state, phase: hash4(this.seed, bi, band, bk, SECTOR.salt + 2) };
+  }
+
+  /** Luz do setor em (x,y,z) agora: 0 apagado · onda 0..1 instável · 1 com energia. */
+  sectorLight(x, y, z, time) {
+    const s = this.sectorAt(x, y, z);
+    if (s.state === 'dark') return 0;
+    if (s.state === 'powered') return 1;
+    const w = Math.sin(time * 0.6 + s.phase * 6.2831 + (x + z) * 0.004);
+    const t = Math.min(1, Math.max(0, (w + 0.3) / 0.4));
+    return t * t * (3 - 2 * t);
   }
 
   // ── relevo sobre as camadas ──────────────────────────────────────────────

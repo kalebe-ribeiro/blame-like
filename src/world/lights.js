@@ -100,7 +100,9 @@ export class LightRig {
         uLightPos.value[i].set(l.x - origin.x, l.y - origin.y, l.z - origin.z);
         _col.set(l.color[0], l.color[1], l.color[2]);
         // luzes da rede elétrica (quase todas) obedecem aos apagões
-        const power = l.grid === false || !this.outages ? 1 : this.outages.power(l.x, l.y, l.z, l.phase + l.x * 0.37, time);
+        // luzes da rede: apagões, setores apagados e as ondas dos setores instáveis
+        const field = this.outages?.field;
+        const power = l.grid === false || !this.outages ? 1 : this.outages.power(l.x, l.y, l.z, l.phase + l.x * 0.37, time) * (field ? field.sectorLight(l.x, l.y, l.z, time) : 1);
         uLightColor.value[i].copy(_col).multiplyScalar(l.intensity * flicker(l, time) * s.level * power);
       } else {
         uLightPos.value[i].set(0, -1e6, 0);

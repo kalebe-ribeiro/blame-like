@@ -95,7 +95,7 @@ export class ColossusSystem {
       k,
       pos: new THREE.Vector3(),
       clamp: hash4(this.field.seed, lane.b.n, k, lane.lat, 712) * CLAMP,
-      light: { x: 0, y: 0, z: 0, color: SODIUM, intensity: 900, mode: 'steady', phase: k * 3.1 },
+      light: { x: 0, y: 0, z: 0, color: SODIUM, intensity: 900, mode: 'steady', phase: k * 3.1, grid: false }, // energia própria
     };
   }
 

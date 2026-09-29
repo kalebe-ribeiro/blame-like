@@ -104,6 +104,8 @@ export class World {
     this.seed = seed >>> 0;
     this.origin.set(0, 0, 0);
     this.shared.uOriginMod.value.set(0, 0, 0);
+    this.shared.uOrigin.value.set(0, 0, 0);
+    this.shared.uSectorSeed.value = this.seed | 0; // o mesmo inteiro que o hash do Field usa
     this.outages.events = [];
     const rng = new RNG(this.seed);
     const m = this._createMaterials(rng);
@@ -122,6 +124,7 @@ export class World {
     this.scene.add(this.streamGroup);
     // a mesma "lei" dos workers, na thread principal (consultas como nearestNode)
     this.field = new Field(this.seed, reserved);
+    this.outages.field = this.field; // setores apagados: trens, elevadores e terminais param
     this.batches = new BatchSet(this.streamGroup);
     const common = { pool: this.pool, batches: this.batches, materials: m, seed: this.seed, reserved };
     const lodHooks = {
@@ -394,6 +397,7 @@ export class World {
 
     // o ruído dos shaders usa origem mód. PERÍODO; ao "dar a volta" o padrão salta
     const mod = (v) => ((v % ORIGIN_PERIOD) + ORIGIN_PERIOD) % ORIGIN_PERIOD;
+    this.shared.uOrigin.value.copy(this.origin);
     const om = this.shared.uOriginMod.value;
     const next = new THREE.Vector3(mod(this.origin.x), mod(this.origin.y), mod(this.origin.z));
     const expected = om.clone().add(delta);

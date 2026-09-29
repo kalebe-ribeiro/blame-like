@@ -34,6 +34,7 @@ export class OutageSystem {
     this.events = []; // { id, c: Vector3 global, maxR, t0, dark, done }
     this.enabled = true;
     this.bus = null; // eventos outage:start / outage:restore (core/events.js)
+    this.field = null; // setores permanentemente apagados (Field.sectorAt)
     this._next = 50 + Math.random() * 40; // o primeiro não vem logo de cara
     this._id = 0;
   }
@@ -108,6 +109,9 @@ export class OutageSystem {
    * o atraso e a gagueira de cada lâmpada.
    */
   power(x, y, z, seed, time) {
+    // setor permanentemente apagado: nada ali tem energia (os instáveis contam como ligados
+    // aqui — só as lâmpadas oscilam com eles, ver LightRig)
+    if (this.field && this.field.sectorAt(x, y, z).state === 'dark') return 0;
     let p = 1;
     for (const ev of this.events) {
       const d = Math.hypot(x - ev.c.x, y - ev.c.y, z - ev.c.z);

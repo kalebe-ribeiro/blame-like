@@ -112,6 +112,49 @@ uniform vec4  uOutageB[4];                // frente do religamento (m), raio do 
 
 // Energia da rede (0..1) num ponto — mesma lógica de world/outages.js.
 // j (0..1) desloca a frente um pouco, para as janelas não apagarem em bloco.
+// ── setores de energia (a mesma conta de Field.sectorAt, gen/field.js) ──
+uniform vec3 uOrigin;        // origem flutuante inteira: cena + uOrigin = GLOBAL
+uniform int  uSectorSeed;    // seed do mundo
+uint sectorHash(int a, int b, int c, int salt) {
+  uint h = uint(uSectorSeed) ^ (uint(a) * 0x27d4eb2du);
+  h ^= uint(b) * 0x165667b1u;
+  h ^= uint(c) * 0x1b873593u;
+  h ^= uint(salt) * 0x5bd1e995u;
+  h = (h ^ (h >> 15u)) * 0x85ebca6bu;
+  h = (h ^ (h >> 13u)) * 0xc2b2ae35u;
+  h = (h ^ (h >> 16u)) * 0x9e3779b1u;
+  h ^= h >> 15u;
+  return h;
+}
+// 0 apagado · onda instável · 1 com energia (SECTOR em gen/field.js: 900 m, 30% / 15%)
+float sectorPower(vec3 wp) {
+  vec3 g = wp + uOrigin;
+  const float C = 900.0;
+  int band = int(floor((g.y - 1488.0) / 2880.0));
+  int ci = int(floor(g.x / C));
+  int ck = int(floor(g.z / C));
+  float best = 1e30;
+  int bi = ci;
+  int bk = ck;
+  for (int di = -1; di <= 1; di++) {
+    for (int dk = -1; dk <= 1; dk++) {
+      int i = ci + di;
+      int k = ck + dk;
+      uint h = sectorHash(i, band, k, 910);
+      float px = (float(i) + float(h & 1023u) / 1024.0) * C;
+      float pz = (float(k) + float((h >> 10u) & 1023u) / 1024.0) * C;
+      float w = float((h >> 20u) & 1023u) / 1024.0 * C * 0.8;
+      float d = (g.x - px) * (g.x - px) + (g.z - pz) * (g.z - pz) - w * w;
+      if (d < best) { best = d; bi = i; bk = k; }
+    }
+  }
+  float r = float(sectorHash(bi, band, bk, 911)) / 4294967296.0;
+  if (r < 0.3) return 0.0;
+  if (r >= 0.45) return 1.0;
+  float phase = float(sectorHash(bi, band, bk, 912)) / 4294967296.0;
+  return smoothstep(-0.3, 0.1, sin(uTime * 0.6 + phase * 6.2831 + (g.x + g.z) * 0.004));
+}
+
 float outagePower(vec3 wp, float j) {
   float p = 1.0;
   for (int i = 0; i < 4; i++) {

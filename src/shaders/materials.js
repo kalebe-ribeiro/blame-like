@@ -44,6 +44,8 @@ export function createSharedUniforms() {
     uFogBase: { value: 0 },
     uScatter: { value: 0.01 },
     uOriginMod: { value: new THREE.Vector3() },
+    uOrigin: { value: new THREE.Vector3() }, // origem flutuante inteira (setores de energia)
+    uSectorSeed: { value: 0 },
     // poeira em suspensão: cinza neutro e um cinza quente
     uFogColorA: { value: new THREE.Vector3(0.014, 0.0145, 0.015) },
     uFogColorB: { value: new THREE.Vector3(0.021, 0.0195, 0.017) },
@@ -235,7 +237,7 @@ void main() {
     float flow = fract((uv.x + uv.y) * 0.07 - t * 0.2 + h * 7.0);
     flow = smoothstep(0.0, 0.03, flow) * smoothstep(0.15, 0.03, flow);
     albedo *= 1.0 - circuit * 0.35;
-    emit += uCircuitColor * circuit * (0.03 + 0.5 * flow) * outagePower(vWorldPos, 0.5);
+    emit += uCircuitColor * circuit * (0.03 + 0.5 * flow) * outagePower(vWorldPos, 0.5) * sectorPower(vWorldPos);
   }
 
   // ── janelas: milhares de pontos de luz em paredes colossais ──
@@ -253,7 +255,7 @@ void main() {
     float wfw = length(fwidth(wuv));
     float farW = smoothstep(0.2, 0.9, wfw);
     float near = inside * on * flick * (0.07 + 0.1 * fract(hsh * 13.0));
-    emit += wcol * mix(near, uWindows * district * 0.03, farW) * outagePower(vWorldPos, hsh);
+    emit += wcol * mix(near, uWindows * district * 0.03, farW) * outagePower(vWorldPos, hsh) * sectorPower(vWorldPos);
     albedo *= 1.0 - inside * (1.0 - farW) * 0.45;     // o vão escuro da janela
   }
 
