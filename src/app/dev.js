@@ -3,6 +3,7 @@
 //  --stats e --check (teste de fumaça). Nada disso roda no `npm start` normal.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { subDraws } from '../world/batches.js';
 
 export function setupDev(ctx) {
   const { params, world, camera, renderer } = ctx;
@@ -38,6 +39,36 @@ export function setupDev(ctx) {
       });
     };
     const gl = renderer.getContext();
+    // tempo de GPU do reflexo (EXT_disjoint_timer_query_webgl2)
+    let reflMs = 0;
+    let reflN = 0;
+    let reflDraws = 0;
+    let reflTris = 0;
+    const tq = gl.getExtension('EXT_disjoint_timer_query_webgl2');
+    if (tq && ctx.reflection) {
+      const pending = [];
+      const render = ctx.reflection.render.bind(ctx.reflection);
+      ctx.reflection.render = (...a) => {
+        while (pending.length && gl.getQueryParameter(pending[0], gl.QUERY_RESULT_AVAILABLE)) {
+          const q = pending.shift();
+          if (!gl.getParameter(tq.GPU_DISJOINT_EXT)) {
+            reflMs += gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6;
+            reflN++;
+          }
+          gl.deleteQuery(q);
+        }
+        if (ctx.reflection.level === null || pending.length > 4) return render(...a);
+        const q = gl.createQuery();
+        gl.beginQuery(tq.TIME_ELAPSED_EXT, q);
+        const c0 = renderer.info.render.calls;
+        const t0 = renderer.info.render.triangles;
+        render(...a);
+        gl.endQuery(tq.TIME_ELAPSED_EXT);
+        reflDraws = renderer.info.render.calls - c0;
+        reflTris = renderer.info.render.triangles - t0;
+        pending.push(q);
+      };
+    }
     const dbg = gl.getExtension('WEBGL_debug_renderer_info');
     console.warn(`gpu=${dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)}`);
     let frames = 0;
@@ -57,6 +88,11 @@ export function setupDev(ctx) {
           (performance.memory ? ` heap=${Math.round(performance.memory.usedJSHeapSize / 1048576)}MB` : ''),
       );
       timeLists();
+      console.warn(`  vagas desenhadas/quadro: cena ${Math.round(subDraws.main / Math.max(1, frames))} · reflexo ${Math.round(subDraws.reflection / Math.max(1, frames))}`);
+      subDraws.main = subDraws.reflection = 0;
+      if (reflN) console.warn(`  reflexo: ${(reflMs / reflN).toFixed(2)} ms de GPU · ${reflDraws} desenhos · ${(reflTris / 1e6).toFixed(2)}M triângulos · cena ${renderer.info.render.calls}`);
+      reflMs = 0;
+      reflN = 0;
       console.warn(`  listas: ${(batchMs / Math.max(1, frames)).toFixed(2)} ms/quadro em ${Math.round(batchCalls / Math.max(1, frames))} chamadas`);
       batchMs = 0;
       batchCalls = 0;

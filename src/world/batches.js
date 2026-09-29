@@ -32,7 +32,9 @@
 //  reenvia a textura de índices da página. Aqui (fastLists) as esferas já
 //  ficam em coordenadas do mundo (as matrizes são só translação), a ordem de
 //  frente para trás só é refeita quando a câmera anda uns metros, e a textura
-//  só é reenviada quando a lista realmente mudou.
+//  só é reenviada quando a lista realmente mudou. O reflexo da água desenha
+//  as mesmas páginas com outra câmera: cada câmera tem a sua lista e a sua
+//  textura de índices (senão as duas se desfazem e reenviam tudo a cada quadro).
 //
 //  Os shaders precisam de <batching_pars_vertex>/<batching_vertex> — ver
 //  shaders/materials.js.
@@ -49,6 +51,8 @@ const COMPACT_AT = 0.2; // fração da página em vagas livres para valer compac
 const RESORT_DIST = 8; // m que a câmera anda até refazer a ordem de frente para trás
 
 const IDENTITY = new THREE.Matrix4();
+/** Desenhos individuais emitidos (o ANGLE emula o multi-draw: um por vaga). Para --stats. */
+export const subDraws = { main: 0, reflection: 0 };
 const _m = new THREE.Matrix4();
 const _frustum = new THREE.Frustum();
 const _cam = new THREE.Vector3();
@@ -65,6 +69,26 @@ function fastLists(renderer, scene, camera, geometry) {
     this._multiDrawCount = 0;
     return;
   }
+  // vagas mudaram (o three marca _visibilityChanged; place() marca L.ver)
+  if (this._visibilityChanged) {
+    L.ver++;
+    this._visibilityChanged = false;
+  }
+  // a lista desta câmera (0 = a principal, 1 = o reflexo), com a sua textura
+  const [v0, v1] = L.views;
+  // a textura da página que não é a do reflexo é a principal (setInstanceCount a recria)
+  if (this._indirectTexture !== v1.tex && this._indirectTexture !== v0.tex) {
+    v0.tex = this._indirectTexture;
+    v0.seen = -1;
+  }
+  const view = camera.userData.cull ? v1 : v0;
+  const main = v0.tex.image.data.length;
+  if (view === v1 && (!view.tex || view.tex.image.data.length !== main)) {
+    view.tex?.dispose();
+    const size = Math.sqrt(main);
+    view.tex = new THREE.DataTexture(new Uint32Array(main), size, size, THREE.RedIntegerFormat, THREE.UnsignedIntType);
+    view.seen = -1;
+  }
   const info = this._instanceInfo;
   const sph = L.sph;
   const moved = !this.matrixWorld.equals(IDENTITY);
@@ -73,8 +97,8 @@ function fastLists(renderer, scene, camera, geometry) {
   if (moved) _cam.applyMatrix4(_m.copy(this.matrixWorld).invert());
 
   // 1) a ordem (instâncias visíveis, de frente para trás) — só quando precisa
-  if (this._visibilityChanged || L.dirty || (this.sortObjects && _cam.distanceToSquared(L.at) > RESORT_DIST * RESORT_DIST)) {
-    const order = L.order;
+  if (view.seen !== L.ver || (this.sortObjects && _cam.distanceToSquared(view.at) > RESORT_DIST * RESORT_DIST)) {
+    const order = view.order;
     order.length = 0;
     for (let i = 0; i < info.length; i++) if (info[i].visible && info[i].active) order.push(i);
     if (this.sortObjects) {
@@ -87,31 +111,35 @@ function fastLists(renderer, scene, camera, geometry) {
       }
       order.sort((a, b) => d[a] - d[b]);
     }
-    L.at.copy(_cam);
-    L.dirty = false;
-    L.changed = true;
-    this._visibilityChanged = false;
+    view.at.copy(_cam);
+    view.seen = L.ver;
+    view.changed = true;
   }
 
-  // 2) recorte por frustum com as esferas já no mundo
-  _m.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  // 2) recorte por frustum com as esferas já no mundo. Uma câmera pode trazer
+  //    o próprio volume de recorte (o reflexo: a projeção oblíqua distorce o
+  //    plano far) e um plano extra (a superfície da água)
+  const cull = camera.userData.cull;
+  _m.multiplyMatrices(cull ? cull.projection : camera.projectionMatrix, camera.matrixWorldInverse);
   if (moved) _m.multiply(this.matrixWorld);
   _frustum.setFromProjectionMatrix(_m, renderer.coordinateSystem);
   const planes = _frustum.planes;
+  const np = cull?.plane ? 7 : 6;
+  if (cull?.plane) planes[6] = cull.plane;
   const bpe = geometry.index.array.BYTES_PER_ELEMENT;
   const starts = this._multiDrawStarts;
   const counts = this._multiDrawCounts;
-  const ind = this._indirectTexture.image.data;
+  const ind = view.tex.image.data;
   const geos = this._geometryInfo;
   let n = 0;
-  let changed = L.changed;
-  for (const i of L.order) {
+  let changed = view.changed;
+  for (const i of view.order) {
     const x = sph[i * 4];
     const y = sph[i * 4 + 1];
     const z = sph[i * 4 + 2];
     const r = -sph[i * 4 + 3];
     let inside = true;
-    for (let p = 0; p < 6; p++) {
+    for (let p = 0; p < np; p++) {
       const pl = planes[p];
       if (pl.normal.x * x + pl.normal.y * y + pl.normal.z * z + pl.constant < r) {
         inside = false;
@@ -128,11 +156,23 @@ function fastLists(renderer, scene, camera, geometry) {
     }
     n++;
   }
-  if (n !== this._multiDrawCount) changed = true;
+  if (n !== view.count) changed = true;
+  view.count = n;
   this._multiDrawCount = n;
+  if (camera.userData.cull) subDraws.reflection += n;
+  else subDraws.main += n;
   // a textura de índices só volta para a GPU quando a lista mudou
-  if (changed) this._indirectTexture.needsUpdate = true;
-  L.changed = false;
+  if (changed) view.tex.needsUpdate = true;
+  view.changed = false;
+  // o renderer lê a textura de índices da página logo depois deste gancho
+  this._indirectTexture = view.tex;
+}
+
+/** Devolve a textura principal à página (antes de setInstanceCount/dispose). */
+function restoreMainTexture(page) {
+  const [v0, v1] = page._lists.views;
+  if (v0.tex) page._indirectTexture = v0.tex;
+  return v1;
 }
 
 /** Esfera da vaga em coordenadas do mundo (a matriz é só translação). */
@@ -151,7 +191,7 @@ function place(page, inst, geometry, matrix) {
   L.sph[inst * 4 + 1] = bs.center.y + e[13];
   L.sph[inst * 4 + 2] = bs.center.z + e[14];
   L.sph[inst * 4 + 3] = bs.radius;
-  L.dirty = true;
+  L.ver++;
 }
 
 /** Arredonda para cima numa escala de passos de ~25% (classes de vaga). */
@@ -178,7 +218,8 @@ class MaterialBatch {
     page.sortObjects = !this.material.transparent; // opacos de frente para trás (early-z)
     page.renderOrder = this.renderOrder;
     page.freeV = 0; // vértices reservados em vagas livres nesta página
-    page._lists = { sph: new Float32Array(START_INSTANCES * 4), dist: new Float32Array(START_INSTANCES), local: [], order: [], at: new THREE.Vector3(), dirty: true, changed: true };
+    const view = () => ({ order: [], at: new THREE.Vector3(), seen: -1, changed: true, count: -1, tex: null });
+    page._lists = { sph: new Float32Array(START_INSTANCES * 4), dist: new Float32Array(START_INSTANCES), local: [], ver: 0, views: [view(), view()] };
     page.onBeforeRender = fastLists;
     this.pages.push(page);
     this.set.parent.add(page);
@@ -215,6 +256,7 @@ class MaterialBatch {
       // vazia e sobra folga nas outras: descarta a página
       this.pages.splice(this.pages.indexOf(page), 1);
       page.removeFromParent();
+      restoreMainTexture(page).tex?.dispose();
       page.dispose();
       return;
     }
@@ -272,6 +314,7 @@ class MaterialBatch {
     }
     page ??= this._newPage(rv, ri);
     if (page._availableInstanceIds.length === 0 && page._instanceInfo.length >= page.maxInstanceCount) {
+      restoreMainTexture(page);
       page.setInstanceCount(page.maxInstanceCount * 2);
     }
     const geo = page.addGeometry(geometry, rv, ri);
@@ -386,6 +429,7 @@ export class BatchSet {
   dispose() {
     for (const mb of this.batches.values()) {
       for (const p of mb.pages) {
+        restoreMainTexture(p).tex?.dispose();
         p.dispose();
         p.removeFromParent();
       }

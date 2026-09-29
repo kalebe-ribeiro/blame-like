@@ -40,6 +40,7 @@ export function setupRender(ctx) {
   // reflexo planar nos setores inundados (render/reflection.js)
   const reflection = new ReflectionSystem(shared);
   reflection.attach(world.materials.flood);
+  reflection.hidden.push(ctx.dust);
   Object.assign(ctx, { composer, scenePass, signal, reflection });
   window.addEventListener('resize', () => resize(ctx));
   resize(ctx);

@@ -20,7 +20,12 @@
 import * as THREE from 'three';
 import { MEGA, FLOOD } from '../gen/field.js';
 
+//  Custo: o reflexo desenha as mesmas páginas de lotes com outra câmera — cada
+//  câmera tem a sua lista e textura de índices (world/batches.js), e o recorte
+//  usa a projeção normal até REFL_FAR mais a própria água como piso (a oblíqua
+//  distorce o plano far). As partículas de poeira ficam de fora.
 const SCALE = 0.5; // resolução do reflexo em relação à tela
+const REFL_FAR = 1200; // m
 
 export class ReflectionSystem {
   constructor(shared) {
@@ -30,10 +35,15 @@ export class ReflectionSystem {
     this.level = null; // nível GLOBAL da água em uso (ou null)
     this.materials = [];
     this.enabled = true;
+    this.hidden = []; // objetos que não entram no reflexo (poeira)
     this._plane = new THREE.Plane();
     this._clip = new THREE.Vector4();
     this._q = new THREE.Vector4();
     this._timer = 0;
+    // recorte próprio: a projeção normal (antes da oblíqua) e a água como piso
+    this._cullProj = new THREE.Matrix4();
+    this._cullPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    this.cam.userData.cull = { projection: this._cullProj, plane: this._cullPlane };
   }
 
   /** Materiais de água que leem o reflexo. */
@@ -85,9 +95,10 @@ export class ReflectionSystem {
     cam.fov = camera.fov;
     cam.aspect = camera.aspect;
     cam.near = camera.near;
-    cam.far = camera.far;
-    cam.projectionMatrix.copy(camera.projectionMatrix);
-    cam.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
+    cam.far = Math.min(camera.far, REFL_FAR);
+    cam.updateProjectionMatrix(); // sem o tremor do TAA: o reflexo fica estável
+    this._cullProj.copy(cam.projectionMatrix);
+    this._cullPlane.constant = -(L - 2); // só o que passa acima da água aparece nela
     cam.position.set(camera.position.x, 2 * L - camera.position.y, camera.position.z);
     const q = camera.quaternion;
     cam.quaternion.set(-q.x, q.y, -q.z, q.w);
@@ -116,9 +127,12 @@ export class ReflectionSystem {
       m.uniforms.uReflTex.value = null;
     }
     const prevTarget = renderer.getRenderTarget();
+    const vis = this.hidden.map((o) => o.visible);
+    for (const o of this.hidden) o.visible = false;
     renderer.setRenderTarget(this.rt);
     renderer.render(scene, cam);
     renderer.setRenderTarget(prevTarget);
+    this.hidden.forEach((o, i) => (o.visible = vis[i]));
     for (const m of this.materials) {
       m.uniforms.uReflOn.value = 1;
       m.uniforms.uReflTex.value = this.rt.texture;
