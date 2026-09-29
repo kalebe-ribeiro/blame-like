@@ -8,11 +8,13 @@
 //
 //  Tipos de linha: manutenção adiada, falhas, energia, contagens, avisos,
 //  a burocracia da rede (gene, acesso) — e, raramente, fragmentos de quem
-//  construiu tudo e se perdeu na própria obra.
+//  construiu tudo e se perdeu na própria obra. Em parte dos terminais, uma
+//  ROTA: o endereço de outro lugar — uma pista (lang/leads.js).
 // ─────────────────────────────────────────────────────────────────────────────
 import { hash4, rngAt } from '../gen/hash.js';
 import { MEGA } from '../gen/field.js';
 import { SCRIPT } from './ancient.js';
+import { leadFor, leadLine } from './leads.js';
 
 const W = (w) => ({ w });
 const N = (n) => ({ n: String(n) });
@@ -111,6 +113,9 @@ export function terminalRecords(field, site) {
   const p = pool(r, field, here);
   const n = 6 + r.int(0, 4);
   for (let i = 0; i < n; i++) lines.push(r.pick(p)());
+  // a pista (lang/leads.js): o endereço de outro lugar que existe — nem todo terminal tem
+  const lead = leadFor(field, site);
+  if (lead) lines.splice(Math.min(lines.length, 3 + r.int(1, 4)), 0, leadLine(field, lead));
   // um terminal em ~8 guarda um fragmento (nas únicas, sempre)
   if (site.kind === 'unique' || hash4(field.seed, Math.round(site.x), Math.round(site.z), 0, 951) < 0.12) {
     lines.push(RULE);

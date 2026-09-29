@@ -5,10 +5,13 @@
 //    REGISTROS  os terminais lidos neste mundo; clicar reabre o texto — refeito
 //               do Field e traduzido com o que você sabe AGORA (reler meses
 //               depois e entender é o prêmio)
+//    PISTAS     os endereços lidos (Peregrinação): a rota com as partes que você
+//               tem — traduzida com o léxico de agora —, a distância estimada e
+//               o tamanho da área de incerteza; as já alcançadas no fim
 //    LÉXICO     as palavras entendidas (global): a forma antiga e a tradução
 // ─────────────────────────────────────────────────────────────────────────────
 import { t, fmtDist } from '../i18n/index.js';
-import { CONCEPTS, SCRIPT, ancientWord, drawLetter } from '../lang/ancient.js';
+import { CONCEPTS, SCRIPT, ancientWord, drawLetter, drawTokens } from '../lang/ancient.js';
 
 let tab = 'log';
 
@@ -19,14 +22,16 @@ export function setArchiveTab(k) {
 
 /**
  * @param {HTMLElement} el
- * @param {object} o { lines: [[rótulo, valor]], records: {id: {x,y,z,kind,at}}, lexicon, here (GLOBAL), onOpen(id, rec) }
+ * @param {object} o { lines: [[rótulo, valor]], records: {id: {x,y,z,kind,at}}, leads: [{ tokens, open, dist, r }] | null, lexicon, here (GLOBAL), onOpen(id, rec) }
  */
 export function renderArchive(el, o) {
   const tabs = [
     ['log', t('diary.title')],
     ['records', t('archive.records', { n: Object.keys(o.records).length })],
+    ...(o.leads ? [['leads', t('archive.leads', { n: o.leads.filter((l) => l.open).length })]] : []),
     ['lexicon', t('archive.lexicon', o.lexicon.progress())],
   ];
+  if (tab === 'leads' && !o.leads) tab = 'log';
   el.innerHTML =
     `<div class="archive-tabs">${tabs.map(([k, label]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${label}</button>`).join('')}</div>` +
     `<div class="archive-body"></div>`;
@@ -62,6 +67,37 @@ export function renderArchive(el, o) {
         o.onOpen(row.dataset.id, o.records[row.dataset.id]);
       }),
     );
+    return;
+  }
+
+  if (tab === 'leads') {
+    if (!o.leads.length) {
+      body.innerHTML = `<div class="archive-empty">${t('archive.noLeads')}</div>`;
+      return;
+    }
+    // cada pista: a rota (tokens, como na tela do terminal) e, embaixo, onde deve estar
+    const canvas = document.createElement('canvas');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rowH = 38;
+    const cw = Math.max(200, (el.clientWidth || Math.min(560, window.innerWidth * 0.86)) - 12);
+    const ch = o.leads.length * rowH + 6;
+    canvas.style.width = `${cw}px`;
+    canvas.style.height = `${ch}px`;
+    canvas.width = cw * dpr;
+    canvas.height = ch * dpr;
+    const g = canvas.getContext('2d');
+    g.scale(dpr, dpr);
+    const known = (w) => o.lexicon.known(w);
+    const word = (w) => t(`word.${w}`);
+    o.leads.forEach((l, i) => {
+      const y = i * rowH + 4;
+      const color = l.open ? 'rgba(200,196,184,0.85)' : 'rgba(160,160,150,0.45)';
+      drawTokens(g, l.tokens, 2, y, known, word, { h: 9, font: '11px Consolas, monospace', color, maxW: cw - 8 });
+      g.font = '10px Consolas, monospace';
+      g.fillStyle = l.open ? 'rgba(215,196,154,0.7)' : 'rgba(160,160,150,0.4)';
+      g.fillText(l.open ? t('archive.lead.open', { dist: fmtDist(l.dist), r: fmtDist(l.r) }) : t('archive.lead.reached'), 2, y + 16);
+    });
+    body.appendChild(canvas);
     return;
   }
 

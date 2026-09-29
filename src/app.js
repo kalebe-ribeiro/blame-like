@@ -39,6 +39,7 @@ import { setupDev } from './app/dev.js';
 import { createWake } from './app/wake.js';
 import { createCarried } from './app/carried.js';
 import { createReading } from './app/reading.js';
+import { createLeads } from './app/leads.js';
 
 /** A névoa de altura é relativa ao observador: sempre mais densa abaixo. */
 const FOG_ABOVE_EYE = 40;
@@ -147,6 +148,7 @@ ctx.placeOf = (x, y, z) => {
 
 // ─── peças ──────────────────────────────────────────────────────────────────
 setupRender(ctx);
+ctx.leads = createLeads(ctx);
 ctx.travel = createTravel(ctx);
 ctx.body = createBody(ctx);
 ctx.sound = createWorldSound(ctx);

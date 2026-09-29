@@ -1,0 +1,99 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  Onde há terminais — pela lei do mundo (Field), sem carregar nada.
+//
+//  Os mesmos lugares (e os mesmos ids estáveis) que world/terminals.js põe na
+//  cena; aqui só a conta, para quem precisa saber de terminais longe: as pistas
+//  (lang/leads.js), o sensor, o começo de um mundo.
+//
+//    station  na ponta da plataforma de cada estação de transportador
+//    passage  no alto das passagens das camadas, ao lado da ponte de embarque
+//    unique   o console ativo de cada estrutura única (energia própria)
+//
+//  site: { id, x, y (pés), z, yaw, kind, line?, s?, unique? } — GLOBAL
+// ─────────────────────────────────────────────────────────────────────────────
+import { TRANSIT, MEGA, WALK } from './field.js';
+
+const S = TRANSIT.station;
+const stationT = (s) => s * S + S / 2; // o mesmo de gen/transit.js
+
+/** O terminal da estação s da linha L. */
+export function stationSite(L, s) {
+  const ts = stationT(s);
+  const hw = L.w.width / 2;
+  const side = L.track.side;
+  const len = TRANSIT.carLen + 4;
+  const t = ts - len / 2 + 1.4; // na ponta oposta à placa
+  const lat = L.u + side * (hw + 0.9);
+  // a tela olha ao longo da plataforma (para quem vem da passarela)
+  const x = L.axis === 'z' ? lat : t;
+  const z = L.axis === 'z' ? t : lat;
+  const yaw = L.axis === 'z' ? 0 : Math.PI / 2; // a tela (+z local) olha para +t
+  return { id: `st:${L.id}:${s}`, x, y: L.y, z, yaw, kind: 'station', line: L, s };
+}
+
+/** Onde ficar de pé para ler um terminal: { x, y, z } (pés, GLOBAL) — 1,4 m à frente da tela. */
+export function standBefore(site) {
+  return { x: site.x + Math.sin(site.yaw) * 1.4, y: site.y, z: site.z + Math.cos(site.yaw) * 1.4 };
+}
+
+/** Terminais a até R metros de (x,y,z) GLOBAL. */
+export function terminalSitesNear(F, x, y, z, R) {
+  const out = [];
+  for (const L of F.transitLinesNear(x, y, z, R)) {
+    const tp = L.axis === 'z' ? z : x;
+    for (let s = Math.floor((tp - R - S / 2) / S); s <= Math.ceil((tp + R - S / 2) / S); s++) out.push(stationSite(L, s));
+  }
+  for (const b of F.barriersNear(y)) {
+    if (Math.abs(b.top - y) > R) continue;
+    const P = MEGA.passage;
+    for (let pi = Math.floor((x - R) / P); pi <= Math.floor((x + R) / P); pi++) {
+      for (let pk = Math.floor((z - R) / P); pk <= Math.floor((z + R) / P); pk++) {
+        const p = F.passage(b.n, pi, pk);
+        if (!p) continue;
+        out.push({ id: `ps:${b.n}:${pi}:${pk}`, x: p.x + p.size / 2 + 5, y: b.top, z: p.z + 7, yaw: Math.PI / 2, kind: 'passage' });
+      }
+    }
+  }
+  for (const u of F.uniquesNear(x, y, z, R + 80)) out.push(uniqueTerminal(F, u));
+  return out.filter((s) => Math.hypot(s.x - x, s.y - y, s.z - z) < R);
+}
+
+/** O terminal (console ativo) de uma estrutura única. */
+export function uniqueTerminal(F, u) {
+  return { id: `un:${u.id}`, ...F.uniqueConsole(u), kind: 'unique', unique: u };
+}
+
+/** Refaz um terminal pelo id estável ('st:…', 'ps:…', 'un:…'), ou null. */
+export function siteById(F, id) {
+  const [k, ...rest] = id.split(':');
+  if (k === 'un') {
+    const [n, i, kk] = rest[0].slice(1).split(',').map(Number);
+    const u = F.uniqueSite(n, i, kk);
+    return u ? uniqueTerminal(F, u) : null;
+  }
+  if (k === 'ps') {
+    const [n, pi, pk] = rest.map(Number);
+    const b = F.barrier(n);
+    const p = b && F.passage(n, pi, pk);
+    return p ? { id, x: p.x + p.size / 2 + 5, y: b.top, z: p.z + 7, yaw: Math.PI / 2, kind: 'passage' } : null;
+  }
+  if (k === 'st') {
+    // st:tz<a>,<b>:<s> ou st:tx<b>,<c>:<s>
+    const lineId = rest[0];
+    const s = Number(rest[1]);
+    const [p, q] = lineId.slice(2).split(',').map(Number);
+    const { spacing, ySpacing } = WALK;
+    const L =
+      lineId[1] === 'z'
+        ? (() => {
+            const w = F.walkZ(p, q);
+            return w?.track ? { axis: 'z', u: p * spacing, y: q * ySpacing, w, track: w.track, id: lineId } : null;
+          })()
+        : (() => {
+            const w = F.walkX(p, q);
+            return w?.track ? { axis: 'x', u: q * spacing + spacing / 2, y: p * ySpacing + ySpacing / 2, w, track: w.track, id: lineId } : null;
+          })();
+    return L ? stationSite(L, s) : null;
+  }
+  return null;
+}

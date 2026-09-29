@@ -9,6 +9,7 @@ import { Diary } from '../ui/journey.js';
 import { storeSlot } from './saves.js';
 import { TrailMap } from '../ui/trailmap.js';
 import { renderArchive } from '../ui/archive.js';
+import { leadLine } from '../lang/leads.js';
 
 export function createTravel(ctx) {
   const { world, camera, controls } = ctx;
@@ -43,11 +44,20 @@ export function createTravel(ctx) {
   function renderDiary() {
     const el = document.getElementById('gate-diary');
     if (!el) return;
+    const here = world.toGlobal(camera.position, new THREE.Vector3());
+    // as pistas (Peregrinação): a rota refeita do Field, com as partes que você tem
+    const leads = ctx.rules.leads
+      ? ctx.leads.list().map(([id, rec]) => {
+          const a = ctx.leads.area(rec);
+          return { tokens: leadLine(world.field, { id, ...rec }, rec.parts), open: rec.state === 'open', dist: Math.hypot(a.x - here.x, a.y - here.y, a.z - here.z), r: a.r };
+        })
+      : null;
     renderArchive(el, {
       lines: diary.lines(),
       records: slot.archive?.records ?? {},
+      leads,
       lexicon: ctx.lexicon,
-      here: world.toGlobal(camera.position, new THREE.Vector3()),
+      here,
       onOpen: (id, rec) => ctx.reading.showArchived(id, rec),
     });
   }
@@ -84,6 +94,7 @@ export function createTravel(ctx) {
       trail.load(null);
       slot.seed = ctx.seed;
       slot.changes = {};
+      slot.leads = {};
     },
     update(dt) {
       world.toGlobal(camera.position, g);

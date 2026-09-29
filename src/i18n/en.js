@@ -302,6 +302,10 @@ export default {
   'reader.fragment': 'portable reader: a fragment · cell −{cost}% · E / ESC  close',
   // ── o diário como arquivo ──
   'archive.records': 'RECORDS ({n})',
+  'archive.leads': 'LEADS ({n})',
+  'archive.noLeads': 'no address followed yet — terminals sometimes name a ROUTE to another place',
+  'archive.lead.open': 'somewhere ~{dist} from here · within {r}',
+  'archive.lead.reached': 'reached',
   'archive.lexicon': 'LEXICON ({known}/{total})',
   'archive.noRecords': 'no terminal read in this world yet',
   'archive.noWords': 'no word of the old language understood yet',

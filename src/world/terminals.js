@@ -11,8 +11,7 @@
 //  tela). Sem energia (apagão), a tela apaga.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { TRANSIT, MEGA } from '../gen/field.js';
-import { stationT } from '../gen/transit.js';
+import { terminalSitesNear } from '../gen/sites.js';
 import { hash4, rngAt } from '../gen/hash.js';
 import { t as tr } from '../i18n/index.js';
 import { drawTokens } from '../lang/ancient.js';
@@ -40,44 +39,9 @@ export class TerminalSystem {
     this._screenGeo = new THREE.PlaneGeometry(0.66, 0.46);
   }
 
-  /** Lugares de terminais perto de (x,y,z) GLOBAL: { id, x, y, z, yaw, kind, line?, s? } */
+  /** Lugares de terminais perto de (x,y,z) GLOBAL (gen/sites.js). */
   _sites(g) {
-    const out = [];
-    const S = TRANSIT.station;
-    for (const L of this.field.transitLinesNear(g.x, g.y, g.z, RANGE)) {
-      const tp = L.axis === 'z' ? g.z : g.x;
-      const s = Math.round((tp - S / 2) / S);
-      const ts = stationT(s);
-      if (Math.abs(ts - tp) > RANGE) continue;
-      const hw = L.w.width / 2;
-      const side = L.track.side;
-      const len = TRANSIT.carLen + 4;
-      const t = ts - len / 2 + 1.4; // na ponta oposta à placa
-      const lat = L.u + side * (hw + 0.9);
-      // a tela olha ao longo da plataforma (para quem vem da passarela)
-      const x = L.axis === 'z' ? lat : t;
-      const z = L.axis === 'z' ? t : lat;
-      const yaw = L.axis === 'z' ? 0 : Math.PI / 2; // a tela (+z local) olha para +t
-      out.push({ id: `st:${L.id}:${s}`, x, y: L.y, z, yaw, kind: 'station', line: L, s });
-    }
-    // no alto das passagens das camadas, ao lado da ponte de embarque
-    for (const b of this.field.barriersNear(g.y)) {
-      if (Math.abs(b.top - g.y) > RANGE) continue;
-      const P = MEGA.passage;
-      for (let pi = Math.floor((g.x - RANGE) / P); pi <= Math.floor((g.x + RANGE) / P); pi++) {
-        for (let pk = Math.floor((g.z - RANGE) / P); pk <= Math.floor((g.z + RANGE) / P); pk++) {
-          const p = this.field.passage(b.n, pi, pk);
-          if (!p) continue;
-          out.push({ id: `ps:${b.n}:${pi}:${pk}`, x: p.x + p.size / 2 + 5, y: b.top, z: p.z + 7, yaw: Math.PI / 2, kind: 'passage' });
-        }
-      }
-    }
-    // o console ativo de cada estrutura única (tem energia própria)
-    for (const u of this.field.uniquesNear(g.x, g.y, g.z, RANGE + 80)) {
-      const c = this.field.uniqueConsole(u);
-      out.push({ id: `un:${u.id}`, ...c, kind: 'unique', unique: u });
-    }
-    return out.filter((s) => Math.hypot(s.x - g.x, s.y - g.y, s.z - g.z) < RANGE);
+    return terminalSitesNear(this.field, g.x, g.y, g.z, RANGE);
   }
 
   /** O terminal mais perto de g (GLOBAL), até R metros — ou null. */
