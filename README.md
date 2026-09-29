@@ -38,6 +38,7 @@ npm start
 - **Luz** (calibrada para não estourar com pouca névoa): vapor de sódio âmbar, fluorescente esverdeada cansada, branco frio e, raramente, vermelho de alerta. Há luz ambiente difusa, para as massas lerem como volume, e clarões de **solda** distantes: algo ainda está construindo.
 - **Névoa** de poeira cinza/ocre, com partículas em suspensão perto da câmera.
 - **Imagem**: pós-processamento de filme velho (dessaturação, grão, vinheta). **Nenhuma estética de glitch**: nada de falhas digitais na imagem, no som ou na interface.
+- **Trilha**: de tempos em tempos (1–2,5 min) um acorde grave e lento sobe sobre o drone e se desfaz na reverberação. Não há melodia, só a harmonia do lugar: quintas abertas na deriva, segundas menores no abismo, quintas paralelas no maciço, clusters apertados na colmeia, quase nada no vazio.
 - **Som**: drone grave, vento em dutos e **obra distante** (bate-estacas, golpes metálicos com ressonância, rangidos de vigas). Soam também gotas ecoando, estalos térmicos do metal, rajadas de ar e roncos distantes.
 - **Anomalias raras**: as formas orgânicas das versões anteriores (carne, carcaças, neurônios, halos) continuam existindo, mas como exceções no meio do concreto.
 
@@ -95,6 +96,7 @@ Todas são infinitas: não têm começo nem fim visíveis.
 | **Treliças** | aberta | estrutura espacial de vigas de concreto (célula de 240 m) que ocupa regiões inteiras. Dá para andar sobre as vigas. |
 | **Condutos** | fechada | tubos de 22–60 m de raio ao longo de X ou Z, com piso interno andável, anéis estruturais e faixas de luz. |
 | **Escadarias** | aberta | escadas colossais de 24–44 m de largura, inclinação 1:2, que sobem e descem sem fim, apoiadas em pilares que caem no nada. |
+| **Trincheiras e máquinas colossais** | teto | sob algumas camadas correm trincheiras de 160 m de largura, cavadas 56 m na laje, ao longo da grade das passagens. Dentro delas, penduradas em trilhos, **máquinas de 260 m se arrastam a ~3 m/s**, sem operador. De baixo se vê uma plataforma escura atravessando o teto, lâmpadas quentes e cones de luz varrendo a Cidade; a cada poucos segundos vem o baque das garras trocando de trilho, atrasado pela distância. |
 
 **Regras entre estruturas:**
 - Onde duas galerias/poços se cruzam, as paredes de uma **se abrem** dentro da outra e os volumes se fundem.
@@ -173,7 +175,7 @@ A Cidade é grande demais para ser percorrida. A tecla **T**, ou o botão **TRAN
 - **Regiões:** teia, colmeia, maciço, vazio, setor inundado.
 - **Interiores:** sala de máquinas, silo, depósito.
 - **Estruturas:** galeria, poço, conduto, estrato, treliça, escadaria, camada/elevador.
-- **Outros:** Construtores (você chega a ~160 m do canteiro, de frente para o pórtico), cemitério de Construtores, cascata (na borda da poça), transportador (na plataforma de uma estação) e a ponte inicial.
+- **Outros:** Construtores (você chega a ~160 m do canteiro, de frente para o pórtico), cemitério de Construtores, cascata (na borda da poça), transportador (na plataforma de uma estação), máquina colossal (você chega flutuando à frente dela, e ela passa por cima) e a ponte inicial.
 
 A busca usa as funções puras do `Field`, então não precisa que o lugar esteja carregado. O ponto de chegada sempre tem chão: a laje de uma sala, o topo de um bloco, uma plataforma da rede, uma sacada, o piso de um conduto, uma viga. O corpo paira até a geometria em volta ficar pronta. No vazio, se não houver nenhuma plataforma por perto, você chega voando.
 
@@ -194,6 +196,7 @@ A tecla **O**, ou o botão na tela de entrada, abre o painel. Os valores ficam s
 | colapsos distantes | ligado por padrão |
 | raios de luz na névoa | ligado por padrão |
 | reflexo da água | ligado por padrão |
+| trilha (acordes raros e lentos) | ligado por padrão |
 | balanço da cabeça / efeitos de queda | ligados por padrão (conforto: desligue se enjoar) |
 | inverter eixo vertical | desligado |
 | realocar ao cair | desligado por padrão |
@@ -218,7 +221,14 @@ Não há partes fixas: você começa sobre a ponte inicial, uma passarela infini
 main.js                     Electron (protocolo app://, atalhos, flags de dev)
 index.html                  import map do three + overlays
 src/
-  app.js                    bootstrap, pós-processamento e loop principal
+  app.js                    bootstrap e loop principal (as peças compartilham um contexto)
+  app/render.js             renderizador, pós-processamento, reflexo, foto
+  app/body.js               o corpo: passos, água, queda, vagões, vibração
+  app/sound.js              sons e avisos dos acontecimentos do mundo
+  app/travel.js             salvamento, diário e mapa da travessia
+  app/ui.js                 tela de entrada, painéis, teclas, teleporte, novo mundo
+  app/dev.js                flags de desenvolvimento
+  dev/check.js              teste de fumaça (npm run check)
   lib/three.js              ponte do three.js que funciona dentro dos workers
   core/rng.js, noise.js     RNG por seed, simplex 3D + fbm (CPU)
   gen/hash.js               hash de coordenadas → base de tudo que é infinito
@@ -238,6 +248,7 @@ src/
   world/silhouettes.js      silhuetas colossais a dezenas de km (máscara da névoa)
   world/collapses.js        colapsos distantes (fragmentos de pilares caindo)
   world/transitCars.js      vagões dos transportadores (horário determinístico, relógio por linha)
+  world/colossi.js          máquinas colossais nas trincheiras sob as camadas
   world/terminals.js        terminais mortos (registros procedurais, horário dos vagões)
   ui/journey.js             continuar de onde parou + diário da travessia
   ui/trailmap.js            mapa da travessia (M)
@@ -313,15 +324,20 @@ Não use `material.clone()`, porque ele desconecta os uniforms compartilhados.
 ## Desenvolvimento
 
 ```bash
+npm run check
+```
+Teste de fumaça: numa seed fixa, visita todos os destinos do painel de transporte. Em cada um espera o terreno carregar, mede o fps (média e pior quadro) e confere se o corpo não atravessou o chão. No meio do roteiro força um apagão e um colapso. Erros de script, de shader e de WebGL reprovam. Sai com código 0 (passou) ou 1, e não toca no seu salvamento. `--check=trelica,escadaria --pos=x,y,z` roda só esses destinos, nessa ordem, partindo desse ponto.
+
+```bash
 npx electron . --stats
 ```
-Imprime FPS, chunks carregados, fila de geração, lotes, draw calls e triângulos. Com `--novsync` o limite de quadros é removido, para medir desempenho de verdade. `--outage=4` força um apagão de setor aos 4 s, e `--collapse=4` um colapso distante.
+Imprime FPS, chunks carregados, fila de geração, lotes (uso, vagas livres, compactações), draw calls, triângulos, heap e a GPU em uso. Também mostra o tempo de CPU das listas de desenho e, perto da água, o tempo de GPU do reflexo. Com `--novsync` o limite de quadros é removido, para medir desempenho de verdade. `--outage=4` força um apagão de setor aos 4 s, e `--collapse=4` um colapso distante.
 
 ```bash
 npx electron . --capture=shot.png --pos=2000,-800,3000,0.3,0 --seed=abc --delay=8 --show
 ```
 
-`--goto=construtores` (ou qualquer tipo do painel de transporte: `teia`, `colmeia`, `macico`, `vazio`, `galeria`, `poco`, `conduto`, `estrato`, `trelica`, `escadaria`, `camada`, `ponte`) começa já transportado.
+`--goto=construtores` (ou qualquer tipo do painel de transporte: `teia`, `colmeia`, `macico`, `vazio`, `inundado`, `maquinas`, `silo`, `deposito`, `galeria`, `poco`, `conduto`, `estrato`, `trelica`, `escadaria`, `camada`, `cemiterio`, `cascata`, `transportador`, `colosso`, `ponte`) começa já transportado.
 
 `--fog=0.3` e `--dist=1500` sobrescrevem a névoa e a distância só nesta sessão, sem salvar.
 Captura um PNG num ponto qualquer do mundo. Outras flags:
