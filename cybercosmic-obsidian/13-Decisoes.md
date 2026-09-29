@@ -1,0 +1,79 @@
+# 13 — Decisões
+
+Registro das decisões do usuário, com data. Uma decisão só muda se o usuário mudar.
+
+## 2026-09-29 — rumo do gameplay
+
+**Fase atual: discutir ideias antes de escrever qualquer código.**
+
+| decisão | detalhe |
+|---|---|
+| Referência | ***Blame!* é inspiração direta para qualquer decisão** ([[14-Universo-Blame]]) |
+| Nada alienígena | tirar toda característica alienígena, **inclusive os glifos**. A língua desconhecida é a de uma **civilização humana antiga que se perdeu** na construção infinda nascida da própria ganância |
+| Idioma padrão | **inglês** |
+| Tradução | **progresso global** (entre mundos); mas a ideia é que o jogador fique numa seed só de qualquer jeito |
+| Modos de jogo | escolha **antes de iniciar o mundo**; **voo livre e teletransporte só no modo livre** ([[Ideias/Gameplay/Modos-de-jogo]]) |
+| Fim | o jogo **essencialmente não tem fim** — não se apegar a isso — mas **existem objetivos a concluir** |
+| Peregrinação | tem de **nascer do contexto** (ex.: um terminal com um fragmento de coordenada), **nunca sorteada ao abrir o mundo** |
+| Ferramentas | **sensor + leitor portátil**, somente (ver a rodada abaixo) |
+| Cargas | **standby**: entram quando houver NPCs raros |
+| Futuro | **NPCs** (humanos, transumanos… os seres de *Blame!*) e **inimigos Safeguard** — arquitetar tudo pensando nisso ([[Ideias/Futuro/NPCs-e-Safeguards]]) |
+| Contexto | registrar sempre no Obsidian (este cofre) |
+
+### Respostas às perguntas (2026-09-29, segunda rodada)
+
+| pergunta | decisão |
+|---|---|
+| forma da língua antiga | **opção 3**: escrita própria para as palavras, **números legíveis desde o início** |
+| nomes | **os nomes da obra**: Safeguard, Netsfera, Autoridade, gene de terminal da rede |
+| nome do modo com progressão | **Peregrinação** (o outro é o **Livre**) |
+| a tradução avança no modo Livre? | **não** |
+| português | **continua como opção de idioma** (inglês é o padrão) |
+| ferramentas além do sensor | **só o leitor portátil** (as outras ficam de fora) |
+| um mundo pode trocar de modo? | **não** — o modo fica preso ao salvamento |
+
+### Terceira rodada (2026-09-29)
+
+| pergunta | decisão |
+|---|---|
+| nome da mecânica de seguir endereços | **Pistas** (*leads*); "Peregrinação" é só o nome do modo |
+| começo de um mundo | **perto de um terminal morto, com o leitor portátil e pouca energia**; a primeira leitura dá o primeiro fragmento ([[Ideias/Gameplay/Inicio-do-mundo]]) |
+| interface | **quase nada na tela**: sensor e leitor são objetos na mão, a energia aparece no aparelho ([[Ideias/Gameplay/Interface-diegetica]]) |
+| ler um terminal | **tela no centro** |
+| setores / endereços | **aleatórios, nada definido, "nada certinho"** — sem grade; o usuário já tinha pedido o mesmo quando os biomas foram gerados ([[Ideias/Mundo/Enderecamento-da-Cidade]]) |
+| morte e quedas longas | **você acorda num lugar aleatório** — os Safeguards acharam que você morreu e descartaram o corpo, mas você está vivo; **o mesmo vale para quedas longas**, com a animação de desmaio e de ser arrastado por algo que não se vê ([[Ideias/Gameplay/Queda-e-despertar]]) |
+
+### Quarta rodada (2026-09-29)
+
+| pergunta | decisão |
+|---|---|
+| custo de acordar | **se quem arrastou foram os Safeguards, você perde tudo** (o que "tudo" inclui: em aberto) |
+| ponto de partida da Peregrinação | **aleatório** (diferente por seed) |
+| HUD no modo Livre | **mantém** |
+| duração do arrastar | **6–10 s** |
+
+### Quinta rodada (2026-09-29)
+
+| pergunta | decisão |
+|---|---|
+| o que "perde tudo" inclui (Safeguards) | perde **energia e o que carregava**; **mantém as ferramentas**, a tradução, o diário e as pistas |
+| arrastado por NPCs | eles **ficam com algo** ou **pedem missões** (entregas, ajuda etc.) |
+| antes de existirem Safeguards/NPCs | acordar **não custa nada** além do deslocamento |
+
+### Fase 0 (2026-09-29)
+
+| pergunta | decisão |
+|---|---|
+| vários mundos salvos, ou um por modo? | **um por modo** — confirmado pelo usuário |
+| fogos-fátuos (luzes que orbitavam o corpo) | **removidos** — "iluminação mágica", não fazem sentido no contexto |
+| commits | **commit a cada fase** (e, dentro dela, a cada etapa) |
+| iniciar a fase 1? | **não por enquanto** — o usuário pediu para não começar a fase 1 |
+
+### Ideias escolhidas
+Terminais com conteúdo · Tradução como progresso · Peregrinação (contextual) · Estruturas únicas · Mapa com descobertas · Luz como recurso · Religar setores · Ferramentas (sensor + leitor portátil) · Subir nas máquinas colossais · Diário como arquivo · Travessias difíceis · Seeds compartilháveis · Marcas deixadas por você · Cargas (standby).
+
+Não mencionadas (continuam só propostas): copiar inscrições, credenciais de acesso, elevadores/trens como quebra-cabeça, modo expedição (provavelmente absorvido pelos [[Ideias/Gameplay/Modos-de-jogo|modos de jogo]]).
+
+## Antes (direção de arte)
+
+Ver [[02-Direcao-de-Arte]] e [[Ideias/Descartadas]]: sem neon, sem glitch, sem formas orgânicas, sem portais, sem neve, sem reset ao cair, iluminação escura com névoa de 0 a 200%, tempestades de poeira fora (2026-09-28).

@@ -1,0 +1,223 @@
+{
+  "main": {
+    "id": "c40ca6d448ed5fcb",
+    "type": "split",
+    "children": [
+      {
+        "id": "8f19c3a2a194ce81",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ce4c8cf8abaf8e7f",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "15-Plano-de-Implementacao.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "15-Plano-de-Implementacao"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "ebbc3364469cae57",
+    "type": "split",
+    "children": [
+      {
+        "id": "984dff5b171124af",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6d8232ab394a7639",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorador de arquivos"
+            }
+          },
+          {
+            "id": "81482495b7b73e60",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Procurar"
+            }
+          },
+          {
+            "id": "ddb8a738e829ef10",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Marcadores"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "5ba8cdbc2ab3eec8",
+    "type": "split",
+    "children": [
+      {
+        "id": "032e02494096c32b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "44f5b45ede52e4c5",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "14-Universo-Blame.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Links inversos"
+            }
+          },
+          {
+            "id": "9cbd1c4339d9a489",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "14-Universo-Blame.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Links de saída"
+            }
+          },
+          {
+            "id": "08c1fb5e83886544",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Etiquetas"
+            }
+          },
+          {
+            "id": "725d14c9b0467922",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Todas as propriedades"
+            }
+          },
+          {
+            "id": "8d31dee4254c7e98",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "14-Universo-Blame.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Sumário"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Abrir a troca rápida": false,
+      "graph:Abrir visualização em gráfico": false,
+      "canvas:Criar novo canvas": false,
+      "daily-notes:Abrir a nota de hoje": false,
+      "templates:Inserir modelo": false,
+      "command-palette:Abrir paleta de comandos": false,
+      "bases:Criar nova base": false
+    }
+  },
+  "active": "ce4c8cf8abaf8e7f",
+  "lastOpenFiles": [
+    "14-Universo-Blame.md",
+    "Ideias/Mundo/Enderecamento-da-Cidade.md",
+    "Ideias/Gameplay/Copiar-inscricoes.md",
+    "Copiar-glifos.md",
+    "Ideias/00-Ideias.md",
+    "15-Plano-de-Implementacao.md",
+    "Ideias/Gameplay/Interface-diegetica.md",
+    "Ideias/Gameplay/Inicio-do-mundo.md",
+    "Ideias/Gameplay/Queda-e-despertar.md",
+    "Ideias/Gameplay/Pistas.md",
+    "sedcUH5uv",
+    "Ideias/Tecnico/Arquitetura-para-o-futuro.md",
+    "Ideias/Pendencias.md",
+    "Ideias/Gameplay/Modos-de-jogo.md",
+    "12-Historico.md.tmp.14844.a138121caf75",
+    "Ideias/Futuro/NPCs-e-Safeguards.md",
+    "Ideias/Futuro",
+    "13-Decisoes.md",
+    "Ideias/Gameplay/Plano-de-Gameplay.md",
+    "Ideias/Gameplay/Marcas-do-jogador.md",
+    "Ideias/Gameplay/Seeds-compartilhaveis.md",
+    "Ideias/Gameplay/Modo-expedicao.md",
+    "Ideias/Gameplay/Cargas.md",
+    "Ideias/Gameplay/Travessias-dificeis.md",
+    "Ideias/Gameplay/Elevadores-e-trens-como-quebra-cabeca.md",
+    "Ideias/Gameplay/Diario-como-arquivo.md",
+    "Ideias/Gameplay/Subir-nas-maquinas.md",
+    "Ideias/Gameplay/Credenciais-de-acesso.md",
+    "Ideias/Gameplay/Ferramentas.md"
+  ]
+}
