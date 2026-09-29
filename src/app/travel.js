@@ -9,7 +9,7 @@ import { Diary } from '../ui/journey.js';
 import { storeSlot } from './saves.js';
 import { TrailMap } from '../ui/trailmap.js';
 import { renderArchive } from '../ui/archive.js';
-import { leadLine } from '../lang/leads.js';
+import { leadLine, areaDistance } from '../lang/leads.js';
 import { t } from '../i18n/index.js';
 
 export function createTravel(ctx) {
@@ -50,7 +50,7 @@ export function createTravel(ctx) {
     const leads = ctx.rules.leads
       ? ctx.leads.list().map(([id, rec]) => {
           const a = ctx.leads.area(rec);
-          return { tokens: leadLine(world.field, { id, ...rec }, rec.parts), open: rec.state === 'open', dist: Math.hypot(a.x - here.x, a.y - here.y, a.z - here.z), r: a.r };
+          return { tokens: leadLine(world.field, { id, ...rec }, rec.parts), open: rec.state === 'open', dist: areaDistance(a, here), r: a.r, ring: a.ring ?? null };
         })
       : null;
     renderArchive(el, {
@@ -89,7 +89,7 @@ export function createTravel(ctx) {
     const leads = ctx.rules.leads
       ? ctx.leads.list().map(([id, rec]) => {
           const a = ctx.leads.area(rec);
-          return { x: a.x, y: a.y, z: a.z, r: a.r, open: rec.state === 'open', tokens: leadLine(world.field, { id, ...rec }, rec.parts) };
+          return { x: a.x, y: a.y, z: a.z, r: a.r, ring: a.ring ?? null, open: rec.state === 'open', tokens: leadLine(world.field, { id, ...rec }, rec.parts) };
         })
       : [];
     const sectors = Object.values(slot.sectors ?? {});

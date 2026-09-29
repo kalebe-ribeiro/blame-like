@@ -30,11 +30,11 @@ Os do modo Livre. Na Peregrinação não há voo (P), transporte (T), mundo novo
 
 ### O corpo na Peregrinação
 
-- **O começo**: um mundo novo da Peregrinação começa num lugar diferente em cada seed, na plataforma de uma estação num setor apagado, de frente para um **terminal morto**, com o leitor portátil, pouca carga e a lanterna acesa. A primeira leitura já traz a primeira pista.
+- **O começo**: um mundo novo da Peregrinação começa num lugar diferente em cada seed, na plataforma de uma estação num setor apagado, de frente para um **terminal morto**, com o leitor portátil, pouca carga e a lanterna apagada (acender ou poupar é decisão sua). A primeira leitura já traz a primeira pista, sempre com a distância.
 - **O aparelho na mão**: a lanterna na frente e uma telinha em cima com a carga (dez gomos). Nada de barra na tela do jogo.
 - **A célula de energia**: a lanterna gasta (carga cheia dura 7 min) e falha quando está no fim; sem carga você ainda anda, só enxerga o que a Cidade ilumina. Um mundo novo começa com pouca carga.
 - **Tomadas**: caixinhas nos postes das passarelas, das plataformas e nos abrigos das estações. Recarregam enquanto você fica perto, se o setor tiver energia.
-- **O sensor**: achado ao pé do terminal no fim da primeira pista (e junto do console de toda estrutura única, até você ter um). Na tela do aparelho, de que lado vem o sinal mais forte e o quanto ele é nítido, nunca a distância; atrás de você, uma seta na borda. Escuta **terminais** (o console das únicas se ouve a 2,5 km), **energia viva** (setores com energia, tomadas carregadas) ou **movimento** (máquinas colossais, vagões). No modo terminais, o lugar de uma pista aberta soa diferente: é assim que você sabe que chegou. Gasta a célula (carga cheia dura 15 min).
+- **O sensor**: achado ao pé do terminal no fim da primeira pista (e junto do console de toda estrutura única, até você ter um). Na tela do aparelho, de que lado vem o sinal mais forte, se ele está **acima ou abaixo** (▲ ▼, ou um traço no mesmo nível) e o quanto ele é nítido, nunca a distância; atrás de você, uma seta na borda. Escuta **terminais** (o console das únicas se ouve a 2,5 km), **energia viva** (setores com energia, tomadas carregadas) ou **movimento** (máquinas colossais, vagões). No modo terminais, o lugar de uma pista aberta soa diferente: é assim que você sabe que chegou. Gasta a célula (carga cheia dura 15 min).
 - **Queda e despertar**: uma queda que seria fatal (ou uma queda sem fim) não mata. A vista desaba até o chão, as bordas fecham, o foco se perde, o som abafa; no escuro, só o coração. Você é arrastado aos puxões por algo que nunca dá para ver, e acorda num lugar qualquer, longe.
 
 ## A língua antiga
@@ -52,9 +52,9 @@ A Cidade fala a língua de quem a construiu e se perdeu na própria obra: humana
 Não há missões. Uma pista é um endereço que você leu e decide seguir.
 
 - **A rota**: parte dos terminais tem uma linha ROTA, com o **setor** (o código da Cidade), o **nível** e a **distância** de outro lugar que existe de verdade. Um terminal com energia mostra tudo; o leitor portátil arranca uma ou duas partes por fragmento, e as outras saem apagadas.
-- **Estreitar**: cada parte só vale quando a palavra que a nomeia (SETOR, NÍVEL, DISTÂNCIA) já foi entendida. Juntar partes e aprender palavras encolhe a área de incerteza da pista, no mapa e no diário. Os códigos de setor pintados nas paredes dizem se você está no lugar certo, e o sensor confirma.
+- **Estreitar**: a distância é um número, sempre legível, e sozinha já dá um **anel** em volta de onde a pista foi lida. O setor e o nível só valem quando a palavra (SETOR, NÍVEL) já foi entendida. Juntar partes e aprender palavras encolhe a área de incerteza da pista, no mapa e no diário. Os códigos de setor pintados nas paredes dizem se você está no lugar certo, e o sensor confirma.
 - **Chegar**: ler o terminal citado fecha a pista, e lá, muitas vezes, há outra.
-- **Cadeias**: os terminais comuns apontam para a **estrutura única** mais próxima (um elo alguns quilômetros mais perto dela, ou ela mesma); o console de uma estrutura única aponta para além da metade do caminho até a próxima. As cadeias nunca voltam para onde estiveram e nunca acabam.
+- **Cadeias**: os terminais comuns apontam para a **estrutura única** mais próxima (um elo alguns quilômetros mais perto dela, ou ela mesma); o console de uma estrutura única aponta para um terminal a 40–55% do caminho até a próxima. As cadeias nunca voltam para onde estiveram e nunca acabam.
 - **Estruturas únicas**: raras (uma a cada ~16 km, no alto das camadas), com porta, luzes e um console com energia própria. Há três tipos: console ativo, arquivo de registros e usina.
 
 ## Setores de energia
@@ -210,7 +210,7 @@ Detalhes da implementação:
 ## A travessia
 
 - **Continuar de onde parou:** o jogo guarda sozinho, no mundo salvo do modo, a seed, a posição, a direção do olhar, o diário, o mapa e o que mudou no mundo (a cada 5 s e ao fechar). Ao abrir, você volta exatamente ali. No painel **MUNDOS** dá para continuar o mundo do outro modo ou começar um mundo novo (substitui o daquele modo, com confirmação). O salvamento de antes dos modos vira o mundo do modo Livre.
-- **Mapa da travessia** (M): o caminho deste mundo guardado entre sessões, um ponto a cada ~8 m. Aparece como uma linha de luz em 3D, com trilhos, teleportes tracejados, quedas e fotos marcadas, escala e extensão. Mostra também o que foi descoberto: os setores atravessados (com o estado da energia), os terminais lidos, as estruturas únicas e, na Peregrinação, as pistas abertas como círculos tracejados de incerteza, com a rota escrita ao lado.
+- **Mapa da travessia** (M): o caminho deste mundo guardado entre sessões, um ponto a cada ~8 m. Aparece como uma linha de luz em 3D, com trilhos, teleportes tracejados, quedas e fotos marcadas, escala e extensão. Mostra também o que foi descoberto: os setores atravessados (com o estado da energia), os terminais lidos, as estruturas únicas e, na Peregrinação, as pistas abertas como círculos tracejados de incerteza (ou anéis, quando só a distância é sabida), com a rota escrita ao lado.
 - **Diário da travessia**, na tela de entrada e acumulado no mundo: distância a pé, em deriva e sobre trilhos (e número de viagens), maior queda, ponto mais fundo e mais alto, regiões visitadas, apagões e colapsos testemunhados, fotos e tempo na Cidade.
 - Só o `npm start` normal lê e grava isso. Qualquer flag de desenvolvimento (`--seed`, `--pos`, `--capture`…) roda uma sessão avulsa que não mexe no seu salvamento. `--profile=pasta` usa um perfil separado.
 

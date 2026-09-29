@@ -7,8 +7,9 @@
 //  • O alvo de cada terminal comum é a estrutura única mais próxima (o "fim
 //    da cadeia"). Longe dela, o terminal cita outro terminal ~2–3 km mais
 //    perto dela (um elo); perto (< 4,5 km), cita a própria estrutura.
-//    Seguir elo por elo leva sempre à mesma estrutura: as cadeias convergem.
-//  • O console de uma estrutura única cita um terminal além da metade do
+//    Cada elo recalcula a própria única mais próxima — quase sempre a mesma;
+//    as cadeias convergem para alguma única, nunca voltam nem morrem.
+//  • O console de uma estrutura única cita um terminal a 40–55% do
 //    caminho até a próxima única — a próxima cadeia começa lá. De única em
 //    única, as cadeias seguem uma "correnteza" (uma direção por seed): nunca
 //    voltam para onde já estiveram, e nunca acabam.
@@ -18,9 +19,10 @@
 //
 //  A linha da pista tem três partes — SETOR (o código da Cidade), NÍVEL e
 //  DISTÂNCIA (a partir de quem cita). Um terminal com energia mostra tudo; o
-//  leitor portátil arranca só uma ou duas partes. Cada parte só vale quando a
-//  palavra que a nomeia já foi entendida (léxico): é assim que a área de
-//  incerteza encolhe (leadArea).
+//  leitor portátil arranca só uma ou duas partes. A DISTÂNCIA é um número
+//  (sempre legível): vale logo, e sozinha vira um ANEL em volta de quem citou.
+//  SETOR e NÍVEL só valem quando a palavra já foi entendida (léxico): é assim
+//  que a área de incerteza encolhe (leadArea).
 // ─────────────────────────────────────────────────────────────────────────────
 import { hash4, rngAt } from '../gen/hash.js';
 import { MEGA } from '../gen/field.js';
@@ -111,10 +113,10 @@ function findLead(F, site) {
     from: { id: site.id, x: site.x, y: site.y, z: site.z },
   });
   if (d < LEAD.finish) return target(gt);
-  // o ponto procurado: um passo na direção da única (do console: além da metade do caminho);
+  // o ponto procurado: um passo na direção da única (do console: 40–55% do caminho);
   // se ali não houver um terminal que sirva, tenta outros pontos
   for (let tries = 0; tries < 6; tries++) {
-    const step = home ? d * r.float(0.5, 0.75) : r.float(...LEAD.step);
+    const step = home ? d * r.float(0.4, 0.55) : r.float(...LEAD.step);
     const a = r.float(-0.35, 0.35) * (tries < 3 ? 1 : 2); // nada "certinho": o elo nunca está exatamente no caminho
     const dx = (gt.x - site.x) / d;
     const dz = (gt.z - site.z) / d;
@@ -231,18 +233,36 @@ const RADIUS = {
   'dist,level,sector': 350,
 };
 
+/** Meia largura (m) do anel quando só a distância é sabida (a distância vem com uma casa decimal). */
+const RING_W = 250;
+
 /**
- * Onde a pista provavelmente está, com o que se sabe: { x, y, z, r, dy, known }.
- * rec: a pista salva ({ id, x, y, z, parts }) · known(w): o léxico.
+ * Onde a pista provavelmente está, com o que se sabe: { x, y, z, r, dy, known, ring? }.
+ * rec: a pista salva ({ id, x, y, z, parts, from }) · known(w): o léxico.
  * O centro não é o alvo: fica deslocado (sempre com o alvo dentro).
+ * Distância sem setor: um ANEL (ring: { R, w }) centrado em quem citou (x,z = from).
  */
 export function leadArea(rec, known) {
-  const k = Object.keys(PARTS).filter((p) => rec.parts.includes(p) && known(PARTS[p]));
+  // a distância é um número: sempre legível; setor e nível pedem a palavra
+  const k = Object.keys(PARTS).filter((p) => rec.parts.includes(p) && (p === 'dist' || known(PARTS[p])));
+  const dy0 = k.includes('level') ? 200 : 1500;
+  if (k.includes('dist') && !k.includes('sector') && rec.from) {
+    const R = Math.hypot(rec.x - rec.from.x, rec.z - rec.from.z);
+    const h = hash4(3, Math.round(rec.x), Math.round(rec.z), k.length, 995);
+    return { x: rec.from.x, y: rec.y + (h - 0.5) * dy0, z: rec.from.z, r: R + RING_W, dy: dy0, known: k, ring: { R, w: RING_W } };
+  }
   const r = RADIUS[k.slice().sort().join(',')];
   const h1 = hash4(1, Math.round(rec.x), Math.round(rec.z), k.length, 993);
   const h2 = hash4(2, Math.round(rec.x), Math.round(rec.z), k.length, 994);
   const a = h1 * Math.PI * 2;
   const off = r * 0.6 * h2;
-  const dy = k.includes('level') ? 200 : 1500;
+  const dy = dy0;
   return { x: rec.x + Math.cos(a) * off, y: rec.y + (h1 - 0.5) * dy, z: rec.z + Math.sin(a) * off, r, dy, known: k };
+}
+
+/** Quão longe p está da área de uma pista (m, no plano; 0 = dentro). */
+export function areaDistance(a, p) {
+  const d = Math.hypot(p.x - a.x, p.z - a.z);
+  if (a.ring) return Math.max(0, Math.abs(d - a.ring.R) - a.ring.w);
+  return Math.max(0, d - a.r);
 }

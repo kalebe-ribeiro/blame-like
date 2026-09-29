@@ -164,8 +164,6 @@ ctx.sound = createWorldSound(ctx);
 ctx.ui = createUI(ctx);
 ctx.wake = createWake(ctx);
 ctx.carried = createCarried(ctx);
-// no começo, a lanterna já acesa: o setor está apagado (dá para desligar com F)
-if (start) setTimeout(() => ctx.carried.lanternOn || ctx.carried.toggleLantern(), 300);
 ctx.reading = createReading(ctx);
 setupDev(ctx);
 

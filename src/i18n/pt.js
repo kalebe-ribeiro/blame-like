@@ -314,6 +314,7 @@ export default {
   'archive.records': 'REGISTROS ({n})',
   'archive.leads': 'PISTAS ({n})',
   'archive.noLeads': 'nenhum endereço seguido ainda — às vezes um terminal cita uma ROTA para outro lugar',
+  'archive.lead.ring': 'a cerca de {R} de onde foi lida · você está a ~{dist} desse anel',
   'archive.lead.open': 'em algum lugar a ~{dist} daqui · num raio de {r}',
   'archive.lead.reached': 'alcançada',
   'archive.lexicon': 'LÉXICO ({known}/{total})',

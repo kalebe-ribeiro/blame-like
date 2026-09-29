@@ -22,7 +22,7 @@ export function setArchiveTab(k) {
 
 /**
  * @param {HTMLElement} el
- * @param {object} o { lines: [[rótulo, valor]], records: {id: {x,y,z,kind,at}}, leads: [{ tokens, open, dist, r }] | null, lexicon, here (GLOBAL), onOpen(id, rec) }
+ * @param {object} o { lines: [[rótulo, valor]], records: {id: {x,y,z,kind,at}}, leads: [{ tokens, open, dist, r, ring }] | null, lexicon, here (GLOBAL), onOpen(id, rec) }
  */
 export function renderArchive(el, o) {
   const tabs = [
@@ -95,7 +95,7 @@ export function renderArchive(el, o) {
       drawTokens(g, l.tokens, 2, y, known, word, { h: 9, font: '11px Consolas, monospace', color, maxW: cw - 8 });
       g.font = '10px Consolas, monospace';
       g.fillStyle = l.open ? 'rgba(215,196,154,0.7)' : 'rgba(160,160,150,0.4)';
-      g.fillText(l.open ? t('archive.lead.open', { dist: fmtDist(l.dist), r: fmtDist(l.r) }) : t('archive.lead.reached'), 2, y + 16);
+      g.fillText(l.open ? (l.ring ? t('archive.lead.ring', { dist: fmtDist(l.dist), R: fmtDist(l.ring.R) }) : t('archive.lead.open', { dist: fmtDist(l.dist), r: fmtDist(l.r) })) : t('archive.lead.reached'), 2, y + 16);
     });
     body.appendChild(canvas);
     return;

@@ -80,3 +80,8 @@ Por que as coisas estão como estão, em ordem.
 - **3.5 Mapa com descobertas** (`c0b9214`): setores atravessados (`slot.sectors`), terminais lidos, únicas, pistas com área de incerteza e a rota escrita. Flag `--map=N`.
 - Verificação feita num contêiner na nuvem, sem GPU: render por software a ~1 fps. O `npm run check` inteiro passa do limite de 6 min do `main.js` nessas condições; foi rodado em partes (`--check=a,b,…`) e todos os destinos passaram nos dois modos, com 0 erros. Numa máquina com GPU o roteiro inteiro cabe no tempo, como antes.
 
+## 2026-09-29 — revisão da fase 3 (feita na sessão cloud) e ajustes
+
+- Revisada a branch `claude/dreamy-tesla-8pvapl`: checks passam, cadeias sem loops (~1 ms por terminal).
+- Ajustes: sensor com acima/abaixo; distância sempre legível (anel no mapa e no diário); elo das únicas a 40–55%; começo com a lanterna apagada; comentário das cadeias corrigido. Mergeado em main.
+

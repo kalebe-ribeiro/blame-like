@@ -314,6 +314,7 @@ export default {
   'archive.records': 'RECORDS ({n})',
   'archive.leads': 'LEADS ({n})',
   'archive.noLeads': 'no address followed yet — terminals sometimes name a ROUTE to another place',
+  'archive.lead.ring': 'about {R} from where it was read · you are ~{dist} off that ring',
   'archive.lead.open': 'somewhere ~{dist} from here · within {r}',
   'archive.lead.reached': 'reached',
   'archive.lexicon': 'LEXICON ({known}/{total})',

@@ -39,7 +39,7 @@ export class TrailMap {
   /**
    * O que foi descoberto, para desenhar junto do rastro:
    *   places  [{ x, y, z, unique }]           terminais lidos (unique: estrutura única)
-   *   leads   [{ x, y, z, r, open, tokens }]   pistas (centro estimado e raio)
+   *   leads   [{ x, y, z, r, open, tokens, ring? }] pistas (centro estimado e raio; ring {R,w}: anel em volta de quem citou)
    *   sectors [{ x, y, z, state }]             setores por onde passou
    *   known(w), word(w)                        o léxico, para escrever as rotas
    */
@@ -290,13 +290,22 @@ export class TrailMap {
     // as pistas: a área de incerteza (tracejada) e a rota ao lado
     for (const l of F.leads) {
       if (!l.open) continue;
-      ring(l.x, l.y, l.z, l.r);
+      let [px, py] = proj(l.x, l.y, l.z);
+      if (l.ring) {
+        // só a distância: um anel em volta de quem citou (a faixa é a incerteza)
+        ring(l.x, l.y, l.z, l.ring.R);
+        g.strokeStyle = 'rgba(215,160,90,0.12)';
+        g.lineWidth = Math.max(2 * dpr, 2 * l.ring.w * s);
+        g.stroke();
+        [px, py] = proj(l.x + l.ring.R * 0.71, l.y, l.z - l.ring.R * 0.71); // o rótulo, num ponto do anel
+      } else {
+        ring(l.x, l.y, l.z, l.r);
+      }
       g.setLineDash([4 * dpr, 5 * dpr]);
       g.strokeStyle = 'rgba(215,160,90,0.55)';
       g.lineWidth = 1.2 * dpr;
       g.stroke();
       g.setLineDash([]);
-      const [px, py] = proj(l.x, l.y, l.z);
       g.fillStyle = 'rgba(215,160,90,0.8)';
       g.fillRect(px - 1.5 * dpr, py - 1.5 * dpr, 3 * dpr, 3 * dpr);
       if (F.known) drawTokens(g, l.tokens, px + 8 * dpr, py - 5 * dpr, F.known, F.word, { h: 7 * dpr, font: `${9 * dpr}px Consolas, monospace`, color: 'rgba(215,196,154,0.75)', maxW: 520 * dpr });

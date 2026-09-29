@@ -77,12 +77,12 @@ O usuário pediu para finalizar a fase 3 sem responder às perguntas abertas. O 
 |---|---|
 | mostrar algo quando se chega a uma pista? (estava em aberto em [[Ideias/Gameplay/Pistas]]) | **nada na tela**. A pista fecha ao **ler o terminal citado**; antes disso, o **sensor** (modo terminais) marca o lugar de uma pista aberta com ◆ "O ENDEREÇO" |
 | para onde as pistas apontam | **terminais** (elos) e **estruturas únicas** (fim da cadeia). Canteiros e trincheiras ficaram para a fase 4 |
-| como uma pista estreita | três partes: **setor, nível, distância**. Terminal com energia dá tudo; o leitor portátil, 1–2 partes por fragmento. Uma parte só vale com a palavra entendida (SETOR, NÍVEL, DISTÂNCIA). Raio: 5 km sem nada → 350 m com tudo |
+| como uma pista estreita | três partes: **setor, nível, distância**. Terminal com energia dá tudo; o leitor portátil, 1–2 partes por fragmento. Uma parte só vale com a palavra entendida (SETOR, NÍVEL, DISTÂNCIA). Raio: 5 km sem nada → 350 m com tudo · **revisto em 2026-09-29**: a distância é número e vale sempre; sozinha (sem setor) vira um anel em volta de quem citou |
 | quantos terminais citam alguém | ~40% (os elos e o primeiro terminal do mundo, sempre) |
 | cadeias | convergem para a única mais próxima; das únicas, seguem uma direção por seed (nunca voltam, nunca acabam) |
 | onde se acha o sensor | ao pé do terminal **no fim da primeira pista**, e junto do console de toda estrutura única (até ter um) |
-| modos do sensor (a nota dizia "a decidir") | **terminais · energia viva · movimento**, tecla **G**; gasta a célula (15 min com carga cheia); mostra o lado e a nitidez, nunca a distância |
-| começo da Peregrinação | plataforma de estação num **setor apagado**, diante do terminal morto, **lanterna já acesa** |
+| modos do sensor (a nota dizia "a decidir") | **terminais · energia viva · movimento**, tecla **G**; gasta a célula (15 min com carga cheia); mostra o lado e a nitidez, nunca a distância · **revisto**: também acima/abaixo (▲ ▼ ou traço), porque as pistas trocam muito de camada |
+| começo da Peregrinação | plataforma de estação num **setor apagado**, diante do terminal morto, ~~lanterna já acesa~~ **revisto: lanterna apagada** (a carga é pouca: acender é decisão do jogador); o primeiro fragmento sempre traz a distância |
 | pistas no modo Livre | não (`ctx.rules.leads`); o mapa com descobertas (setores, terminais lidos, únicas) vale nos dois modos |
 
 ### Ideias escolhidas
@@ -93,3 +93,13 @@ Não mencionadas (continuam só propostas): copiar inscrições, credenciais de 
 ## Antes (direção de arte)
 
 Ver [[02-Direcao-de-Arte]] e [[Ideias/Descartadas]]: sem neon, sem glitch, sem formas orgânicas, sem portais, sem neve, sem reset ao cair, iluminação escura com névoa de 0 a 200%, tempestades de poeira fora (2026-09-28).
+
+### Ajustes da fase 3 depois da revisão (2026-09-29)
+
+O usuário pediu os cinco ajustes da revisão da sessão cloud:
+- **sensor com acima/abaixo** (em vez de prender os elos a uma camada): as pistas trocam de camada com frequência (1–2,5 km de desnível por elo), e isso fica — é *Blame!*;
+- **distância sempre vale** (número legível) → anel no mapa; a primeira pista já orienta;
+- elo das estruturas únicas a **40–55%** do caminho (era 50–75%: travessias de 6–13 km);
+- começo **sem lanterna acesa**;
+- comentário de `lang/leads.js` corrigido (as cadeias convergem para *alguma* única, não garantidamente a mesma).
+

@@ -15,7 +15,8 @@
 //    lente do aparelho: ilumina o caminho e a poeira em volta.
 //  • SENSOR (quando achado — ctx.player.inventory): G troca o que ele escuta
 //    (terminais → energia → movimento → desligado). Na tela: de que lado vem
-//    o sinal mais forte e o quanto ele é nítido — nunca a que distância. No
+//    o sinal mais forte, se está ACIMA ou ABAIXO (▲ ▼ — as pistas trocam de
+//    camada) e o quanto ele é nítido — nunca a que distância. No
 //    modo terminais, o lugar de uma pista aberta soa diferente (◆): é assim
 //    que você sabe que chegou. O console das estruturas únicas tem energia
 //    própria e se ouve de muito mais longe.
@@ -71,6 +72,7 @@ export function createCarried(ctx) {
   let signal = null; // { x, y, z, k (0..1 nitidez), lead }
   let sensorScan = 0;
   let bearing = 0; // de que lado vem o sinal (rad, suavizado; + = à esquerda)
+  let vert = 0; // acima (+1), abaixo (−1) ou no mesmo nível (0)
   let found = 0; // s: "SENSOR  [G]" na tela depois de pegar o sensor
   const _g = new THREE.Vector3();
   const _lens = new THREE.Vector3();
@@ -167,6 +169,15 @@ export function createCarried(ctx) {
           g2.lineTo(L ? 16 : 112, 38);
           g2.fill();
         } else g2.fillRect(x - 1.5, 34 - h / 2, 3, h);
+        // acima / abaixo: um triângulo no canto de baixo; no mesmo nível, um traço
+        const vx = 118;
+        if (vert) {
+          g2.beginPath();
+          g2.moveTo(vx - 4, vert > 0 ? 55 : 46);
+          g2.lineTo(vx + 4, vert > 0 ? 55 : 46);
+          g2.lineTo(vx, vert > 0 ? 46 : 55);
+          g2.fill();
+        } else g2.fillRect(vx - 4, 50, 8, 2);
       }
       if (!line && signal?.lead) line = t('device.sensor.lead');
       if (line && !(plugged && Math.floor(time * 2) % 2)) g2.fillText(line, 8, 48);
@@ -272,6 +283,10 @@ export function createCarried(ctx) {
           signal = listen(_g, time);
         }
         if (signal) {
+          // com folga (histerese), para o triângulo não piscar perto do limite
+          const dy = signal.y - _g.y;
+          if (Math.abs(dy) > 30) vert = Math.sign(dy);
+          else if (Math.abs(dy) < 18) vert = 0;
           const want = Math.atan2(-(signal.x - _g.x), -(signal.z - _g.z)) - controls.yaw;
           const d = Math.atan2(Math.sin(want - bearing), Math.cos(want - bearing));
           bearing += d * Math.min(1, dt * 6);

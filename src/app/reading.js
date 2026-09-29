@@ -81,6 +81,8 @@ export function createReading(ctx) {
       const keys = Object.keys(PARTS);
       const o = Math.floor(hash4(3, it.fragments, it.site.x | 0, it.site.z | 0, 973) * 3);
       const shown = keys.slice(0, 1 + (hash4(4, it.fragments, it.site.z | 0, 0, 974) < 0.45 ? 1 : 0)).map((_, i) => keys[(o + i) % 3]);
+      // a primeira pista do mundo traz sempre a distância (um número: já dá um anel no mapa)
+      if (first && !shown.includes('dist')) shown[0] = 'dist';
       const partial = leadLine(world.field, route.lead, shown);
       lines.splice(1, 0, partial);
       lead = { lead: route.lead, parts: shown };
