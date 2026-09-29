@@ -359,7 +359,7 @@ function genSurfaces(F, B, box) {
     });
   }
   for (const st of F.strataNear(cy)) surfaces.push({ y: st.top, kind: 'stratum', ok: (x, z) => F.strataSolid(st, x - 25, z - 25) && F.strataSolid(st, x + 25, z + 25), prob: 0.08, under: st.bottom });
-  for (const b of F.barriersNear(cy)) surfaces.push({ y: b.top, kind: 'barrier', ok: (x, z) => F.barrierSolid(b, x - 40, z - 40) && F.barrierSolid(b, x + 40, z + 40), prob: 0.07, under: b.bottom });
+  for (const b of F.barriersNear(cy)) surfaces.push({ y: b.top, kind: 'barrier', ok: (x, z) => !F.reliefAt(b, x, z, 12) && F.barrierSolid(b, x - 40, z - 40) && F.barrierSolid(b, x + 40, z + 40), prob: 0.07, under: b.bottom });
 
   for (const s of surfaces) {
     // topo da superfície dentro do chunk

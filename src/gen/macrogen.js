@@ -19,7 +19,7 @@
 //  Cada placa pertence à célula que contém seu centro → gerada uma única vez.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from '../lib/three.js';
-import { MACRO, MEGA } from './field.js';
+import { MACRO, MEGA, RELIEF } from './field.js';
 import { hash4, rngAt } from './hash.js';
 import { place, cylinderBetween, slabBetween } from '../world/geometry.js';
 import { ChunkBuilder } from './chunkgen.js';
@@ -40,6 +40,7 @@ export function generateMacro(F, mx, my, mz) {
   const owns = (x, y, z) => x >= box.x0 && x < box.x1 && y >= box.y0 && y < box.y1 && z >= box.z0 && z < box.z1;
 
   genBarriers(F, B, box, owns);
+  genBarrierRelief(F, B, box);
   genGalleries(F, B, box, owns);
   genShafts(F, B, box, owns);
   genStrata(F, B, box, owns);
@@ -120,6 +121,63 @@ function genBarriers(F, B, box, owns) {
         const p = F.passage(b.n, pi, pk);
         if (!p || !owns(p.x, yc, p.z)) continue;
         passageTower(F, B, b, p);
+      }
+    }
+  }
+}
+
+// ─── relevo sobre as camadas (visível a quilômetros, como a laje) ───────────
+
+function genBarrierRelief(F, B, box) {
+  const C = RELIEF.cell;
+  const th = MEGA.barrierThick;
+  for (const b of F.barriersNear((box.y0 + box.y1) / 2)) {
+    const yc = b.top - th / 2; // mesma posse da laje
+    if (yc < box.y0 || yc >= box.y1) continue;
+    const y = b.top;
+    for (let ci = Math.floor(box.x0 / C); ci * C < box.x1; ci++) {
+      for (let ck = Math.floor(box.z0 / C); ck * C < box.z1; ck++) {
+        const p = F.barrierRelief(b, ci, ck);
+        if (!p) continue;
+        const w = p.x1 - p.x0;
+        const d = p.z1 - p.z0;
+        const cx = (p.x0 + p.x1) / 2;
+        const cz = (p.z0 + p.z1) / 2;
+        const r = rngAt(F.seed, ci, b.n, ck, 802);
+        if (p.kind === 'plinth') {
+          block(B, 'barrier', cx, y + p.h / 2, cz, w, p.h, d);
+          if (p.step) block(B, 'barrier', cx + r.float(-0.1, 0.1) * w, y + p.h + p.step / 2, cz + r.float(-0.1, 0.1) * d, w * r.float(0.35, 0.6), p.step, d * r.float(0.35, 0.6));
+        } else if (p.kind === 'ridge') {
+          block(B, 'wall', cx, y + p.h / 2, cz, w, p.h, d);
+          // dutos correndo por cima, com suportes
+          const alongX = p.axis === 'x';
+          const len = alongX ? w : d;
+          const wid = alongX ? d : w;
+          for (let q = 0; q < p.pipes; q++) {
+            const off = ((q + 0.5) / p.pipes - 0.5) * wid * 0.7;
+            const rad = r.float(1.2, 3);
+            const a = new THREE.Vector3(alongX ? p.x0 : cx + off, y + p.h + rad + 1, alongX ? cz + off : p.z0);
+            const e = new THREE.Vector3(alongX ? p.x1 : cx + off, a.y, alongX ? cz + off : p.z1);
+            B.add('conduit', cylinderBetween(B.L(a.x, a.y, a.z), B.L(e.x, e.y, e.z), rad, rad, 8));
+            for (let t = 8; t < len; t += 24) {
+              const sx = alongX ? p.x0 + t : cx + off;
+              const sz = alongX ? cz + off : p.z0 + t;
+              block(B, 'frame', sx, y + p.h + 0.5, sz, 1.2, 1, 1.2);
+            }
+          }
+        } else if (p.kind === 'hall') {
+          block(B, 'floor', cx, y + p.h / 2, cz, w, p.h, d);
+          // platibanda e casas de máquinas no telhado
+          block(B, 'barrier', cx, y + p.h + 1, cz, w + 2, 2, d + 2);
+          for (let q = r.int(0, 3); q > 0; q--) block(B, 'macro', cx + r.float(-0.35, 0.35) * w, y + p.h + 5, cz + r.float(-0.35, 0.35) * d, r.float(8, 18), 8, r.float(8, 18));
+          if (r.chance(0.2)) B.light(cx + w / 2 + 3, y + 6, cz, FLUORO, r.float(200, 400), 'faulty');
+        } else {
+          block(B, 'barrier', cx, y + p.baseH / 2, cz, w, p.baseH, d);
+          const L = B.L(cx, y + (p.baseH + p.h) / 2, cz);
+          B.add('macro', place(new THREE.CylinderGeometry(p.stackR * 0.85, p.stackR, p.h - p.baseH, 10), { x: L.x, y: L.y, z: L.z }));
+          block(B, 'frame', cx, y + p.h - 2, cz, p.stackR * 2.3, 1.2, p.stackR * 2.3);
+          if (p.light) B.light(cx, y + p.h + 3, cz, SODIUM, r.float(300, 600), 'faulty');
+        }
       }
     }
   }

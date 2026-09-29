@@ -62,7 +62,7 @@ function pick(cands, g, recent) {
 
 /** Há chão (camada, estrato ou piso de galeria) exatamente na altura y deste ponto? */
 function floorAt(F, x, y, z) {
-  for (const b of F.barriersNear(y)) if (Math.abs(y - b.top) < 1 && F.barrierSolid(b, x, z)) return true;
+  for (const b of F.barriersNear(y)) if (Math.abs(y - b.top) < 1 && F.barrierSolid(b, x, z) && !F.reliefAt(b, x, z, 4)) return true;
   for (const st of F.strataNear(y)) if (Math.abs(y - st.top) < 1 && F.strataSolid(st, x, z)) return true;
   for (const gal of F.galleriesNear(x, y, z)) {
     if (Math.abs(y - gal.floor) > 1) continue;

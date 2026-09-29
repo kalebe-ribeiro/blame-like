@@ -68,6 +68,13 @@ export const TRANSIT = { prob: 0.4, gap: 7, station: 1440, carLen: 22, carW: 5, 
  *   spacing: distância entre máquinas na mesma trincheira (onde houver)
  */
 export const COLOSSUS = { prob: 0.3, half: 80, depth: 56, spacing: 5200, fill: 0.55, speed: 3.2, len: 260, width: 118 };
+/**
+ * Relevo sobre as camadas: o topo de uma camada não é um plano liso até o
+ * horizonte — tem plataformas, espinhaços de serviço, galpões e chaminés de
+ * ventilação, em distritos mais densos e mais ralos. Célula de 160 m.
+ * Até ~36 m de altura: acima disso começam passarelas, nós e blocos.
+ */
+export const RELIEF = { cell: 160, maxH: 36 };
 export const HIVE = 48; // célula da colmeia (uma sala)
 
 export const MEGA = {
@@ -233,6 +240,98 @@ export class Field {
     return !(p && Math.abs(x - p.x) < p.size / 2 && Math.abs(z - p.z) < p.size / 2);
   }
 
+  // ── relevo sobre as camadas ──────────────────────────────────────────────
+
+  /**
+   * Peça de relevo na célula (ci, ck) do topo da camada b, ou null.
+   * { kind, x0, x1, z0, z1, h, … } — pegada em coordenadas globais, h acima do topo.
+   *   plinth  plataforma baixa, às vezes em degraus (step: altura do degrau de cima)
+   *   ridge   espinhaço de serviço comprido (axis) com dutos por cima
+   *   hall    galpão com fendas de janela
+   *   stack   chaminé de ventilação sobre uma base
+   */
+  barrierRelief(b, ci, ck) {
+    return this._memo(`rl${b.n},${ci},${ck}`, () => {
+      const C = RELIEF.cell;
+      const cx = (ci + 0.5) * C;
+      const cz = (ck + 0.5) * C;
+      // distritos: onde há muito, onde quase nada (mas nunca um plano vazio por km)
+      const district = this.noise3(cx * 0.0006 + 3.3, b.n * 7.1, cz * 0.0006 - 8.1) * 0.5 + 0.5;
+      if (hash4(this.seed, ci, b.n, ck, 800) > 0.12 + 0.6 * district) return null;
+      // longe das passagens (torre do elevador e pontes de embarque)
+      const P = MEGA.passage;
+      for (let pi = Math.floor((cx - 300) / P); pi <= Math.floor((cx + 300) / P); pi++) {
+        for (let pk = Math.floor((cz - 300) / P); pk <= Math.floor((cz + 300) / P); pk++) {
+          const p = this.passage(b.n, pi, pk);
+          if (p && Math.abs(cx - p.x) < 260 && Math.abs(cz - p.z) < 260) return null;
+        }
+      }
+      // e dos canteiros dos Construtores (mesma regra de builderSitesNear)
+      const S = MEGA.builder;
+      for (let i = Math.floor((cx - 300) / S); i <= Math.floor((cx + 300) / S); i++) {
+        for (let k = Math.floor((cz - 300) / S); k <= Math.floor((cz + 300) / S); k++) {
+          if (hash4(this.seed, i, Math.round(b.top), k, 620) > 0.4) continue;
+          const r = rngAt(this.seed, i, Math.round(b.top), k, 621);
+          if (Math.abs(cx - (i + r.float(0.3, 0.7)) * S) < 240 && Math.abs(cz - (k + r.float(0.3, 0.7)) * S) < 240) return null;
+        }
+      }
+      const r = rngAt(this.seed, ci, b.n, ck, 801);
+      const roll = r.next();
+      const kind = roll < 0.42 ? 'plinth' : roll < 0.68 ? 'ridge' : roll < 0.86 ? 'hall' : 'stack';
+      const ox = cx + r.float(-12, 12);
+      const oz = cz + r.float(-12, 12);
+      let piece;
+      if (kind === 'plinth') {
+        const w = r.float(50, 140);
+        const d = r.float(50, 140);
+        const h = r.float(3, 12);
+        piece = { kind, x0: ox - w / 2, x1: ox + w / 2, z0: oz - d / 2, z1: oz + d / 2, h, step: r.chance(0.4) ? r.float(3, 9) : 0 };
+      } else if (kind === 'ridge') {
+        const axis = r.chance(0.5) ? 'x' : 'z';
+        const len = r.float(110, 156);
+        const wid = r.float(10, 26);
+        const h = r.float(6, 18);
+        const [w, d] = axis === 'x' ? [len, wid] : [wid, len];
+        piece = { kind, axis, x0: ox - w / 2, x1: ox + w / 2, z0: oz - d / 2, z1: oz + d / 2, h, pipes: r.int(1, 3) };
+      } else if (kind === 'hall') {
+        const w = r.float(60, 130);
+        const d = r.float(40, 90);
+        const h = r.float(14, 30);
+        piece = { kind, x0: ox - w / 2, x1: ox + w / 2, z0: oz - d / 2, z1: oz + d / 2, h };
+      } else {
+        const base = r.float(24, 40);
+        const h = r.float(24, RELIEF.maxH);
+        piece = { kind, x0: ox - base / 2, x1: ox + base / 2, z0: oz - base / 2, z1: oz + base / 2, h, stackR: r.float(4, 9), baseH: r.float(5, 10), light: r.chance(0.35) };
+      }
+      // chão firme embaixo de toda a pegada, e nada atravessando o volume
+      const { x0, x1, z0, z1, h } = piece;
+      const mx = (x0 + x1) / 2;
+      const mz = (z0 + z1) / 2;
+      for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1], [mx, mz]]) {
+        if (!this.barrierSolid(b, x, z) || this.insideVoid(x, b.top + 4, z) || this.insideVoid(x, b.top + h, z)) return null;
+      }
+      const half = Math.hypot(x1 - x0, z1 - z0) / 2;
+      if (this.nearMegaWall(mx, b.top + h / 2, mz, half + 10)) return null;
+      if (this.walkwayNear(mx, b.top - 2, b.top + h + 6, mz, half + 8)) return null;
+      if (this.stairwaysIn(x0 - 30, b.top - 2, z0 - 30, x1 + 30, b.top + h + 8, z1 + 30).length) return null;
+      return piece;
+    });
+  }
+
+  /** O ponto (x,z) do topo da camada b está sob (ou a `margin` de) uma peça de relevo? */
+  reliefAt(b, x, z, margin = 0) {
+    const C = RELIEF.cell;
+    const ci = Math.floor(x / C);
+    const ck = Math.floor(z / C);
+    for (let i = ci - 1; i <= ci + 1; i++) {
+      for (let k = ck - 1; k <= ck + 1; k++) {
+        const p = this.barrierRelief(b, i, k);
+        if (p && x > p.x0 - margin && x < p.x1 + margin && z > p.z0 - margin && z < p.z1 + margin) return p;
+      }
+    }
+    return null;
+  }
+
   // ── trincheiras das máquinas colossais (por baixo das camadas) ────────────
 
   /** A linha c da grade das passagens, no eixo dado, tem trincheira na camada n? */
@@ -337,7 +436,7 @@ export class Field {
     const out = [];
     const S = MEGA.builder;
     const surfaces = [];
-    for (const b of this.barriersNear(y)) surfaces.push({ y: b.top, kind: 'barrier', ok: (px, pz) => this.barrierSolid(b, px, pz) && this.barrierSolid(b, px + 80, pz + 80) && this.barrierSolid(b, px - 80, pz - 80) });
+    for (const b of this.barriersNear(y)) surfaces.push({ y: b.top, kind: 'barrier', ok: (px, pz) => !this.reliefAt(b, px, pz, 10) && this.barrierSolid(b, px, pz) && this.barrierSolid(b, px + 80, pz + 80) && this.barrierSolid(b, px - 80, pz - 80) });
     for (const st of this.strataNear(y)) surfaces.push({ y: st.top, kind: 'stratum', ok: (px, pz) => this.strataSolid(st, px, pz) && this.strataSolid(st, px + 80, pz) && this.strataSolid(st, px - 80, pz) });
     for (const s of surfaces) {
       if (Math.abs(s.y - y) > R) continue;
