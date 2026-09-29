@@ -10,7 +10,7 @@
 //   camadas    lajes intransponíveis de 72 m; só as passagens as perfuram,
 //              cada uma com uma torre de elevador colossal
 //   feixes     luz caindo por passagens, buracos de estratos, clarabóias e poços
-//   anomalias  monólitos, agulhas e halos (raros)
+//   anomalias  monólitos e agulhas (raros)
 //
 //  Paredes e lajes são feitas de PLACAS (MEGA.tile). Uma placa é omitida quando:
 //    • seu centro está dentro do vazio de OUTRA galeria/poço (volumes se fundem);
@@ -536,8 +536,8 @@ function genAnomalies(F, B, box, mx, my, mz) {
   if (!r.chance(0.22)) return;
   const g = [box.x0 + r.float(200, MACRO - 200), box.y0 + r.float(200, MACRO - 200), box.z0 + r.float(200, MACRO - 200)];
   if (F.insideVoid(g[0], g[1], g[2]) || !F.isOpenBiome(g[0], g[1], g[2]) || F.touchesBarrier(g[1] - 1600, g[1] + 1600)) return;
-  const kind = r.pick(['monolith', 'monolith', 'needle', 'needle', 'halo']);
-  const ext = kind === 'halo' ? 700 : 1600;
+  const kind = r.pick(['monolith', 'needle']);
+  const ext = 1600;
   if (F.reservedHit(g[0] - ext, g[1] - ext, g[2] - ext, g[0] + ext, g[1] + ext, g[2] + ext)) return;
   ANOMALIES[kind](B, B.L(...g), r, g);
 }
@@ -566,14 +566,5 @@ const ANOMALIES = {
       B.add('wall', place(new THREE.BoxGeometry(s, r.float(8, 20), s), { x: p.x, y: p.y, z: p.z }));
     }
     B.light(g[0], g[1], g[2], SODIUM, r.float(500, 1000), 'faulty');
-  },
-
-  /** Halo: anel quebrado — algo que não foi construído por ninguém. */
-  halo(B, o, r, g) {
-    const R = r.float(250, 600);
-    const rot = { x: o.x, y: o.y, z: o.z, rx: r.float(0, Math.PI), ry: r.float(0, Math.PI) };
-    B.add('anomaly', place(new THREE.TorusGeometry(R, r.float(6, 16), 10, 180, Math.PI * r.float(1.4, 1.9)), rot));
-    B.add('anomaly', place(new THREE.TorusGeometry(R * 0.86, r.float(2, 5), 6, 160, Math.PI * r.float(0.8, 1.6)), { ...rot, rz: r.float(0, 6) }));
-    B.light(g[0], g[1], g[2], COLD, r.float(1000, 2000), 'steady');
   },
 };
