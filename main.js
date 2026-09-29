@@ -13,6 +13,7 @@
 //      captura um PNG da janela depois de N segundos e fecha o app.
 //      --view aceita: spawn | abyss | up | far
 //      --show mantém a janela visível (senão o Chromium desacelera o loop)
+//      --gate mantém a tela de entrada aberta na captura
 //    electron . --goto=colmeia  → começa transportado ao exemplar mais próximo do tipo
 //    electron . --outage=4 → força um apagão de setor aos 4 s
 //    electron . --collapse=4 → força um colapso distante aos 4 s
@@ -112,7 +113,8 @@ function createWindow() {
   });
 
   const query = new URLSearchParams();
-  if (capturePath) query.set('autostart', '1');
+  // --gate: captura com a tela de entrada aberta (para conferir textos)
+  if (capturePath && !process.argv.includes('--gate')) query.set('autostart', '1');
   if (view) query.set('view', view);
   if (seed) query.set('seed', seed);
   if (stats) query.set('stats', '1');

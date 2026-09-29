@@ -10,6 +10,7 @@
 //    controle     vibração nos momentos físicos
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { t, fmtNum } from '../i18n/index.js';
 
 // o som do passo depende do que está sob os pés (material da malha de colisão)
 const STEP_SURFACE = {
@@ -39,10 +40,10 @@ export function createBody(ctx) {
     audio.impact(impact);
     controls.rumble(Math.min(1, Math.max(0, impact - 6) / 40), Math.min(1, impact / 30), 120 + Math.min(500, impact * 10));
     ctx.travel.fell(height);
-    if (height > 80) hud.push(`QUEDA REGISTRADA :: ${Math.round(height)} m`);
+    if (height > 80) hud.push(t('hud.fall', { m: fmtNum(Math.round(height)) }));
   };
   controls.onModeChange = (mode) => {
-    hud.push(mode === 'walk' ? 'LOCOMOÇÃO: SUPERFÍCIE · gravidade restaurada' : 'LOCOMOÇÃO: DERIVA · gravidade suspensa');
+    hud.push(t(mode === 'walk' ? 'hud.walk' : 'hud.fly'));
   };
 
   /** Dentro d'água (setores inundados)? */
@@ -90,7 +91,7 @@ export function createBody(ctx) {
     world.transit.riding = car;
     if (car && !lastCar) ctx.travel.boarded();
     if (car && car === lastCar && car.powered !== lastPowered) {
-      hud.push(car.powered ? 'TRANSPORTADOR :: ENERGIA RESTABELECIDA' : 'TRANSPORTADOR :: SEM ENERGIA · aguardando religamento');
+      hud.push(t(car.powered ? 'hud.transit.power' : 'hud.transit.nopower'));
     }
     lastCar = car;
     lastPowered = car?.powered;

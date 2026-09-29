@@ -23,7 +23,8 @@ import { NoclipControls } from './controls/noclip.js';
 import { Walker } from './controls/walker.js';
 import { CollisionWorld } from './world/collision.js';
 import { AudioEngine } from './audio/audio.js';
-import { AlienHUD } from './ui/hud.js';
+import { HUD } from './ui/hud.js';
+import { t } from './i18n/index.js';
 import { loadSettings } from './ui/settings.js';
 import { loadSave } from './ui/journey.js';
 import { createRenderer, setupRender, renderFrame } from './app/render.js';
@@ -88,7 +89,7 @@ if (saved) {
 }
 
 ctx.audio = new AudioEngine();
-ctx.hud = new AlienHUD(document.getElementById('hud'), ctx.seed);
+ctx.hud = new HUD(document.getElementById('hud'));
 
 // ─── sons posicionados: panorâmica (−1..1) e distância de um ponto GLOBAL ─────
 const _rel = new THREE.Vector3();
@@ -149,7 +150,7 @@ function frame() {
     if (landing) {
       controls.placeFeet(landing);
       audio.reindex();
-      hud.push('OBSERVADOR REALOCADO :: a queda não termina, ela é interrompida');
+      hud.push(t('hud.rescued'));
     } else {
       controls.walker.airTime = 0;
     }
@@ -161,7 +162,6 @@ function frame() {
   // 5. interface + áudio
   hud.update(dt, time, {
     pos: world.toGlobal(camera.position, globalPos),
-    scale: controls.scale,
     region: world.regionAt(camera.position),
     seed: ctx.seed,
   });

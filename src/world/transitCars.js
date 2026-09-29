@@ -22,6 +22,7 @@ import * as THREE from 'three';
 import { TRANSIT } from '../gen/field.js';
 import { stationT } from '../gen/transit.js';
 import { mergeAll, place } from './geometry.js';
+import { t } from '../i18n/index.js';
 
 const S = TRANSIT.station;
 const ACC = 0.9; // m/s² — pico de ~36 m/s (130 km/h) no meio do trecho
@@ -108,12 +109,12 @@ export class TransitCars {
   stationStatus(line, s, time) {
     const k = this.clocks.get(line.id);
     const c = k ? k.c : time;
-    if (k && k.rate < 0.05) return 'COMPOSIÇÕES SUSPENSAS · SEM ENERGIA';
+    if (k && k.rate < 0.05) return t('transit.suspended');
     const tau = ((c % PERIOD) + PERIOD) % PERIOD;
-    const dirTxt = `SENTIDO ${line.track.dir > 0 ? '+' : '−'}${line.axis.toUpperCase()}`;
-    if (tau < DWELL) return `EMBARQUE · PARTIDA EM ${Math.ceil(DWELL - tau)} S · ${dirTxt}`;
+    const dir = t('transit.dir', { sign: line.track.dir > 0 ? '+' : '−', axis: line.axis.toUpperCase() });
+    if (tau < DWELL) return t('transit.boarding', { s: Math.ceil(DWELL - tau), dir });
     const eta = Math.ceil(PERIOD - tau);
-    return `PRÓXIMA COMPOSIÇÃO: ${eta} S${k && k.rate < 0.95 ? ' · ATRASADA' : ''} · ${dirTxt}`;
+    return t('transit.next', { s: eta, late: k && k.rate < 0.95 ? t('transit.late') : '', dir });
   }
 
   /** Posição ao longo da linha do vagão k no tempo `time`. */

@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { VIEWS } from '../world/world.js';
-import { createAlphabet, drawGlyph } from '../ui/glyphs.js';
+import { t, setLang, applyDom, fmtDist } from '../i18n/index.js';
 import { SettingsPanel } from '../ui/settings.js';
 import { TransportPanel } from '../ui/transport.js';
 import { findDestination } from '../world/teleport.js';
@@ -17,7 +17,8 @@ export function createUI(ctx) {
   const trail = ctx.travel.trail;
 
   // ─── tela de entrada ───
-  drawGateGlyphs(ctx.seed);
+  setLang(ctx.settings.lang);
+  applyDom();
   gate.addEventListener('click', () => {
     audio.start();
     controls.lock();
@@ -35,7 +36,8 @@ export function createUI(ctx) {
     audio.start();
   }
   ctx.travel.renderDiary();
-  if (ctx.resumed) gateSub.textContent = 'clique para continuar a travessia';
+  if (ctx.resumed) gateSub.dataset.i18n = 'gate.continue';
+  applyDom(gate);
 
   // ─── configurações ───
   const settings = new SettingsPanel(ctx.settings, (s, key) => applySettings(s, key));
@@ -53,6 +55,10 @@ export function createUI(ctx) {
 
   function applySettings(s, key) {
     const is = (k) => !key || key === k;
+    if (is('lang')) {
+      setLang(s.lang);
+      ctx.travel.renderDiary();
+    }
     if (is('renderDistance') || is('fog')) world.setView({ renderDistance: s.renderDistance, fog: s.fog });
     if (is('fov')) {
       camera.fov = s.fov;
@@ -108,8 +114,7 @@ export function createUI(ctx) {
     const eye = dest.feet.clone().sub(world.origin);
     eye.y += 1.7;
     controls.setView({ pos: eye, yaw: dest.yaw, pitch: dest.pitch, scale: 1 });
-    const km = dest.feet.distanceTo(g) / 1000;
-    hud.push(`TRANSFERÊNCIA :: ${label.toUpperCase()} · ${km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km'}`);
+    hud.push(t('hud.transfer', { label: label.toUpperCase(), dist: fmtDist(dest.feet.distanceTo(g)) }));
     audio.start();
     audio.transfer(1);
     controls.lock();
@@ -142,7 +147,6 @@ export function createUI(ctx) {
     ctx.seed = Math.floor(Math.random() * 2 ** 31);
     world.build(ctx.seed);
     world.setView({ renderDistance: ctx.settings.renderDistance, fog: ctx.settings.fog });
-    hud.setSeed(ctx.seed);
     ctx.travel.newWorld();
     ctx.sound.wire();
     controls.setView(VIEWS.spawn);
@@ -153,7 +157,8 @@ export function createUI(ctx) {
     e.stopPropagation();
     regenerate();
     ctx.travel.save();
-    gateSub.textContent = 'clique para entrar na Cidade';
+    gateSub.dataset.i18n = 'gate.enter';
+    applyDom(gate);
   });
 
   // ─── controle de videogame ───
@@ -161,7 +166,7 @@ export function createUI(ctx) {
     // o controle não precisa (nem consegue) travar o mouse: entra direto
     audio.start();
     if (!settings.isOpen && !transport.isOpen) gate.classList.add('hidden');
-    hud.push('CONTROLE DETECTADO :: entrada aceita');
+    hud.push(t('hud.gamepad'));
   };
   controls.onPadButton = (name) => {
     if (name === 'photo') photo();
@@ -181,20 +186,4 @@ export function createUI(ctx) {
   });
 
   return { teleport, regenerate, toggleMap, photo };
-}
-
-function drawGateGlyphs(seed) {
-  const c = document.getElementById('gate-glyphs');
-  const ctx2 = c.getContext('2d');
-  const alphabet = createAlphabet(seed ^ 0x5eed);
-  c.width = c.clientWidth * 2;
-  c.height = c.clientHeight * 2;
-  ctx2.scale(2, 2);
-  ctx2.lineWidth = 1.4;
-  const n = Math.floor(c.clientWidth / 22);
-  for (let i = 0; i < n; i++) {
-    if (Math.random() < 0.1) continue;
-    ctx2.strokeStyle = ctx2.fillStyle = Math.random() < 0.08 ? 'rgba(196,110,62,0.8)' : 'rgba(178,188,172,0.7)';
-    drawGlyph(ctx2, alphabet[Math.floor(Math.random() * alphabet.length)], i * 22 + 4, 16, 12, 24);
-  }
 }

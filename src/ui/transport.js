@@ -4,6 +4,7 @@
 //  tipo (clicar de novo leva a outro). A busca em si fica em world/teleport.js.
 // ─────────────────────────────────────────────────────────────────────────────
 import { DESTINATIONS } from '../world/teleport.js';
+import { t, onLangChange } from '../i18n/index.js';
 
 export class TransportPanel {
   /** @param {(kind: string, label: string) => boolean} onPick  true = transportou */
@@ -12,6 +13,16 @@ export class TransportPanel {
     this.onClose = null;
     this.el = this._build();
     document.body.appendChild(this.el);
+    onLangChange(() => this._relabel());
+    this._relabel();
+  }
+
+  _relabel() {
+    this.el.querySelector('.settings-title').textContent = t('transport.title');
+    this.el.querySelector('[data-act="close"]').textContent = t('transport.back');
+    for (const el of this.el.querySelectorAll('[data-group]')) el.textContent = t(`dest.group.${el.dataset.group}`);
+    for (const el of this.el.querySelectorAll('[data-kind]')) el.textContent = t(`dest.${el.dataset.kind}`);
+    this.status.textContent = t('transport.status');
   }
 
   get isOpen() {
@@ -19,7 +30,7 @@ export class TransportPanel {
   }
 
   open() {
-    this.status.textContent = 'destino: o exemplar mais próximo · repetir leva a outro';
+    this.status.textContent = t('transport.status');
     this.el.classList.add('open');
   }
 
@@ -35,19 +46,19 @@ export class TransportPanel {
     const groups = [...new Set(DESTINATIONS.map((d) => d.group))];
     root.innerHTML = `
       <div class="settings-box">
-        <div class="settings-title">TRANSPORTE</div>
+        <div class="settings-title"></div>
         ${groups
           .map(
-            (g) => `<div class="transport-group">${g}</div>
+            (g) => `<div class="transport-group" data-group="${g}"></div>
           <div class="transport-grid">${DESTINATIONS.filter((d) => d.group === g)
-            .map((d) => `<button data-kind="${d.kind}">${d.label}</button>`)
+            .map((d) => `<button data-kind="${d.kind}"></button>`)
             .join('')}</div>`,
           )
           .join('')}
         <div class="settings-hint transport-status"></div>
         <div class="settings-actions">
           <span></span>
-          <button data-act="close">voltar</button>
+          <button data-act="close"></button>
         </div>
       </div>`;
     this.status = root.querySelector('.transport-status');
@@ -57,12 +68,12 @@ export class TransportPanel {
       if (t?.dataset?.act === 'close') return this.close();
       const kind = t?.dataset?.kind;
       if (!kind) return;
-      const d = DESTINATIONS.find((x) => x.kind === kind);
-      this.status.textContent = 'procurando…';
+      const label = t(`dest.${kind}`);
+      this.status.textContent = t('transport.searching');
       // deixa o texto aparecer antes da busca (que pode levar alguns ms)
       setTimeout(() => {
-        if (this.onPick(kind, d.label)) this.close();
-        else this.status.textContent = `nenhum registro de "${d.label}" nas redondezas`;
+        if (this.onPick(kind, label)) this.close();
+        else this.status.textContent = t('transport.none', { label });
       }, 16);
     });
     root.addEventListener('keydown', (e) => {

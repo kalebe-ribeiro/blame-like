@@ -11,6 +11,8 @@
 //  A vista gira devagar sozinha; arrastar gira, a roda aproxima.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { t, fmtNum, fmtDist, applyDom } from '../i18n/index.js';
+
 const KEY = 'cybercosmic.trail.v1';
 const STEP = 8; // m entre pontos
 const MAX = 40000;
@@ -89,14 +91,15 @@ export class TrailMap {
     root.id = 'trailmap';
     root.innerHTML = `
       <canvas></canvas>
-      <div class="tm-title">MAPA DA TRAVESSIA</div>
+      <div class="tm-title" data-i18n="map.title"></div>
       <div class="tm-info"></div>
       <div class="tm-legend">
-        <span><i class="tm-l0"></i>caminho</span><span><i class="tm-l1"></i>trilhos</span>
-        <span><i class="tm-l2"></i>transporte</span><span><i class="tm-q"></i>queda</span><span><i class="tm-f"></i>foto</span>
-        <span class="tm-hint">arrastar gira · roda aproxima · M ou ESC fecha</span>
+        <span><i class="tm-l0"></i><b data-i18n="map.path"></b></span><span><i class="tm-l1"></i><b data-i18n="map.rails"></b></span>
+        <span><i class="tm-l2"></i><b data-i18n="map.jump"></b></span><span><i class="tm-q"></i><b data-i18n="map.fall"></b></span><span><i class="tm-f"></i><b data-i18n="map.photo"></b></span>
+        <span class="tm-hint" data-i18n="map.hint"></span>
       </div>`;
     document.body.appendChild(root);
+    applyDom(root);
     this.canvas = root.querySelector('canvas');
     this.ctx = this.canvas.getContext('2d');
     this.info = root.querySelector('.tm-info');
@@ -149,7 +152,7 @@ export class TrailMap {
     if (!pts.length) {
       g.fillStyle = 'rgba(200,196,184,0.5)';
       g.font = `${13 * devicePixelRatio}px Consolas, monospace`;
-      g.fillText('nenhum trecho registrado ainda', W / 2 - 120 * devicePixelRatio, H / 2);
+      g.fillText(t('map.empty'), W / 2 - 120 * devicePixelRatio, H / 2);
       return;
     }
     // caixa envolvente → centro e escala
@@ -263,8 +266,8 @@ export class TrailMap {
     g.stroke();
     g.fillStyle = 'rgba(200,196,184,0.7)';
     g.font = `${11 * dpr}px Consolas, monospace`;
-    g.fillText(fmt(bar), 40 * dpr, H - 48 * dpr);
-    this.info.textContent = `extensão ${fmt(x1 - x0)} × ${fmt(z1 - z0)} · desnível ${fmt(y1 - y0)} · ${pts.length.toLocaleString('pt-BR')} pontos`;
+    g.fillText(fmtDist(bar), 40 * dpr, H - 48 * dpr);
+    this.info.textContent = t('map.info', { w: fmtDist(x1 - x0), d: fmtDist(z1 - z0), h: fmtDist(y1 - y0), n: fmtNum(pts.length) });
   }
 }
 
@@ -272,7 +275,4 @@ function niceStep(v) {
   const p = Math.pow(10, Math.floor(Math.log10(Math.max(v, 1))));
   const m = v / p;
   return (m < 2 ? 1 : m < 5 ? 2 : 5) * p;
-}
-function fmt(m) {
-  return m >= 1000 ? `${(m / 1000).toFixed(m >= 10000 ? 0 : 1).replace('.', ',')} km` : `${Math.round(m)} m`;
 }

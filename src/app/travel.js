@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { storeSave, Diary } from '../ui/journey.js';
 import { TrailMap } from '../ui/trailmap.js';
+import { t } from '../i18n/index.js';
 
 export function createTravel(ctx) {
   const { world, camera, controls } = ctx;
@@ -31,7 +32,7 @@ export function createTravel(ctx) {
   function renderDiary() {
     const el = document.getElementById('gate-diary');
     if (!el) return;
-    el.innerHTML = '<div class="diary-title">DIÁRIO DA TRAVESSIA</div>' +
+    el.innerHTML = `<div class="diary-title">${t('diary.title')}</div>` +
       diary.lines().map(([k, v]) => `<div class="diary-row"><span>${k}</span><b>${v}</b></div>`).join('');
   }
 

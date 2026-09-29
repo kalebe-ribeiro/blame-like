@@ -2,8 +2,9 @@
 //  Terminais mortos: consoles nas estações dos transportadores e no alto das
 //  passagens das camadas. A tela mostra registros procedurais — manutenção
 //  adiada há milhões de ciclos, avisos, listas de setores, "habitantes
-//  registrados: 0" — alguns trechos já ilegíveis (o alfabeto da Cidade). Nas
+//  registrados: 0" — algumas palavras gastas a ponto de quase sumir. Nas
 //  estações, uma linha é viva: o horário real do próximo vagão.
+//  (Na fase 2 do plano estes terminais passam a falar a língua antiga.)
 //
 //  Só os terminais perto do observador existem (e só estes redesenham a
 //  tela). Sem energia (apagão), a tela apaga.
@@ -12,7 +13,7 @@ import * as THREE from 'three';
 import { TRANSIT, MEGA } from '../gen/field.js';
 import { stationT } from '../gen/transit.js';
 import { hash4, rngAt } from '../gen/hash.js';
-import { createAlphabet, drawGlyph } from '../ui/glyphs.js';
+import { t, fmtNum } from '../i18n/index.js';
 
 const RANGE = 90; // m: terminais existem só perto
 const W = 256;
@@ -20,33 +21,33 @@ const H = 176;
 const LINE_H = 13;
 
 const hex = (n, d = 3) => `0x${(n >>> 0).toString(16).toUpperCase().padStart(d, '0').slice(-d)}`;
-const num = (n) => Math.round(n).toLocaleString('pt-BR');
+const num = (n) => fmtNum(Math.round(n));
 
-/** Registros de um terminal (determinísticos pela semente). */
+/** Registros de um terminal (determinísticos pela semente; no idioma atual). */
 function writeLog(r, kind) {
   const L = [];
   const sector = hex(r.int(0, 4095));
-  L.push(`TERMINAL ${hex(r.int(0, 65535), 4)} · SETOR ${sector}`);
+  L.push(t('term.header', { id: hex(r.int(0, 65535), 4), sector }));
   L.push('────────────────────────────');
   const pool = [
-    () => `MANUTENÇÃO ${r.pick(['ADIADA', 'SUSPENSA', 'NÃO AGENDADA'])} · ${num(r.int(40000, 9000000))} CICLOS`,
-    () => `HABITANTES REGISTRADOS NO SETOR: 0`,
-    () => `ÚLTIMO ACESSO AUTORIZADO: ∅`,
-    () => `TERMINAL GENÉTICO: NÃO DETECTADO`,
-    () => `ENERGIA: ${r.int(3, 61)}% · REDE ${r.pick(['INSTÁVEL', 'DEGRADADA', 'EM RESERVA'])}`,
-    () => `CONSTRUÇÃO EM ANDAMENTO · PRAZO: ∞`,
-    () => `SETORES: ${hex(r.int(0, 4095))} ${hex(r.int(0, 4095))} [APAGADO] ${hex(r.int(0, 4095))}`,
-    () => `AVISO: CAMADA ${r.int(2, 90)} INTRANSPONÍVEL`,
-    () => `PASSAGEM MAIS PRÓXIMA: ${(r.float(1.5, 40)).toFixed(1).replace('.', ',')} KM`,
-    () => `REQUISIÇÃO ${hex(r.int(0, 65535), 4)} · SEM RESPOSTA HÁ ${num(r.int(300, 90000))} DIAS`,
-    () => `CONTAGEM DE PAVIMENTOS: ${num(r.int(1e5, 9e6))} · INCOMPLETA`,
-    () => `REGISTRO CORROMPIDO · RECUPERAÇÃO ${r.int(0, 12)}%`,
-    () => `OBJETO NÃO CATALOGADO NO NÍVEL ${num(r.int(1000, 900000))}`,
-    () => `ROTA ALTERNATIVA: NENHUMA`,
+    () => t('term.maint', { state: t(`term.maint.${r.int(0, 2)}`), n: num(r.int(40000, 9000000)) }),
+    () => t('term.inhabitants'),
+    () => t('term.lastAccess'),
+    () => t('term.gene'),
+    () => t('term.power', { p: r.int(3, 61), state: t(`term.power.${r.int(0, 2)}`) }),
+    () => t('term.construction'),
+    () => t('term.sectors', { a: hex(r.int(0, 4095)), b: hex(r.int(0, 4095)), c: hex(r.int(0, 4095)) }),
+    () => t('term.barrier', { n: r.int(2, 90) }),
+    () => t('term.passage', { km: fmtNum(r.float(1.5, 40), 1) }),
+    () => t('term.request', { id: hex(r.int(0, 65535), 4), n: num(r.int(300, 90000)) }),
+    () => t('term.floors', { n: num(r.int(1e5, 9e6)) }),
+    () => t('term.damaged', { p: r.int(0, 12) }),
+    () => t('term.object', { n: num(r.int(1000, 900000)) }),
+    () => t('term.route'),
   ];
   if (kind === 'passage') {
-    L.push(`ELEVADOR DE PASSAGEM · CAMADA ${r.int(2, 60)}`);
-    L.push(`ESPESSURA DA CAMADA: ${MEGA.barrierThick} M`);
+    L.push(t('term.elevator', { n: r.int(2, 60) }));
+    L.push(t('term.thickness', { m: MEGA.barrierThick }));
   }
   const n = 7 + r.int(0, 3);
   for (let i = 0; i < n; i++) L.push(r.pick(pool)());
@@ -64,7 +65,6 @@ export class TerminalSystem {
     this.items = new Map(); // id → terminal
     this.lights = [];
     this.meshes = [];
-    this.alphabet = createAlphabet(seed ^ 0x7e11);
     this._scan = 0;
     this._body = new THREE.BoxGeometry(0.7, 1.05, 0.45);
     this._body.translate(0, 0.525, 0);
@@ -152,18 +152,14 @@ export class TerminalSystem {
       const live = i === 2 && t.site.kind === 'station'; // o horário: sempre legível
       c.fillStyle = i === 0 ? '#c9d4c8' : live ? '#d7c49a' : '#9fae9f';
       let x = 8;
-      // palavras que a Cidade já apagou: glifos no lugar do texto
+      // palavras gastas pela tela velha: quase apagadas
       for (const word of line.split(' ')) {
         const h = hash4(this.seed, word.length * 31 + i, x, y, 951);
-        if (h < 0.1 && word.length > 2 && i > 1 && !live) {
-          c.strokeStyle = '#7f8c7f';
-          c.lineWidth = 1;
-          for (let k = 0; k < Math.min(word.length, 5); k++) drawGlyph(c, this.alphabet[Math.floor(h * 997 + k) % this.alphabet.length], x + k * 7, y + 1, 5, 8);
-          x += Math.min(word.length, 5) * 7 + 6;
-        } else {
-          c.fillText(word, x, y);
-          x += c.measureText(word + ' ').width;
-        }
+        const worn = h < 0.1 && word.length > 2 && i > 1 && !live;
+        c.globalAlpha = worn ? 0.22 : 1;
+        c.fillText(word, x, y);
+        c.globalAlpha = 1;
+        x += c.measureText(word + ' ').width;
       }
       y += LINE_H;
     }

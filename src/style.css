@@ -35,7 +35,6 @@ html, body {
 
 #gate.hidden { opacity: 0; pointer-events: none; }
 
-#gate-glyphs { width: min(640px, 80vw); height: 60px; opacity: 0.8; }
 
 .gate-title {
   position: relative;
@@ -80,6 +79,7 @@ html, body {
 .tm-title { position: absolute; top: 26px; left: 32px; letter-spacing: 0.5em; font-size: 13px; color: #d8d4cc; }
 .tm-info { position: absolute; top: 50px; left: 32px; font-size: 11px; letter-spacing: 0.08em; color: rgba(176, 118, 62, 0.85); }
 .tm-legend { position: absolute; bottom: 22px; right: 32px; display: flex; gap: 16px; font-size: 10px; letter-spacing: 0.1em; align-items: center; }
+.tm-legend b { font-weight: normal; }
 .tm-legend i { display: inline-block; width: 16px; height: 0; border-top: 1px solid; margin-right: 6px; vertical-align: middle; }
 .tm-l0 { border-color: rgba(200, 206, 196, 0.8) !important; }
 .tm-l1 { border-color: rgba(215, 196, 154, 0.9) !important; border-top-width: 2px !important; }
@@ -139,6 +139,13 @@ html, body {
 .settings-hint { grid-column: 1 / -1; font-size: 10px; color: rgba(150, 146, 136, 0.6); }
 .settings-row input[type="range"] { width: 100%; accent-color: #8a8a80; }
 .settings-row input[type="checkbox"] { justify-self: start; accent-color: #8a8a80; width: 16px; height: 16px; }
+.settings-row select {
+  background: rgba(14, 14, 13, 0.92);
+  color: rgba(200, 196, 184, 0.85);
+  border: 1px solid rgba(178, 188, 172, 0.3);
+  font: inherit;
+  padding: 3px 6px;
+}
 
 .settings-actions { display: flex; justify-content: space-between; margin-top: 22px; }
 .settings-actions button {

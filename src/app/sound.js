@@ -5,6 +5,7 @@
 //  acompanham cada acontecimento.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { t } from '../i18n/index.js';
 
 /** Nome de setor "mal traduzido" para os avisos. */
 const sectorName = (ev) => ((Math.abs(Math.round(ev.c.x / 97) * 131 + Math.round(ev.c.z / 89) * 7) + ev.id) % 4096).toString(16).toUpperCase().padStart(3, '0');
@@ -21,17 +22,17 @@ export function createWorldSound(ctx) {
       audio.powerDown(...ctx.placeOf(ev.c.x, ev.c.y, ev.c.z), ev.maxR);
       controls.rumble(0.25, 0.1, 300);
       ctx.travel.witnessed('outages');
-      hud.push(`SETOR 0x${sectorName(ev)} :: ENERGIA INTERROMPIDA`);
+      hud.push(t('hud.outage.start', { sector: sectorName(ev) }));
     };
     world.outages.onRestore = (ev) => {
       audio.powerUp(...ctx.placeOf(ev.c.x, ev.c.y, ev.c.z), ev.maxR);
-      hud.push(`SETOR 0x${sectorName(ev)} :: RELIGAMENTO EM CASCATA`);
+      hud.push(t('hud.outage.restore', { sector: sectorName(ev) }));
     };
     world.collapses.onStart = (ev) => {
       const [pan, dist] = ctx.placeOf(ev.pos.x, ev.pos.y, ev.pos.z);
       audio.collapseStart(pan, dist, ev.delay);
       ctx.travel.witnessed('collapses');
-      hud.push('ESTRUTURA COMPROMETIDA :: desprendimento registrado');
+      hud.push(t('hud.collapse'));
     };
     world.collapses.onImpact = (ev) => {
       const [pan, dist] = ctx.placeOf(ev.pos.x, ev.pos.y, ev.pos.z);
@@ -58,7 +59,7 @@ export function createWorldSound(ctx) {
         if (dist < 900) setTimeout(() => controls.rumble(0.5 * (1 - dist / 900), 0.2, 400), dist / 0.34);
         if (dist < 1500 && !sawColossus) {
           sawColossus = true;
-          hud.push('MÁQUINA DE MANUTENÇÃO :: em rota · operador ausente');
+          hud.push(t('hud.colossus'));
         }
       }
       spaceTimer -= dt;

@@ -12,6 +12,8 @@
 //  Tudo em localStorage (fica no perfil do Electron, na máquina).
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { t, fmtNum, fmtDist } from '../i18n/index.js';
+
 const SAVE_KEY = 'cybercosmic.save.v1';
 const DIARY_KEY = 'cybercosmic.diary.v1';
 
@@ -48,12 +50,8 @@ const EMPTY = {
   time: 0, sessions: 0,
 };
 
-/** Nomes das regiões como aparecem no diário (a mesma "tradução" da interface). */
-const REGION_NAMES = {
-  ponte: 'espinha', abismo: 'fundo', altura: 'coroa', deriva: 'deriva',
-  galeria: 'galeria', poco: 'poço', estrato: 'estrato', colmeia: 'colmeia', camada: 'camada',
-  macico: 'maciço', vazio: 'vazio', conduto: 'conduto',
-};
+/** Regiões contadas no diário (os nomes vêm de i18n: 'region.<nome>'). */
+const REGIONS = ['ponte', 'abismo', 'altura', 'deriva', 'galeria', 'poco', 'estrato', 'colmeia', 'camada', 'macico', 'vazio', 'conduto'];
 
 export class Diary {
   /** @param {boolean} persist  false = sessão de teste: começa do zero e não grava */
@@ -80,7 +78,7 @@ export class Diary {
   }
 
   region(r) {
-    if (!r || !REGION_NAMES[r] || this._regions.has(r)) return false;
+    if (!r || !REGIONS.includes(r) || this._regions.has(r)) return false;
     this._regions.add(r);
     this.d.regions = [...this._regions];
     return true;
@@ -93,21 +91,19 @@ export class Diary {
   /** Linhas do diário para a tela de entrada. */
   lines() {
     const d = this.d;
-    const km = (m) => (m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(m < 100000 ? 1 : 0).replace('.', ',')} km`);
-    const alt = (y) => (y === null ? '—' : `${y >= 0 ? '+' : '−'}${Math.round(Math.abs(y)).toLocaleString('pt-BR')} m`);
+    const alt = (y) => (y === null ? '—' : `${y >= 0 ? '+' : '−'}${fmtNum(Math.round(Math.abs(y)))} m`);
     const h = Math.floor(d.time / 3600);
     const m = Math.floor((d.time % 3600) / 60);
-    const total = Object.keys(REGION_NAMES).length;
     return [
-      ['PERCORRIDO A PÉ', km(d.walked)],
-      ['EM DERIVA', km(d.flown)],
-      ['SOBRE TRILHOS', d.rides ? `${km(d.rode)} · ${d.rides} ${d.rides === 1 ? 'viagem' : 'viagens'}` : '—'],
-      ['MAIOR QUEDA', d.maxFall ? `${Math.round(d.maxFall).toLocaleString('pt-BR')} m` : '—'],
-      ['MAIS FUNDO / MAIS ALTO', `${alt(d.minY)} / ${alt(d.maxY)}`],
-      ['REGIÕES', `${this._regions.size}/${total} :: ${[...this._regions].map((r) => REGION_NAMES[r]).join(' · ') || '—'}`],
-      ['APAGÕES / COLAPSOS', `${d.outages} / ${d.collapses}`],
-      ['REGISTROS (FOTOS)', `${d.photos}`],
-      ['TEMPO NA CIDADE', h ? `${h} h ${String(m).padStart(2, '0')} min` : `${m} min`],
+      [t('diary.walked'), fmtDist(d.walked)],
+      [t('diary.flown'), fmtDist(d.flown)],
+      [t('diary.rode'), d.rides ? `${fmtDist(d.rode)} · ${d.rides} ${t(d.rides === 1 ? 'diary.trip' : 'diary.trips')}` : '—'],
+      [t('diary.maxFall'), d.maxFall ? `${fmtNum(Math.round(d.maxFall))} m` : '—'],
+      [t('diary.depth'), `${alt(d.minY)} / ${alt(d.maxY)}`],
+      [t('diary.regions'), `${this._regions.size}/${REGIONS.length} :: ${[...this._regions].map((r) => t(`region.${r}`)).join(' · ') || '—'}`],
+      [t('diary.events'), `${d.outages} / ${d.collapses}`],
+      [t('diary.photos'), `${d.photos}`],
+      [t('diary.time'), h ? `${h} h ${String(m).padStart(2, '0')} min` : `${m} min`],
     ];
   }
 }

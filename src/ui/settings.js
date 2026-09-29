@@ -3,13 +3,15 @@
 //  Os valores ficam salvos no navegador do Electron (localStorage) e são
 //  reaplicados ao abrir o app.
 //
-//  Para adicionar uma opção: acrescente um item em FIELDS e trate a chave em
-//  applySettings() (app.js).
+//  Para adicionar uma opção: acrescente um item em FIELDS, o rótulo em
+//  i18n/*.js ('settings.<chave>') e trate a chave em applySettings() (app/ui.js).
 // ─────────────────────────────────────────────────────────────────────────────
+import { t, LANGS, onLangChange } from '../i18n/index.js';
 
 const STORAGE_KEY = 'cybercosmic.settings.v1';
 
 export const DEFAULTS = {
+  lang: 'en', // idioma da interface (inglês é o padrão)
   renderDistance: 560, // m — raio de carregamento dos chunks
   fog: 1, // multiplicador da densidade da névoa
   fov: 72, // graus (vertical)
@@ -29,29 +31,26 @@ export const DEFAULTS = {
 };
 
 const FIELDS = [
-  {
-    key: 'renderDistance',
-    label: 'distância de renderização',
-    type: 'range', min: 240, max: 2400, step: 40,
-    fmt: (v) => `${v} m`,
-    hint: 'acima de 700 m entra o LOD: o que está longe é gerado simplificado',
-  },
-  { key: 'fog', label: 'densidade da névoa', type: 'range', min: 0, max: 2, step: 0.05, fmt: (v) => `${Math.round(v * 100)}%` },
-  { key: 'fov', label: 'campo de visão', type: 'range', min: 50, max: 100, step: 1, fmt: (v) => `${v}°` },
-  { key: 'sensitivity', label: 'sensibilidade do mouse', type: 'range', min: 0.3, max: 3, step: 0.05, fmt: (v) => `${v.toFixed(2)}×` },
-  { key: 'resolution', label: 'resolução (densidade de pixels)', type: 'range', min: 0.5, max: 2, step: 0.05, fmt: (v) => `${v.toFixed(2)}×` },
-  { key: 'ssao', label: 'oclusão de ambiente (SSAO)', type: 'toggle' },
-  { key: 'taa', label: 'antialiasing temporal (TAA)', type: 'toggle' },
-  { key: 'shafts', label: 'raios de luz na névoa', type: 'toggle' },
-  { key: 'reflections', label: 'reflexo da água (setores inundados)', type: 'toggle' },
-  { key: 'music', label: 'trilha (acordes raros e lentos)', type: 'toggle' },
-  { key: 'headBob', label: 'balanço da cabeça ao andar', type: 'toggle' },
-  { key: 'motionFx', label: 'efeitos de queda (campo de visão, tremor)', type: 'toggle' },
-  { key: 'invertY', label: 'inverter eixo vertical', type: 'toggle' },
-  { key: 'outages', label: 'apagões de setor', type: 'toggle' },
-  { key: 'collapses', label: 'colapsos distantes', type: 'toggle' },
-  { key: 'fallRescue', label: 'realocar ao cair por muito tempo', type: 'toggle' },
+  { key: 'lang', type: 'select', options: LANGS },
+  { key: 'renderDistance', type: 'range', min: 240, max: 2400, step: 40, fmt: (v) => `${v} m`, hint: true },
+  { key: 'fog', type: 'range', min: 0, max: 2, step: 0.05, fmt: (v) => `${Math.round(v * 100)}%` },
+  { key: 'fov', type: 'range', min: 50, max: 100, step: 1, fmt: (v) => `${v}°` },
+  { key: 'sensitivity', type: 'range', min: 0.3, max: 3, step: 0.05, fmt: (v) => `${v.toFixed(2)}×` },
+  { key: 'resolution', type: 'range', min: 0.5, max: 2, step: 0.05, fmt: (v) => `${v.toFixed(2)}×` },
+  { key: 'ssao', type: 'toggle' },
+  { key: 'taa', type: 'toggle' },
+  { key: 'shafts', type: 'toggle' },
+  { key: 'reflections', type: 'toggle' },
+  { key: 'music', type: 'toggle' },
+  { key: 'headBob', type: 'toggle' },
+  { key: 'motionFx', type: 'toggle' },
+  { key: 'invertY', type: 'toggle' },
+  { key: 'outages', type: 'toggle' },
+  { key: 'collapses', type: 'toggle' },
+  { key: 'fallRescue', type: 'toggle' },
 ];
+const label = (f) => t(f.key === 'lang' ? 'settings.lang' : `settings.${f.key}`);
+const onOff = (v) => t(v ? 'settings.on' : 'settings.off');
 
 export function loadSettings() {
   try {
@@ -82,6 +81,20 @@ export class SettingsPanel {
     this.onClose = null;
     this.el = this._build();
     document.body.appendChild(this.el);
+    onLangChange(() => this._relabel());
+    this._relabel();
+  }
+
+  /** Reescreve os rótulos no idioma atual. */
+  _relabel() {
+    this.el.querySelector('.settings-title').textContent = t('settings.title');
+    this.el.querySelector('[data-act="reset"]').textContent = t('settings.reset');
+    this.el.querySelector('[data-act="close"]').textContent = t('settings.back');
+    for (const { f, labelEl, hintEl } of Object.values(this.inputs)) {
+      labelEl.textContent = label(f);
+      if (hintEl) hintEl.textContent = t(`settings.${f.key}.hint`);
+    }
+    this._sync();
   }
 
   get isOpen() {
@@ -103,11 +116,11 @@ export class SettingsPanel {
     root.id = 'settings';
     root.innerHTML = `
       <div class="settings-box">
-        <div class="settings-title">CONFIGURAÇÕES</div>
+        <div class="settings-title"></div>
         <div class="settings-rows"></div>
         <div class="settings-actions">
-          <button data-act="reset">restaurar padrões</button>
-          <button data-act="close">voltar</button>
+          <button data-act="reset"></button>
+          <button data-act="close"></button>
         </div>
       </div>`;
     const rows = root.querySelector('.settings-rows');
@@ -117,10 +130,10 @@ export class SettingsPanel {
       row.className = 'settings-row';
       if (f.type === 'range') {
         row.innerHTML = `
-          <span class="settings-label">${f.label}</span>
+          <span class="settings-label"></span>
           <input type="range" min="${f.min}" max="${f.max}" step="${f.step}" />
           <span class="settings-value"></span>
-          ${f.hint ? `<span class="settings-hint">${f.hint}</span>` : ''}`;
+          ${f.hint ? '<span class="settings-hint"></span>' : ''}`;
         const input = row.querySelector('input');
         const out = row.querySelector('.settings-value');
         input.addEventListener('input', () => {
@@ -129,20 +142,33 @@ export class SettingsPanel {
           this._commit(f.key);
         });
         this.inputs[f.key] = { input, out, f };
+      } else if (f.type === 'select') {
+        row.innerHTML = `
+          <span class="settings-label"></span>
+          <select>${f.options.map(([v, name]) => `<option value="${v}">${name}</option>`).join('')}</select>
+          <span class="settings-value"></span>`;
+        const input = row.querySelector('select');
+        input.addEventListener('change', () => {
+          this.values[f.key] = input.value;
+          this._commit(f.key);
+        });
+        this.inputs[f.key] = { input, out: null, f };
       } else {
         row.innerHTML = `
-          <span class="settings-label">${f.label}</span>
+          <span class="settings-label"></span>
           <input type="checkbox" />
           <span class="settings-value"></span>`;
         const input = row.querySelector('input');
         const out = row.querySelector('.settings-value');
         input.addEventListener('change', () => {
           this.values[f.key] = input.checked;
-          out.textContent = input.checked ? 'ligado' : 'desligado';
+          out.textContent = onOff(input.checked);
           this._commit(f.key);
         });
         this.inputs[f.key] = { input, out, f };
       }
+      this.inputs[f.key].labelEl = row.querySelector('.settings-label');
+      this.inputs[f.key].hintEl = row.querySelector('.settings-hint');
       rows.appendChild(row);
     }
     root.addEventListener('click', (e) => {
@@ -168,9 +194,11 @@ export class SettingsPanel {
       if (f.type === 'range') {
         input.value = v;
         out.textContent = f.fmt(v);
+      } else if (f.type === 'select') {
+        input.value = v;
       } else {
         input.checked = !!v;
-        out.textContent = v ? 'ligado' : 'desligado';
+        out.textContent = onOff(v);
       }
     }
   }

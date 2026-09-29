@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="Content-Security-Policy"
@@ -24,19 +24,13 @@
 
   <!-- Tela de entrada: aparece no início e sempre que o ponteiro é liberado (ESC). -->
   <div id="gate">
-    <canvas id="gate-glyphs"></canvas>
-    <div class="gate-title" data-text="ATRAVESSAR">ATRAVESSAR</div>
-    <div class="gate-sub">clique para entrar na Cidade</div>
-    <div class="gate-keys">
-      <span>WASD</span> mover &nbsp;·&nbsp; <span>MOUSE</span> olhar &nbsp;·&nbsp;
-      <span>ESPAÇO</span> pular / subir &nbsp;·&nbsp; <span>CTRL / Q</span> descer (voo) &nbsp;·&nbsp; <span>F</span> andar ↔ voar<br />
-      <span>SHIFT</span> acelerar &nbsp;·&nbsp; <span>P</span> piloto automático &nbsp;·&nbsp; <span>R</span> regenerar &nbsp;·&nbsp;
-      <span>H</span> interface &nbsp;·&nbsp; <span>O</span> configurações &nbsp;·&nbsp; <span>T</span> transporte &nbsp;·&nbsp; <span>F2</span> foto &nbsp;·&nbsp; <span>M</span> mapa &nbsp;·&nbsp; <span>F11</span> tela cheia &nbsp;·&nbsp; <span>ESC</span> soltar
-    </div>
+    <div class="gate-title" data-i18n="gate.title"></div>
+    <div class="gate-sub" data-i18n="gate.enter"></div>
+    <div class="gate-keys" data-i18n-html="gate.keys"></div>
     <div class="gate-buttons">
-      <button class="gate-settings" id="open-transport">TRANSPORTE</button>
-      <button class="gate-settings" id="open-settings">CONFIGURAÇÕES</button>
-      <button class="gate-settings" id="new-world">NOVO MUNDO</button>
+      <button class="gate-settings" id="open-transport" data-i18n="gate.transport"></button>
+      <button class="gate-settings" id="open-settings" data-i18n="gate.settings"></button>
+      <button class="gate-settings" id="new-world" data-i18n="gate.newWorld"></button>
     </div>
     <div class="gate-diary" id="gate-diary"></div>
   </div>

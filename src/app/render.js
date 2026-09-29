@@ -6,6 +6,7 @@
 //  névoa, render/pipeline.js) → bloom → tone mapping → filme (grão, vinheta).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { t } from '../i18n/index.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
@@ -110,7 +111,7 @@ export function takePhoto(ctx) {
     a.download = `cybercosmic-${ctx.seed.toString(36)}-${stamp}.png`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    ctx.hud.push('REGISTRO SALVO :: Imagens/CYBERCOSMIC');
+    ctx.hud.push(t('hud.photo'));
   }, 'image/png');
   signal.uniforms.uGrain.value = grain;
   renderer.setPixelRatio(prevRatio);
