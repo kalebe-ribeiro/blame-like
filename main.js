@@ -18,6 +18,7 @@
 //    electron . --collapse=4 → força um colapso distante aos 4 s
 //    electron . --stats   → imprime FPS e estatísticas do streaming no terminal
 //    electron . --novsync → sem limite de quadros (medir desempenho)
+//    electron . --check   → teste de fumaça: visita todos os destinos (npm run check)
 //    electron . --profile=tmp → perfil separado: não toca no seu salvamento/diário
 //    electron . --autopilot=6  → começa em piloto automático (N = multiplicador de velocidade)
 //    electron . --pos=x,y,z,yaw,pitch  → começa num ponto global qualquer
@@ -49,6 +50,10 @@ const distArg = argValue('dist');
 
 // O áudio precisa começar sem gesto no modo captura (e não atrapalha no normal).
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// --check: teste de fumaça (roteiro por todos os destinos) — ver src/dev/check.js
+const checkMode = process.argv.includes('--check');
+if (checkMode) app.setPath('userData', path.join(require('os').tmpdir(), 'cybercosmic-check'));
+
 // --profile=pasta: perfil separado (salvamento, diário, configurações) — para testes
 if (argValue('profile')) app.setPath('userData', path.resolve(argValue('profile')));
 
@@ -116,6 +121,11 @@ function createWindow() {
   if (gotoKind) query.set('goto', gotoKind);
   if (argValue('outage')) query.set('outage', argValue('outage'));
   if (argValue('collapse')) query.set('collapse', argValue('collapse'));
+  if (checkMode) {
+    query.set('check', '1');
+    query.set('seed', 'abc');
+    query.set('autostart', '1');
+  }
   if (fogArg) query.set('fog', fogArg);
   if (distArg) query.set('dist', distArg);
   const qs = query.toString();
@@ -134,8 +144,13 @@ function createWindow() {
 
   // Encaminha avisos/erros do renderer para o terminal — ajuda muito ao expandir shaders.
   win.webContents.on('console-message', (_e, level, message, line, sourceId) => {
+    if (checkMode) return onCheckMessage(level, message, sourceId, line);
     if (level >= 2) console.log(`[renderer] ${message} (${sourceId}:${line})`);
   });
+  if (checkMode) {
+    win.webContents.on('render-process-gone', (_e, d) => finishCheck(`processo do renderer caiu: ${d.reason}`));
+    setTimeout(() => finishCheck('tempo esgotado (6 min)'), 6 * 60 * 1000);
+  }
 
   if (capturePath) {
     setTimeout(async () => {
@@ -145,6 +160,39 @@ function createWindow() {
       app.quit();
     }, captureDelay * 1000);
   }
+}
+
+// ─── teste de fumaça ────────────────────────────────────────────────────────
+const checkRows = [];
+const checkErrors = [];
+function onCheckMessage(level, message, sourceId, line) {
+  if (message === 'CHECK:DONE') return finishCheck();
+  if (message.startsWith('CHECK:')) {
+    const r = JSON.parse(message.slice(6));
+    checkRows.push(r);
+    const cols = [r.kind.padEnd(14), r.ok ? 'ok   ' : 'FALHA', r.fps !== undefined ? `${String(r.fps).padStart(4)} fps  pior ${String(r.worst).padStart(4)} ms` : '', r.why ?? ''];
+    console.log('  ' + cols.join('  '));
+    return;
+  }
+  // avisos do Chromium sobre a GPU no fechamento não contam
+  // erros de script/shader, e avisos de WebGL (erros de GL chegam como aviso)
+  if ((level >= 3 || /^WebGL:|GL_INVALID|THREE\.WebGLProgram/.test(message)) && !/GPU state invalid/.test(message)) {
+    checkErrors.push(`${message} (${sourceId}:${line})`);
+    console.log(`  ERRO: ${message}`);
+  }
+}
+let checkFinished = false;
+function finishCheck(fatal) {
+  if (checkFinished) return;
+  checkFinished = true;
+  const failed = checkRows.filter((r) => !r.ok);
+  const fps = checkRows.filter((r) => r.fps).map((r) => r.fps);
+  console.log('');
+  console.log(`  destinos: ${checkRows.length} · falhas: ${failed.length} · erros: ${checkErrors.length}${fps.length ? ` · fps médio ${Math.round(fps.reduce((a, b) => a + b, 0) / fps.length)} (mín ${Math.min(...fps)})` : ''}`);
+  if (fatal) console.log(`  FATAL: ${fatal}`);
+  const pass = !fatal && !failed.length && !checkErrors.length && checkRows.length > 0;
+  console.log(pass ? '  PASSOU' : '  REPROVOU');
+  app.exit(pass ? 0 : 1);
 }
 
 app.whenReady().then(() => {

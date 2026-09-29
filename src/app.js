@@ -516,6 +516,10 @@ function teleport(kind, label) {
   controls.lock();
   return true;
 }
+// teste de fumaça (npm run check): roteiro automático por todos os destinos
+if (params.get('check')) {
+  import('./dev/check.js').then((m) => m.runCheck({ teleport, world, controls, camera, THREE, getTime: () => time }));
+}
 // flag de desenvolvimento: --goto=construtores (ou qualquer tipo de DESTINATIONS)
 if (params.get('goto')) teleport(params.get('goto'), params.get('goto'));
 

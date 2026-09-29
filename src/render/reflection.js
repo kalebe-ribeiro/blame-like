@@ -7,6 +7,10 @@
 //  (material 'flood', USE_REFLECTION) lê essa imagem em espaço de tela,
 //  invertida na vertical e tremida pelas ondulações, e mistura por Fresnel.
 //
+//  O recorte "só acima da água" é feito pela própria projeção (plano near
+//  oblíquo, Lengyel 2005) — sem planos de recorte do renderer, que obrigariam
+//  a recompilar variantes de TODOS os shaders na primeira vez (1,5 s travado).
+//
 //  Por que dá certo sem inverter a imagem: refletir a cena no plano y = L e
 //  olhá-la com a câmera real é o mesmo que olhar a cena real com uma câmera
 //  em y' = 2L − y cuja rotação é M·R·M (M = espelho em y) — que é uma rotação
@@ -26,7 +30,9 @@ export class ReflectionSystem {
     this.level = null; // nível GLOBAL da água em uso (ou null)
     this.materials = [];
     this.enabled = true;
-    this._plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    this._plane = new THREE.Plane();
+    this._clip = new THREE.Vector4();
+    this._q = new THREE.Vector4();
     this._timer = 0;
   }
 
@@ -92,14 +98,31 @@ export class ReflectionSystem {
     const silOn = sh.uSilOn.value;
     sh.uFogBase.value = fogBase - camera.position.y + cam.position.y; // névoa relativa ao "olho" espelhado
     sh.uSilOn.value = 0; // a máscara das silhuetas é da câmera real
-    const prevPlanes = renderer.clippingPlanes;
-    this._plane.set(this._plane.normal, -(L + 0.08)); // só o que está acima da água (e não a própria água)
-    renderer.clippingPlanes = [this._plane];
+    // plano near oblíquo = a superfície da água (só o que está acima entra)
+    this._plane.set(new THREE.Vector3(0, 1, 0), -(L + 0.08)).applyMatrix4(cam.matrixWorldInverse);
+    const P = cam.projectionMatrix;
+    const e = P.elements;
+    const c = this._clip.set(this._plane.normal.x, this._plane.normal.y, this._plane.normal.z, this._plane.constant);
+    const qc = this._q.set((Math.sign(c.x) + e[8]) / e[0], (Math.sign(c.y) + e[9]) / e[5], -1, (1 + e[10]) / e[14]);
+    c.multiplyScalar(2 / c.dot(qc));
+    e[2] = c.x;
+    e[6] = c.y;
+    e[10] = c.z + 1;
+    e[14] = c.w;
+    cam.projectionMatrixInverse.copy(P).invert();
+    // a própria água não pode ler a textura em que está sendo escrita (laço de realimentação)
+    for (const m of this.materials) {
+      m.uniforms.uReflOn.value = 0;
+      m.uniforms.uReflTex.value = null;
+    }
     const prevTarget = renderer.getRenderTarget();
     renderer.setRenderTarget(this.rt);
     renderer.render(scene, cam);
     renderer.setRenderTarget(prevTarget);
-    renderer.clippingPlanes = prevPlanes;
+    for (const m of this.materials) {
+      m.uniforms.uReflOn.value = 1;
+      m.uniforms.uReflTex.value = this.rt.texture;
+    }
     sh.uFogBase.value = fogBase;
     sh.uSilOn.value = silOn;
   }

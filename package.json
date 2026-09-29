@@ -5,7 +5,8 @@
   "main": "main.js",
   "private": true,
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "check": "electron . --check"
   },
   "dependencies": {
     "three": "^0.170.0",
