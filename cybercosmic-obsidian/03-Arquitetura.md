@@ -51,7 +51,10 @@ As peças compartilham um objeto de contexto `ctx`:
 | `app/player.js` | **estado do corpo**: energia, ferramentas, o que carrega, acesso |
 | `app/carried.js` | o aparelho na mão (Peregrinação): lanterna (luz 'carried' do LightRig), célula de energia, tomadas |
 | `app/wake.js` | queda e despertar (Peregrinação): assume a câmera durante a sequência |
-| `app/reading.js` | E diante de um terminal: leitura (ensina), leitor portátil (fragmento), reabrir do arquivo |
+| `app/reading.js` | E diante de um terminal: leitura (ensina), leitor portátil (fragmento), pegar o sensor, reabrir do arquivo |
+| `app/leads.js` | **pistas** do mundo (Peregrinação): abrir, juntar partes, alcançar; `slot.leads`; eventos `lead:new/narrow/reached` |
+
+`src/gen/sites.js`: **onde há terminais**, pela lei do mundo (estação, passagem, console de única) — a única fonte dos ids estáveis dos terminais; `siteById` refaz um terminal pelo id. `src/lang/leads.js`: quem cita quem (pistas), a linha ROTA, a área de incerteza e o começo do mundo — tudo puro.
 
 `src/lang/`: a língua antiga (`ancient.js`: conceitos, escrita de estêncil, `drawTokens`), o léxico global (`lexicon.js`, no perfil — `ctx.lexicon`, também em `world.lexicon`) e o que os terminais dizem (`records.js`). Texto da língua antiga é sempre uma lista de **tokens** (`{w}` palavra, `{n}` número, `{c}` código, `{p}` pontuação), desenhada misturando o que é entendido (no idioma do jogo) e o resto (estêncil).
 

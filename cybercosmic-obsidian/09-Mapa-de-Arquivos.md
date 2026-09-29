@@ -14,12 +14,14 @@ src/
   app/saves.js              perfil global + um mundo salvo por modo (WorldState)
   app/modes.js              modos de jogo e regras (ctx.rules)
   app/player.js             estado do corpo (energia, ferramentas, acesso)
-  app/carried.js            aparelho na mão: lanterna, célula de energia, tomadas
+  app/carried.js            aparelho na mão: lanterna, célula de energia, tomadas, sensor
   app/wake.js               queda e despertar
-  app/reading.js            ler terminais, leitor portátil, reabrir do arquivo
+  app/reading.js            ler terminais, leitor portátil, pegar o sensor, reabrir do arquivo
+  app/leads.js              as pistas do mundo (abrir, estreitar, alcançar)
   lang/ancient.js           a língua antiga: conceitos, escrita de estêncil, drawTokens
   lang/lexicon.js           o léxico global
   lang/records.js           o que os terminais dizem; sectorCode, levelNumber
+  lang/leads.js             pistas: leadFor, leadLine, leadArea, startPlace (o começo do mundo)
   core/events.js            barramento de eventos (world.bus)
   i18n/index.js             t(), idiomas, formatação de números e distâncias
   i18n/en.js, i18n/pt.js    os textos (inglês padrão, português opção)
@@ -29,6 +31,7 @@ src/
   lib/three.js              ponte do three que funciona dentro dos workers
 
   gen/hash.js               hash de coordenadas → base de tudo que é infinito
+  gen/sites.js              onde há terminais (ids estáveis), sem carregar nada
   gen/field.js              A LEI DO MUNDO (grades, regiões, estruturas, trincheiras, relevo…)
   gen/chunkgen.js           gera um chunk (worker): pilares, passarelas, flutuantes
   gen/network.js            rede andável (plataformas e ligações)
@@ -77,7 +80,7 @@ src/
   ui/settings.js            configurações (O)
   ui/transport.js           painel de transporte (T)
   ui/journey.js             diário (os dados ficam no mundo salvo)
-  ui/trailmap.js            mapa da travessia (M)
+  ui/trailmap.js            mapa da travessia (M), com as descobertas
   ui/reader.js              tela de leitura
-  ui/archive.js             o diário como arquivo (abas)
+  ui/archive.js             o diário como arquivo (abas: diário, registros, pistas, léxico)
 ```

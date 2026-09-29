@@ -1,10 +1,12 @@
 ---
-status: decidida
+status: feita
 prioridade: alta
 tags: [gameplay, peregrinacao]
 ---
 
 # Início de um mundo (modo Peregrinação)
+
+> **Feito na fase 3** (`startPlace` em `lang/leads.js`, `app.js`): plataforma de estação num setor apagado, diante de um terminal morto que sempre cita alguém; leitor portátil, 35% de carga, lanterna acesa; o primeiro fragmento sempre traz parte da rota. Destino de transporte "Início da Peregrinação".
 
 > Decidido (2026-09-29).
 

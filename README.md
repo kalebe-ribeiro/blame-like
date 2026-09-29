@@ -25,13 +25,16 @@ Os do modo Livre. Na Peregrinação não há voo (P), transporte (T), mundo novo
 | tecla | na Peregrinação |
 |---|---|
 | **F** | liga/desliga a lanterna do aparelho na mão (no controle: X) |
-| **E** | lê o terminal em frente; se não houver, conecta numa tomada de recarga (no controle: Y) |
+| **E** | lê o terminal em frente (ou pega o sensor largado ao pé dele); se não houver, conecta numa tomada de recarga (no controle: Y) |
+| **G** | o sensor: terminais → energia viva → movimento → desligado (no controle: direcional ↓) |
 
 ### O corpo na Peregrinação
 
+- **O começo**: um mundo novo da Peregrinação começa num lugar diferente em cada seed, na plataforma de uma estação num setor apagado, de frente para um **terminal morto**, com o leitor portátil, pouca carga e a lanterna acesa. A primeira leitura já traz a primeira pista.
 - **O aparelho na mão**: a lanterna na frente e uma telinha em cima com a carga (dez gomos). Nada de barra na tela do jogo.
 - **A célula de energia**: a lanterna gasta (carga cheia dura 7 min) e falha quando está no fim; sem carga você ainda anda, só enxerga o que a Cidade ilumina. Um mundo novo começa com pouca carga.
 - **Tomadas**: caixinhas nos postes das passarelas, das plataformas e nos abrigos das estações. Recarregam enquanto você fica perto, se o setor tiver energia.
+- **O sensor**: achado ao pé do terminal no fim da primeira pista (e junto do console de toda estrutura única, até você ter um). Na tela do aparelho, de que lado vem o sinal mais forte e o quanto ele é nítido, nunca a distância; atrás de você, uma seta na borda. Escuta **terminais** (o console das únicas se ouve a 2,5 km), **energia viva** (setores com energia, tomadas carregadas) ou **movimento** (máquinas colossais, vagões). No modo terminais, o lugar de uma pista aberta soa diferente: é assim que você sabe que chegou. Gasta a célula (carga cheia dura 15 min).
 - **Queda e despertar**: uma queda que seria fatal (ou uma queda sem fim) não mata. A vista desaba até o chão, as bordas fecham, o foco se perde, o som abafa; no escuro, só o coração. Você é arrastado aos puxões por algo que nunca dá para ver, e acorda num lugar qualquer, longe.
 
 ## A língua antiga
@@ -42,7 +45,17 @@ A Cidade fala a língua de quem a construiu e se perdeu na própria obra: humana
 - **Aprender**: cada palavra é entendida depois de vista em fontes diferentes o bastante (as comuns em 2, as incomuns em 4, as raras em 7). Palavras entendidas durante a leitura "se resolvem" na frente dos seus olhos. O léxico é **global** (vale em todos os mundos) e só cresce na Peregrinação.
 - **Endereços nas paredes**: tinta de estêncil gasta ao lado das passarelas que atravessam galerias e maciços, e nas placas das estações. Setor, nível, galeria, com formatos que mudam de setor para setor, códigos riscados e renumerados. Ler de perto também ensina, e a palavra que nomeia o lugar conta dobrado.
 - **Leitor portátil** (Peregrinação): diante de um terminal sem energia, E gasta 8% da célula e arranca um fragmento do que ele guarda.
-- **O diário como arquivo**: na tela de entrada, as abas DIÁRIO, REGISTROS (os terminais lidos; clicar relê com o que você sabe agora) e LÉXICO.
+- **O diário como arquivo**: na tela de entrada, as abas DIÁRIO, REGISTROS (os terminais lidos; clicar relê com o que você sabe agora), PISTAS (Peregrinação) e LÉXICO.
+
+## Pistas (Peregrinação)
+
+Não há missões. Uma pista é um endereço que você leu e decide seguir.
+
+- **A rota**: parte dos terminais tem uma linha ROTA, com o **setor** (o código da Cidade), o **nível** e a **distância** de outro lugar que existe de verdade. Um terminal com energia mostra tudo; o leitor portátil arranca uma ou duas partes por fragmento, e as outras saem apagadas.
+- **Estreitar**: cada parte só vale quando a palavra que a nomeia (SETOR, NÍVEL, DISTÂNCIA) já foi entendida. Juntar partes e aprender palavras encolhe a área de incerteza da pista, no mapa e no diário. Os códigos de setor pintados nas paredes dizem se você está no lugar certo, e o sensor confirma.
+- **Chegar**: ler o terminal citado fecha a pista, e lá, muitas vezes, há outra.
+- **Cadeias**: os terminais comuns apontam para a **estrutura única** mais próxima (um elo alguns quilômetros mais perto dela, ou ela mesma); o console de uma estrutura única aponta para além da metade do caminho até a próxima. As cadeias nunca voltam para onde estiveram e nunca acabam.
+- **Estruturas únicas**: raras (uma a cada ~16 km, no alto das camadas), com porta, luzes e um console com energia própria. Há três tipos: console ativo, arquivo de registros e usina.
 
 ## Setores de energia
 
@@ -197,7 +210,7 @@ Detalhes da implementação:
 ## A travessia
 
 - **Continuar de onde parou:** o jogo guarda sozinho, no mundo salvo do modo, a seed, a posição, a direção do olhar, o diário, o mapa e o que mudou no mundo (a cada 5 s e ao fechar). Ao abrir, você volta exatamente ali. No painel **MUNDOS** dá para continuar o mundo do outro modo ou começar um mundo novo (substitui o daquele modo, com confirmação). O salvamento de antes dos modos vira o mundo do modo Livre.
-- **Mapa da travessia** (M): o caminho deste mundo guardado entre sessões, um ponto a cada ~8 m. Aparece como uma linha de luz em 3D, com trilhos, teleportes tracejados, quedas e fotos marcadas, escala e extensão.
+- **Mapa da travessia** (M): o caminho deste mundo guardado entre sessões, um ponto a cada ~8 m. Aparece como uma linha de luz em 3D, com trilhos, teleportes tracejados, quedas e fotos marcadas, escala e extensão. Mostra também o que foi descoberto: os setores atravessados (com o estado da energia), os terminais lidos, as estruturas únicas e, na Peregrinação, as pistas abertas como círculos tracejados de incerteza, com a rota escrita ao lado.
 - **Diário da travessia**, na tela de entrada e acumulado no mundo: distância a pé, em deriva e sobre trilhos (e número de viagens), maior queda, ponto mais fundo e mais alto, regiões visitadas, apagões e colapsos testemunhados, fotos e tempo na Cidade.
 - Só o `npm start` normal lê e grava isso. Qualquer flag de desenvolvimento (`--seed`, `--pos`, `--capture`…) roda uma sessão avulsa que não mexe no seu salvamento. `--profile=pasta` usa um perfil separado.
 
@@ -212,7 +225,7 @@ A Cidade é grande demais para ser percorrida. A tecla **T**, ou o botão **TRAN
 - **Regiões:** teia, colmeia, maciço, vazio, setor inundado.
 - **Interiores:** sala de máquinas, silo, depósito.
 - **Estruturas:** galeria, poço, conduto, estrato, treliça, escadaria, camada/elevador.
-- **Outros:** Construtores (você chega a ~160 m do canteiro, de frente para o pórtico), cemitério de Construtores, cascata (na borda da poça), transportador (na plataforma de uma estação), máquina colossal (você chega flutuando à frente dela, e ela passa por cima) e a ponte inicial.
+- **Outros:** Construtores (você chega a ~160 m do canteiro, de frente para o pórtico), cemitério de Construtores, cascata (na borda da poça), transportador (na plataforma de uma estação), máquina colossal (você chega flutuando à frente dela, e ela passa por cima), terminal (diante de um com energia), estrutura única (diante da porta), o início da Peregrinação nesta seed e a ponte inicial.
 
 A busca usa as funções puras do `Field`, então não precisa que o lugar esteja carregado. O ponto de chegada sempre tem chão: a laje de uma sala, o topo de um bloco, uma plataforma da rede, uma sacada, o piso de um conduto, uma viga. O corpo paira até a geometria em volta ficar pronta. No vazio, se não houver nenhuma plataforma por perto, você chega voando.
 
@@ -266,9 +279,12 @@ src/
   app/saves.js              perfil global + um mundo salvo por modo (o que mudou, por id estável)
   app/modes.js              modos de jogo (Livre, Peregrinação) e suas regras
   app/player.js             estado do corpo: energia, ferramentas, o que carrega, acesso
-  app/carried.js            o aparelho na mão: lanterna, célula de energia, tomadas (Peregrinação)
+  app/carried.js            o aparelho na mão: lanterna, célula de energia, tomadas, sensor (Peregrinação)
   app/wake.js               queda e despertar (Peregrinação)
-  app/reading.js            ler terminais (E), o leitor portátil
+  app/reading.js            ler terminais (E), o leitor portátil, pegar o sensor
+  app/leads.js              as pistas do mundo (abrir, estreitar, alcançar)
+  lang/leads.js             pistas: quem cita quem, a linha ROTA, a área de incerteza, o começo do mundo
+  gen/sites.js              onde há terminais, pela lei do mundo (ids estáveis)
   lang/ancient.js           a língua antiga: conceitos, escrita de estêncil, desenho misturado
   lang/lexicon.js           o léxico global (palavras entendidas)
   lang/records.js           o que os terminais dizem; códigos de setor e níveis
@@ -384,13 +400,13 @@ Teste de fumaça: numa seed fixa, visita todos os destinos do painel de transpor
 ```bash
 npx electron . --stats
 ```
-Imprime FPS, chunks carregados, fila de geração, lotes (uso, vagas livres, compactações), draw calls, triângulos, heap e a GPU em uso. Também mostra o tempo de CPU das listas de desenho e, perto da água, o tempo de GPU do reflexo. Com `--novsync` o limite de quadros é removido, para medir desempenho de verdade. `--outage=4` força um apagão de setor aos 4 s, e `--collapse=4` um colapso distante. `--wake=4` dispara o desmaio aos 4 s, `--lantern` começa com a lanterna acesa e `--game=pilgrimage` abre a sessão no modo Peregrinação. `--read=N` abre a leitura do terminal em frente aos N s, `--lexicon=N` já entende as palavras até a classe N (1 comuns, 2 incomuns, 3 raras) e `--archive=records|lexicon` escolhe a aba do diário.
+Imprime FPS, chunks carregados, fila de geração, lotes (uso, vagas livres, compactações), draw calls, triângulos, heap e a GPU em uso. Também mostra o tempo de CPU das listas de desenho e, perto da água, o tempo de GPU do reflexo. Com `--novsync` o limite de quadros é removido, para medir desempenho de verdade. `--outage=4` força um apagão de setor aos 4 s, e `--collapse=4` um colapso distante. `--wake=4` dispara o desmaio aos 4 s, `--lantern` começa com a lanterna acesa e `--game=pilgrimage` abre a sessão no modo Peregrinação. `--read=N` abre a leitura do terminal em frente aos N s, `--lexicon=N` já entende as palavras até a classe N (1 comuns, 2 incomuns, 3 raras) e `--archive=records|lexicon|leads` escolhe a aba do diário. `--sensor=terminal|energy|motion` dá o sensor já ligado nesse modo, e `--map=N` abre o mapa aos N s.
 
 ```bash
 npx electron . --capture=shot.png --pos=2000,-800,3000,0.3,0 --seed=abc --delay=8 --show
 ```
 
-`--goto=construtores` (ou qualquer tipo do painel de transporte: `teia`, `colmeia`, `macico`, `vazio`, `inundado`, `maquinas`, `silo`, `deposito`, `galeria`, `poco`, `conduto`, `estrato`, `trelica`, `escadaria`, `camada`, `cemiterio`, `cascata`, `transportador`, `colosso`, `ponte`) começa já transportado.
+`--goto=construtores` (ou qualquer tipo do painel de transporte: `teia`, `colmeia`, `macico`, `vazio`, `inundado`, `maquinas`, `silo`, `deposito`, `galeria`, `poco`, `conduto`, `estrato`, `trelica`, `escadaria`, `camada`, `cemiterio`, `cascata`, `transportador`, `colosso`, `terminal`, `unica`, `inicio`, `ponte`) começa já transportado.
 
 `--fog=0.3` e `--dist=1500` sobrescrevem a névoa e a distância só nesta sessão, sem salvar.
 Captura um PNG num ponto qualquer do mundo. Outras flags:

@@ -1,10 +1,12 @@
 ---
-status: em andamento
+status: feita
 prioridade: média
 tags: [gameplay, progressao]
 ---
 
 # Ferramentas encontradas
+
+> **Sensor feito na fase 3** (`app/carried.js`): tecla G, modos terminais · energia viva · movimento; mostra o lado e a nitidez do sinal, nunca a distância; ◆ no lugar de uma pista aberta; gasta a célula. Achado ao pé do terminal no fim da primeira pista e junto do console das estruturas únicas.
 
 > **Leitor portátil feito na fase 2** (`app/reading.js`): terminal morto + E → fragmento (cabeçalho + 2–3 linhas), −8% da célula; todo mundo da Peregrinação tem. O sensor é da fase 3.
 

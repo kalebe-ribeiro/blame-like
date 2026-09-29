@@ -70,3 +70,13 @@ Por que as coisas estão como estão, em ordem.
 - **2.4 Leitor portátil**: fragmento de terminal morto por 8% da célula.
 - **2.5 Diário como arquivo**: abas DIÁRIO / REGISTROS / LÉXICO.
 
+## 2026-09-29 — fase 3 (seguir rastros) feita
+
+- **3.1 Estruturas únicas** (`c87258a`; não tinha sido registrada no cofre): console ativo, arquivo de registros, usina. Uma por célula de ~16 km (75%), no alto das camadas, longe de passagens, canteiros, relevo e assentamentos; porta, luzes próprias e um console sempre com energia e registros especiais. Destino de transporte "Estrutura única".
+- **3.2 Pistas** (`08bd6b2`): ~40% dos terminais têm uma linha ROTA (setor, nível, distância de outro lugar que existe). Os lugares dos terminais saíram de `world/terminals.js` para `gen/sites.js` (a mesma conta e os mesmos ids para quem precisa de terminais longe). Lógica pura em `lang/leads.js`; estado no mundo salvo em `app/leads.js` (`slot.leads`); aba PISTAS no arquivo.
+  - A primeira versão das cadeias fazia **ciclo A→B→A** entre duas únicas próximas (camadas empilhadas) e **morria** quando o elo escolhido não citava ninguém. Correção: de única em única, a cadeia segue uma **correnteza** (direção por seed, ≥3 km adiante), e só terminais que citam alguém viram elos. Medido em 40 seeds: começo encontrado em todas; 35 cadeias passam de 30 elos (o limite do teste), as outras 5 param depois de 10 ou mais.
+- **3.3 Início do mundo** (`eafd97c`): plataforma de estação num setor apagado, diante de um terminal morto que sempre cita alguém (lugar diferente por seed, `startPlace`); lanterna acesa no começo; destino de transporte "Início da Peregrinação" (entra no teste de fumaça).
+- **3.4 Sensor** (`d9dad31`): no aparelho da mão, tecla G (controle: direcional ↓); terminais / energia viva / movimento; mostra só o lado e a nitidez; ◆ no lugar de uma pista aberta. Achado ao pé do terminal no fim da primeira pista e nos consoles das únicas. Flag `--sensor=`.
+- **3.5 Mapa com descobertas** (`c0b9214`): setores atravessados (`slot.sectors`), terminais lidos, únicas, pistas com área de incerteza e a rota escrita. Flag `--map=N`.
+- Verificação feita num contêiner na nuvem, sem GPU: render por software a ~1 fps. O `npm run check` inteiro passa do limite de 6 min do `main.js` nessas condições; foi rodado em partes (`--check=a,b,…`) e todos os destinos passaram nos dois modos, com 0 erros. Numa máquina com GPU o roteiro inteiro cabe no tempo, como antes.
+

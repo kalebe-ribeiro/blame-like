@@ -1,10 +1,12 @@
 ---
-status: escolhida
+status: feita
 prioridade: média
 tags: [gameplay, interface]
 ---
 
 # Mapa com descobertas
+
+> **Feita na fase 3** (`ui/trailmap.js`): setores atravessados (com o estado da energia), terminais lidos, estruturas únicas e as pistas abertas com a área de incerteza e a rota escrita. Setores religados, esquemas parciais e marcas do jogador chegam com as fases seguintes.
 
 > Escolhida (2026-09-29).
 

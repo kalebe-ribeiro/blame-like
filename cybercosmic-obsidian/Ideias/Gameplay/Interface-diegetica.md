@@ -6,6 +6,8 @@ tags: [gameplay, interface]
 
 # Interface mínima, no mundo
 
+> **Fase 3**: o sensor usa o mesmo aparelho (a tela mostra o modo, a faixa com o lado do sinal e a carga em gomos menores). Tecla G.
+
 > **Fase 1**: o aparelho na mão existe (lanterna + telinha com a carga). Sensor e leitor usarão o mesmo aparelho (fases 2–3).
 
 > **Fase 0**: a Peregrinação já não tem interface na tela. Os aparelhos na mão (energia, sensor, leitor) chegam nas fases 1–3.

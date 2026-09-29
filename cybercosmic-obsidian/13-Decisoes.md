@@ -69,6 +69,22 @@ Registro das decisões do usuário, com data. Uma decisão só muda se o usuári
 | commits | **commit a cada fase** (e, dentro dela, a cada etapa) |
 | iniciar a fase 1? | **não por enquanto** — o usuário pediu para não começar a fase 1 |
 
+### Fase 3 (2026-09-29) — escolhas feitas por padrão, **a confirmar**
+
+O usuário pediu para finalizar a fase 3 sem responder às perguntas abertas. O que foi escolhido (tudo fácil de mudar):
+
+| pergunta | escolha |
+|---|---|
+| mostrar algo quando se chega a uma pista? (estava em aberto em [[Ideias/Gameplay/Pistas]]) | **nada na tela**. A pista fecha ao **ler o terminal citado**; antes disso, o **sensor** (modo terminais) marca o lugar de uma pista aberta com ◆ "O ENDEREÇO" |
+| para onde as pistas apontam | **terminais** (elos) e **estruturas únicas** (fim da cadeia). Canteiros e trincheiras ficaram para a fase 4 |
+| como uma pista estreita | três partes: **setor, nível, distância**. Terminal com energia dá tudo; o leitor portátil, 1–2 partes por fragmento. Uma parte só vale com a palavra entendida (SETOR, NÍVEL, DISTÂNCIA). Raio: 5 km sem nada → 350 m com tudo |
+| quantos terminais citam alguém | ~40% (os elos e o primeiro terminal do mundo, sempre) |
+| cadeias | convergem para a única mais próxima; das únicas, seguem uma direção por seed (nunca voltam, nunca acabam) |
+| onde se acha o sensor | ao pé do terminal **no fim da primeira pista**, e junto do console de toda estrutura única (até ter um) |
+| modos do sensor (a nota dizia "a decidir") | **terminais · energia viva · movimento**, tecla **G**; gasta a célula (15 min com carga cheia); mostra o lado e a nitidez, nunca a distância |
+| começo da Peregrinação | plataforma de estação num **setor apagado**, diante do terminal morto, **lanterna já acesa** |
+| pistas no modo Livre | não (`ctx.rules.leads`); o mapa com descobertas (setores, terminais lidos, únicas) vale nos dois modos |
+
 ### Ideias escolhidas
 Terminais com conteúdo · Tradução como progresso · Peregrinação (contextual) · Estruturas únicas · Mapa com descobertas · Luz como recurso · Religar setores · Ferramentas (sensor + leitor portátil) · Subir nas máquinas colossais · Diário como arquivo · Travessias difíceis · Seeds compartilháveis · Marcas deixadas por você · Cargas (standby).
 

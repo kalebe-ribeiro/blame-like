@@ -10,24 +10,24 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 
 **Status**: `escolhida` (o usuário quer) · `decidida` · `proposta` · `standby` · `futuro` · `feita`. Ver também [[Descartadas]], [[Pendencias]] e as decisões em [[13-Decisoes]].
 
-**Fase atual (2026-09-29): discussão de ideias, sem código.** Plano: [[Plano-de-Gameplay]].
+**Estado (2026-09-29): fases 0–3 do [[15-Plano-de-Implementacao]] feitas.** Plano: [[Plano-de-Gameplay]].
 
 ## Gameplay
 
 | ideia | status | prioridade |
 |---|---|---|
 | [[Modos-de-jogo]] (Livre × Peregrinação) | ✔ feita (fase 0) | alta |
-| [[Inicio-do-mundo]] | decidida | alta |
-| [[Interface-diegetica]] | em andamento (aparelho na mão na fase 1) | alta |
+| [[Inicio-do-mundo]] | ✔ feita (fase 3) | alta |
+| [[Interface-diegetica]] | em andamento (aparelho na mão: carga na fase 1, sensor na fase 3) | alta |
 | [[Queda-e-despertar]] (animação) | ✔ feita (fase 1) | alta |
 | [[Terminais-com-conteudo]] | ✔ feita (fase 2) | alta |
 | [[Traducao-como-progresso]] | ✔ feita (fase 2) | alta |
-| [[Pistas]] (antes "peregrinação") | ★ escolhida | alta |
-| [[Estruturas-unicas]] | ★ escolhida | alta |
-| [[Mapa-de-descobertas]] | ★ escolhida | média |
+| [[Pistas]] (antes "peregrinação") | ✔ feita (fase 3) | alta |
+| [[Estruturas-unicas]] | em andamento (3 tipos na fase 3) | alta |
+| [[Mapa-de-descobertas]] | ✔ feita (fase 3) | média |
 | [[Luz-como-recurso]] | ✔ feita (fase 1) | média |
 | [[Religar-setores]] | ★ escolhida | média |
-| [[Ferramentas]] (sensor + leitor portátil) | leitor ✔ (fase 2) · sensor na fase 3 | média |
+| [[Ferramentas]] (sensor + leitor portátil) | ✔ feita (leitor na fase 2, sensor na fase 3) | média |
 | [[Subir-nas-maquinas]] | ★ escolhida | média |
 | [[Diario-como-arquivo]] | ✔ feita (fase 2) | média |
 | [[Travessias-dificeis]] | ★ escolhida | média |

@@ -1,10 +1,12 @@
 ---
-status: escolhida
+status: feita
 prioridade: alta
 tags: [gameplay, direcao]
 ---
 
 # Pistas — rastros que nascem do mundo
+
+> **Feita na fase 3** (`lang/leads.js`, `app/leads.js`, `gen/sites.js`): ~40% dos terminais têm uma linha ROTA (setor · nível · distância). Terminal com energia dá tudo, o leitor portátil 1–2 partes; cada parte só vale com a palavra entendida, e a área de incerteza encolhe (mapa e aba PISTAS). Ler o terminal citado fecha a pista. Cadeias: terminais → a única mais próxima; das únicas, uma correnteza por seed (nunca voltam, nunca acabam). Alvos hoje: terminais e estruturas únicas; canteiros e trincheiras na fase 4. **Em aberto → escolhido por padrão:** nada na tela ao chegar; o sensor marca o lugar (◆). Ver [[13-Decisoes]].
 
 > Escolhida (2026-09-29) — antes chamada "peregrinação"; o nome ficou só para o [[Modos-de-jogo|modo]]. Condição: **tem de fazer sentido no contexto — nunca sorteada ao abrir o mundo.**
 > Inspiração: Killy atravessando a Cidade atrás de um rastro ([[14-Universo-Blame]]).

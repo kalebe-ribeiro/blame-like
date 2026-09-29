@@ -5,7 +5,7 @@
 > ainda pode ser feito. Serve para você e para uma IA começar uma sessão sem
 > redescobrir tudo.
 
-**Aferido em:** 2026-09-29, commit `a16a534` (branch `main`).
+**Aferido em:** 2026-09-29, commit `c0b9214` (fase 3 inteira; branch `claude/dreamy-tesla-8pvapl`).
 **Raiz do projeto:** `C:\Users\kaleb\Downloads\vibecoding\blame` (este cofre é a subpasta `cybercosmic-obsidian/`).
 **Repositório:** https://github.com/kalebe-ribeiro/blame-like (público).
 
@@ -33,7 +33,7 @@
 | **o que fazer a seguir** | [[15-Plano-de-Implementacao]] (fases 0 → 7, até os NPCs) → [[Ideias/00-Ideias]] |
 | mudanças decididas e ainda não feitas | [[Ideias/Pendencias]] |
 
-> **Estado (2026-09-29): fases 0, 1 e 2 feitas; a fase 3 só começa quando o usuário pedir.** Registrar todo o contexto novo neste cofre.
+> **Estado (2026-09-29): fases 0, 1, 2 e 3 feitas.** Na fase 3, várias escolhas foram feitas por padrão e **esperam confirmação** — ver [[13-Decisoes]] ("Fase 3"). A fase 4 só começa quando o usuário pedir. Registrar todo o contexto novo neste cofre.
 
 ## Mapa do cofre
 

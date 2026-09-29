@@ -17,7 +17,7 @@
 | 0 ✔ | Fundação | limpar, preparar idiomas, modos, salvamento e a base para tudo o que vem |
 | 1 ✔ | Corpo e risco | a queda que acaba em despertar, a energia, o escuro |
 | 2 ✔ | Ler a Cidade | a língua antiga, os endereços, os terminais, o leitor, o diário |
-| 3 | Seguir rastros | pistas, sensor, mapa, o começo de um mundo, as primeiras estruturas únicas |
+| 3 ✔ | Seguir rastros | pistas, sensor, mapa, o começo de um mundo, as primeiras estruturas únicas |
 | 4 | Energia e travessia | religar setores, subir nas máquinas, marcas, seeds compartilháveis |
 | 5 | Preparar os seres | tudo o que Safeguards e NPCs vão precisar — ainda sem nenhum deles |
 | 6 | Safeguards | o sistema de defesa da Cidade |
@@ -80,7 +80,9 @@
 
 ---
 
-## Fase 3 — Seguir rastros
+## Fase 3 — Seguir rastros ✔ (feita em 2026-09-29)
+
+> Cinco etapas: `c87258a` (3.1 estruturas únicas), `08bd6b2` (3.2 pistas), `eafd97c` (3.3 início do mundo), `d9dad31` (3.4 sensor), `c0b9214` (3.5 mapa com descobertas). Detalhes em [[12-Historico]]. Escolhas feitas por padrão (a confirmar) em [[13-Decisoes]]. Ficaram para a fase 4: pistas para canteiros e trincheiras/horários de máquinas, e as outras estruturas únicas (sala de controle dos Construtores, antena, vila, berço).
 
 **Objetivo**: os objetivos aparecem — sem nenhuma missão.
 

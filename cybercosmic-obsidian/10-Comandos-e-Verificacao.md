@@ -20,6 +20,10 @@ npx electron . --check=trelica,escadaria --pos=3082,-1388,-1256
 ```
 Só esses destinos, nessa ordem, partindo desse ponto. **Falhas dependem do ponto de partida** — ao reproduzir, use o `@ x,y,z` que o relatório imprime.
 
+### Sem GPU (contêiner na nuvem)
+
+Com `xvfb-run -a -s "-screen 0 1600x900x24" npx electron . --no-sandbox …` o jogo roda, mas por software, a ~1 fps. O `--check` inteiro passa do limite de 6 min do `main.js`: rode em partes (`--check=a,b,c`). O tempo do jogo anda mais devagar que o relógio, então `--read=N`/`--map=N` disparam atrasados em relação a `--delay` da captura (deixe folga, ex. `--read=30 --delay=75`).
+
 ## Medir
 
 ```bash
@@ -39,7 +43,7 @@ npx electron . --capture=shot.png --pos=x,y,z,yaw,pitch --mode=fly --seed=abc --
 
 ## Outras flags
 
-`--game=free|pilgrimage` (modo de jogo da sessão), `--wake=N` (desmaio aos N s), `--lantern` (lanterna acesa), `--read=N` (abre a leitura do terminal em frente), `--lexicon=N` (entende as palavras até a classe N, só na sessão), `--archive=records|lexicon` (aba do diário), `--gate` (captura com a tela de entrada aberta — para conferir textos e painéis), `--outage=4` / `--collapse=4` (força o evento aos N s), `--autopilot=N`, `--mode=fly`, `--seed=<base36>`, `--profile=<pasta>`, `--novsync`.
+`--game=free|pilgrimage` (modo de jogo da sessão), `--sensor=terminal|energy|motion` (sensor já ligado), `--map=N` (abre o mapa aos N s), `--wake=N` (desmaio aos N s), `--lantern` (lanterna acesa), `--read=N` (abre a leitura do terminal em frente), `--lexicon=N` (entende as palavras até a classe N, só na sessão), `--archive=records|leads|lexicon` (aba do diário), `--gate` (captura com a tela de entrada aberta — para conferir textos e painéis), `--outage=4` / `--collapse=4` (força o evento aos N s), `--autopilot=N`, `--mode=fly`, `--seed=<base36>`, `--profile=<pasta>`, `--novsync`.
 
 ## Git
 

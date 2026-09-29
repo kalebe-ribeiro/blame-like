@@ -11,6 +11,7 @@
 | SHIFT | correr / acelerar voando |
 | P | piloto automático (voo contemplativo) |
 | T | transporte · O configurações · M mapa · H interface · F2 foto · R mundo novo |
+| F / E / G (Peregrinação) | lanterna / ler um terminal, pegar o sensor ou conectar numa tomada / sensor (terminais → energia → movimento → desligado) |
 
 **Controle de videogame** suportado (entra direto, vibração em quedas, apagões, colapsos, máquinas).
 
@@ -30,7 +31,7 @@ Inglês padrão, português opção (primeira linha das configurações; os pain
 
 ## Transporte (T — `ui/transport.js`, `world/teleport.js`)
 
-21 destinos em grupos: regiões, interiores do maciço, estruturas, outros (Construtores, cemitério, cascata, transportador, máquina colossal, ponte). Vai ao exemplar **mais próximo**; repetir leva a outro (os últimos 8 são pulados). Busca só no Field; o corpo paira até a geometria chegar. Destinos com `fly: true` chegam voando.
+24 destinos em grupos: regiões, interiores do maciço, estruturas, outros (Construtores, cemitério, cascata, transportador, máquina colossal, terminal, estrutura única, início da Peregrinação, ponte). Vai ao exemplar **mais próximo**; repetir leva a outro (os últimos 8 são pulados). Busca só no Field; o corpo paira até a geometria chegar. Destinos com `fly: true` chegam voando.
 
 ## Configurações (O — `ui/settings.js`)
 
@@ -40,7 +41,7 @@ Distância (240–2400 m), névoa (0–200%), FOV, sensibilidade, resolução, S
 
 - **Continuar de onde parou**: tudo vai para o mundo salvo do modo (`app/saves.js`) a cada 5 s, ao soltar o mouse e ao fechar: seed, posição, olhar, andar/voar, diário, rastro do mapa, estado do corpo e o que mudou no mundo. O salvamento de antes dos modos virou o mundo do modo Livre (migração automática, uma vez).
 - **Diário** (na tela de entrada): distância andada/voada/de vagão, tempo, quedas, maior profundidade, regiões, apagões e colapsos vistos, fotos.
-- **Mapa da travessia** (M — `ui/trailmap.js`): o caminho em 3D, com marcas de quedas e fotos.
+- **Mapa da travessia** (M — `ui/trailmap.js`): o caminho em 3D, com marcas de quedas e fotos; as descobertas (setores atravessados, terminais lidos, estruturas únicas) e, na Peregrinação, as pistas abertas com a área de incerteza e a rota.
 - **Foto** (F2): até 4K, 16 quadros de TAA, sem HUD e sem grão → Imagens/CYBERCOSMIC.
 - **Só o `npm start` normal lê e grava** a travessia, e só com um mundo escolhido (`ctx.saving`); sessões com flags não tocam no salvamento.
 

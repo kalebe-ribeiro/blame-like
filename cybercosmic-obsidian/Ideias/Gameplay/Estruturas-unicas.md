@@ -1,10 +1,12 @@
 ---
-status: escolhida
+status: em andamento
 prioridade: alta
 tags: [gameplay, mundo, direcao]
 ---
 
 # Estruturas únicas
+
+> **Fase 3.1** (`uniqueSite` em `gen/field.js`, `buildUnique` em `gen/macrogen.js`): console ativo, arquivo de registros e usina — uma por ~16 km, no alto das camadas, fim das cadeias de [[Pistas]]; o console tem energia própria e guarda o [[Ferramentas|sensor]] (até você ter um). Os efeitos (salto de tradução, religar a região, ampliar o sensor) e as outras estruturas ficam para a fase 4 em diante.
 
 > Escolhida (2026-09-29). São os **objetivos** do jogo: raras, no fim de cadeias de [[Pistas|pistas]].
 
