@@ -166,7 +166,6 @@ function frame() {
   ctx.signal.uniforms.uTime.value = time;
   dust.material.uniforms.uTime.value = time;
   dust.material.uniforms.uCam.value.copy(camera.position);
-  world.lights.close = controls.mode === 'walk';
   world.update(time, dt, camera, controls.scale);
   ctx.reflection.update(world.field, world.toGlobal(camera.position, globalPos), dt);
   ctx.sound.update(dt);

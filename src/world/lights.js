@@ -2,13 +2,15 @@
 //  Luzes "de shader" num mundo infinito.
 //
 //  Os shaders têm LIGHT_COUNT posições. Algumas são FIXAS (acompanham o
-//  observador: fogos-fátuos, o brilho do abismo abaixo, o brilho acima); as
+//  observador: o brilho do abismo abaixo, o brilho acima); as
 //  demais são DINÂMICAS: a cada 0,25 s escolhemos, entre todas as luzes dos
 //  chunks carregados, as mais próximas do observador. Luzes que entram/saem
 //  do conjunto fazem fade, então nada pisca ao trocar.
 //
-//  Modos: 'steady' constante · 'faulty' lâmpada falhando · 'wisp' fogo-fátuo
+//  Modos: 'steady' constante · 'faulty' lâmpada falhando
 //         'follow' preso ao observador com um deslocamento que deriva devagar
+//  (Não há luz "mágica" perto do corpo: o que ilumina o caminho é a Cidade —
+//  e, no modo Peregrinação, a luz que você carrega, fase 1 do plano.)
 //         'weld'   arco de solda: rajadas de clarões durante alguns segundos,
 //                  depois silêncio — alguém (algo) continua construindo
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,8 +22,6 @@ const _col = new THREE.Vector3();
 export class LightRig {
   constructor(shared) {
     this.shared = shared;
-    /** No modo andar os fogos-fátuos ficam perto, iluminando o caminho. */
-    this.close = false;
     this.fixed = []; // coordenadas de CENA
     this.slots = [];
     this._selectTimer = 0;
@@ -30,7 +30,7 @@ export class LightRig {
   }
 
   /** Luz fixa (em coordenadas de cena). */
-  addFixed({ pos = new THREE.Vector3(), color, intensity, mode = 'wisp', offset = null, phase = Math.random() * 100 }) {
+  addFixed({ pos = new THREE.Vector3(), color, intensity, mode = 'follow', offset = null, phase = Math.random() * 100 }) {
     this.fixed.push({ pos: pos.clone(), base: pos.clone(), color: color.clone(), intensity, mode, offset, phase });
     this.slots = new Array(LIGHT_COUNT - this.fixed.length).fill(null).map(() => ({ light: null, level: 0 }));
   }
@@ -142,20 +142,7 @@ export class LightRig {
 
   _animateFixed(l, time, dt, camera, scale) {
     const cam = camera.position;
-    if (l.mode === 'wisp') {
-      // orbita lenta em torno de um ponto que persegue a câmera com atraso
-      l.base.lerp(cam, 1 - Math.exp(-dt * (this.close ? 0.6 : 0.15)));
-      if (l.base.distanceTo(cam) > 300 * scale) l.base.copy(cam);
-      // raio da órbita suaviza entre "longe" (voo) e "perto" (caminhada)
-      l.orbit = (l.orbit ?? 22) + ((this.close ? 7 : 22) - (l.orbit ?? 22)) * Math.min(1, dt * 0.5);
-      const r = l.orbit * scale;
-      const a = time * 0.07 + l.phase;
-      l.pos.set(
-        l.base.x + Math.cos(a) * r,
-        l.base.y + Math.sin(time * 0.11 + l.phase) * (this.close ? 1.5 : 6) * scale + (this.close ? 2.5 : 4) * scale,
-        l.base.z + Math.sin(a * 1.3) * r,
-      );
-    } else if (l.mode === 'follow') {
+    if (l.mode === 'follow') {
       const o = l.offset;
       l.pos.set(
         cam.x + o.x + Math.sin(time * 0.013 + l.phase) * 60,

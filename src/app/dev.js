@@ -3,6 +3,7 @@
 //  --stats e --check (teste de fumaça). Nada disso roda no `npm start` normal.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { t } from '../i18n/index.js';
 import { subDraws } from '../world/batches.js';
 
 export function setupDev(ctx) {
@@ -10,7 +11,7 @@ export function setupDev(ctx) {
   const trigger = (system) => system.trigger(world.toGlobal(camera.position), camera.getWorldDirection(new THREE.Vector3()), ctx.time);
 
   // --goto=construtores (ou qualquer tipo do painel de transporte)
-  if (params.get('goto')) ctx.ui.teleport(params.get('goto'), params.get('goto'));
+  if (params.get('goto')) ctx.ui.teleport(params.get('goto'), t(`dest.${params.get('goto')}`));
   // --outage=4 / --collapse=4: força o acontecimento aos N segundos
   if (params.get('outage')) setTimeout(() => trigger(world.outages), Number(params.get('outage')) * 1000);
   if (params.get('collapse')) setTimeout(() => trigger(world.collapses), Number(params.get('collapse')) * 1000);

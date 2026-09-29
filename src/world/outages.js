@@ -13,7 +13,7 @@
 //    • no shader, para as janelas e linhas técnicas (uOutageA/B, ver
 //      shaders/chunks.js → outagePower()).
 //
-//  Luzes que não são da rede (fogos-fátuos, brilho do abismo, os arcos de
+//  Luzes que não são da rede (brilho do abismo, os arcos de
 //  solda dos Construtores) não apagam.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';

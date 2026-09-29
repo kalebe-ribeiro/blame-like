@@ -254,11 +254,9 @@ export class World {
 
   _setupLights(rng) {
     const L = this.lights;
-    const { sodium, fluoro, cold } = PALETTE;
+    const { sodium, cold } = PALETTE;
     L.clear();
     // fixas: acompanham o observador
-    L.addFixed({ pos: V3(0, 2, 30), color: cold, intensity: 12, mode: 'wisp' });
-    L.addFixed({ pos: V3(0, 2, -30), color: fluoro, intensity: 10, mode: 'wisp', phase: 50 });
     L.addFixed({ color: sodium, intensity: 450, mode: 'follow', offset: V3(40, -300, -60) }); // brasa distante lá embaixo
     L.addFixed({ color: cold, intensity: 700, mode: 'follow', offset: V3(-80, 450, -120) }); // clarão frio lá em cima
 
