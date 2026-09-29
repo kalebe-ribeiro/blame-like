@@ -18,7 +18,7 @@ import { conceptsIn } from '../lang/ancient.js';
 import { t } from '../i18n/index.js';
 import { hash4 } from '../gen/hash.js';
 import { terminalRecords } from '../lang/records.js';
-import { leadLine, startSite, PARTS } from '../lang/leads.js';
+import { leadLine, leadFor, startSite, PARTS } from '../lang/leads.js';
 
 const FRAGMENT_COST = 0.08; // da célula (1 = cheia)
 
@@ -28,6 +28,26 @@ export function createReading(ctx) {
   const _g = new THREE.Vector3();
   const known = (w) => ctx.lexicon.known(w);
   const word = (w) => t(`word.${w}`);
+
+  // o sensor (ver o cofre, Ferramentas): achado no fim da primeira pista e junto do console
+  // de toda estrutura única — até você ter um
+  let firstTarget;
+  const firstTargetId = () => {
+    if (firstTarget === undefined) {
+      const s = startSite(world.field);
+      firstTarget = s ? leadFor(world.field, s, { force: true })?.id ?? null : null;
+    }
+    return firstTarget;
+  };
+  world.terminals.toolAt = (site) =>
+    ctx.rules.resources && !ctx.player.inventory.includes('sensor') && (site.kind === 'unique' || site.id === firstTargetId());
+
+  function pickUp(it) {
+    ctx.player.inventory.push('sensor');
+    world.bus.emit('player:pickup', { tool: 'sensor', id: it.site.id });
+    audio.deviceClick?.(true);
+    ctx.carried.gotSensor?.();
+  }
 
   function nearTerminal() {
     return world.terminals.nearest(world.toGlobal(camera.position, _g), 2.4);
@@ -76,6 +96,10 @@ export function createReading(ctx) {
   function open() {
     const it = nearTerminal();
     if (!it) return false;
+    if (world.terminals.toolAt(it.site)) {
+      pickUp(it);
+      return true;
+    }
     if (!it.powered) return readFragment(it);
     const lines = world.terminals.readable(it, ctx.time);
     const learned = ctx.lexicon.see(it.site.id, conceptsIn(lines));

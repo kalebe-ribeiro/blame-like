@@ -17,7 +17,7 @@ export default {
   'gate.choose': 'escolha como entrar na Cidade',
   'gate.keys.pilgrimage':
     '<span>WASD</span> mover &nbsp;·&nbsp; <span>MOUSE</span> olhar &nbsp;·&nbsp; <span>ESPAÇO</span> pular &nbsp;·&nbsp; ' +
-    '<span>SHIFT</span> correr &nbsp;·&nbsp; <span>F</span> lanterna &nbsp;·&nbsp; <span>E</span> ler um terminal · conectar numa tomada<br />' +
+    '<span>SHIFT</span> correr &nbsp;·&nbsp; <span>F</span> lanterna &nbsp;·&nbsp; <span>E</span> ler um terminal · conectar numa tomada &nbsp;·&nbsp; <span>G</span> sensor<br />' +
     '<span>O</span> configurações &nbsp;·&nbsp; <span>F2</span> foto &nbsp;·&nbsp; <span>M</span> mapa &nbsp;·&nbsp; ' +
     '<span>F11</span> tela cheia &nbsp;·&nbsp; <span>ESC</span> soltar',
 
@@ -185,6 +185,11 @@ export default {
   'device.noPower': 'SEM ENERGIA AQUI',
   'device.socket': 'TOMADA  [E]',
   'device.empty': 'CÉLULA VAZIA',
+  'device.sensorFound': 'SENSOR  [G]',
+  'device.sensor.terminal': 'SENSOR · TERMINAIS',
+  'device.sensor.energy': 'SENSOR · ENERGIA VIVA',
+  'device.sensor.motion': 'SENSOR · MOVIMENTO',
+  'device.sensor.lead': '◆ O ENDEREÇO',
   // ── a língua antiga: a tradução de cada palavra (lang/ancient.js) ──
   'word.SECTOR': 'SETOR',
   'word.LEVEL': 'NÍVEL',

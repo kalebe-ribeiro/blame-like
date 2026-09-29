@@ -165,6 +165,7 @@ export class NoclipControls {
       if (this.autopilot) this.setMode('fly');
     }
     if (edge(5)) this.onPadButton?.('photo'); // RB
+    if (edge(13)) this.onPadButton?.('sensor'); // direcional ↓: o sensor (Peregrinação)
     if (edge(8)) this.onPadButton?.('hud'); // Select/Back
     this.pad.prev = gp.buttons.map((x) => x.pressed);
     return out;

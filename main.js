@@ -18,6 +18,7 @@
 //    electron . --outage=4 → força um apagão de setor aos 4 s
 //    electron . --collapse=4 → força um colapso distante aos 4 s
 //    electron . --wake=4 → desmaio aos 4 s (a sequência de queda e despertar)
+//    electron . --sensor=terminal → com o sensor ligado (terminal | energy | motion), só na sessão
 //    electron . --stats   → imprime FPS e estatísticas do streaming no terminal
 //    electron . --novsync → sem limite de quadros (medir desempenho)
 //    electron . --check   → teste de fumaça: visita todos os destinos (npm run check)
@@ -136,6 +137,7 @@ function createWindow() {
   if (argValue('lexicon')) query.set('lexicon', argValue('lexicon'));
   if (argValue('archive')) query.set('archive', argValue('archive'));
   if (process.argv.includes('--lantern')) query.set('lantern', '1');
+  if (argValue('sensor')) query.set('sensor', argValue('sensor'));
   if (argValue('collapse')) query.set('collapse', argValue('collapse'));
   if (checkMode) {
     query.set('check', argValue('check') || '1'); // --check=trelica,escadaria: só esses

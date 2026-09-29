@@ -31,6 +31,8 @@ export class TerminalSystem {
     this.transit = null;
     this.outages = null;
     this.items = new Map(); // id → terminal
+    /** (site) → true: há um sensor largado ao pé deste terminal (app/reading.js decide) */
+    this.toolAt = null;
     this.lights = [];
     this.meshes = [];
     this._scan = 0;
@@ -84,10 +86,20 @@ export class TerminalSystem {
     hood.position.set(0, 1.28, -0.04);
     hood.rotation.x = -0.35;
     group.add(body, hood, screen);
+    // um sensor largado no chão, ao pé do terminal: um aparelho igual ao da mão, com a lente virada para cima
+    const tool = new THREE.Group();
+    const tb = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.04, 0.16), this.materials.machine);
+    const tl = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.026, 0.006), this.materials.lamp ?? this.materials.machine);
+    tl.position.set(0, 0, -0.083);
+    tool.add(tb, tl);
+    tool.position.set(0.5, 0.02, 0.3);
+    tool.rotation.y = 0.7;
+    tool.visible = false;
+    group.add(tool);
     group.rotation.y = site.yaw;
     this.parent.add(group);
     const r = rngAt(this.seed, Math.round(site.x), Math.round(site.y), Math.round(site.z), 950);
-    return { site, group, screen, canvas, ctx: canvas.getContext('2d'), tex, lines: terminalRecords(this.field, site), shown: 0, next: 0, r, powered: true };
+    return { site, group, screen, tool, canvas, ctx: canvas.getContext('2d'), tex, lines: terminalRecords(this.field, site), shown: 0, next: 0, r, powered: true };
   }
 
   _draw(t, time) {
@@ -133,6 +145,7 @@ export class TerminalSystem {
           t.tex.dispose();
           t.screen.material.dispose();
           t.group.children[1].geometry.dispose();
+          for (const m of t.tool.children) m.geometry.dispose();
           this.items.delete(id);
         }
       }
@@ -143,6 +156,7 @@ export class TerminalSystem {
     for (const t of this.items.values()) {
       const s = t.site;
       t.group.position.set(s.x - origin.x, s.y - origin.y, s.z - origin.z);
+      t.tool.visible = !!this.toolAt?.(s);
       t.group.updateMatrixWorld(true);
       this.meshes.push(t.group.children[0]);
       const powered = s.kind === 'unique' || !this.outages || this.outages.power(s.x, s.y + 1, s.z, 1.1, time) >= 0.5;

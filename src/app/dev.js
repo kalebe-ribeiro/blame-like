@@ -19,6 +19,16 @@ export function setupDev(ctx) {
   if (params.get('collapse')) setTimeout(() => trigger(world.collapses), Number(params.get('collapse')) * 1000);
   // --lantern: a lanterna já acesa (Peregrinação)
   if (params.get('lantern')) setTimeout(() => ctx.carried.toggleLantern(), 500);
+  // --sensor=terminal|energy|motion: com o sensor, já ligado nesse modo (Peregrinação) — só nesta sessão
+  if (params.get('sensor')) {
+    if (!ctx.player.inventory.includes('sensor')) ctx.player.inventory.push('sensor');
+    setTimeout(() => {
+      for (const k of ['terminal', 'energy', 'motion']) {
+        ctx.carried.cycleSensor();
+        if (ctx.carried.sensorMode === params.get('sensor')) break;
+      }
+    }, 500);
+  }
   // --lexicon=1: já entende as palavras até essa classe (1 comuns, 2 incomuns, 3 raras) — só nesta sessão
   if (params.get('lexicon')) {
     const upTo = Number(params.get('lexicon'));
