@@ -20,7 +20,23 @@ O jogo é em **inglês** por padrão, com **português** como opção nas config
 
 ## Controles
 
-Os do modo Livre. Na Peregrinação não há voo (F, P), transporte (T), mundo novo (R) nem interface (H).
+Os do modo Livre. Na Peregrinação não há voo (P), transporte (T), mundo novo (R) nem interface (H), e duas teclas mudam:
+
+| tecla | na Peregrinação |
+|---|---|
+| **F** | liga/desliga a lanterna do aparelho na mão (no controle: X) |
+| **E** | conecta numa tomada de recarga, perto dela (no controle: Y) |
+
+### O corpo na Peregrinação
+
+- **O aparelho na mão**: a lanterna na frente e uma telinha em cima com a carga (dez gomos). Nada de barra na tela do jogo.
+- **A célula de energia**: a lanterna gasta (carga cheia dura 7 min) e falha quando está no fim; sem carga você ainda anda, só enxerga o que a Cidade ilumina. Um mundo novo começa com pouca carga.
+- **Tomadas**: caixinhas nos postes das passarelas, das plataformas e nos abrigos das estações. Recarregam enquanto você fica perto, se o setor tiver energia.
+- **Queda e despertar**: uma queda que seria fatal (ou uma queda sem fim) não mata. A vista desaba até o chão, as bordas fecham, o foco se perde, o som abafa; no escuro, só o coração. Você é arrastado aos puxões por algo que nunca dá para ver, e acorda num lugar qualquer, longe.
+
+## Setores de energia
+
+A Cidade é dividida em setores de formas e tamanhos irregulares (só as camadas os separam na vertical). Cerca de 30% estão **permanentemente apagados**: lâmpadas, janelas, trens, elevadores e terminais sem energia. Uns 15% são **instáveis**: a luz vai e vem em ondas. O resto tem energia. A mesma conta roda na CPU (lâmpadas) e na GPU (janelas), então as duas sempre concordam.
 
 | tecla | ação |
 |---|---|
@@ -239,7 +255,9 @@ src/
   app/travel.js             salvamento, diário e mapa da travessia
   app/saves.js              perfil global + um mundo salvo por modo (o que mudou, por id estável)
   app/modes.js              modos de jogo (Livre, Peregrinação) e suas regras
-  app/player.js             estado do corpo: energia, ferramentas, acesso (ainda sem efeito)
+  app/player.js             estado do corpo: energia, ferramentas, o que carrega, acesso
+  app/carried.js            o aparelho na mão: lanterna, célula de energia, tomadas (Peregrinação)
+  app/wake.js               queda e despertar (Peregrinação)
   core/events.js            barramento de eventos (mundo e corpo → som, interface, diário)
   i18n/                     textos da interface: en.js (padrão), pt.js
   app/ui.js                 tela de entrada, painéis, teclas, teleporte, novo mundo
@@ -349,7 +367,7 @@ Teste de fumaça: numa seed fixa, visita todos os destinos do painel de transpor
 ```bash
 npx electron . --stats
 ```
-Imprime FPS, chunks carregados, fila de geração, lotes (uso, vagas livres, compactações), draw calls, triângulos, heap e a GPU em uso. Também mostra o tempo de CPU das listas de desenho e, perto da água, o tempo de GPU do reflexo. Com `--novsync` o limite de quadros é removido, para medir desempenho de verdade. `--outage=4` força um apagão de setor aos 4 s, e `--collapse=4` um colapso distante.
+Imprime FPS, chunks carregados, fila de geração, lotes (uso, vagas livres, compactações), draw calls, triângulos, heap e a GPU em uso. Também mostra o tempo de CPU das listas de desenho e, perto da água, o tempo de GPU do reflexo. Com `--novsync` o limite de quadros é removido, para medir desempenho de verdade. `--outage=4` força um apagão de setor aos 4 s, e `--collapse=4` um colapso distante. `--wake=4` dispara o desmaio aos 4 s, `--lantern` começa com a lanterna acesa e `--game=pilgrimage` abre a sessão no modo Peregrinação.
 
 ```bash
 npx electron . --capture=shot.png --pos=2000,-800,3000,0.3,0 --seed=abc --delay=8 --show
