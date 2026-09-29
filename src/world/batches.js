@@ -27,6 +27,13 @@
 //  compactada (BatchedMesh.optimize: as vagas vivas deslizam para o começo,
 //  com envios parciais) e páginas que ficam vazias além da folga são jogadas fora.
 //
+//  Listas por quadro: o onBeforeRender do three (r170) refaz, para cada página
+//  e a cada quadro, matriz + esfera + frustum de cada vaga, ordena tudo e
+//  reenvia a textura de índices da página. Aqui (fastLists) as esferas já
+//  ficam em coordenadas do mundo (as matrizes são só translação), a ordem de
+//  frente para trás só é refeita quando a câmera anda uns metros, e a textura
+//  só é reenviada quando a lista realmente mudou.
+//
 //  Os shaders precisam de <batching_pars_vertex>/<batching_vertex> — ver
 //  shaders/materials.js.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -38,6 +45,114 @@ const SPARE_AT = 0.3; // abaixo desta folga (fração de uma página), prepara a
 const INDEX_PER_VERTEX = 2.5; // capacidade de índices por vértice numa página
 const START_INSTANCES = 64;
 const COMPACT_AT = 0.2; // fração da página em vagas livres para valer compactar
+
+const RESORT_DIST = 8; // m que a câmera anda até refazer a ordem de frente para trás
+
+const IDENTITY = new THREE.Matrix4();
+const _m = new THREE.Matrix4();
+const _frustum = new THREE.Frustum();
+const _cam = new THREE.Vector3();
+
+/**
+ * Substitui BatchedMesh.onBeforeRender nas nossas páginas (this = página).
+ * Mesmo resultado: _multiDrawStarts/_multiDrawCounts/_multiDrawCount e a
+ * textura de índices (qual instância cada desenho usa).
+ */
+function fastLists(renderer, scene, camera, geometry) {
+  const L = this._lists;
+  // página reserva ainda sem nada (nem índices)
+  if (!geometry.index) {
+    this._multiDrawCount = 0;
+    return;
+  }
+  const info = this._instanceInfo;
+  const sph = L.sph;
+  const moved = !this.matrixWorld.equals(IDENTITY);
+  // câmera no espaço da página (a página fica na origem, normalmente)
+  _cam.setFromMatrixPosition(camera.matrixWorld);
+  if (moved) _cam.applyMatrix4(_m.copy(this.matrixWorld).invert());
+
+  // 1) a ordem (instâncias visíveis, de frente para trás) — só quando precisa
+  if (this._visibilityChanged || L.dirty || (this.sortObjects && _cam.distanceToSquared(L.at) > RESORT_DIST * RESORT_DIST)) {
+    const order = L.order;
+    order.length = 0;
+    for (let i = 0; i < info.length; i++) if (info[i].visible && info[i].active) order.push(i);
+    if (this.sortObjects) {
+      const d = L.dist;
+      for (const i of order) {
+        const dx = sph[i * 4] - _cam.x;
+        const dy = sph[i * 4 + 1] - _cam.y;
+        const dz = sph[i * 4 + 2] - _cam.z;
+        d[i] = dx * dx + dy * dy + dz * dz;
+      }
+      order.sort((a, b) => d[a] - d[b]);
+    }
+    L.at.copy(_cam);
+    L.dirty = false;
+    L.changed = true;
+    this._visibilityChanged = false;
+  }
+
+  // 2) recorte por frustum com as esferas já no mundo
+  _m.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  if (moved) _m.multiply(this.matrixWorld);
+  _frustum.setFromProjectionMatrix(_m, renderer.coordinateSystem);
+  const planes = _frustum.planes;
+  const bpe = geometry.index.array.BYTES_PER_ELEMENT;
+  const starts = this._multiDrawStarts;
+  const counts = this._multiDrawCounts;
+  const ind = this._indirectTexture.image.data;
+  const geos = this._geometryInfo;
+  let n = 0;
+  let changed = L.changed;
+  for (const i of L.order) {
+    const x = sph[i * 4];
+    const y = sph[i * 4 + 1];
+    const z = sph[i * 4 + 2];
+    const r = -sph[i * 4 + 3];
+    let inside = true;
+    for (let p = 0; p < 6; p++) {
+      const pl = planes[p];
+      if (pl.normal.x * x + pl.normal.y * y + pl.normal.z * z + pl.constant < r) {
+        inside = false;
+        break;
+      }
+    }
+    if (!inside) continue;
+    const g = geos[info[i].geometryIndex];
+    starts[n] = g.start * bpe;
+    counts[n] = g.count;
+    if (ind[n] !== i) {
+      ind[n] = i;
+      changed = true;
+    }
+    n++;
+  }
+  if (n !== this._multiDrawCount) changed = true;
+  this._multiDrawCount = n;
+  // a textura de índices só volta para a GPU quando a lista mudou
+  if (changed) this._indirectTexture.needsUpdate = true;
+  L.changed = false;
+}
+
+/** Esfera da vaga em coordenadas do mundo (a matriz é só translação). */
+function place(page, inst, geometry, matrix) {
+  const L = page._lists;
+  if (L.sph.length < page.maxInstanceCount * 4) {
+    const sph = new Float32Array(page.maxInstanceCount * 4);
+    sph.set(L.sph);
+    L.sph = sph;
+    L.dist = new Float32Array(page.maxInstanceCount);
+  }
+  if (geometry) L.local[inst] = geometry.boundingSphere;
+  const bs = L.local[inst];
+  const e = matrix.elements;
+  L.sph[inst * 4] = bs.center.x + e[12];
+  L.sph[inst * 4 + 1] = bs.center.y + e[13];
+  L.sph[inst * 4 + 2] = bs.center.z + e[14];
+  L.sph[inst * 4 + 3] = bs.radius;
+  L.dirty = true;
+}
 
 /** Arredonda para cima numa escala de passos de ~25% (classes de vaga). */
 function sizeClass(n) {
@@ -63,6 +178,8 @@ class MaterialBatch {
     page.sortObjects = !this.material.transparent; // opacos de frente para trás (early-z)
     page.renderOrder = this.renderOrder;
     page.freeV = 0; // vértices reservados em vagas livres nesta página
+    page._lists = { sph: new Float32Array(START_INSTANCES * 4), dist: new Float32Array(START_INSTANCES), local: [], order: [], at: new THREE.Vector3(), dirty: true, changed: true };
+    page.onBeforeRender = fastLists;
     this.pages.push(page);
     this.set.parent.add(page);
     return page;
@@ -131,6 +248,7 @@ class MaterialBatch {
       this.free.pop();
       slot.page.setGeometryAt(slot.geo, geometry);
       slot.page.setMatrixAt(slot.inst, matrix);
+      place(slot.page, slot.inst, geometry, matrix);
       slot.page.setVisibleAt(slot.inst, true);
       slot.page.freeV -= slot.rv;
       slot.v = v;
@@ -159,6 +277,7 @@ class MaterialBatch {
     const geo = page.addGeometry(geometry, rv, ri);
     const inst = page.addInstance(geo);
     page.setMatrixAt(inst, matrix);
+    place(page, inst, geometry, matrix);
     // pouca folga sobrando: pede uma página reserva (criada num quadro calmo)
     if (this._tailFree() < PAGE_MAX * SPARE_AT) this.set.wantSpare.add(this);
     return { page, geo, inst, rv, ri, v };
@@ -243,6 +362,7 @@ export class BatchSet {
 
   setMatrix(slot, matrix) {
     slot.page.setMatrixAt(slot.inst, matrix);
+    place(slot.page, slot.inst, null, matrix);
   }
 
   /** Para --stats: vértices em uso / capacidade alocada, número de páginas. */

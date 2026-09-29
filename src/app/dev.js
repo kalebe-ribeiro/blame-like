@@ -21,6 +21,22 @@ export function setupDev(ctx) {
 
   // --stats: FPS e streaming no terminal a cada 2 s
   if (params.get('stats')) {
+    // tempo de CPU montando as listas de desenho dos lotes (por quadro)
+    let batchMs = 0;
+    let batchCalls = 0;
+    const timeLists = () => {
+      ctx.scene.traverse((o) => {
+        if (!o.isBatchedMesh || o._timed) return;
+        const obr = o.onBeforeRender;
+        o.onBeforeRender = function (...a) {
+          const t0 = performance.now();
+          obr.apply(this, a);
+          batchMs += performance.now() - t0;
+          batchCalls++;
+        };
+        o._timed = true;
+      });
+    };
     const gl = renderer.getContext();
     const dbg = gl.getExtension('WEBGL_debug_renderer_info');
     console.warn(`gpu=${dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)}`);
@@ -40,6 +56,10 @@ export function setupDev(ctx) {
           `lotes=${bs.pages} uso=${Math.round((100 * bs.used) / bs.cap)}% livres=${bs.freeSlots} mats=${bs.materials} comp=${world.batches.compactions ?? 0}/${(world.batches.compactMs ?? 0).toFixed(1)}ms draws=${info.calls} tris=${(info.triangles / 1e6).toFixed(2)}M pos=${g.x.toFixed(0)},${g.y.toFixed(0)},${g.z.toFixed(0)} região=${world.regionAt(camera.position)}` +
           (performance.memory ? ` heap=${Math.round(performance.memory.usedJSHeapSize / 1048576)}MB` : ''),
       );
+      timeLists();
+      console.warn(`  listas: ${(batchMs / Math.max(1, frames)).toFixed(2)} ms/quadro em ${Math.round(batchCalls / Math.max(1, frames))} chamadas`);
+      batchMs = 0;
+      batchCalls = 0;
       frames = 0;
     }, 2000);
   }
