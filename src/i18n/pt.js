@@ -17,7 +17,7 @@ export default {
   'gate.choose': 'escolha como entrar na Cidade',
   'gate.keys.pilgrimage':
     '<span>WASD</span> mover &nbsp;·&nbsp; <span>MOUSE</span> olhar &nbsp;·&nbsp; <span>ESPAÇO</span> pular &nbsp;·&nbsp; ' +
-    '<span>SHIFT</span> correr &nbsp;·&nbsp; <span>F</span> lanterna &nbsp;·&nbsp; <span>E</span> conectar numa tomada<br />' +
+    '<span>SHIFT</span> correr &nbsp;·&nbsp; <span>F</span> lanterna &nbsp;·&nbsp; <span>E</span> ler um terminal · conectar numa tomada<br />' +
     '<span>O</span> configurações &nbsp;·&nbsp; <span>F2</span> foto &nbsp;·&nbsp; <span>M</span> mapa &nbsp;·&nbsp; ' +
     '<span>F11</span> tela cheia &nbsp;·&nbsp; <span>ESC</span> soltar',
 
@@ -293,4 +293,12 @@ export default {
   'reader.freeNote': 'modo Livre: aqui nada se aprende · E / ESC  fechar',
   'reader.learned': 'entendido agora: {words}',
   'reader.fragment': 'leitor portátil: um fragmento · célula −{cost}% · E / ESC  fechar',
+  // ── o diário como arquivo ──
+  'archive.records': 'REGISTROS ({n})',
+  'archive.lexicon': 'LÉXICO ({known}/{total})',
+  'archive.noRecords': 'nenhum terminal lido neste mundo ainda',
+  'archive.noWords': 'nenhuma palavra da língua antiga entendida ainda',
+  'archive.kind.station': 'terminal de estação',
+  'archive.kind.passage': 'terminal de passagem',
+  'reader.archived': 'do arquivo · relido com o que você sabe agora · E / ESC  fechar',
 };

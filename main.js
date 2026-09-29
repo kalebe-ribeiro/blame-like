@@ -134,6 +134,7 @@ function createWindow() {
   if (argValue('wake')) query.set('wake', argValue('wake'));
   if (argValue('read')) query.set('read', argValue('read'));
   if (argValue('lexicon')) query.set('lexicon', argValue('lexicon'));
+  if (argValue('archive')) query.set('archive', argValue('archive'));
   if (process.argv.includes('--lantern')) query.set('lantern', '1');
   if (argValue('collapse')) query.set('collapse', argValue('collapse'));
   if (checkMode) {

@@ -16,6 +16,7 @@ import { ReaderPanel } from '../ui/reader.js';
 import { conceptsIn } from '../lang/ancient.js';
 import { t } from '../i18n/index.js';
 import { hash4 } from '../gen/hash.js';
+import { terminalRecords } from '../lang/records.js';
 
 const FRAGMENT_COST = 0.08; // da célula (1 = cheia)
 
@@ -69,9 +70,19 @@ export function createReading(ctx) {
     return true;
   }
 
+  let fromArchive = false;
+
   function close() {
     panel.close();
-    controls.lock(); // a tecla que fechou conta como gesto: o mouse volta a travar
+    if (!fromArchive) controls.lock(); // a tecla que fechou conta como gesto: o mouse volta a travar
+    fromArchive = false;
+  }
+
+  /** Reabre um registro do arquivo (tela de entrada): o texto refeito do Field, com o léxico de agora. */
+  function showArchived(id, rec) {
+    const lines = terminalRecords(world.field, { id, ...rec });
+    fromArchive = true;
+    panel.open(lines, known, word, [], { note: t('reader.archived') });
   }
 
   return {
@@ -87,5 +98,6 @@ export function createReading(ctx) {
       return open();
     },
     close,
+    showArchived,
   };
 }

@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { Diary } from '../ui/journey.js';
 import { storeSlot } from './saves.js';
 import { TrailMap } from '../ui/trailmap.js';
-import { t } from '../i18n/index.js';
+import { renderArchive } from '../ui/archive.js';
 
 export function createTravel(ctx) {
   const { world, camera, controls } = ctx;
@@ -39,13 +39,19 @@ export function createTravel(ctx) {
   }
   window.addEventListener('beforeunload', save);
 
-  /** Mostra o diário na tela de entrada. */
+  /** Mostra o diário (e o arquivo: registros lidos, léxico) na tela de entrada. */
   function renderDiary() {
     const el = document.getElementById('gate-diary');
     if (!el) return;
-    el.innerHTML = `<div class="diary-title">${t('diary.title')}</div>` +
-      diary.lines().map(([k, v]) => `<div class="diary-row"><span>${k}</span><b>${v}</b></div>`).join('');
+    renderArchive(el, {
+      lines: diary.lines(),
+      records: slot.archive?.records ?? {},
+      lexicon: ctx.lexicon,
+      here: world.toGlobal(camera.position, new THREE.Vector3()),
+      onOpen: (id, rec) => ctx.reading.showArchived(id, rec),
+    });
   }
+
 
   // o diário escuta o barramento (core/events.js)
   const { bus } = world;

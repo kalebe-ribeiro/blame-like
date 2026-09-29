@@ -17,7 +17,7 @@ export default {
   'gate.choose': 'choose how to enter the City',
   'gate.keys.pilgrimage':
     '<span>WASD</span> move &nbsp;·&nbsp; <span>MOUSE</span> look &nbsp;·&nbsp; <span>SPACE</span> jump &nbsp;·&nbsp; ' +
-    '<span>SHIFT</span> run &nbsp;·&nbsp; <span>F</span> lantern &nbsp;·&nbsp; <span>E</span> plug into a socket<br />' +
+    '<span>SHIFT</span> run &nbsp;·&nbsp; <span>F</span> lantern &nbsp;·&nbsp; <span>E</span> read a terminal · plug into a socket<br />' +
     '<span>O</span> settings &nbsp;·&nbsp; <span>F2</span> photo &nbsp;·&nbsp; <span>M</span> map &nbsp;·&nbsp; ' +
     '<span>F11</span> fullscreen &nbsp;·&nbsp; <span>ESC</span> release',
 
@@ -293,4 +293,12 @@ export default {
   'reader.freeNote': 'Free mode: nothing is learned here · E / ESC  close',
   'reader.learned': 'now understood: {words}',
   'reader.fragment': 'portable reader: a fragment · cell −{cost}% · E / ESC  close',
+  // ── o diário como arquivo ──
+  'archive.records': 'RECORDS ({n})',
+  'archive.lexicon': 'LEXICON ({known}/{total})',
+  'archive.noRecords': 'no terminal read in this world yet',
+  'archive.noWords': 'no word of the old language understood yet',
+  'archive.kind.station': 'station terminal',
+  'archive.kind.passage': 'passage terminal',
+  'reader.archived': 'from the archive · read again with what you know now · E / ESC  close',
 };

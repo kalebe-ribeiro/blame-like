@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { t } from '../i18n/index.js';
 import { CONCEPTS, NEED } from '../lang/ancient.js';
+import { setArchiveTab } from '../ui/archive.js';
 import { subDraws } from '../world/batches.js';
 
 export function setupDev(ctx) {
@@ -22,6 +23,11 @@ export function setupDev(ctx) {
   if (params.get('lexicon')) {
     const upTo = Number(params.get('lexicon'));
     for (const [w, cls] of Object.entries(CONCEPTS)) if (cls <= upTo) ctx.lexicon.counts[w] = NEED[cls];
+  }
+  // --archive=records|lexicon: a aba do diário na tela de entrada
+  if (params.get('archive')) {
+    setArchiveTab(params.get('archive'));
+    ctx.travel.renderDiary();
   }
   // --read=12: abre a leitura do terminal em frente aos N segundos
   if (params.get('read')) setTimeout(() => ctx.reading.tryUse(), Number(params.get('read')) * 1000);
