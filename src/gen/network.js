@@ -18,7 +18,7 @@
 import * as THREE from '../lib/three.js';
 import { NODE, WALK, EDGE_DIRS } from './field.js';
 import { place, cylinderBetween, buildTaperedTube, slabBetween } from '../world/geometry.js';
-import { catenaryCable, buildTendril } from '../world/cables.js';
+import { catenaryCable } from '../world/cables.js';
 import { FLUORO, SODIUM, COLD } from './colors.js';
 import { rngAt } from './hash.js';
 
@@ -133,9 +133,13 @@ function buildPlatform(F, B, n) {
       B.add('slab', place(new THREE.BoxGeometry(2.4, 9, 0.5, 1, 4, 1), { x: c.x, y: c.y + 4.5, z: c.z, ry: n.spin }));
       break;
     }
-    case 'tree': { // (anomalia rara, mantida para seeds antigas)
+    case 'tree': { // (o nome ficou das seeds antigas) mastro de aço morto, com uma travessa
       const rr = rngAt(F.seed, n.i, n.l, n.k, 85);
-      B.add('cable', buildTendril(c.clone().add(new THREE.Vector3(-r * 0.4, 0, r * 0.2)), { rng: rr, dir: 'up', grammar: 'dendrite', iterations: 4, scale: 0.9 }));
+      const h = rr.float(10, 22);
+      const mx = c.x - r * 0.4;
+      const mz = c.z + r * 0.2;
+      B.add('duct', place(new THREE.CylinderGeometry(0.18, 0.3, h, 5), { x: mx, y: c.y + h / 2, z: mz }));
+      B.add('duct', place(new THREE.BoxGeometry(rr.float(2, 5), 0.2, 0.2), { x: mx, y: c.y + h * rr.float(0.7, 0.95), z: mz, ry: n.spin }));
       break;
     }
     case 'booth': {

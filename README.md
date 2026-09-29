@@ -40,7 +40,7 @@ npm start
 - **Imagem**: pós-processamento de filme velho (dessaturação, grão, vinheta). **Nenhuma estética de glitch**: nada de falhas digitais na imagem, no som ou na interface.
 - **Trilha**: de tempos em tempos (1–2,5 min) um acorde grave e lento sobe sobre o drone e se desfaz na reverberação. Não há melodia, só a harmonia do lugar: quintas abertas na deriva, segundas menores no abismo, quintas paralelas no maciço, clusters apertados na colmeia, quase nada no vazio.
 - **Som**: drone grave, vento em dutos e **obra distante** (bate-estacas, golpes metálicos com ressonância, rangidos de vigas). Soam também gotas ecoando, estalos térmicos do metal, rajadas de ar e roncos distantes.
-- **Anomalias raras**: as formas orgânicas das versões anteriores (carne, carcaças, neurônios, halos) continuam existindo, mas como exceções no meio do concreto.
+- **Nada de criaturas**: tudo o que existe foi construído. As formas orgânicas das versões antigas (carcaças com costelas, neurônios, espinhas colossais, tentáculos) foram retiradas.
 
 ## A Cidade de perto
 
@@ -116,8 +116,8 @@ O espaço é dividido em cubos de **192 m** (chunks). O que existe em cada ponto
 - **Pilares**: colunas numa grade 2D, infinitas em y e com lacunas definidas por ruído. Isso gera torres que pendem do nada, torres que sobem do nada e fragmentos soltos, com coroas, raízes, bulbos e tendões.
 - **Passarelas**: retas infinitas em treliça (ao longo de Z e de X), em alturas periódicas e com trechos quebrados. A ponte inicial é uma delas.
 - **Dutos**: tubos infinitos ao longo de X, Z e Y, o "encanamento" do sistema.
-- **Cabos e tentáculos**: catenárias entre pilares vizinhos, e tentáculos/raízes/dendritos gerados por **L-system**.
-- **Flutuantes**: carcaças com costelas, neurônios, lajes, anéis e gaiolas.
+- **Cabos**: catenárias entre pilares vizinhos e fios de prumo pendendo no vazio.
+- **Flutuantes**: blocos habitacionais, lajes, anéis e gaiolas.
 - **Rede andável**: plataformas numa grade 3D com ruído (há aglomerados densos e vazios enormes). Cada ligação entre vizinhas é sorteada:
   - ponte reta, ponte suspensa ou tubo-corredor fechado;
   - rampa ou escadaria entre níveis;

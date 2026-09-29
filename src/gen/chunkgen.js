@@ -18,7 +18,7 @@ import { CHUNK, PILLAR_CELL, SEG_H, WALK, DUCT } from './field.js';
 import { genTransit, stationNear } from './transit.js';
 import { rngAt } from './hash.js';
 import { mergeAll, place, cylinderBetween } from '../world/geometry.js';
-import { catenaryCable, buildTendril, plumbLine } from '../world/cables.js';
+import { catenaryCable, plumbLine } from '../world/cables.js';
 
 import { FLUORO, SODIUM, COLD, WARN } from './colors.js';
 import { genNetwork } from './network.js';
@@ -246,16 +246,14 @@ function buildSegment(F, B, p, j, anchors) {
     const y = ya + r.float(0.1, 0.9) * SEG_H;
     anchors.push({ kind: 'pillar', p, y, r: lerp(ra, rb, (y - ya) / SEG_H) * 0.9 });
   }
-  // tentáculos e fios de prumo saindo do pilar
+  // fios de prumo saindo do pilar
   if (r.chance(0.12)) {
     const y = ya + r.float(0, SEG_H);
     F.pillarCenter(p, y, c);
     const ang = r.float(0, Math.PI * 2);
     const rr = lerp(ra, rb, (y - ya) / SEG_H);
     const o = B.L(c.x + Math.cos(ang) * rr, y, c.z + Math.sin(ang) * rr);
-    B.add('cable', r.chance(0.12)
-      ? buildTendril(o, { rng: r, dir: 'down', iterations: 4, scale: r.float(1, 2.2) })
-      : plumbLine(o, r.float(80, 260), { rng: r, radius: r.float(0.06, 0.25) }));
+    B.add('cable', plumbLine(o, r.float(80, 260), { rng: r, radius: r.float(0.06, 0.25) }));
   }
   // luz na superfície
   if (r.chance(0.07)) {
@@ -302,16 +300,13 @@ function buildRoot(F, B, p, y, radius, r) {
     const len = r.float(25, 130);
     B.add('tower', place(new THREE.ConeGeometry(radius, len, p.sides, 8, true), { x: L.x, y: L.y - len / 2, z: L.z, rx: Math.PI, ry: p.spin }));
   } else {
-    // corte seco com feixes de cabos pendendo (raramente, algo orgânico)
+    // corte seco com feixes de cabos pendendo
     B.add('tower', place(new THREE.CylinderGeometry(radius, radius * 0.5, 3, p.sides, 1, false), { x: L.x, y: L.y - 1.5, z: L.z, ry: p.spin }));
     const n = r.int(3, 7);
-    const organic = r.chance(0.15);
     for (let i = 0; i < n; i++) {
       const ang = (i / n) * Math.PI * 2 + r.float(0, 0.5);
       const o = L.clone().add(new THREE.Vector3(Math.cos(ang) * radius * 0.6, -2, Math.sin(ang) * radius * 0.6));
-      B.add('cable', organic
-        ? buildTendril(o, { rng: r, dir: 'down', iterations: 4, scale: r.float(1.5, 3) })
-        : plumbLine(o, r.float(30, 180), { rng: r, radius: r.float(0.15, 0.5) }));
+      B.add('cable', plumbLine(o, r.float(30, 180), { rng: r, radius: r.float(0.15, 0.5) }));
     }
   }
 }
@@ -424,7 +419,6 @@ function buildWalk(F, B, axis, u, y, t0, t1, w, salt, anchors) {
       const [ax, ay, az] = G(ts + len / 2, -1.2, (w.track ? -w.track.side : r.sign()) * hw);
       anchors.push({ kind: 'point', gx: ax, gy: ay, gz: az });
     }
-    if (r.chance(0.015)) B.add('cable', buildTendril(P(ts + len / 2, -2.8, r.float(-1, 1)), { rng: r, dir: 'down', iterations: 4 }));
     if (r.chance(0.05)) B.add('cable', plumbLine(P(ts + len / 2, -2, r.sign() * hw * 0.8), r.float(100, 300), { rng: r, radius: r.float(0.06, 0.18) }));
   }
 }
@@ -575,8 +569,8 @@ function genFloaters(F, B, box, cx, cy, cz) {
     if (F.reservedHit(gx - 70, gy - 70, gz - 70, gx + 70, gy + 70, gz + 70)) continue;
     if (F.walkwayNear(gx, gy - 50, gy + 50, gz, 50)) continue;
     if (!F.isOpenBiome(gx, gy, gz) || F.insideVoid(gx, gy, gz) || F.touchesBarrier(gy - 80, gy + 80)) continue;
-    // brutalismo em maioria; carcaças e neurônios são anomalias raras
-    const kind = r.pick(['block', 'block', 'block', 'slab', 'slab', 'cage', 'cage', 'ring', 'ribcage', 'neuron']);
+    // só coisas construídas: blocos, lajes, gaiolas, anéis
+    const kind = r.pick(['block', 'block', 'block', 'slab', 'slab', 'cage', 'cage', 'ring']);
     const o = B.L(gx, gy, gz);
     if (B.lod) {
       if (kind === 'block' || kind === 'slab') B.add('block', place(new THREE.BoxGeometry(r.float(15, 40), r.float(20, 80), r.float(15, 40)), { x: o.x, y: o.y, z: o.z }));
@@ -596,49 +590,6 @@ const FLOATERS = {
     const w = r.float(30, 60);
     B.add('dress', place(new THREE.BoxGeometry(w, 3, w * r.float(0.6, 1)), { x: o.x, y: o.y - 1.5, z: o.z, ry: r.float(0, 1) }));
     if (r.chance(0.5)) B.add('cable', plumbLine(o.clone().add(new THREE.Vector3(r.float(-8, 8), -3, r.float(-8, 8))), r.float(40, 160), { rng: r, radius: 0.2 }));
-  },
-
-  /** Carcaça: espinha com costelas arqueadas — um organismo imenso, morto ou dormindo. */
-  ribcage(B, o, r) {
-    const axis = new THREE.Vector3(r.float(-1, 1), r.float(-0.25, 0.25), r.float(-1, 1)).normalize();
-    const len = r.float(40, 100);
-    const count = Math.floor(len / 5);
-    const ribR = r.float(6, 14);
-    const flip = r.chance(0.3);
-    const quat = new THREE.Quaternion().setFromUnitVectors(Z, axis);
-    const side = new THREE.Vector3(0, 1, 0).cross(axis).normalize();
-    for (let i = 0; i <= count; i++) {
-      const t = i / count;
-      const p = o.clone().addScaledVector(axis, (t - 0.5) * len).addScaledVector(side, Math.sin(t * Math.PI * 2) * 3);
-      B.add('organic', place(new THREE.IcosahedronGeometry(r.float(1.2, 2.4), 1), { x: p.x, y: p.y, z: p.z }));
-      if (i === 0 || i === count) continue;
-      const R = 2 + ribR * Math.sin(Math.PI * t);
-      const arc = Math.PI * r.float(0.9, 1.25);
-      const rib = new THREE.TorusGeometry(R, r.float(0.3, 0.7), 5, 24, arc);
-      rib.rotateZ(Math.PI / 2 - arc / 2 + (flip ? Math.PI : 0));
-      rib.applyQuaternion(quat);
-      rib.translate(p.x, p.y, p.z);
-      B.add('organic', rib);
-    }
-  },
-
-  /** Neurônio: núcleo com dendritos em todas as direções. */
-  neuron(B, o, r, g) {
-    const R = r.float(5, 12);
-    B.add('organic', place(new THREE.IcosahedronGeometry(R, 2), { x: o.x, y: o.y, z: o.z }));
-    const n = r.int(5, 8);
-    for (let i = 0; i < n; i++) {
-      const dir = new THREE.Vector3(r.float(-1, 1), r.float(-1, 1), r.float(-1, 1)).normalize();
-      B.add('cable', buildTendril(o.clone().addScaledVector(dir, R * 0.9), {
-        rng: r,
-        grammar: 'dendrite',
-        iterations: 4,
-        scale: r.float(1.2, 2.2),
-        heading: dir,
-        tropism: dir.clone().multiplyScalar(0.3),
-      }));
-    }
-    B.light(g[0], g[1] + R + 5, g[2], SODIUM, r.float(60, 150), 'steady');
   },
 
   /** Laje: um pequeno monólito à deriva. */
