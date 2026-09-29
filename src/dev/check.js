@@ -55,7 +55,8 @@ export async function runCheck(ctx) {
       report({ kind, ok: false, why: 'destino não encontrado' });
       continue;
     }
-    controls.setMode('walk');
+    // quem chega voando (máquina colossal, vazio sem plataforma) continua voando
+    if (!found.fly) controls.setMode('walk');
     // no meio do roteiro, os eventos do mundo também precisam funcionar
     if (n === 3) world.outages.trigger(world.toGlobal(camera.position), camera.getWorldDirection(new THREE.Vector3()), ctx.getTime());
     if (n === 6) world.collapses.trigger(world.toGlobal(camera.position), camera.getWorldDirection(new THREE.Vector3()), ctx.getTime());
@@ -64,7 +65,7 @@ export async function runCheck(ctx) {
     const w = controls.walker;
     const g = world.toGlobal(camera.position);
     // "caiu": em queda livre há muito tempo depois de o terreno carregar
-    const falling = !w.grounded && w.airTime > 2;
+    const falling = !found.fly && !w.grounded && w.airTime > 2;
     report({ kind, ok: !falling, fps: m.fps, worst: m.worst, grounded: w.grounded, y: Math.round(g.y), ...(falling ? { why: 'em queda livre (atravessou o chão?)', at: [from.x, from.y, from.z].map(Math.round) } : {}) });
   }
   console.warn('CHECK:DONE');

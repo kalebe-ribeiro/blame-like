@@ -67,6 +67,7 @@ function walkwayPierces(F, wallAxis, wallPos, tA0, tA1, y0, y1) {
 
 function genBarriers(F, B, box, owns) {
   const th = MEGA.barrierThick;
+  const P = MEGA.passage;
   for (const b of F.barriersNear((box.y0 + box.y1) / 2)) {
     const yc = b.top - th / 2;
     if (yc < box.y0 || yc >= box.y1) continue;
@@ -76,30 +77,44 @@ function genBarriers(F, B, box, owns) {
       const flush = () => {
         if (!run) return;
         const len = (run.end - run.start + 1) * T;
-        block(B, 'barrier', run.start * T + len / 2, yc, zc, len, th, T);
+        // laje cheia, ou mais fina onde uma trincheira de máquina a escava por baixo
+        const t = th - run.depth;
+        block(B, 'barrier', run.start * T + len / 2, b.top - t / 2, zc, len, t, T);
         run = null;
       };
       for (let i = Math.floor(box.x0 / T); i * T < box.x1; i++) {
         const xc = (i + 0.5) * T;
         const solid = F.barrierSolid(b, xc - 30, zc - 30) && F.barrierSolid(b, xc + 30, zc + 30) && F.barrierSolid(b, xc, zc);
-        if (solid) {
-          if (run) run.end = i;
-          else run = { start: i, end: i };
-          // caixotões por baixo: vigas cruzadas que dão escala ao teto
-          block(B, 'barrier', xc, b.bottom - 5, zc - T / 2 + 3, T, 10, 6);
-          block(B, 'barrier', xc - T / 2 + 3, b.bottom - 5, zc, 6, 10, T);
-          // luminárias penduradas do teto, raras e distantes umas das outras
-          if (hash4(F.seed, i, b.n, k, 360) < 0.03) {
-            block(B, 'frame', xc, b.bottom - 22, zc, 0.6, 24, 0.6);
-            block(B, 'frame', xc, b.bottom - 34.5, zc, 8, 1.5, 3);
-            B.light(xc, b.bottom - 37, zc, hash4(F.seed, i, b.n, k, 361) < 0.6 ? SODIUM : FLUORO, 1600, hash4(F.seed, i, b.n, k, 362) < 0.2 ? 'faulty' : 'steady');
-          }
-        } else flush();
+        if (!solid) {
+          flush();
+          continue;
+        }
+        const depth = F.trenchAt(b, xc, zc);
+        if (run && run.depth !== depth) flush();
+        if (run) run.end = i;
+        else run = { start: i, end: i, depth };
+        // caixotões por baixo: vigas cruzadas que dão escala ao teto (no fundo da trincheira, se houver)
+        const cy = b.bottom + depth - 5;
+        block(B, 'barrier', xc, cy, zc - T / 2 + 3, T, 10, 6);
+        block(B, 'barrier', xc - T / 2 + 3, cy, zc, 6, 10, T);
+        if (depth) {
+          // trilhos das máquinas colossais, presos ao teto da trincheira
+          const lz = Math.round(zc / P) * P;
+          const lx = Math.round(xc / P) * P;
+          if (Math.abs(zc - lz) < T && F.ceilingLane(b.n, 'x', lz / P)) block(B, 'frame', xc, cy - 7, lz + Math.sign(zc - lz) * 45, T, 4, 5);
+          if (Math.abs(xc - lx) < T && F.ceilingLane(b.n, 'z', lx / P)) block(B, 'frame', lx + Math.sign(xc - lx) * 45, cy - 7, zc, 5, 4, T);
+          continue;
+        }
+        // luminárias penduradas do teto, raras e distantes umas das outras
+        if (hash4(F.seed, i, b.n, k, 360) < 0.03) {
+          block(B, 'frame', xc, b.bottom - 22, zc, 0.6, 24, 0.6);
+          block(B, 'frame', xc, b.bottom - 34.5, zc, 8, 1.5, 3);
+          B.light(xc, b.bottom - 37, zc, hash4(F.seed, i, b.n, k, 361) < 0.6 ? SODIUM : FLUORO, 1600, hash4(F.seed, i, b.n, k, 362) < 0.2 ? 'faulty' : 'steady');
+        }
       }
       flush();
     }
     // passagens desta célula: torre de elevador colossal + luz caindo
-    const P = MEGA.passage;
     for (let pi = Math.floor(box.x0 / P); pi * P < box.x1; pi++) {
       for (let pk = Math.floor(box.z0 / P); pk * P < box.z1; pk++) {
         const p = F.passage(b.n, pi, pk);

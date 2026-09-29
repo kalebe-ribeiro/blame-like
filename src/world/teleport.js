@@ -6,8 +6,9 @@
 //  esteja carregada. O corpo chega flutuando e só assenta quando a geometria
 //  ao redor terminar de ser gerada.
 //
-//  findDestination(field, kind, globalPos, recent) → { feet, yaw, pitch, fly, id } | null
+//  findDestination(field, kind, globalPos, recent, opts) → { feet, yaw, pitch, fly, id } | null
 //    feet: posição GLOBAL dos pés · recent: ids já visitados (para variar)
+//    opts.colossus(): a máquina colossal mais próxima agora (ela anda com o tempo)
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { MEGA, HIVE, TRANSIT, MACRO } from '../gen/field.js';
@@ -32,6 +33,7 @@ export const DESTINATIONS = [
   { group: 'outros', kind: 'cemiterio', label: 'Cemitério de Construtores' },
   { group: 'outros', kind: 'cascata', label: 'Cascata' },
   { group: 'outros', kind: 'transportador', label: 'Transportador' },
+  { group: 'outros', kind: 'colosso', label: 'Máquina colossal' },
   { group: 'outros', kind: 'ponte', label: 'Ponte inicial' },
 ];
 
@@ -70,8 +72,24 @@ function floorAt(F, x, y, z) {
   return false;
 }
 
-export function findDestination(F, kind, g, recent = new Set()) {
+export function findDestination(F, kind, g, recent = new Set(), opts = {}) {
   const finders = {
+    // ── à frente de uma máquina colossal, flutuando sob a trincheira: ela passa por cima ──
+    colosso: () => {
+      // o ponto de vista precisa estar no aberto (teia ou vazio), longe de paredes
+      const spot = (m) => {
+        const ahead = 320 * m.dir;
+        return [m.lane.axis === 'x' ? m.x + ahead : m.x, m.y - 120, m.lane.axis === 'x' ? m.z : m.z + ahead];
+      };
+      const open = (m) => {
+        const [x, y, z] = spot(m);
+        return F.isOpenBiome(x, y, z) && F.isOpenBiome(m.x, y, m.z) && !F.insideVoid(x, y, z) && !F.nearMegaWall(x, y, z, 60);
+      };
+      const m = opts.colossus?.(open);
+      if (!m) return null;
+      const [fx, fy, fz] = spot(m);
+      return { id: `c${Math.round(m.x)},${Math.round(m.z)}`, feet: V(fx, fy, fz), yaw: yawTo(fx, fz, m.x, m.z), pitch: Math.atan2(120, 320), fly: true };
+    },
     ponte: () => ({ id: 'ponte', feet: V(0, 0.5, 58), yaw: 0, pitch: 0.03 }),
 
     // ── regiões ──

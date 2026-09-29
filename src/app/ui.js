@@ -97,7 +97,7 @@ export function createUI(ctx) {
   function teleport(kind, label) {
     const g = world.toGlobal(camera.position, new THREE.Vector3());
     const recent = visited.get(kind) ?? new Set();
-    const dest = findDestination(world.field, kind, g, recent);
+    const dest = findDestination(world.field, kind, g, recent, { colossus: (accept) => world.colossi.nearest(world.field, g, ctx.time, accept) });
     if (!dest) return false;
     recent.add(dest.id);
     if (recent.size > 8) recent.delete(recent.values().next().value);
@@ -112,7 +112,7 @@ export function createUI(ctx) {
     audio.start();
     audio.transfer(1);
     controls.lock();
-    return true;
+    return dest;
   }
 
   // ─── mapa da travessia (M) ───

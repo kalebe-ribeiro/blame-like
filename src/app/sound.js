@@ -12,6 +12,7 @@ const sectorName = (ev) => ((Math.abs(Math.round(ev.c.x / 97) * 131 + Math.round
 export function createWorldSound(ctx) {
   const { world, audio, hud, controls, camera } = ctx;
   let spaceTimer = 0;
+  let sawColossus = false;
   const g = new THREE.Vector3();
 
   /** Liga os acontecimentos do mundo atual (chamado de novo a cada mundo novo). */
@@ -49,6 +50,16 @@ export function createWorldSound(ctx) {
         const [pan, dist] = ctx.placeOf(ev.x, ev.y, ev.z);
         if (ev.kind === 'clang') audio.clangAt(pan, dist);
         else audio.weldAt(pan, dist);
+      }
+      // máquinas colossais: o baque das garras; perto, o chão treme junto
+      for (const ev of world.colossi.events.splice(0)) {
+        const [pan, dist] = ctx.placeOf(ev.x, ev.y, ev.z);
+        audio.colossusClamp(pan, dist);
+        if (dist < 900) setTimeout(() => controls.rumble(0.5 * (1 - dist / 900), 0.2, 400), dist / 0.34);
+        if (dist < 1500 && !sawColossus) {
+          sawColossus = true;
+          hud.push('MÁQUINA DE MANUTENÇÃO :: em rota · operador ausente');
+        }
       }
       spaceTimer -= dt;
       if (spaceTimer > 0) return;

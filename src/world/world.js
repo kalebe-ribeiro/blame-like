@@ -31,6 +31,7 @@ import { OutageSystem } from './outages.js';
 import { SilhouetteSystem } from './silhouettes.js';
 import { CollapseSystem } from './collapses.js';
 import { TransitCars } from './transitCars.js';
+import { ColossusSystem } from './colossi.js';
 import { TerminalSystem } from './terminals.js';
 import { CHUNK, MACRO, Field } from '../gen/field.js';
 
@@ -137,6 +138,8 @@ export class World {
     this.transit = new TransitCars(this.streamGroup, m);
     this.transit.field = this.field;
     this.transit.outages = this.outages;
+    this.colossi = new ColossusSystem(this.streamGroup, m);
+    this.colossi.field = this.field;
     this.elevators.outages = this.outages;
     this.terminals = new TerminalSystem(this.streamGroup, m, this.seed);
     Object.assign(this.terminals, { field: this.field, transit: this.transit, outages: this.outages });
@@ -227,7 +230,10 @@ export class World {
       // setores inundados: lâmina d'água parada de quilômetros
       flood: mk({ base: C(0.03, 0.032, 0.034), panel: 100, streaks: 0, accentAmount: 0, wet: 1, fogAmount: 0.6, fade: fadeMacro, reflect: true }),
       machine: mk({ ...steel, base: C(0.1, 0.1, 0.105), accentAmount: 0.6, panel: 2.5, fogAmount: 0.6 }),
+      // máquinas colossais nas trincheiras do teto (vistas a quilômetros)
+      colossus: mk({ ...steel, base: C(0.085, 0.085, 0.09), accentAmount: 0.5, panel: 7, windows: 0.04, windowSize: [4, 2.5], windowColor: C(0.95, 0.62, 0.32), fogAmount: 0.35, fade: fadeMacro }),
       beam: createBeamMaterial(S, { color: new THREE.Vector3(0.95, 0.88, 0.75), intensity: 0.05, fade: fadeMacro }),
+      colossusBeam: createBeamMaterial(S, { color: new THREE.Vector3(1.0, 0.7, 0.42), intensity: 0.14, fade: fadeMacro }),
     };
     // variantes para os chunks LOD: mesmas receitas, fade no fim do alcance
     this.lodMaterials = {};
@@ -367,6 +373,7 @@ export class World {
     this.macroLayer.rebase(this.origin);
     this.lights.shift(delta);
     this.transit?.rebase(delta);
+    this.colossi?.rebase(delta);
 
     // o ruído dos shaders usa origem mód. PERÍODO; ao "dar a volta" o padrão salta
     const mod = (v) => ((v % ORIGIN_PERIOD) + ORIGIN_PERIOD) % ORIGIN_PERIOD;
@@ -464,6 +471,7 @@ export class World {
     this.elevators.update(time, dt, g, this.origin);
     this.builders.update(time, dt, g, this.origin);
     this.transit.update(time, dt, g, this.origin);
+    this.colossi.update(time, dt, g, this.origin);
     this.terminals.update(time, dt, g, this.origin);
     this.particles.update(time, dt, g, this.origin, () => [...this.chunkLayer.allEmitters(), ...this.macroLayer.allEmitters()]);
 
@@ -475,6 +483,7 @@ export class World {
       yield* self.elevators.lights;
       yield* self.builders.lights;
       yield* self.transit.lights;
+      yield* self.colossi.lights;
       yield* self.terminals.lights;
     }
     this.outages.update(time, dt, g, _fwd, this.origin);
@@ -486,6 +495,7 @@ export class World {
   dispose() {
     this.elevators?.dispose();
     this.transit?.dispose();
+    this.colossi?.dispose();
     this.terminals?.dispose();
     this.builders?.dispose();
     this.particles?.dispose();

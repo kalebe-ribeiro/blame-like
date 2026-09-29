@@ -323,6 +323,40 @@ export class AudioEngine {
     src.start(t);
   }
 
+  /**
+   * Baque das garras de uma máquina colossal trocando de trilho: um golpe
+   * surdo e um zumbido metálico grave que ressoa — chega atrasado pela distância.
+   */
+  colossusClamp(pan, dist) {
+    if (!this.ctx || dist > 5000) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime + dist / 340;
+    const out = this._placed(pan, dist * 0.25);
+    const o = ctx.createOscillator();
+    o.frequency.setValueAtTime(34, t);
+    o.frequency.exponentialRampToValueAtTime(24, t + 1.2);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(0.5, t + 0.02);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+    o.connect(og).connect(out);
+    o.start(t);
+    o.stop(t + 1.7);
+    // a estrutura inteira vibrando: duas parciais inarmônicas bem graves
+    for (const [f, a] of [[71, 0.09], [113, 0.05]]) {
+      const r = ctx.createOscillator();
+      r.frequency.value = f * rand(0.97, 1.03);
+      const rg = ctx.createGain();
+      rg.gain.setValueAtTime(0.0001, t);
+      rg.gain.exponentialRampToValueAtTime(a, t + 0.05);
+      rg.gain.exponentialRampToValueAtTime(0.0001, t + 3.5);
+      r.connect(rg).connect(out);
+      r.start(t);
+      r.stop(t + 3.6);
+    }
+    this._thump(t, out, 0.6, 180);
+  }
+
   /** A bordo de um vagão: ronco grave que cresce com a velocidade (m/s). */
   setRide(v) {
     if (!this.ctx) return;

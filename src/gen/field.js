@@ -60,6 +60,14 @@ export const NODE = { h: 96, v: 48 }; // célula da rede andável (horizontal, v
  */
 export const FLOOD = { depth: 0.6, dam: 0.85, damW: 1.6, thr: 0.2 };
 export const TRANSIT = { prob: 0.4, gap: 7, station: 1440, carLen: 22, carW: 5, carH: 4.6 };
+/**
+ * Máquinas colossais em trânsito: trincheiras cavadas por baixo das camadas,
+ * ao longo das linhas da grade das passagens (nunca cruzam um poço de
+ * elevador). Dentro delas, pórticos de centenas de metros se arrastam.
+ *   half: meia largura da trincheira · depth: quanto ela sobe na laje
+ *   spacing: distância entre máquinas na mesma trincheira (onde houver)
+ */
+export const COLOSSUS = { prob: 0.3, half: 80, depth: 56, spacing: 5200, fill: 0.55, speed: 3.2, len: 260, width: 118 };
 export const HIVE = 48; // célula da colmeia (uma sala)
 
 export const MEGA = {
@@ -223,6 +231,40 @@ export class Field {
     const P = MEGA.passage;
     const p = this.passage(b.n, Math.floor(x / P), Math.floor(z / P));
     return !(p && Math.abs(x - p.x) < p.size / 2 && Math.abs(z - p.z) < p.size / 2);
+  }
+
+  // ── trincheiras das máquinas colossais (por baixo das camadas) ────────────
+
+  /** A linha c da grade das passagens, no eixo dado, tem trincheira na camada n? */
+  ceilingLane(n, axis, c) {
+    return hash4(this.seed, n, c, axis === 'x' ? 0 : 1, 700) < COLOSSUS.prob;
+  }
+
+  /** Profundidade da trincheira sob a camada b no ponto (x,z): 0 = laje cheia. */
+  trenchAt(b, x, z) {
+    const P = MEGA.passage;
+    const { half, depth } = COLOSSUS;
+    const cz = Math.round(z / P);
+    if (Math.abs(z - cz * P) < half && this.ceilingLane(b.n, 'x', cz)) return depth;
+    const cx = Math.round(x / P);
+    if (Math.abs(x - cx * P) < half && this.ceilingLane(b.n, 'z', cx)) return depth;
+    return 0;
+  }
+
+  /** Trincheiras (camada, eixo, linha) a até R do ponto, nas camadas perto de y. */
+  trenchesNear(x, y, z, R) {
+    const P = MEGA.passage;
+    const out = [];
+    for (const b of this.barriersNear(y)) {
+      if (Math.abs(b.bottom - y) > R) continue;
+      for (let c = Math.floor((z - R) / P); c <= Math.ceil((z + R) / P); c++) {
+        if (this.ceilingLane(b.n, 'x', c)) out.push({ id: `T${b.n}x${c}`, b, axis: 'x', lat: c * P });
+      }
+      for (let c = Math.floor((x - R) / P); c <= Math.ceil((x + R) / P); c++) {
+        if (this.ceilingLane(b.n, 'z', c)) out.push({ id: `T${b.n}z${c}`, b, axis: 'z', lat: c * P });
+      }
+    }
+    return out;
   }
 
   // ── elevadores (objetos que se movem; animados na thread principal) ───────
