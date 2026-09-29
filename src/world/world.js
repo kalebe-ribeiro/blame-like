@@ -33,6 +33,7 @@ import { CollapseSystem } from './collapses.js';
 import { TransitCars } from './transitCars.js';
 import { ColossusSystem } from './colossi.js';
 import { EventBus } from '../core/events.js';
+import { InscriptionSystem } from './inscriptions.js';
 import { TerminalSystem } from './terminals.js';
 import { CHUNK, MACRO, Field } from '../gen/field.js';
 
@@ -152,6 +153,9 @@ export class World {
     this.elevators.outages = this.outages;
     this.terminals = new TerminalSystem(this.streamGroup, m, this.seed);
     Object.assign(this.terminals, { field: this.field, transit: this.transit, outages: this.outages, world: this });
+    // o endereçamento pintado nas paredes (na língua antiga)
+    this.inscriptions = new InscriptionSystem(this.streamGroup, this.seed);
+    Object.assign(this.inscriptions, { field: this.field, world: this });
     this.particles = new ParticleSystem(this.streamGroup);
     this.particles.bus = this.bus;
     // o horizonte impossível: estruturas a dezenas de km, só sombras na poeira
@@ -506,6 +510,7 @@ export class World {
     this.transit.update(time, dt, g, this.origin);
     this.colossi.update(time, dt, g, this.origin);
     this.terminals.update(time, dt, g, this.origin);
+    this.inscriptions.update(time, dt, g, this.origin, camera);
     this.particles.update(time, dt, g, this.origin, () => [...this.chunkLayer.allEmitters(), ...this.macroLayer.allEmitters()]);
 
     const self = this;
@@ -530,6 +535,7 @@ export class World {
     this.transit?.dispose();
     this.colossi?.dispose();
     this.terminals?.dispose();
+    this.inscriptions?.dispose();
     this.builders?.dispose();
     this.particles?.dispose();
     this.silhouettes?.dispose();
