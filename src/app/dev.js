@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { t } from '../i18n/index.js';
+import { CONCEPTS, NEED } from '../lang/ancient.js';
 import { subDraws } from '../world/batches.js';
 
 export function setupDev(ctx) {
@@ -17,6 +18,13 @@ export function setupDev(ctx) {
   if (params.get('collapse')) setTimeout(() => trigger(world.collapses), Number(params.get('collapse')) * 1000);
   // --lantern: a lanterna já acesa (Peregrinação)
   if (params.get('lantern')) setTimeout(() => ctx.carried.toggleLantern(), 500);
+  // --lexicon=1: já entende as palavras até essa classe (1 comuns, 2 incomuns, 3 raras) — só nesta sessão
+  if (params.get('lexicon')) {
+    const upTo = Number(params.get('lexicon'));
+    for (const [w, cls] of Object.entries(CONCEPTS)) if (cls <= upTo) ctx.lexicon.counts[w] = NEED[cls];
+  }
+  // --read=12: abre a leitura do terminal em frente aos N segundos
+  if (params.get('read')) setTimeout(() => ctx.reading.tryUse(), Number(params.get('read')) * 1000);
   // --wake=4: desmaio (queda fatal) aos N segundos — para ver a sequência de despertar
   if (params.get('wake')) setTimeout(() => ctx.wake.start('impact'), Number(params.get('wake')) * 1000);
 

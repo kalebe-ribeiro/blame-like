@@ -38,7 +38,7 @@ export function createUI(ctx) {
   });
   controls.onLockChange = (locked) => {
     // com um painel aberto, a tela de entrada fica escondida atrás dele
-    gate.classList.toggle('hidden', locked || settings.isOpen || transport.isOpen || worlds.isOpen || trail.open);
+    gate.classList.toggle('hidden', locked || settings.isOpen || transport.isOpen || worlds.isOpen || trail.open || ctx.reading?.isOpen);
     if (!locked) {
       ctx.travel.renderDiary();
       ctx.travel.save();
@@ -221,7 +221,7 @@ export function createUI(ctx) {
     if (name === 'photo') photo();
     if (name === 'hud' && rules.hud) hud.toggle();
     if (name === 'lantern') ctx.carried.toggleLantern();
-    if (name === 'use') ctx.carried.togglePlug();
+    if (name === 'use') ctx.reading.tryUse() || ctx.carried.togglePlug();
   };
 
   // ─── teclas globais ───
@@ -234,6 +234,9 @@ export function createUI(ctx) {
     if (e.code === 'F2') photo();
     if (e.code === 'KeyM') toggleMap();
     if (e.code === 'Escape' && trail.open) toggleMap();
+    // E: ler o terminal em frente (ou fechar a leitura); senão, a tomada
+    if (e.code === 'KeyE' && (controls.locked || ctx.reading.isOpen)) ctx.reading.tryUse() || ctx.carried.togglePlug();
+    if (e.code === 'Escape' && ctx.reading.isOpen) ctx.reading.close();
   });
 
   // primeira vez: o painel de mundos já aberto

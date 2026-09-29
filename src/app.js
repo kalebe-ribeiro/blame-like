@@ -38,6 +38,7 @@ import { createUI } from './app/ui.js';
 import { setupDev } from './app/dev.js';
 import { createWake } from './app/wake.js';
 import { createCarried } from './app/carried.js';
+import { createReading } from './app/reading.js';
 
 /** A névoa de altura é relativa ao observador: sempre mais densa abaixo. */
 const FOG_ABOVE_EYE = 40;
@@ -149,6 +150,7 @@ ctx.sound = createWorldSound(ctx);
 ctx.ui = createUI(ctx);
 ctx.wake = createWake(ctx);
 ctx.carried = createCarried(ctx);
+ctx.reading = createReading(ctx);
 setupDev(ctx);
 
 // ─── loop ───────────────────────────────────────────────────────────────────

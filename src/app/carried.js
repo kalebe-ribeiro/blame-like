@@ -6,7 +6,8 @@
 //  • Célula de energia (ctx.player.energy): a lanterna gasta; sem carga, você
 //    ainda anda — só enxerga o que a Cidade ilumina. Carga baixa: a luz falha.
 //  • F liga/desliga a lanterna (na Peregrinação não se voa, a tecla fica livre).
-//  • Tomadas (ChunkBuilder.socket): perto de uma, E conecta; recarrega enquanto
+//  • Tomadas (ChunkBuilder.socket): perto de uma, E conecta (se não houver
+//    um terminal em frente — app/ui.js decide); recarrega enquanto
 //    você fica ali — se o setor tiver energia.
 //  • A lanterna é uma luz de verdade (o espaço 'carried' do LightRig), presa à
 //    lente do aparelho: ilumina o caminho e a poeira em volta.
@@ -100,7 +101,7 @@ export function createCarried(ctx) {
   document.addEventListener('keydown', (e) => {
     if (e.repeat || !controls.locked) return;
     if (e.code === 'KeyF' && !ctx.rules.fly) toggleLantern();
-    if (e.code === 'KeyE') togglePlug();
+    // E é tratado em app/ui.js (terminal primeiro, depois tomada)
   });
 
   return {

@@ -16,6 +16,8 @@
 //    player:board     { car }            subiu num vagão
 //    player:photo     { }
 //    player:transfer  { kind, from, to } teletransporte (modo Livre)
+//    player:read      { id, site, learned } leu um terminal (app/reading.js)
+//    player:wake      { from, to, cause }  acordou depois de um desmaio (app/wake.js)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export class EventBus {

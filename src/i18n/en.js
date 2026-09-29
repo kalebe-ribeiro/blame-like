@@ -288,4 +288,8 @@ export default {
   'word.NOBODY': 'NOBODY',
   'word.REMAINS': 'REMAINS',
   'word.HERE': 'HERE',
+  // ── a tela de leitura ──
+  'reader.hint': 'E / ESC  close · wheel scrolls',
+  'reader.freeNote': 'Free mode: nothing is learned here · E / ESC  close',
+  'reader.learned': 'now understood: {words}',
 };

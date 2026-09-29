@@ -56,6 +56,11 @@ export function createTravel(ctx) {
     diary.fall(height);
     if (height > 40) trail.mark(world.toGlobal(camera.position, g), 'queda', height);
   });
+  // o arquivo do mundo: cada registro lido (o texto é refeito do Field pelo lugar — ver lang/records.js)
+  bus.on('player:read', ({ id, site }) => {
+    slot.archive ??= { records: {} };
+    slot.archive.records[id] ??= { x: site.x, y: site.y, z: site.z, kind: site.kind, at: Date.now() };
+  });
   bus.on('player:photo', () => {
     diary.add('photos');
     trail.mark(world.toGlobal(camera.position, g), 'foto');

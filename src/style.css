@@ -205,3 +205,22 @@ html, body {
 .worlds-actions button:hover { border-color: rgba(200, 196, 184, 0.8); color: #e2ded4; }
 .worlds-actions button.warn { border-color: rgba(176, 118, 62, 0.8); color: #d09a60; }
 .gate-mode { font-size: 10px; letter-spacing: 0.35em; color: rgba(150, 146, 136, 0.7); }
+
+/* ── Tela de leitura de um terminal (tecla E) ───────────────────────────── */
+#reader {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 22;
+  font-family: "Consolas", "Courier New", monospace;
+  color: #b2bcac;
+}
+#reader.open { display: flex; }
+.reader-box { border: 1px solid rgba(178, 188, 172, 0.25); background: #050706; padding: 14px; box-shadow: 0 0 60px rgba(0, 0, 0, 0.8); }
+.reader-box canvas { display: block; }
+.reader-foot { display: flex; justify-content: space-between; gap: 20px; margin-top: 10px; font-size: 11px; letter-spacing: 0.12em; min-height: 14px; }
+.reader-new { color: #c9a26a; }
+.reader-hint { color: rgba(150, 146, 136, 0.7); }

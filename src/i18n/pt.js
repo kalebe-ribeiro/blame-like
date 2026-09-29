@@ -288,4 +288,8 @@ export default {
   'word.NOBODY': 'NINGUÉM',
   'word.REMAINS': 'RESTA',
   'word.HERE': 'AQUI',
+  // ── a tela de leitura ──
+  'reader.hint': 'E / ESC  fechar · a roda rola',
+  'reader.freeNote': 'modo Livre: aqui nada se aprende · E / ESC  fechar',
+  'reader.learned': 'entendido agora: {words}',
 };

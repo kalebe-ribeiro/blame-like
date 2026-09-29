@@ -132,6 +132,8 @@ function createWindow() {
   if (argValue('game')) query.set('game', argValue('game')); // modo de jogo: free | pilgrimage
   if (argValue('outage')) query.set('outage', argValue('outage'));
   if (argValue('wake')) query.set('wake', argValue('wake'));
+  if (argValue('read')) query.set('read', argValue('read'));
+  if (argValue('lexicon')) query.set('lexicon', argValue('lexicon'));
   if (process.argv.includes('--lantern')) query.set('lantern', '1');
   if (argValue('collapse')) query.set('collapse', argValue('collapse'));
   if (checkMode) {

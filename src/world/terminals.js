@@ -75,6 +75,28 @@ export class TerminalSystem {
     return out.filter((s) => Math.hypot(s.x - g.x, s.y - g.y, s.z - g.z) < RANGE);
   }
 
+  /** O terminal mais perto de g (GLOBAL), até R metros — ou null. */
+  nearest(g, R = 2.4) {
+    let best = null;
+    let bd = R;
+    for (const it of this.items.values()) {
+      const s = it.site;
+      const d = Math.hypot(s.x - g.x, s.y + 1.2 - g.y, s.z - g.z);
+      if (d < bd) {
+        bd = d;
+        best = it;
+      }
+    }
+    return best;
+  }
+
+  /** O texto inteiro de um terminal para ler (com a linha viva do horário, nas estações). */
+  readable(it, time) {
+    const lines = it.lines.slice();
+    if (it.site.kind === 'station' && this.transit) lines.splice(2, 0, this.transit.stationStatus(it.site.line, it.site.s, time));
+    return lines;
+  }
+
   _create(site) {
     const canvas = document.createElement('canvas');
     canvas.width = W;
