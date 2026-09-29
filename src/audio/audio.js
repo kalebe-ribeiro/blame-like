@@ -425,6 +425,57 @@ export class AudioEngine {
     this._thump(t, out, 0.6, 180);
   }
 
+  // ── desmaio e despertar (app/wake.js) ──
+
+  /** O mundo some no ouvido: 0 = normal, 1 = quase nada (abafado e baixo). */
+  faint(level) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.muffle.frequency.setTargetAtTime(Math.max(160, 20000 * Math.pow(1 - level, 3)), t, 0.4);
+    this.master.gain.setTargetAtTime(0.85 * (1 - 0.6 * level), t, 0.5);
+  }
+
+  /** Um batimento lento e surdo (no escuro). */
+  heartbeat() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    for (const [dt, a] of [[0, 0.5], [0.28, 0.32]]) {
+      const o = this.ctx.createOscillator();
+      o.frequency.setValueAtTime(58, t + dt);
+      o.frequency.exponentialRampToValueAtTime(38, t + dt + 0.18);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t + dt);
+      g.gain.exponentialRampToValueAtTime(a, t + dt + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.25);
+      // direto na saída: o coração não passa pelo abafador do mundo
+      o.connect(g).connect(this.ctx.destination);
+      o.start(t + dt);
+      o.stop(t + dt + 0.3);
+    }
+  }
+
+  /** Um puxão: o corpo raspando no concreto. */
+  dragScrape(k = 1) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this._rumbleBuf ??= this._noiseBuffer(6, 'brown');
+    src.playbackRate.value = rand(1.6, 2.4);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = rand(500, 900);
+    bp.Q.value = 0.8;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5 * k, t + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + rand(0.5, 0.8));
+    // também direto: é o som do próprio corpo, perto demais para abafar
+    src.connect(bp).connect(g).connect(ctx.destination);
+    src.start(t, rand(0, 4));
+    src.stop(t + 0.9);
+  }
+
   /** A bordo de um vagão: ronco grave que cresce com a velocidade (m/s). */
   setRide(v) {
     if (!this.ctx) return;

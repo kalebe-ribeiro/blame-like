@@ -12,6 +12,9 @@
 import * as THREE from 'three';
 import { t, fmtNum } from '../i18n/index.js';
 
+/** Velocidade de impacto (m/s) que seria fatal: acima disso, desmaio (Peregrinação). */
+const LETHAL_IMPACT = 38;
+
 // o som do passo depende do que está sob os pés (material da malha de colisão)
 const STEP_SURFACE = {
   grate: 'grate', rungs: 'grate',
@@ -40,6 +43,8 @@ export function createBody(ctx) {
     audio.impact(impact);
     controls.rumble(Math.min(1, Math.max(0, impact - 6) / 40), Math.min(1, impact / 30), 120 + Math.min(500, impact * 10));
     world.bus.emit('player:fall', { height });
+    // Peregrinação: um impacto que seria fatal vira desmaio (app/wake.js)
+    if (ctx.rules.deathWake && impact > LETHAL_IMPACT) ctx.wake.start('impact');
     if (height > 80) hud.push(t('hud.fall', { m: fmtNum(Math.round(height)) }));
   };
   controls.onModeChange = (mode) => {

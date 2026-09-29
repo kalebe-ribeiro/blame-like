@@ -35,11 +35,14 @@ import { createWorldSound } from './app/sound.js';
 import { createTravel } from './app/travel.js';
 import { createUI } from './app/ui.js';
 import { setupDev } from './app/dev.js';
+import { createWake } from './app/wake.js';
 
 /** A névoa de altura é relativa ao observador: sempre mais densa abaixo. */
 const FOG_ABOVE_EYE = 40;
 /** Tempo em queda livre até o sistema "realocar" o observador (s). */
 const FALL_RESCUE_AFTER = 5.5;
+/** Peregrinação: caindo no vazio há tanto tempo, a vista escurece ainda no ar (s). */
+const VOID_FAINT_AFTER = 6;
 
 const params = new URLSearchParams(location.search);
 // só o `npm start` normal (sem nenhuma flag) lê e grava a travessia — sessões de
@@ -136,6 +139,7 @@ ctx.travel = createTravel(ctx);
 ctx.body = createBody(ctx);
 ctx.sound = createWorldSound(ctx);
 ctx.ui = createUI(ctx);
+ctx.wake = createWake(ctx);
 setupDev(ctx);
 
 // ─── loop ───────────────────────────────────────────────────────────────────
@@ -151,8 +155,12 @@ function frame() {
   const time = ctx.time;
 
   // 1. movimento e o que o corpo sente
-  controls.update(dt, time);
-  ctx.body.update(dt);
+  // durante o desmaio a câmera é da sequência (app/wake.js)
+  if (ctx.wake.active) ctx.wake.update(dt);
+  else {
+    controls.update(dt, time);
+    ctx.body.update(dt);
+  }
   ctx.travel.update(dt);
   camera.updateMatrixWorld();
 
@@ -171,7 +179,9 @@ function frame() {
   ctx.sound.update(dt);
 
   // caiu no abismo por tempo demais: realoca (só se ligado nas configurações)
-  const rescue = ctx.rules.fallRescue === 'always' || ctx.settings.fallRescue;
+  // Peregrinação: a queda sem fim também acaba em desmaio (app/wake.js)
+  if (ctx.rules.deathWake && !ctx.wake.active && controls.mode === 'walk' && controls.walker.airTime > VOID_FAINT_AFTER) ctx.wake.start('void');
+  const rescue = ctx.rules.fallRescue === 'always' || (ctx.rules.fallRescue === 'setting' && ctx.settings.fallRescue);
   if (rescue && controls.mode === 'walk' && controls.walker.airTime > FALL_RESCUE_AFTER) {
     const landing = world.findLanding(camera.position);
     if (landing) {

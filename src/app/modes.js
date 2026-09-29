@@ -19,6 +19,7 @@ export const MODES = {
     translation: false, // a tradução não avança aqui
     resources: false, // energia e luz como recurso (fase 1)
     fallRescue: 'setting', // realocar ao cair: opção nas configurações
+    deathWake: false, // queda fatal → desmaio e despertar (app/wake.js)
   },
   pilgrimage: {
     id: 'pilgrimage',
@@ -28,8 +29,9 @@ export const MODES = {
     hud: false,
     translation: true,
     resources: true,
-    // até a fase 1 (desmaio e despertar), uma queda sem fim é interrompida
-    fallRescue: 'always',
+    fallRescue: 'never',
+    // uma queda fatal (ou sem fim) vira desmaio: você é arrastado e acorda em outro lugar
+    deathWake: true,
   },
 };
 

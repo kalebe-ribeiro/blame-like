@@ -15,6 +15,8 @@ export function setupDev(ctx) {
   // --outage=4 / --collapse=4: força o acontecimento aos N segundos
   if (params.get('outage')) setTimeout(() => trigger(world.outages), Number(params.get('outage')) * 1000);
   if (params.get('collapse')) setTimeout(() => trigger(world.collapses), Number(params.get('collapse')) * 1000);
+  // --wake=4: desmaio (queda fatal) aos N segundos — para ver a sequência de despertar
+  if (params.get('wake')) setTimeout(() => ctx.wake.start('impact'), Number(params.get('wake')) * 1000);
 
   // --check: roteiro automático por todos os destinos (npm run check)
   if (params.get('check')) {

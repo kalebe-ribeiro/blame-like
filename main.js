@@ -17,6 +17,7 @@
 //    electron . --goto=colmeia  → começa transportado ao exemplar mais próximo do tipo
 //    electron . --outage=4 → força um apagão de setor aos 4 s
 //    electron . --collapse=4 → força um colapso distante aos 4 s
+//    electron . --wake=4 → desmaio aos 4 s (a sequência de queda e despertar)
 //    electron . --stats   → imprime FPS e estatísticas do streaming no terminal
 //    electron . --novsync → sem limite de quadros (medir desempenho)
 //    electron . --check   → teste de fumaça: visita todos os destinos (npm run check)
@@ -125,6 +126,7 @@ function createWindow() {
   if (gotoKind) query.set('goto', gotoKind);
   if (argValue('game')) query.set('game', argValue('game')); // modo de jogo: free | pilgrimage
   if (argValue('outage')) query.set('outage', argValue('outage'));
+  if (argValue('wake')) query.set('wake', argValue('wake'));
   if (argValue('collapse')) query.set('collapse', argValue('collapse'));
   if (checkMode) {
     query.set('check', argValue('check') || '1'); // --check=trelica,escadaria: só esses
