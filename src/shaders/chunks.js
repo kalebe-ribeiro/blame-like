@@ -1,0 +1,200 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  Pedaços de GLSL compartilhados por todos os materiais.
+//
+//  NOISE_GLSL  → simplex 3D (Ashima/McEwan) + fbm + hashes
+//  FOG_GLSL    → névoa volumétrica analítica:
+//                  • névoa de altura exponencial (mais densa no abismo)
+//                  • densidade modulada por ruído que deriva no tempo
+//                  • in-scatter analítico de cada luz pontual (halos na névoa)
+//
+//  Todos os materiais chamam applyFog(cor, posiçãoMundo, k, fade) no fim do fragment
+//  shader. Como a névoa é calculada por pixel a partir de cameraPosition, ela
+//  funciona automaticamente também nas câmeras virtuais dos portais.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const NOISE_GLSL = /* glsl */ `
+vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec4 permute(vec4 x) { return mod289(((x * 34.0) + 10.0) * x); }
+vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+
+// Simplex noise 3D → aprox. [-1, 1]
+float snoise(vec3 v) {
+  const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);
+  const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+  vec3 i  = floor(v + dot(v, C.yyy));
+  vec3 x0 = v - i + dot(i, C.xxx);
+  vec3 g = step(x0.yzx, x0.xyz);
+  vec3 l = 1.0 - g;
+  vec3 i1 = min(g.xyz, l.zxy);
+  vec3 i2 = max(g.xyz, l.zxy);
+  vec3 x1 = x0 - i1 + C.xxx;
+  vec3 x2 = x0 - i2 + C.yyy;
+  vec3 x3 = x0 - D.yyy;
+  i = mod289(i);
+  vec4 p = permute(permute(permute(
+             i.z + vec4(0.0, i1.z, i2.z, 1.0))
+           + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+           + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+  float n_ = 0.142857142857;
+  vec3 ns = n_ * D.wyz - D.xzx;
+  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+  vec4 x_ = floor(j * ns.z);
+  vec4 y_ = floor(j - 7.0 * x_);
+  vec4 x = x_ * ns.x + ns.yyyy;
+  vec4 y = y_ * ns.x + ns.yyyy;
+  vec4 h = 1.0 - abs(x) - abs(y);
+  vec4 b0 = vec4(x.xy, y.xy);
+  vec4 b1 = vec4(x.zw, y.zw);
+  vec4 s0 = floor(b0) * 2.0 + 1.0;
+  vec4 s1 = floor(b1) * 2.0 + 1.0;
+  vec4 sh = -step(h, vec4(0.0));
+  vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
+  vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
+  vec3 p0 = vec3(a0.xy, h.x);
+  vec3 p1 = vec3(a0.zw, h.y);
+  vec3 p2 = vec3(a1.xy, h.z);
+  vec3 p3 = vec3(a1.zw, h.w);
+  vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
+  p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+  vec4 m = max(0.5 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
+  m = m * m;
+  return 105.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
+}
+
+// Fractal Brownian motion (4 oitavas) — base da textura de "carne"
+float fbm(vec3 p) {
+  float a = 0.5, s = 0.0;
+  for (int i = 0; i < 4; i++) {
+    s += a * snoise(p);
+    p = p * 2.03 + vec3(1.7, 9.2, 3.1);
+    a *= 0.5;
+  }
+  return s;
+}
+
+// fbm que para nas oitavas menores que um pixel (fp = pegada do pixel em
+// unidades de p, ex.: length(fwidth(p))). Mais barato e sem serrilhado longe.
+float fbmAA(vec3 p, float fp) {
+  float a = 0.5, s = 0.0, f = 1.0;
+  for (int i = 0; i < 4; i++) {
+    float w = 1.0 - smoothstep(0.25, 0.5, fp * f);
+    if (w <= 0.0) break;
+    s += a * w * snoise(p);
+    p = p * 2.03 + vec3(1.7, 9.2, 3.1);
+    a *= 0.5;
+    f *= 2.03;
+  }
+  return s;
+}
+
+float hash11(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
+float hash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+float hash13(vec3 p3) {
+  p3 = fract(p3 * 0.1031);
+  p3 += dot(p3, p3.zyx + 31.32);
+  return fract((p3.x + p3.y) * p3.z);
+}
+`;
+
+// Uniforms de luz/névoa compartilhados (declarados uma única vez por shader).
+export const SHARED_UNIFORMS_GLSL = /* glsl */ `
+uniform float uTime;
+uniform vec3  uLightPos[LIGHT_COUNT];
+uniform vec3  uLightColor[LIGHT_COUNT];   // cor * intensidade
+uniform vec3  uLightFog[LIGHT_COUNT];     // cor * intensidade * atenuação até a câmera (CPU)
+uniform vec4  uOutageA[4];                // apagões: centro (cena) + frente da queda (m)
+uniform vec4  uOutageB[4];                // frente do religamento (m), raio do setor
+
+// Energia da rede (0..1) num ponto — mesma lógica de world/outages.js.
+// j (0..1) desloca a frente um pouco, para as janelas não apagarem em bloco.
+float outagePower(vec3 wp, float j) {
+  float p = 1.0;
+  for (int i = 0; i < 4; i++) {
+    vec4 a = uOutageA[i];
+    if (a.w < 0.0) continue;
+    vec4 b = uOutageB[i];
+    float d = distance(wp, a.xyz) + j * 18.0;
+    float dark = (1.0 - smoothstep(a.w - 6.0, a.w, d))
+               * smoothstep(b.x - 6.0, b.x, d + j * 11.0)
+               * (1.0 - smoothstep(b.y - 10.0, b.y + 8.0, d));
+    p *= 1.0 - dark;
+  }
+  return p;
+}
+uniform float uFogDensity;      // densidade na altura uFogBase
+uniform float uFogFalloff;      // quão rápido a névoa afina com a altura
+uniform float uFogBase;
+uniform float uScatter;         // força do espalhamento das luzes na névoa
+uniform vec3  uOriginMod;       // origem flutuante: mantém os padrões contínuos
+uniform vec3  uFogColorA;       // poeira cinza
+uniform vec3  uFogColorB;       // poeira quente
+uniform sampler2D uSilMask;     // silhuetas colossais: 1 = névoa livre, < 1 = sombra atrás
+uniform vec2  uSilRes;          // tamanho da tela (px) para ler a máscara
+uniform float uSilOn;
+`;
+
+export const FOG_GLSL = /* glsl */ `
+// Profundidade óptica de uma névoa de altura exponencial, integrada
+// analiticamente ao longo do raio ro + rd*s, s ∈ [0, t].
+float fogOpticalDepth(vec3 ro, vec3 rd, float t) {
+  float k = rd.y * uFogFalloff * t;
+  float f = abs(k) < 1e-3 ? 1.0 - 0.5 * k : (1.0 - exp(-k)) / k;
+  return uFogDensity * exp(-(ro.y - uFogBase) * uFogFalloff) * t * f;
+}
+
+// In-scatter de uma luz pontual num meio homogêneo: ∫ 1/|r(s)|² ds (forma fechada)
+float airlight(vec3 ro, vec3 rd, float t, vec3 lp) {
+  vec3 q = ro - lp;
+  float b = dot(rd, q);
+  float h = sqrt(max(dot(q, q) - b * b, 0.25));
+  return (atan((t + b) / h) - atan(b / h)) / h;
+}
+
+// k multiplica a profundidade óptica: k < 1 deixa megaestruturas "furarem"
+// a névoa (não-físico, de propósito: a escala precisa ser vista).
+// fade (início, fim): perto do raio de carregamento dos chunks a superfície
+// se dissolve por completo na névoa — assim nada "brota" no horizonte.
+vec3 applyFog(vec3 col, vec3 wpos, float k, vec2 fade) {
+  vec3 ro = cameraPosition;
+  vec3 dv = wpos - ro;
+  float t = length(dv);
+  vec3 rd = dv / max(t, 1e-4);
+
+  // Densidade "viva": duas camadas de ruído derivando lentamente
+  vec3 mid = ro + rd * min(t, 90.0) * 0.5 + uOriginMod;
+  float nA = snoise(mid * 0.018 + vec3(0.0, -uTime * 0.02, uTime * 0.013));
+  float nB = snoise(mid * 0.07 + vec3(uTime * 0.05, 0.0, 0.0));
+  float dm = max(0.6 + 0.45 * nA + 0.25 * nB, 0.15);
+
+  float T = exp(-fogOpticalDepth(ro, rd, t) * dm * k);
+  T *= 1.0 - smoothstep(fade.x, fade.y, t);
+
+  // Cor da névoa: poeira cinza ↔ poeira quente; abaixo, mais escura e ocre
+  vec3 fogCol = mix(uFogColorA, uFogColorB, clamp(0.4 + 0.6 * nA, 0.0, 1.0));
+  fogCol = mix(fogCol, fogCol * vec3(0.75, 0.66, 0.55), smoothstep(0.0, -0.8, rd.y));
+  // estruturas colossais além de tudo bloqueiam a luz da poeira: sombras na névoa.
+  // Pesa pela quantidade de névoa (o que está perto quase não muda) — assim o
+  // céu, a geometria já dissolvida e as silhuetas concordam, sem recortes.
+  if (uSilOn > 0.5) {
+    float sil = texture2D(uSilMask, gl_FragCoord.xy / uSilRes).r;
+    fogCol *= mix(1.0, sil, (1.0 - T) * (1.0 - T));
+  }
+
+  // Luzes espalhadas na névoa (atenuadas pela distância até a fonte)
+  vec3 scatter = vec3(0.0);
+  for (int i = 0; i < LIGHT_COUNT; i++) {
+    vec3 lf = uLightFog[i];
+    if (lf.r + lf.g + lf.b < 1e-6) continue; // vaga vazia ou luz sumida na névoa
+    scatter += lf * airlight(ro, rd, t, uLightPos[i]);
+  }
+  // o brilho em volta das luzes vem da poeira: sem névoa, sem halo
+  scatter *= uScatter * dm * (uFogDensity / 0.0075);
+
+  return col * T + fogCol * (1.0 - T) + scatter;
+}
+`;

@@ -1,0 +1,175 @@
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  cursor: crosshair;
+  user-select: none;
+}
+
+#scene, #hud {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#hud { pointer-events: none; }
+
+/* ── Portão de entrada ─────────────────────────────────────────────────── */
+#gate {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: radial-gradient(ellipse at center, rgba(22, 21, 19, 0.6), rgba(0, 0, 0, 0.94) 70%);
+  color: #b2bcac;
+  font-family: "Consolas", "Courier New", monospace;
+  transition: opacity 0.8s ease;
+  z-index: 10;
+}
+
+#gate.hidden { opacity: 0; pointer-events: none; }
+
+#gate-glyphs { width: min(640px, 80vw); height: 60px; opacity: 0.8; }
+
+.gate-title {
+  position: relative;
+  font-size: 44px;
+  letter-spacing: 0.6em;
+  padding-left: 0.6em;
+  color: #d8d4cc;
+  text-shadow: 0 0 10px rgba(200, 190, 170, 0.18);
+}
+
+
+.gate-sub { font-size: 13px; letter-spacing: 0.35em; color: #b0763e; opacity: 0.8; }
+
+.gate-keys {
+  margin-top: 26px;
+  font-size: 11px;
+  line-height: 2;
+  letter-spacing: 0.12em;
+  text-align: center;
+  color: rgba(150, 146, 136, 0.55);
+}
+.gate-keys span { color: rgba(200, 196, 184, 0.8); }
+
+
+/* ── Botão de configurações na tela de entrada ──────────────────────────── */
+.gate-settings {
+  margin-top: 8px;
+  background: none;
+  border: 1px solid rgba(178, 188, 172, 0.35);
+  color: rgba(200, 196, 184, 0.8);
+  font: 11px "Consolas", "Courier New", monospace;
+  letter-spacing: 0.3em;
+  padding: 8px 18px;
+  cursor: pointer;
+}
+.gate-buttons { display: flex; gap: 12px; justify-content: center; }
+
+/* mapa da travessia */
+#trailmap { position: fixed; inset: 0; display: none; z-index: 25; background: #050505; font-family: "Consolas", "Courier New", monospace; color: rgba(200, 196, 184, 0.75); cursor: grab; }
+#trailmap.open { display: block; }
+#trailmap canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tm-title { position: absolute; top: 26px; left: 32px; letter-spacing: 0.5em; font-size: 13px; color: #d8d4cc; }
+.tm-info { position: absolute; top: 50px; left: 32px; font-size: 11px; letter-spacing: 0.08em; color: rgba(176, 118, 62, 0.85); }
+.tm-legend { position: absolute; bottom: 22px; right: 32px; display: flex; gap: 16px; font-size: 10px; letter-spacing: 0.1em; align-items: center; }
+.tm-legend i { display: inline-block; width: 16px; height: 0; border-top: 1px solid; margin-right: 6px; vertical-align: middle; }
+.tm-l0 { border-color: rgba(200, 206, 196, 0.8) !important; }
+.tm-l1 { border-color: rgba(215, 196, 154, 0.9) !important; border-top-width: 2px !important; }
+.tm-l2 { border-top-style: dashed !important; border-color: rgba(160, 160, 150, 0.6) !important; }
+.tm-q { width: 4px !important; height: 4px !important; border: none !important; background: rgba(176, 118, 62, 0.9); }
+.tm-f { width: 5px !important; height: 5px !important; border: 1px solid rgba(200, 196, 184, 0.8) !important; }
+.tm-hint { color: rgba(150, 146, 136, 0.55); }
+
+/* diário da travessia */
+.gate-diary {
+  margin-top: 26px;
+  width: min(560px, 86vw);
+  font: 11px "Consolas", "Courier New", monospace;
+  color: rgba(178, 188, 172, 0.55);
+  letter-spacing: 0.08em;
+}
+.diary-title { letter-spacing: 0.45em; font-size: 10px; color: rgba(176, 118, 62, 0.75); margin-bottom: 8px; text-align: center; }
+.diary-row { display: flex; justify-content: space-between; gap: 18px; padding: 2px 0; border-bottom: 1px solid rgba(178, 188, 172, 0.05); }
+.diary-row b { font-weight: normal; color: rgba(200, 196, 184, 0.78); text-align: right; }
+.gate-settings:hover { border-color: rgba(200, 196, 184, 0.8); color: #e2ded4; }
+
+/* ── Painel de configurações ────────────────────────────────────────────── */
+#settings, #transport {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 20;
+  font-family: "Consolas", "Courier New", monospace;
+  color: #b2bcac;
+}
+#settings.open, #transport.open { display: flex; }
+
+.settings-box {
+  width: min(560px, 90vw);
+  padding: 28px 32px;
+  border: 1px solid rgba(178, 188, 172, 0.25);
+  background: rgba(14, 14, 13, 0.92);
+}
+.settings-title { letter-spacing: 0.5em; font-size: 15px; color: #d8d4cc; margin-bottom: 22px; }
+
+.settings-row {
+  display: grid;
+  grid-template-columns: 1fr 180px 80px;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(178, 188, 172, 0.08);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  cursor: default;
+}
+.settings-label { color: rgba(200, 196, 184, 0.85); }
+.settings-value { text-align: right; color: #b0763e; }
+.settings-hint { grid-column: 1 / -1; font-size: 10px; color: rgba(150, 146, 136, 0.6); }
+.settings-row input[type="range"] { width: 100%; accent-color: #8a8a80; }
+.settings-row input[type="checkbox"] { justify-self: start; accent-color: #8a8a80; width: 16px; height: 16px; }
+
+.settings-actions { display: flex; justify-content: space-between; margin-top: 22px; }
+.settings-actions button {
+  background: none;
+  border: 1px solid rgba(178, 188, 172, 0.3);
+  color: rgba(200, 196, 184, 0.85);
+  font: 11px "Consolas", "Courier New", monospace;
+  letter-spacing: 0.2em;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+.settings-actions button:hover { border-color: rgba(200, 196, 184, 0.8); color: #e2ded4; }
+
+/* ── Painel de transporte ───────────────────────────────────────────────── */
+.transport-group {
+  font-size: 10px;
+  letter-spacing: 0.4em;
+  color: rgba(150, 146, 136, 0.7);
+  text-transform: uppercase;
+  margin: 14px 0 8px;
+}
+.transport-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.transport-grid button {
+  background: none;
+  border: 1px solid rgba(178, 188, 172, 0.22);
+  color: rgba(200, 196, 184, 0.85);
+  font: 12px "Consolas", "Courier New", monospace;
+  letter-spacing: 0.12em;
+  padding: 9px 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.transport-grid button:hover { border-color: rgba(176, 118, 62, 0.8); color: #e2ded4; }
+.transport-status { margin-top: 16px; min-height: 14px; }

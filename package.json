@@ -1,0 +1,17 @@
+{
+  "name": "cybercosmic",
+  "version": "0.1.0",
+  "description": "Simulador contemplativo 3D — horror cósmico filtrado por cyberpunk. Electron + Three.js.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "three": "^0.170.0",
+    "three-mesh-bvh": "^0.8.3"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}

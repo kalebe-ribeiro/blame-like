@@ -1,0 +1,8 @@
+node_modules/
+# capturas avulsas de desenvolvimento (--capture)
+/*.png
+!docs/*.png
+# perfis de teste (--profile)
+/tmp*/
+.DS_Store
+Thumbs.db

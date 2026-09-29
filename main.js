@@ -1,0 +1,163 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  Processo principal do Electron.
+//  Serve os arquivos do projeto por um protocolo próprio (app://) — tudo local,
+//  sem servidor. O protocolo dá à página uma origem "de verdade", o que permite
+//  Web Workers em módulo (a geração do mundo infinito roda neles).
+//
+//  Atalhos globais da janela:
+//    F11 → tela cheia      F12 → DevTools
+//    (F2, no renderer, tira uma foto: salva em Imagens/CYBERCOSMIC sem perguntar)
+//
+//  Flags de linha de comando (úteis para desenvolvimento / screenshots):
+//    electron . --capture=shot.png --view=spawn --delay=6 [--show]
+//      captura um PNG da janela depois de N segundos e fecha o app.
+//      --view aceita: spawn | abyss | up | far
+//      --show mantém a janela visível (senão o Chromium desacelera o loop)
+//    electron . --goto=colmeia  → começa transportado ao exemplar mais próximo do tipo
+//    electron . --outage=4 → força um apagão de setor aos 4 s
+//    electron . --collapse=4 → força um colapso distante aos 4 s
+//    electron . --stats   → imprime FPS e estatísticas do streaming no terminal
+//    electron . --novsync → sem limite de quadros (medir desempenho)
+//    electron . --profile=tmp → perfil separado: não toca no seu salvamento/diário
+//    electron . --autopilot=6  → começa em piloto automático (N = multiplicador de velocidade)
+//    electron . --pos=x,y,z,yaw,pitch  → começa num ponto global qualquer
+//    electron . --mode=fly               → começa voando (o padrão é andar)
+//    electron . --fog=0.3 --dist=1500     → sobrescreve névoa/distância nesta sessão (não salva)
+// ─────────────────────────────────────────────────────────────────────────────
+const { app, BrowserWindow, Menu, protocol, session } = require('electron');
+const path = require('path');
+const fs = require('fs');
+
+function argValue(name) {
+  const prefix = `--${name}=`;
+  const hit = process.argv.find((a) => a.startsWith(prefix));
+  return hit ? hit.slice(prefix.length) : null;
+}
+
+const capturePath = argValue('capture');
+const view = argValue('view');
+const seed = argValue('seed');
+const captureDelay = Number(argValue('delay') || 6);
+const forceShow = process.argv.includes('--show');
+const stats = process.argv.includes('--stats');
+const autopilot = argValue('autopilot');
+const startPos = argValue('pos');
+const mode = argValue('mode');
+const gotoKind = argValue('goto');
+const fogArg = argValue('fog');
+const distArg = argValue('dist');
+
+// O áudio precisa começar sem gesto no modo captura (e não atrapalha no normal).
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// --profile=pasta: perfil separado (salvamento, diário, configurações) — para testes
+if (argValue('profile')) app.setPath('userData', path.resolve(argValue('profile')));
+
+// --novsync: sem limite de quadros (para medir desempenho de verdade)
+if (process.argv.includes('--novsync')) {
+  app.commandLine.appendSwitch('disable-gpu-vsync');
+  app.commandLine.appendSwitch('disable-frame-rate-limit');
+}
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
+]);
+
+const MIME = {
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.mjs': 'text/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+};
+
+function serveProjectFiles() {
+  const root = path.resolve(__dirname);
+  protocol.handle('app', async (request) => {
+    const url = new URL(request.url);
+    const file = path.normalize(path.join(root, decodeURIComponent(url.pathname)));
+    if (!file.startsWith(root)) return new Response('forbidden', { status: 403 });
+    try {
+      const data = await fs.promises.readFile(file);
+      const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
+      return new Response(data, { headers: { 'content-type': type } });
+    } catch {
+      return new Response('not found', { status: 404 });
+    }
+  });
+}
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 1600,
+    height: 900,
+    minWidth: 800,
+    minHeight: 450,
+    backgroundColor: '#000000',
+    autoHideMenuBar: true,
+    title: 'CYBERCOSMIC',
+    show: !capturePath || forceShow, // em modo captura a janela fica oculta
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      backgroundThrottling: false,
+    },
+  });
+
+  const query = new URLSearchParams();
+  if (capturePath) query.set('autostart', '1');
+  if (view) query.set('view', view);
+  if (seed) query.set('seed', seed);
+  if (stats) query.set('stats', '1');
+  if (autopilot) query.set('autopilot', autopilot);
+  if (startPos) query.set('pos', startPos);
+  if (mode) query.set('mode', mode);
+  if (gotoKind) query.set('goto', gotoKind);
+  if (argValue('outage')) query.set('outage', argValue('outage'));
+  if (argValue('collapse')) query.set('collapse', argValue('collapse'));
+  if (fogArg) query.set('fog', fogArg);
+  if (distArg) query.set('dist', distArg);
+  const qs = query.toString();
+  win.loadURL(`app://bundle/index.html${qs ? `?${qs}` : ''}`);
+
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return;
+    if (input.key === 'F11') {
+      win.setFullScreen(!win.isFullScreen());
+      event.preventDefault();
+    } else if (input.key === 'F12') {
+      win.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
+
+  // Encaminha avisos/erros do renderer para o terminal — ajuda muito ao expandir shaders.
+  win.webContents.on('console-message', (_e, level, message, line, sourceId) => {
+    if (level >= 2) console.log(`[renderer] ${message} (${sourceId}:${line})`);
+  });
+
+  if (capturePath) {
+    setTimeout(async () => {
+      const image = await win.webContents.capturePage();
+      fs.writeFileSync(path.resolve(capturePath), image.toPNG());
+      console.log(`captura salva em ${capturePath}`);
+      app.quit();
+    }, captureDelay * 1000);
+  }
+}
+
+app.whenReady().then(() => {
+  // Sem menu: os aceleradores padrão (Ctrl+W fecha, Ctrl+R recarrega) colidem
+  // com CTRL = descer + W = avançar.
+  Menu.setApplicationMenu(null);
+  serveProjectFiles();
+  // fotos (F2): o renderer "baixa" o PNG; aqui ele vai direto para Imagens/CYBERCOSMIC
+  session.defaultSession.on('will-download', (_e, item) => {
+    const dir = path.join(app.getPath('pictures'), 'CYBERCOSMIC');
+    fs.mkdirSync(dir, { recursive: true });
+    item.setSavePath(path.join(dir, item.getFilename()));
+  });
+  createWindow();
+});
+app.on('window-all-closed', () => app.quit());
