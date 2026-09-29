@@ -10,7 +10,7 @@
 //    feet: posição GLOBAL dos pés · recent: ids já visitados (para variar)
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { MEGA, HIVE, TRANSIT } from '../gen/field.js';
+import { MEGA, HIVE, TRANSIT, MACRO } from '../gen/field.js';
 
 export const DESTINATIONS = [
   { group: 'regiões', kind: 'teia', label: 'Teia' },
@@ -205,7 +205,10 @@ export function findDestination(F, kind, g, recent = new Set()) {
           const bx = i * S + S / 2;
           const by = j * S;
           const bz = k * S;
-          if (!t || !F.frameZone(bx, by, bz) || !F.isOpenBiome(bx, by, bz) || F.insideVoid(bx, by, bz) || F.inBarrier(by, 20)) continue;
+          const inZone = (x, y, z) => F.frameZone(x, y, z) && F.isOpenBiome(x, y, z) && !F.insideVoid(x, y, z) && !F.inBarrier(y, 20);
+          // o nó de onde a viga sai também tem de estar na zona, na célula macro que gera treliça
+          if (!t || !inZone(i * S, by, bz) || !F.frameCell(Math.floor((i * S) / MACRO), Math.floor(by / MACRO), Math.floor(bz / MACRO))) continue;
+          if (!inZone(bx, by, bz)) continue;
           if (F.walkwayNear(bx, by - t / 2 - 6, by + t / 2 + 3, bz, S / 2 + 8)) continue;
           cands.push({ id: `f${i},${j},${k}`, feet: V(bx, by + t / 2 + 0.05, bz), yaw: -Math.PI / 2, pitch: 0.05 });
           if (cands.length > 6) break;
@@ -218,15 +221,19 @@ export function findDestination(F, kind, g, recent = new Set()) {
       const cands = [];
       const R = 7000;
       for (const e of F.stairwaysIn(g.x - R, g.y - 1500, g.z - R, g.x + R, g.y + 1500, g.z + R)) {
-        // o ponto da escada na altura do observador
-        const t = (g.y - e.y0) / (e.dir * MEGA.stairSlope);
-        const y = F.stairY(e, t);
-        if (F.inBarrier(y, 20)) continue;
-        const x = e.axis === 'x' ? t : e.lat;
-        const z = e.axis === 'x' ? e.lat : t;
-        if (F.insideVoid(x, y + 3, z)) continue;
-        const yaw = e.axis === 'x' ? -e.dir * Math.PI / 2 : (e.dir > 0 ? Math.PI : 0);
-        cands.push({ id: e.id, feet: V(x, y + 0.6, z), yaw, pitch: 0.2 });
+        // o ponto da escada na altura do observador — ou perto dela, se essa altura
+        // cai dentro de uma camada (quem está em cima de uma camada, por exemplo)
+        for (const dy of [0, 120, -120, 300, -300, 600, -600]) {
+          const t = (g.y + dy - e.y0) / (e.dir * MEGA.stairSlope);
+          const y = F.stairY(e, t);
+          if (F.inBarrier(y, 20)) continue;
+          const x = e.axis === 'x' ? t : e.lat;
+          const z = e.axis === 'x' ? e.lat : t;
+          if (F.insideVoid(x, y + 3, z)) continue;
+          const yaw = e.axis === 'x' ? -e.dir * Math.PI / 2 : (e.dir > 0 ? Math.PI : 0);
+          cands.push({ id: e.id, feet: V(x, y + 0.6, z), yaw, pitch: 0.2 });
+          break;
+        }
       }
       return pick(cands, g, recent);
     },

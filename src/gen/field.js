@@ -698,6 +698,22 @@ export class Field {
     return this.noise3(x * 0.00032 + 11.1, y * 0.0005, z * 0.00032 - 4.2) > 0.32;
   }
 
+  /**
+   * A célula macro (mx,my,mz) gera treliça? Amostra rápida (8 pontos + centro):
+   * a geração pula a célula inteira se nenhum cai na zona.
+   */
+  frameCell(mx, my, mz) {
+    return this._memo(`fc${mx},${my},${mz}`, () => {
+      const x0 = mx * MACRO;
+      const y0 = my * MACRO;
+      const z0 = mz * MACRO;
+      for (let q = 0; q < 8; q++) {
+        if (this.frameZone(x0 + ((q & 1) + 0.5) * 800, y0 + (((q >> 1) & 1) + 0.5) * 800, z0 + (((q >> 2) & 1) + 0.5) * 800)) return true;
+      }
+      return this.frameZone(x0 + MACRO / 2, y0 + MACRO / 2, z0 + MACRO / 2);
+    });
+  }
+
   /** Espessura da viga na linha (eixo, u, v), trecho n — ou 0 se faltar. */
   frameBeam(axis, u, v, n) {
     const salt = axis === 'x' ? 230 : axis === 'y' ? 231 : 232;

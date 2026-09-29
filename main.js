@@ -19,6 +19,7 @@
 //    electron . --stats   → imprime FPS e estatísticas do streaming no terminal
 //    electron . --novsync → sem limite de quadros (medir desempenho)
 //    electron . --check   → teste de fumaça: visita todos os destinos (npm run check)
+//    electron . --check=trelica,escadaria --pos=x,y,z → só esses, partindo daí
 //    electron . --profile=tmp → perfil separado: não toca no seu salvamento/diário
 //    electron . --autopilot=6  → começa em piloto automático (N = multiplicador de velocidade)
 //    electron . --pos=x,y,z,yaw,pitch  → começa num ponto global qualquer
@@ -51,7 +52,7 @@ const distArg = argValue('dist');
 // O áudio precisa começar sem gesto no modo captura (e não atrapalha no normal).
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 // --check: teste de fumaça (roteiro por todos os destinos) — ver src/dev/check.js
-const checkMode = process.argv.includes('--check');
+const checkMode = process.argv.includes('--check') || !!argValue('check');
 if (checkMode) app.setPath('userData', path.join(require('os').tmpdir(), 'cybercosmic-check'));
 
 // --profile=pasta: perfil separado (salvamento, diário, configurações) — para testes
@@ -122,7 +123,7 @@ function createWindow() {
   if (argValue('outage')) query.set('outage', argValue('outage'));
   if (argValue('collapse')) query.set('collapse', argValue('collapse'));
   if (checkMode) {
-    query.set('check', '1');
+    query.set('check', argValue('check') || '1'); // --check=trelica,escadaria: só esses
     query.set('seed', 'abc');
     query.set('autostart', '1');
   }
@@ -170,7 +171,7 @@ function onCheckMessage(level, message, sourceId, line) {
   if (message.startsWith('CHECK:')) {
     const r = JSON.parse(message.slice(6));
     checkRows.push(r);
-    const cols = [r.kind.padEnd(14), r.ok ? 'ok   ' : 'FALHA', r.fps !== undefined ? `${String(r.fps).padStart(4)} fps  pior ${String(r.worst).padStart(4)} ms` : '', r.why ?? ''];
+    const cols = [r.kind.padEnd(14), r.ok ? 'ok   ' : 'FALHA', r.fps !== undefined ? `${String(r.fps).padStart(4)} fps  pior ${String(r.worst).padStart(4)} ms` : '', r.why ?? '', r.at ? `@ ${r.at.join(',')}` : ''];
     console.log('  ' + cols.join('  '));
     return;
   }

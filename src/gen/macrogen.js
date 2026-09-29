@@ -368,11 +368,7 @@ function genStrata(F, B, box, owns) {
 function genFrames(F, B, box, owns) {
   const S = MEGA.frame;
   // amostra rápida: se nada da célula está na zona, pula
-  let any = false;
-  for (let q = 0; q < 8 && !any; q++) {
-    any = F.frameZone(box.x0 + ((q & 1) + 0.5) * 800, box.y0 + (((q >> 1) & 1) + 0.5) * 800, box.z0 + (((q >> 2) & 1) + 0.5) * 800);
-  }
-  if (!any && !F.frameZone((box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2, (box.z0 + box.z1) / 2)) return;
+  if (!F.frameCell(Math.round(box.x0 / MACRO), Math.round(box.y0 / MACRO), Math.round(box.z0 / MACRO))) return;
 
   const i0 = Math.ceil(box.x0 / S);
   const i1 = Math.ceil(box.x1 / S) - 1;

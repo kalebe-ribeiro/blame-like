@@ -44,9 +44,12 @@ export async function runCheck(ctx) {
   window.addEventListener('unhandledrejection', (e) => console.error('CHECK-ERR ' + (e.reason?.stack ?? e.reason)));
 
   await sleep(SETTLE);
-  const kinds = DESTINATIONS.map((d) => d.kind);
+  const only = ctx.only && ctx.only !== '1' ? ctx.only.split(',') : null;
+  // --check=a,b,c visita só esses, nessa ordem
+  const kinds = only ? only.filter((k) => DESTINATIONS.some((d) => d.kind === k)) : DESTINATIONS.map((d) => d.kind);
   for (let n = 0; n < kinds.length; n++) {
     const kind = kinds[n];
+    const from = world.toGlobal(camera.position);
     const found = teleport(kind, kind);
     if (!found) {
       report({ kind, ok: false, why: 'destino não encontrado' });
@@ -62,7 +65,7 @@ export async function runCheck(ctx) {
     const g = world.toGlobal(camera.position);
     // "caiu": em queda livre há muito tempo depois de o terreno carregar
     const falling = !w.grounded && w.airTime > 2;
-    report({ kind, ok: !falling, fps: m.fps, worst: m.worst, grounded: w.grounded, y: Math.round(g.y), ...(falling ? { why: 'em queda livre (atravessou o chão?)' } : {}) });
+    report({ kind, ok: !falling, fps: m.fps, worst: m.worst, grounded: w.grounded, y: Math.round(g.y), ...(falling ? { why: 'em queda livre (atravessou o chão?)', at: [from.x, from.y, from.z].map(Math.round) } : {}) });
   }
   console.warn('CHECK:DONE');
 }
