@@ -72,6 +72,11 @@ export class TerminalSystem {
         }
       }
     }
+    // o console ativo de cada estrutura única (tem energia própria)
+    for (const u of this.field.uniquesNear(g.x, g.y, g.z, RANGE + 80)) {
+      const c = this.field.uniqueConsole(u);
+      out.push({ id: `un:${u.id}`, ...c, kind: 'unique', unique: u });
+    }
     return out.filter((s) => Math.hypot(s.x - g.x, s.y - g.y, s.z - g.z) < RANGE);
   }
 
@@ -176,7 +181,7 @@ export class TerminalSystem {
       t.group.position.set(s.x - origin.x, s.y - origin.y, s.z - origin.z);
       t.group.updateMatrixWorld(true);
       this.meshes.push(t.group.children[0]);
-      const powered = !this.outages || this.outages.power(s.x, s.y + 1, s.z, 1.1, time) >= 0.5;
+      const powered = s.kind === 'unique' || !this.outages || this.outages.power(s.x, s.y + 1, s.z, 1.1, time) >= 0.5;
       if (powered !== t.powered) {
         t.powered = powered;
         t.shown = powered ? 2 : 0; // religado: reescreve do começo

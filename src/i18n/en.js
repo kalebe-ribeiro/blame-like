@@ -91,6 +91,7 @@ export default {
   'dest.transportador': 'Transit line',
   'dest.colosso': 'Colossal machine',
   'dest.terminal': 'Terminal',
+  'dest.unica': 'Unique structure',
   'dest.ponte': 'Starting bridge',
 
   // ── regiões ──
@@ -288,6 +289,12 @@ export default {
   'word.NOBODY': 'NOBODY',
   'word.REMAINS': 'REMAINS',
   'word.HERE': 'HERE',
+  'word.ARCHIVE': 'ARCHIVE',
+  'word.PLANT': 'PLANT',
+  'word.ACTIVE': 'ACTIVE',
+  'word.RESERVE': 'RESERVE',
+  'word.OUTPUT': 'OUTPUT',
+  'word.OWN': 'OWN',
   // ── a tela de leitura ──
   'reader.hint': 'E / ESC  close · wheel scrolls',
   'reader.freeNote': 'Free mode: nothing is learned here · E / ESC  close',
@@ -298,6 +305,9 @@ export default {
   'archive.lexicon': 'LEXICON ({known}/{total})',
   'archive.noRecords': 'no terminal read in this world yet',
   'archive.noWords': 'no word of the old language understood yet',
+  'archive.kind.unique:console': 'active console',
+  'archive.kind.unique:archive': 'record archive',
+  'archive.kind.unique:plant': 'power plant',
   'archive.kind.station': 'station terminal',
   'archive.kind.passage': 'passage terminal',
   'reader.archived': 'from the archive · read again with what you know now · E / ESC  close',

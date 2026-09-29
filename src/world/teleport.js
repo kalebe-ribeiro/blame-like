@@ -36,6 +36,7 @@ export const DESTINATIONS = [
   { group: 'other', kind: 'transportador' },
   { group: 'other', kind: 'colosso' },
   { group: 'other', kind: 'terminal' },
+  { group: 'other', kind: 'unica' },
   { group: 'other', kind: 'ponte' },
 ];
 
@@ -381,6 +382,27 @@ export function findDestination(F, kind, g, recent = new Set(), opts = {}) {
             const fz = L.axis === 'z' ? t + 1.4 : lat;
             cands.push({ id: `T${L.id}:${s}`, feet: V(fx, L.y + 0.05, fz), yaw: yawTo(fx, fz, tx, tz), pitch: -0.2 });
           }
+        }
+        if (cands.length) break;
+      }
+      return pick(cands, g, recent);
+    },
+
+    // ── uma estrutura única: de pé diante da porta, a ~40 m, olhando para ela ──
+    unica: () => {
+      const cands = [];
+      for (const R of [20000, 40000]) {
+        for (const u of F.uniquesNear(g.x, g.y, g.z, R)) {
+          const d = u.door;
+          const ax = d === 0 ? [1, 0] : d === 1 ? [-1, 0] : d === 2 ? [0, 1] : [0, -1];
+          const ha = d < 2 ? u.hx : u.hz;
+          const hc = d < 2 ? u.hz : u.hx;
+          const off = u.doorOff * hc;
+          const dx = u.x + ax[0] * ha - ax[1] * off; // a porta (c = (−ax[1], ax[0]))
+          const dz = u.z + ax[1] * ha + ax[0] * off;
+          const fx = dx + ax[0] * 40;
+          const fz = dz + ax[1] * 40;
+          cands.push({ id: `U${u.id}`, feet: V(fx, u.y + 0.05, fz), yaw: yawTo(fx, fz, dx, dz), pitch: 0.05 });
         }
         if (cands.length) break;
       }

@@ -19,7 +19,7 @@
 //  Cada placa pertence à célula que contém seu centro → gerada uma única vez.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from '../lib/three.js';
-import { MACRO, MEGA, RELIEF } from './field.js';
+import { MACRO, MEGA, RELIEF, UNIQUE } from './field.js';
 import { hash4, rngAt } from './hash.js';
 import { place, cylinderBetween, slabBetween } from '../world/geometry.js';
 import { ChunkBuilder } from './chunkgen.js';
@@ -41,6 +41,7 @@ export function generateMacro(F, mx, my, mz) {
 
   genBarriers(F, B, box, owns);
   genBarrierRelief(F, B, box);
+  genUniques(F, B, box);
   genGalleries(F, B, box, owns);
   genShafts(F, B, box, owns);
   genStrata(F, B, box, owns);
@@ -181,6 +182,146 @@ function genBarrierRelief(F, B, box) {
       }
     }
   }
+}
+
+// ─── estruturas únicas ──────────────────────────────────────────────────────
+//  No alto das camadas, no fim das cadeias de pistas. Cada uma tem uma porta
+//  (u.door) e, lá dentro, um console que ainda tem energia própria
+//  (world/terminals.js, tipo 'unique'). Nada simétrico: peças fora de esquadro.
+
+function genUniques(F, B, box) {
+  const th = MEGA.barrierThick;
+  const C = UNIQUE.cell;
+  for (const b of F.barriersNear((box.y0 + box.y1) / 2)) {
+    const yc = b.top - th / 2;
+    if (yc < box.y0 || yc >= box.y1) continue;
+    for (let i = Math.floor(box.x0 / C) - 1; i <= Math.floor(box.x1 / C); i++) {
+      for (let k = Math.floor(box.z0 / C) - 1; k <= Math.floor(box.z1 / C); k++) {
+        const u = F.uniqueSite(b.n, i, k);
+        if (!u || u.x < box.x0 || u.x >= box.x1 || u.z < box.z0 || u.z >= box.z1) continue;
+        buildUnique(F, B, u);
+      }
+    }
+  }
+}
+
+/** Frame local de uma única: a porta sempre no lado +a (a,c) → global. */
+function uniqueFrame(u) {
+  const d = u.door;
+  // eixo a aponta para a porta; c é o outro
+  const ax = d === 0 ? [1, 0] : d === 1 ? [-1, 0] : d === 2 ? [0, 1] : [0, -1];
+  const cx = [-ax[1], ax[0]];
+  const ha = d < 2 ? u.hx : u.hz;
+  const hc = d < 2 ? u.hz : u.hx;
+  const P = (a, c) => [u.x + ax[0] * a + cx[0] * c, u.z + ax[1] * a + cx[1] * c];
+  // caixa em coordenadas do frame (centro a,c; meias larguras da, dc)
+  const box = (B, mat, a, y, c, da, h, dc) => {
+    const [x, z] = P(a, c);
+    const sx = Math.abs(ax[0]) * da * 2 + Math.abs(cx[0]) * dc * 2;
+    const sz = Math.abs(ax[1]) * da * 2 + Math.abs(cx[1]) * dc * 2;
+    block(B, mat, x, y + h / 2, z, sx, h, sz);
+  };
+  return { u, ha, hc, P, box };
+}
+
+/** Parede com porta no lado +a; as outras três inteiras (com alguns desvios). */
+function shell(B, f, y, h, T, doorW, doorH, r) {
+  const { ha, hc, box } = f;
+  box(B, 'wall', -ha + T / 2, y, 0, T / 2, h, hc);
+  box(B, 'wall', 0, y, hc - T / 2, ha, h + r.float(-2, 3), T / 2);
+  box(B, 'wall', 0, y, -hc + T / 2, ha, h + r.float(-2, 3), T / 2);
+  // a frente, com a porta um pouco fora do centro
+  const off = f.u.doorOff * hc;
+  const l0 = -hc;
+  const l1 = off - doorW / 2;
+  const r0 = off + doorW / 2;
+  box(B, 'wall', ha - T / 2, y, (l0 + l1) / 2, T / 2, h, (l1 - l0) / 2);
+  box(B, 'wall', ha - T / 2, y, (r0 + hc) / 2, T / 2, h, (hc - r0) / 2);
+  box(B, 'wall', ha - T / 2, y + doorH, off, T / 2, h - doorH, doorW / 2);
+  // umbral saliente e um degrau gasto
+  box(B, 'frame', ha + 0.6, y + doorH, off, 0.8, 1.4, doorW / 2 + 1.2);
+  box(B, 'floor', ha + 2, y, off, 2, 0.35, doorW / 2 + 0.5);
+  // uma luminária sobre a porta, presa ao umbral
+  const [lx, lz] = f.P(ha + 1.6, off);
+  const [mx, mz] = f.P(ha + 0.6, off);
+  B.lamp(lx, y + doorH + 1.6, lz, FLUORO, 40, 'steady', { to: [mx, y + doorH + 2.2, mz], size: 1.3, grid: false });
+  return off;
+}
+
+function buildUnique(F, B, u) {
+  const r = rngAt(F.seed, Math.round(u.x), u.n, Math.round(u.z), 982);
+  const f = uniqueFrame(u);
+  const { ha, hc, box, P } = f;
+  const y = u.y;
+  const T = 3;
+  // base: uma laje baixa, um pouco maior que o prédio e torta em relação a ele
+  box(B, 'barrier', r.float(-3, 3), y, r.float(-3, 3), ha + r.float(6, 12), 1.2, hc + r.float(6, 12));
+  const y0 = y + 1.2;
+  let off;
+  if (u.kind === 'plant') {
+    // a usina: um bloco-núcleo alto, chaminés, dutos; a porta dá num salão baixo
+    const hallA = ha * UNIQUE.plantHall;
+    const fh = { ...f, ha: hallA, box: (B2, m, a, yy, c, da, h, dc) => box(B2, m, a + ha - hallA, yy, c, da, h, dc) };
+    off = shell(B, fh, y0, 12, T, 7, 7, r);
+    box(B, 'macro', ha - hallA, y0 + 12, 0, hallA, 1.5, hc);
+    const c0 = (T - 2 * hallA) / 2; // o núcleo ocupa o resto, até a parede do fundo do salão
+    const cA = (2 * ha - 2 * hallA + T) / 2;
+    box(B, 'macro', c0, y0, 0, cA, u.h, hc * 0.85);
+    box(B, 'barrier', c0, y0 + u.h, 0, cA + 2, 2, hc * 0.9);
+    for (let q = 0; q < 3; q++) {
+      const [x, z] = P(c0 + r.float(-0.6, 0.6) * cA, r.float(-0.6, 0.6) * hc);
+      const rad = r.float(3.5, 6);
+      const hh = r.float(30, 70);
+      const L = B.L(x, y0 + u.h + hh / 2, z);
+      B.add('macro', place(new THREE.CylinderGeometry(rad * 0.8, rad, hh, 12), { x: L.x, y: L.y, z: L.z }));
+      block(B, 'frame', x, y0 + u.h + hh - 3, z, rad * 2.4, 1, rad * 2.4);
+    }
+    for (let q = 0; q < 3; q++) {
+      const c = r.float(-0.7, 0.7) * hc;
+      const [ax, az] = P(ha - hallA, c);
+      const [bx, bz] = P(-ha * 0.9, c + r.float(-6, 6));
+      const hy = y0 + r.float(14, u.h - 4);
+      B.add('conduit', cylinderBetween(B.L(ax, hy, az), B.L(bx, hy, bz), 1.6, 1.6, 8));
+    }
+    // dentro: o salão de controle, painéis contra o núcleo
+    box(B, 'machine', ha - 2 * hallA + T + 0.8, y0, 0, 0.8, 4, hc * 0.7);
+    const [lx, lz] = P(ha * 0.55, 0);
+    B.lamp(lx, y0 + 10, lz, FLUORO, 170, 'steady', { to: [lx, y0 + 12, lz], size: 1.6, grid: false });
+  } else if (u.kind === 'archive') {
+    // o arquivo: salão comprido, fileiras de estantes altas até perder de vista
+    off = shell(B, f, y0, u.h, T, 6, 8, r);
+    box(B, 'macro', 0, y0 + u.h, 0, ha + 1, 1.6, hc + 1);
+    const rows = Math.floor((hc * 2 - 12) / 7);
+    for (let q = 0; q < rows; q++) {
+      const c = -hc + 6 + q * 7 + r.float(-0.6, 0.6);
+      if (Math.abs(c - off) < 5) continue; // corredor da porta
+      const len = ha - 12 - r.float(0, 10);
+      const h = r.float(9, u.h - 4);
+      box(B, 'frame', r.float(-6, 0), y0, c, len, h, 1.1);
+      // prateleiras: tampas horizontais a cada 1,8 m
+      for (let yy = 1.4; yy < h; yy += 1.8) box(B, 'machine', r.float(-6, 0), y0 + yy, c, len - r.float(0, 8), 0.12, 1.25);
+    }
+    for (let q = 0; q < 4; q++) {
+      const [x, z] = P(ha * (0.7 - q * 0.45), (u.doorOff + r.float(-0.08, 0.08)) * hc);
+      B.lamp(x, y0 + u.h - 6, z, FLUORO, 120, q === 2 ? 'faulty' : 'steady', { to: [x, y0 + u.h, z], size: 1.6, grid: false });
+    }
+  } else {
+    // o console: um salão quadrado com um pedestal no meio; o teto tem um rasgo
+    off = shell(B, f, y0, u.h, T, 6, 7, r);
+    const gap = r.float(3, 6);
+    box(B, 'macro', gap / 2 + (ha + 1 - gap / 2) / 2 - 0.5, y0 + u.h, 0, (ha + 1 - gap / 2) / 2 + 0.5, 1.6, hc + 1);
+    box(B, 'macro', -gap / 2 - (ha + 1 - gap / 2) / 2 + 0.5, y0 + u.h, 0, (ha + 1 - gap / 2) / 2 + 0.5, 1.6, hc + 1);
+    box(B, 'floor', 0, y0, 0, 6, 0.6, 6);
+    // colunas desalinhadas
+    for (let q = 0; q < 4; q++) box(B, 'frame', r.float(-0.7, 0.7) * ha, y0, r.float(-0.7, 0.7) * hc, 0.8, u.h, 0.8);
+    const [lx, lz] = P(-2.5, 2.5);
+    B.lamp(lx, y0 + 7, lz, FLUORO, 70, 'steady', { to: [lx, y0 + u.h, lz], size: 1.6, grid: false });
+  }
+  // luz de sinal no telhado, vista de longe (a Cidade ainda sabe que isto existe)
+  const [sx, sz] = P(ha - 4, hc - 4);
+  const top = u.kind === 'plant' ? y0 + 13.5 : y0 + u.h + 1.6;
+  B.lamp(sx, top + 2, sz, SODIUM, r.float(500, 900), 'steady', { to: [sx, top, sz], size: 2.5, far: true, grid: false });
+  return off;
 }
 
 function passageTower(F, B, b, p) {

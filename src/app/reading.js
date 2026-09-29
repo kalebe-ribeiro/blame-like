@@ -80,7 +80,15 @@ export function createReading(ctx) {
 
   /** Reabre um registro do arquivo (tela de entrada): o texto refeito do Field, com o léxico de agora. */
   function showArchived(id, rec) {
-    const lines = terminalRecords(world.field, { id, ...rec });
+    const site = { id, ...rec };
+    if (rec.kind.startsWith('unique')) {
+      // refaz a estrutura pelo id (un:U<camada>,<i>,<k>)
+      const [n, i, k] = id.slice(4).split(',').map(Number);
+      site.kind = 'unique';
+      site.unique = world.field.uniqueSite(n, i, k);
+      if (!site.unique) return;
+    }
+    const lines = terminalRecords(world.field, site);
     fromArchive = true;
     panel.open(lines, known, word, [], { note: t('reader.archived') });
   }

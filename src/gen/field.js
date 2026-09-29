@@ -87,6 +87,15 @@ export const RELIEF = { cell: 160, maxH: 36 };
  * hash inteiro — as lâmpadas (CPU) e as janelas (GPU) concordam.
  */
 export const SECTOR = { cell: 900, dark: 0.3, unstable: 0.15, salt: 910 };
+/**
+ * Estruturas únicas (ver o cofre, Estruturas-unicas): raras, no alto das
+ * camadas (chão firme, espaço livre em cima, vistas de longe), no fim das
+ * cadeias de pistas. Uma por célula de ~16 km (quando existe).
+ *   console  terminal ativo: um salão com um console que ainda tem energia própria
+ *   archive  arquivo de registros: um salão comprido cheio de estantes
+ *   plant    usina: um bloco-núcleo com chaminés
+ */
+export const UNIQUE = { cell: 16000, prob: 0.75, kinds: ['console', 'archive', 'plant'], plantHall: 0.45 };
 export const HIVE = 48; // célula da colmeia (uma sala)
 
 export const MEGA = {
@@ -292,6 +301,111 @@ export class Field {
     return t * t * (3 - 2 * t);
   }
 
+  // ── estruturas únicas ────────────────────────────────────────────────────
+
+  /**
+   * Estrutura única da célula (ui, uk) no alto da camada n, ou null.
+   * { id, kind, n, x, y (topo da camada), z, hx, hz (meias larguras), h, door (0 +x · 1 −x · 2 +z · 3 −z) }
+   */
+  uniqueSite(n, ui, uk) {
+    return this._memo(`U${n},${ui},${uk}`, () => {
+      const b = this.barrier(n);
+      if (!b || hash4(this.seed, ui, n, uk, 980) > UNIQUE.prob) return null;
+      const r = rngAt(this.seed, ui, n, uk, 981);
+      const C = UNIQUE.cell;
+      const kind = UNIQUE.kinds[r.int(0, UNIQUE.kinds.length - 1)];
+      const [hx, hz, h] = kind === 'console' ? [30, 30, 22] : kind === 'archive' ? [66, 26, 26] : [42, 42, 34];
+      // tenta alguns pontos da célula até achar um lugar limpo
+      for (let tries = 0; tries < 6; tries++) {
+        const x = (ui + r.float(0.25, 0.75)) * C;
+        const z = (uk + r.float(0.25, 0.75)) * C;
+        if (!this._uniqueClear(b, x, z, Math.max(hx, hz))) continue;
+        return { id: `U${n},${ui},${uk}`, kind, n, x, y: b.top, z, hx, hz, h, door: r.int(0, 3), doorOff: r.float(-0.25, 0.25) };
+      }
+      return null;
+    });
+  }
+
+  _uniqueClear(b, x, z, half) {
+    // longe das passagens (elevadores) e dos canteiros dos Construtores
+    const P = MEGA.passage;
+    for (let pi = Math.floor((x - 500) / P); pi <= Math.floor((x + 500) / P); pi++) {
+      for (let pk = Math.floor((z - 500) / P); pk <= Math.floor((z + 500) / P); pk++) {
+        const p = this.passage(b.n, pi, pk);
+        if (p && Math.abs(x - p.x) < half + 320 && Math.abs(z - p.z) < half + 320) return false;
+      }
+    }
+    const S = MEGA.builder;
+    for (let i = Math.floor((x - 500) / S); i <= Math.floor((x + 500) / S); i++) {
+      for (let k = Math.floor((z - 500) / S); k <= Math.floor((z + 500) / S); k++) {
+        if (hash4(this.seed, i, Math.round(b.top), k, 620) > 0.4) continue;
+        const r = rngAt(this.seed, i, Math.round(b.top), k, 621);
+        if (Math.abs(x - (i + r.float(0.3, 0.7)) * S) < half + 260 && Math.abs(z - (k + r.float(0.3, 0.7)) * S) < half + 260) return false;
+      }
+    }
+    for (const [dx, dz] of [[0, 0], [half, half], [-half, half], [half, -half], [-half, -half]]) {
+      if (!this.barrierSolid(b, x + dx, z + dz) || this.insideVoid(x + dx, b.top + 6, z + dz) || this.insideVoid(x + dx, b.top + 40, z + dz)) return false;
+    }
+    if (this.nearMegaWall(x, b.top + 20, z, half + 20)) return false;
+    if (this.walkwayNear(x, b.top - 2, b.top + 50, z, half + 12)) return false;
+    return true;
+  }
+
+  /**
+   * O console ativo de uma única: { x, y (pés), z, yaw } — a tela olha para a porta.
+   * (as mesmas medidas de buildUnique em macrogen.js)
+   */
+  uniqueConsole(u) {
+    const d = u.door;
+    const ax = d === 0 ? [1, 0] : d === 1 ? [-1, 0] : d === 2 ? [0, 1] : [0, -1];
+    const cx = [-ax[1], ax[0]];
+    const ha = d < 2 ? u.hx : u.hz;
+    const hc = d < 2 ? u.hz : u.hx;
+    let a = 0;
+    let c = 0;
+    let y = u.y + 1.2;
+    if (u.kind === 'console') {
+      a = -1;
+      y += 0.6; // no pedestal
+    } else if (u.kind === 'archive') {
+      a = ha - 7;
+      c = u.doorOff * hc + 4;
+    } else {
+      a = ha - 2 * ha * UNIQUE.plantHall + 3 + 4;
+    }
+    return { x: u.x + ax[0] * a + cx[0] * c, y, z: u.z + ax[1] * a + cx[1] * c, yaw: Math.atan2(ax[0], ax[1]) };
+  }
+
+  /** Estruturas únicas perto de (x,y,z) — nas camadas perto de y. */
+  uniquesNear(x, y, z, R) {
+    const C = UNIQUE.cell;
+    const out = [];
+    for (const b of this.barriersNear(y)) {
+      if (Math.abs(b.top - y) > R + 2880) continue;
+      for (let i = Math.floor((x - R) / C); i <= Math.floor((x + R) / C); i++) {
+        for (let k = Math.floor((z - R) / C); k <= Math.floor((z + R) / C); k++) {
+          const u = this.uniqueSite(b.n, i, k);
+          if (u) out.push(u);
+        }
+      }
+    }
+    return out;
+  }
+
+  /** O ponto (x,z) do topo da camada b está sob uma estrutura única (com margem)? */
+  uniqueAt(b, x, z, margin = 0) {
+    const C = UNIQUE.cell;
+    const i0 = Math.floor(x / C);
+    const k0 = Math.floor(z / C);
+    for (let i = i0 - 1; i <= i0 + 1; i++) {
+      for (let k = k0 - 1; k <= k0 + 1; k++) {
+        const u = this.uniqueSite(b.n, i, k);
+        if (u && Math.abs(x - u.x) < u.hx + margin && Math.abs(z - u.z) < u.hz + margin) return u;
+      }
+    }
+    return null;
+  }
+
   // ── relevo sobre as camadas ──────────────────────────────────────────────
 
   /**
@@ -327,6 +441,7 @@ export class Field {
           if (Math.abs(cx - (i + r.float(0.3, 0.7)) * S) < 240 && Math.abs(cz - (k + r.float(0.3, 0.7)) * S) < 240) return null;
         }
       }
+      if (this.uniqueAt(b, cx, cz, 120)) return null; // o entorno de uma estrutura única fica livre
       const r = rngAt(this.seed, ci, b.n, ck, 801);
       const roll = r.next();
       const kind = roll < 0.42 ? 'plinth' : roll < 0.68 ? 'ridge' : roll < 0.86 ? 'hall' : 'stack';
@@ -488,7 +603,7 @@ export class Field {
     const out = [];
     const S = MEGA.builder;
     const surfaces = [];
-    for (const b of this.barriersNear(y)) surfaces.push({ y: b.top, kind: 'barrier', ok: (px, pz) => !this.reliefAt(b, px, pz, 10) && this.barrierSolid(b, px, pz) && this.barrierSolid(b, px + 80, pz + 80) && this.barrierSolid(b, px - 80, pz - 80) });
+    for (const b of this.barriersNear(y)) surfaces.push({ y: b.top, kind: 'barrier', ok: (px, pz) => !this.reliefAt(b, px, pz, 10) && !this.uniqueAt(b, px, pz, 120) && this.barrierSolid(b, px, pz) && this.barrierSolid(b, px + 80, pz + 80) && this.barrierSolid(b, px - 80, pz - 80) });
     for (const st of this.strataNear(y)) surfaces.push({ y: st.top, kind: 'stratum', ok: (px, pz) => this.strataSolid(st, px, pz) && this.strataSolid(st, px + 80, pz) && this.strataSolid(st, px - 80, pz) });
     for (const s of surfaces) {
       if (Math.abs(s.y - y) > R) continue;

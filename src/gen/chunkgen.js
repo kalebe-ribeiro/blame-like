@@ -62,9 +62,11 @@ export class ChunkBuilder {
    * Luz em coordenadas GLOBAIS — só a luz. Use direto apenas quando a luz já
    * nasce de algo que existe (uma tela, um braseiro, uma carcaça); senão, lamp().
    */
-  light(x, y, z, color, intensity, mode = 'steady') {
+  light(x, y, z, color, intensity, mode = 'steady', grid = true) {
     if (this.lod) return; // chunks distantes não contribuem luzes
-    this.lights.push({ x, y, z, color, intensity, mode, phase: Math.abs((x * 0.013 + y * 0.029 + z * 0.071) % 100) });
+    const l = { x, y, z, color, intensity, mode, phase: Math.abs((x * 0.013 + y * 0.029 + z * 0.071) % 100) };
+    if (!grid) l.grid = false; // energia própria: não apaga com a rede do setor
+    this.lights.push(l);
   }
 
   /**
@@ -92,8 +94,8 @@ export class ChunkBuilder {
     this.emitters.push({ type: 'socket', x, y, z });
   }
 
-  lamp(x, y, z, color, intensity, mode = 'steady', { to = null, size = 1, far = false } = {}) {
-    this.light(x, y, z, color, intensity, mode);
+  lamp(x, y, z, color, intensity, mode = 'steady', { to = null, size = 1, far = false, grid = true } = {}) {
+    this.light(x, y, z, color, intensity, mode, grid);
     if (this.lod) return;
     const s = size;
     const L = this.L(x, y, z);

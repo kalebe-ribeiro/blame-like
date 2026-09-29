@@ -91,6 +91,7 @@ export default {
   'dest.transportador': 'Transportador',
   'dest.colosso': 'Máquina colossal',
   'dest.terminal': 'Terminal',
+  'dest.unica': 'Estrutura única',
   'dest.ponte': 'Ponte inicial',
 
   // ── regiões ──
@@ -288,6 +289,12 @@ export default {
   'word.NOBODY': 'NINGUÉM',
   'word.REMAINS': 'RESTA',
   'word.HERE': 'AQUI',
+  'word.ARCHIVE': 'ARQUIVO',
+  'word.PLANT': 'USINA',
+  'word.ACTIVE': 'ATIVO',
+  'word.RESERVE': 'RESERVA',
+  'word.OUTPUT': 'SAÍDA',
+  'word.OWN': 'PRÓPRIA',
   // ── a tela de leitura ──
   'reader.hint': 'E / ESC  fechar · a roda rola',
   'reader.freeNote': 'modo Livre: aqui nada se aprende · E / ESC  fechar',
@@ -298,6 +305,9 @@ export default {
   'archive.lexicon': 'LÉXICO ({known}/{total})',
   'archive.noRecords': 'nenhum terminal lido neste mundo ainda',
   'archive.noWords': 'nenhuma palavra da língua antiga entendida ainda',
+  'archive.kind.unique:console': 'console ativo',
+  'archive.kind.unique:archive': 'arquivo de registros',
+  'archive.kind.unique:plant': 'usina',
   'archive.kind.station': 'terminal de estação',
   'archive.kind.passage': 'terminal de passagem',
   'reader.archived': 'do arquivo · relido com o que você sabe agora · E / ESC  fechar',

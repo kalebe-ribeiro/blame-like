@@ -65,7 +65,7 @@ export function createTravel(ctx) {
   // o arquivo do mundo: cada registro lido (o texto é refeito do Field pelo lugar — ver lang/records.js)
   bus.on('player:read', ({ id, site }) => {
     slot.archive ??= { records: {} };
-    slot.archive.records[id] ??= { x: site.x, y: site.y, z: site.z, kind: site.kind, at: Date.now() };
+    slot.archive.records[id] ??= { x: site.x, y: site.y, z: site.z, kind: site.kind === 'unique' ? `unique:${site.unique.kind}` : site.kind, at: Date.now() };
   });
   bus.on('player:photo', () => {
     diary.add('photos');

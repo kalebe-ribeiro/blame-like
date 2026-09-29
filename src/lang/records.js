@@ -87,6 +87,22 @@ export function terminalRecords(field, site) {
   const lines = [];
   lines.push([W('TERMINAL'), { c: [r.int(0, SCRIPT.length - 1), num(r.int(100, 9999))] }, P('·'), W('SECTOR'), sectorCode(field, sector)]);
   lines.push(RULE);
+  if (site.kind === 'unique') {
+    // as estruturas únicas: ainda há energia aqui — e mais para contar
+    const u = site.unique;
+    const code = { c: [r.int(0, SCRIPT.length - 1), num(r.int(10, 99))] };
+    if (u.kind === 'console') {
+      lines.push([W('TERMINAL'), W('ACTIVE'), P('·'), W('POWER'), W('OWN')]);
+      lines.push([W('POWER'), W('RESERVE'), P(':'), N(`${r.int(4, 31)}%`), P('·'), N(num(r.int(2e5, 9e7))), W('CYCLES')]);
+    } else if (u.kind === 'archive') {
+      lines.push([W('ARCHIVE'), code, P('·'), W('RECORD'), W('COUNT'), P(':'), N(num(r.int(1e6, 9e8)))]);
+      lines.push([W('RECORD'), W('DAMAGED'), P(':'), N(`${r.int(60, 99)}%`), P('·'), W('RECOVERY'), W('IN'), W('WORK')]);
+    } else {
+      lines.push([W('PLANT'), code, P('·'), W('STATUS'), P(':'), W('ACTIVE')]);
+      lines.push([W('OUTPUT'), P(':'), N(`${r.int(1, 9)}%`), P('·'), W('GRID'), W('SECTOR'), sectorCode(field, sector), W('DARK')]);
+    }
+    lines.push([W('LEVEL'), N(levelNumber(field, Math.floor((site.y - MEGA.barrierTop0) / MEGA.barrier) + 1, site.x, site.z))]);
+  }
   if (site.kind === 'passage') {
     const band = Math.floor((site.y - MEGA.barrierTop0) / MEGA.barrier) + 1;
     lines.push([W('ELEVATOR'), W('PASSAGE'), P('·'), W('LAYER'), N(levelNumber(field, band, site.x, site.z))]);
@@ -95,8 +111,8 @@ export function terminalRecords(field, site) {
   const p = pool(r, field, here);
   const n = 6 + r.int(0, 4);
   for (let i = 0; i < n; i++) lines.push(r.pick(p)());
-  // um terminal em ~8 guarda um fragmento
-  if (hash4(field.seed, Math.round(site.x), Math.round(site.z), 0, 951) < 0.12) {
+  // um terminal em ~8 guarda um fragmento (nas únicas, sempre)
+  if (site.kind === 'unique' || hash4(field.seed, Math.round(site.x), Math.round(site.z), 0, 951) < 0.12) {
     lines.push(RULE);
     const k = r.int(1, 3);
     for (let i = 0; i < k; i++) lines.push(r.pick(HISTORY));
