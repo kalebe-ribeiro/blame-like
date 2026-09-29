@@ -64,9 +64,9 @@ export class TransportPanel {
     this.status = root.querySelector('.transport-status');
     root.addEventListener('click', (e) => {
       e.stopPropagation();
-      const t = e.target;
-      if (t?.dataset?.act === 'close') return this.close();
-      const kind = t?.dataset?.kind;
+      const target = e.target;
+      if (target?.dataset?.act === 'close') return this.close();
+      const kind = target?.dataset?.kind;
       if (!kind) return;
       const label = t(`dest.${kind}`);
       this.status.textContent = t('transport.searching');

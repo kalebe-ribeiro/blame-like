@@ -44,6 +44,13 @@ export async function runCheck(ctx) {
   window.addEventListener('unhandledrejection', (e) => console.error('CHECK-ERR ' + (e.reason?.stack ?? e.reason)));
 
   await sleep(SETTLE);
+  // a interface também: um clique de verdade no painel de transporte (como o jogador faz)
+  const button = document.querySelector('#transport [data-kind="ponte"]');
+  if (button) {
+    button.click();
+    await sleep(400);
+    report({ kind: 'painel', ok: !!button, fps: undefined, why: undefined });
+  }
   const only = ctx.only && ctx.only !== '1' ? ctx.only.split(',') : null;
   // --check=a,b,c visita só esses, nessa ordem
   const kinds = only ? only.filter((k) => DESTINATIONS.some((d) => d.kind === k)) : DESTINATIONS.map((d) => d.kind);
