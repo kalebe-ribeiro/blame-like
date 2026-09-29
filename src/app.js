@@ -40,6 +40,7 @@ import { createWake } from './app/wake.js';
 import { createCarried } from './app/carried.js';
 import { createReading } from './app/reading.js';
 import { createLeads } from './app/leads.js';
+import { startPlace } from './lang/leads.js';
 
 /** A névoa de altura é relativa ao observador: sempre mais densa abaixo. */
 const FOG_ABOVE_EYE = 40;
@@ -130,6 +131,14 @@ if (slot.pos) {
   controls.setView({ pos: new THREE.Vector3(...slot.pos), yaw: slot.yaw, pitch: slot.pitch, scale: 1 });
   if (slot.move === 'fly') controls.setMode('fly');
 }
+// Início do mundo (Peregrinação — ver o cofre, Inicio-do-mundo): um mundo novo começa
+// diante de um terminal morto, num lugar diferente por seed; a primeira leitura dá a primeira pista
+const fresh = ctx.rules.leads && !slot.pos && !params.get('pos') && !params.get('goto') && !params.get('check');
+const start = fresh ? startPlace(ctx.world.field) : null;
+if (start) {
+  const eye = new THREE.Vector3(start.stand.x, start.stand.y + 1.7, start.stand.z).sub(ctx.world.origin);
+  controls.setView({ pos: eye, yaw: start.yaw, pitch: -0.2, scale: 1 });
+}
 
 ctx.audio = new AudioEngine();
 ctx.hud = new HUD(document.getElementById('hud'));
@@ -155,6 +164,8 @@ ctx.sound = createWorldSound(ctx);
 ctx.ui = createUI(ctx);
 ctx.wake = createWake(ctx);
 ctx.carried = createCarried(ctx);
+// no começo, a lanterna já acesa: o setor está apagado (dá para desligar com F)
+if (start) setTimeout(() => ctx.carried.lanternOn || ctx.carried.toggleLantern(), 300);
 ctx.reading = createReading(ctx);
 setupDev(ctx);
 

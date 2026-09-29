@@ -92,6 +92,7 @@ export default {
   'dest.colosso': 'Máquina colossal',
   'dest.terminal': 'Terminal',
   'dest.unica': 'Estrutura única',
+  'dest.inicio': 'Início da Peregrinação',
   'dest.ponte': 'Ponte inicial',
 
   // ── regiões ──

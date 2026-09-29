@@ -92,6 +92,7 @@ export default {
   'dest.colosso': 'Colossal machine',
   'dest.terminal': 'Terminal',
   'dest.unica': 'Unique structure',
+  'dest.inicio': 'Pilgrimage start',
   'dest.ponte': 'Starting bridge',
 
   // ── regiões ──

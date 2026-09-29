@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { MEGA, HIVE, TRANSIT, MACRO } from '../gen/field.js';
+import { startPlace } from '../lang/leads.js';
 
 /** Tipos de destino (os nomes na tela vêm de i18n: 'dest.<kind>', 'dest.group.<group>'). */
 export const DESTINATIONS = [
@@ -37,6 +38,7 @@ export const DESTINATIONS = [
   { group: 'other', kind: 'colosso' },
   { group: 'other', kind: 'terminal' },
   { group: 'other', kind: 'unica' },
+  { group: 'other', kind: 'inicio' },
   { group: 'other', kind: 'ponte' },
 ];
 
@@ -94,6 +96,11 @@ export function findDestination(F, kind, g, recent = new Set(), opts = {}) {
       return { id: `c${Math.round(m.x)},${Math.round(m.z)}`, feet: V(fx, fy, fz), yaw: yawTo(fx, fz, m.x, m.z), pitch: Math.atan2(120, 320), fly: true };
     },
     ponte: () => ({ id: 'ponte', feet: V(0, 0.5, 58), yaw: 0, pitch: 0.03 }),
+    // ── o começo de um mundo da Peregrinação nesta seed: diante do primeiro terminal morto ──
+    inicio: () => {
+      const s = startPlace(F);
+      return s ? { id: 'inicio', feet: V(s.stand.x, s.stand.y + 0.05, s.stand.z), yaw: s.yaw, pitch: -0.2 } : null;
+    },
 
     // ── regiões ──
     teia: () => biomeSpot(F, g, recent, 'teia', (x, y, z) => nodeSpot(F, x, y, z, 'teia')),
