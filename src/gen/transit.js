@@ -95,6 +95,9 @@ function buildLine(F, B, axis, u, y, t0, t1, w, salt) {
     box('slab', ts, 4.35, pc, L, pw + 0.6, 0.35);
     // placa numa ponta e a luz
     box('sign', ts + L / 2 - 1.2, 3.2, pc, 0.15, pw * 0.7, 0.9);
+    // tomada num poste do abrigo
+    const sp = G(ts - L / 2 + 0.6, 1.1, side * (inner + 0.4) + side * 0.25);
+    B.socket(sp.x + B.x0, sp.y + B.y0, sp.z + B.z0);
     // pendurada da laje do abrigo
     const lp = G(ts, 3.6, pc);
     B.lamp(lp.x + B.x0, lp.y + B.y0, lp.z + B.z0, FLUORO, 45, (s & 3) === 0 ? 'faulty' : 'steady', { to: [lp.x + B.x0, lp.y + B.y0 + 0.6, lp.z + B.z0] });

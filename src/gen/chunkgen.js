@@ -78,6 +78,20 @@ export class ChunkBuilder {
    *   size  escala (as luminárias das megaestruturas são enormes)
    *   far   vista de longe (camada macro): materiais que não somem cedo
    */
+  /**
+   * Tomada de recarga (modo Peregrinação — app/carried.js): uma caixa num
+   * poste ou parede, com uma plaquinha clara. Só dá energia se o setor tiver.
+   * (x,y,z) GLOBAL = o centro da caixa; yaw vira a caixa.
+   */
+  socket(x, y, z, yaw = 0) {
+    if (this.lod) return;
+    const L = this.L(x, y, z);
+    this.add('machine', place(new THREE.BoxGeometry(0.24, 0.32, 0.14), { x: L.x, y: L.y, z: L.z, ry: yaw }));
+    const f = new THREE.Vector3(0, 0.06, 0.075).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+    this.add('lamp', place(new THREE.BoxGeometry(0.1, 0.05, 0.02), { x: L.x + f.x, y: L.y + f.y, z: L.z + f.z, ry: yaw }));
+    this.emitters.push({ type: 'socket', x, y, z });
+  }
+
   lamp(x, y, z, color, intensity, mode = 'steady', { to = null, size = 1, far = false } = {}) {
     this.light(x, y, z, color, intensity, mode);
     if (this.lod) return;
@@ -464,7 +478,9 @@ function buildWalk(F, B, axis, u, y, t0, t1, w, salt, anchors) {
     if (r.chance(0.1)) {
       const side = r.sign();
       const [lx, ly, lz] = G(ts + len / 2, 5, side * 2);
-      B.lamp(lx, ly, lz, (m & 1) ? SODIUM : FLUORO, r.float(30, 50), r.chance(0.5) ? 'faulty' : 'steady', { to: G(ts + len / 2, 0.4, side * 2.7) });
+      const post = G(ts + len / 2, 0.4, side * 2.7);
+      B.lamp(lx, ly, lz, (m & 1) ? SODIUM : FLUORO, r.float(30, 50), r.chance(0.5) ? 'faulty' : 'steady', { to: post });
+      B.socket(post[0], post[1] + 1.1, post[2], rotY + (side > 0 ? Math.PI : 0));
     }
     if (r.chance(0.12)) {
       const [ax, ay, az] = G(ts + len / 2, -1.2, (w.track ? -w.track.side : r.sign()) * hw);

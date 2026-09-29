@@ -17,7 +17,7 @@ export default {
   'gate.choose': 'escolha como entrar na Cidade',
   'gate.keys.pilgrimage':
     '<span>WASD</span> mover &nbsp;·&nbsp; <span>MOUSE</span> olhar &nbsp;·&nbsp; <span>ESPAÇO</span> pular &nbsp;·&nbsp; ' +
-    '<span>SHIFT</span> correr<br />' +
+    '<span>SHIFT</span> correr &nbsp;·&nbsp; <span>F</span> lanterna &nbsp;·&nbsp; <span>E</span> conectar numa tomada<br />' +
     '<span>O</span> configurações &nbsp;·&nbsp; <span>F2</span> foto &nbsp;·&nbsp; <span>M</span> mapa &nbsp;·&nbsp; ' +
     '<span>F11</span> tela cheia &nbsp;·&nbsp; <span>ESC</span> soltar',
 
@@ -177,4 +177,9 @@ export default {
   'transit.boarding': 'EMBARQUE · PARTIDA EM {s} S · {dir}',
   'transit.next': 'PRÓXIMA COMPOSIÇÃO: {s} S{late} · {dir}',
   'transit.late': ' · ATRASADA',
+  // ── o aparelho na mão (Peregrinação) ──
+  'device.charging': 'CARREGANDO',
+  'device.noPower': 'SEM ENERGIA AQUI',
+  'device.socket': 'TOMADA  [E]',
+  'device.empty': 'CÉLULA VAZIA',
 };

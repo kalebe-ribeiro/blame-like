@@ -265,6 +265,8 @@ export class World {
     // fixas: acompanham o observador
     L.addFixed({ color: sodium, intensity: 450, mode: 'follow', offset: V3(40, -300, -60) }); // brasa distante lá embaixo
     L.addFixed({ color: cold, intensity: 700, mode: 'follow', offset: V3(-80, 450, -120) }); // clarão frio lá em cima
+    // a lanterna do aparelho na mão (modo Peregrinação — app/carried.js); apagada = intensidade 0
+    L.addFixed({ color: V3(1.0, 0.9, 0.78), intensity: 0, mode: 'carried' });
 
     // estática (global): a lâmpada de sódio da ponte inicial, num poste de verdade
     const S = (x, y, z, c, intensity, mode = 'steady') => ({ x, y, z, color: [c.x, c.y, c.z], intensity, mode, phase: rng.float(0, 100) });
@@ -421,6 +423,16 @@ export class World {
     if (g.y < -400) return 'abismo';
     if (g.y > 400) return 'altura';
     return 'deriva';
+  }
+
+  /** Tomadas de recarga carregadas (posições GLOBAIS) — ver ChunkBuilder.socket. */
+  *sockets() {
+    for (const e of this.chunkLayer.allEmitters()) if (e.type === 'socket') yield e;
+  }
+
+  /** A luz que o corpo carrega (a lanterna do aparelho): { pos (cena), intensity }. */
+  get carriedLight() {
+    return this.lights.fixed.find((l) => l.mode === 'carried');
   }
 
   /**

@@ -153,9 +153,13 @@ export class NoclipControls {
     // botões de ação: uma vez por aperto
     const edge = (i) => b(i) && !this.pad.prev[i];
     if (edge(2)) {
-      this.autopilot = false;
-      this.setMode(this.mode === 'walk' ? 'fly' : 'walk'); // X
+      // X: andar/voar — ou, onde não se voa (Peregrinação), a lanterna
+      if (this.canFly) {
+        this.autopilot = false;
+        this.setMode(this.mode === 'walk' ? 'fly' : 'walk');
+      } else this.onPadButton?.('lantern');
     }
+    if (edge(3)) this.onPadButton?.('use'); // Y: conectar numa tomada
     if (edge(12) && this.canFly) {
       this.autopilot = !this.autopilot; // direcional ↑
       if (this.autopilot) this.setMode('fly');

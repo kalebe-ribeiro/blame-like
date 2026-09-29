@@ -220,6 +220,8 @@ export function createUI(ctx) {
   controls.onPadButton = (name) => {
     if (name === 'photo') photo();
     if (name === 'hud' && rules.hud) hud.toggle();
+    if (name === 'lantern') ctx.carried.toggleLantern();
+    if (name === 'use') ctx.carried.togglePlug();
   };
 
   // ─── teclas globais ───

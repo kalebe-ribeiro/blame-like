@@ -356,6 +356,7 @@ export function habitation(B, r, x, y, z, tall) {
 function lampPost(B, x, y, z, r) {
   const h = r.float(6, 12);
   B.add('duct', cylinderBetween(B.L(x, y, z), B.L(x, y + h, z), 0.25, 0.18, 6));
+  B.socket(x, y + 1.1, z + 0.3);
   blockG(B, 'duct', x + 0.8, y + h, z, 2, 0.4, 0.8);
   B.lamp(x + 1.2, y + h - 0.6, z, r.chance(0.8) ? SODIUM : FLUORO, r.float(30, 60), r.chance(0.3) ? 'faulty' : 'steady');
 }

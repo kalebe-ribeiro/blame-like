@@ -425,6 +425,15 @@ export class AudioEngine {
     this._thump(t, out, 0.6, 180);
   }
 
+  /** O clique do aparelho na mão (lanterna, tomada). */
+  deviceClick(on) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const p = this._panner(0.3);
+    this._out(p, 0.7, 0.1);
+    this._thump(t, p, on ? 0.35 : 0.25, on ? 2400 : 1600);
+  }
+
   // ── desmaio e despertar (app/wake.js) ──
 
   /** O mundo some no ouvido: 0 = normal, 1 = quase nada (abafado e baixo). */

@@ -112,6 +112,7 @@ function buildPlatform(F, B, n) {
     // luz: plataformas são as "clareiras" do mundo
     const col = COLORS[Math.floor(h * 100) % 3];
     B.lamp(n.x + r * 0.3, n.y + 5, n.z - r * 0.3, col, 25 + h * 80, h < 0.12 ? 'faulty' : 'steady', { to: [n.x + r * 0.3 + 0.7, n.y, n.z - r * 0.3] });
+    B.socket(n.x + r * 0.3 + 0.7, n.y + 1.1, n.z - r * 0.3 + 0.12);
   }
   switch (n.feature) {
     case 'lamp': {

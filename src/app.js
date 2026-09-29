@@ -36,6 +36,7 @@ import { createTravel } from './app/travel.js';
 import { createUI } from './app/ui.js';
 import { setupDev } from './app/dev.js';
 import { createWake } from './app/wake.js';
+import { createCarried } from './app/carried.js';
 
 /** A névoa de altura é relativa ao observador: sempre mais densa abaixo. */
 const FOG_ABOVE_EYE = 40;
@@ -76,7 +77,8 @@ const ctx = {
   /** Grava a travessia? (só no npm start normal, com um mundo escolhido) */
   saving: persist && !choosing,
   worldState: new WorldState(slot),
-  player: createPlayerState(slot.player),
+  // um mundo novo da Peregrinação começa com pouca carga (ver o cofre, Inicio-do-mundo)
+  player: createPlayerState(slot.player ?? (mode === 'pilgrimage' ? { energy: { value: 0.35 } } : null)),
   autostart: params.get('autostart') === '1',
   resumed: !!slot.pos,
   seed: params.get('seed') ? parseInt(params.get('seed'), 36) : slot.seed,
@@ -140,6 +142,7 @@ ctx.body = createBody(ctx);
 ctx.sound = createWorldSound(ctx);
 ctx.ui = createUI(ctx);
 ctx.wake = createWake(ctx);
+ctx.carried = createCarried(ctx);
 setupDev(ctx);
 
 // ─── loop ───────────────────────────────────────────────────────────────────
@@ -167,6 +170,7 @@ function frame() {
   // 2. origem flutuante
   const rebased = world.maybeRebase(camera);
   if (rebased) ctx.scenePass.shiftOrigin(rebased.delta);
+  ctx.carried.update(dt, time); // a lanterna na mão (Peregrinação)
 
   // 3. mundo
   shared.uTime.value = time;

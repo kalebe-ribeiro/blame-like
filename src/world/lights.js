@@ -8,6 +8,7 @@
 //  do conjunto fazem fade, então nada pisca ao trocar.
 //
 //  Modos: 'steady' constante · 'faulty' lâmpada falhando
+//         'carried' a lanterna do aparelho na mão (posição e força vêm de app/carried.js)
 //         'follow' preso ao observador com um deslocamento que deriva devagar
 //  (Não há luz "mágica" perto do corpo: o que ilumina o caminho é a Cidade —
 //  e, no modo Peregrinação, a luz que você carrega, fase 1 do plano.)
@@ -156,6 +157,7 @@ export class LightRig {
 }
 
 function flicker(l, time) {
+  if (l.mode === 'carried') return 1; // a lanterna: quem manda nela é app/carried.js
   if (l.mode === 'ember') {
     // brasa quase apagada: respira devagar, irregular
     return 0.45 + 0.3 * Math.sin(time * 2.3 + l.phase) * Math.sin(time * 0.7 + l.phase * 3.1) + 0.1 * Math.sin(time * 9 + l.phase);

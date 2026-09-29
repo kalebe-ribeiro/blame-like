@@ -54,6 +54,11 @@ const distArg = argValue('dist');
 
 // O áudio precisa começar sem gesto no modo captura (e não atrapalha no normal).
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// Janela coberta por outra (oclusão no Windows): o Chromium cai para 1 quadro/s.
+// Um mundo que continua vivo (e o teste de fumaça) não podem parar por isso.
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
 // --check: teste de fumaça (roteiro por todos os destinos) — ver src/dev/check.js
 const checkMode = process.argv.includes('--check') || !!argValue('check');
 if (checkMode) app.setPath('userData', path.join(require('os').tmpdir(), 'cybercosmic-check'));
@@ -127,6 +132,7 @@ function createWindow() {
   if (argValue('game')) query.set('game', argValue('game')); // modo de jogo: free | pilgrimage
   if (argValue('outage')) query.set('outage', argValue('outage'));
   if (argValue('wake')) query.set('wake', argValue('wake'));
+  if (process.argv.includes('--lantern')) query.set('lantern', '1');
   if (argValue('collapse')) query.set('collapse', argValue('collapse'));
   if (checkMode) {
     query.set('check', argValue('check') || '1'); // --check=trelica,escadaria: só esses
