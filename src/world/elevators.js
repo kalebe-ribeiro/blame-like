@@ -65,6 +65,10 @@ export class ElevatorSystem {
       // uma cabine de operação vazia num canto
       parts.push({ mat: 'machine', g: place(new THREE.BoxGeometry(5, 3.2, 4), { x: w / 2 - 4, y: 1.6, z: d / 2 - 4 }) });
     }
+    // a lâmpada de sinalização: sobre a cabine (grande) ou presa num cabo de tração
+    const lamp = big ? { x: w / 2 - 4, y: 3.4, z: d / 2 - 4 } : { x: w / 2 - 1, y: 3.4, z: d / 2 - 1 };
+    parts.push({ mat: 'machine', g: place(new THREE.BoxGeometry(0.7, 0.4, 0.7), lamp) });
+    def.lamp = { x: lamp.x, y: lamp.y + 0.35, z: lamp.z };
     const group = new THREE.Group();
     for (const mat of ['grate', 'machine']) {
       const g = mergeAll(parts.filter((p) => p.mat === mat).map((p) => p.g));
@@ -119,7 +123,8 @@ export class ElevatorSystem {
       for (const m of car.group.children) m.userData.dy = dy;
       // lâmpada de sinalização presa ao carro (âmbar parado, vermelha em movimento)
       const moving = Math.abs(dy) > 1e-3;
-      this.lights.push({ x: car.def.x, y: y + 4, z: car.def.z, color: moving ? [0.85, 0.12, 0.05] : [1, 0.5, 0.17], intensity: car.def.kind === 'grand' ? 90 : 20, mode: moving ? 'faulty' : 'steady', phase: car.def.x % 7 });
+      const lp = car.def.lamp;
+      this.lights.push({ x: car.def.x + lp.x, y: y + lp.y, z: car.def.z + lp.z, color: moving ? [0.85, 0.12, 0.05] : [1, 0.5, 0.17], intensity: car.def.kind === 'grand' ? 90 : 20, mode: moving ? 'faulty' : 'steady', phase: car.def.x % 7 });
     }
   }
 

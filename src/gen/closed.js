@@ -149,7 +149,7 @@ function furnishRoom(F, B, i, j, k, x0, y0, z0, floorY) {
     const lx = x0 + C / 2;
     const lz = z0 + C / 2 + 6;
     boxG(B, 'duct', lx - 3, y0 + C - 3.3, lz - 0.4, lx + 3, y0 + C - 2.3, lz + 0.4);
-    B.light(lx, y0 + C - 5, lz, h < 0.2 ? FLUORO : h < 0.28 ? SODIUM : WARN, 150, h < 0.12 ? 'faulty' : 'steady');
+    B.lamp(lx, y0 + C - 5, lz, h < 0.2 ? FLUORO : h < 0.28 ? SODIUM : WARN, 150, h < 0.12 ? 'faulty' : 'steady', { to: [lx, y0 + C - 3.3, lz] });
   }
   if (h > 0.8) {
     // entulho: blocos caídos
@@ -201,11 +201,11 @@ export function genMassif(F, B, box) {
   if (!lod) {
     for (const c of F.walkwayCrossings('z', blk.z0, blk.x0, blk.x1, blk.y0, blk.y1)) {
       parts = subtractTunnel(parts, 'z', c.t - c.width / 2 - 4, c.t + c.width / 2 + 4, c.y - 1.5, c.y + 11);
-      B.light(c.t, c.y + 9, (blk.z0 + blk.z1) / 2, SODIUM, 60, 'faulty');
+      B.lamp(c.t, c.y + 9, (blk.z0 + blk.z1) / 2, SODIUM, 60, 'faulty', { to: [c.t, c.y + 11, (blk.z0 + blk.z1) / 2] });
     }
     for (const c of F.walkwayCrossings('x', blk.x0, blk.z0, blk.z1, blk.y0, blk.y1)) {
       parts = subtractTunnel(parts, 'x', c.t - c.width / 2 - 4, c.t + c.width / 2 + 4, c.y - 1.5, c.y + 11);
-      B.light((blk.x0 + blk.x1) / 2, c.y + 9, c.t, SODIUM, 60, 'faulty');
+      B.lamp((blk.x0 + blk.x1) / 2, c.y + 9, c.t, SODIUM, 60, 'faulty', { to: [(blk.x0 + blk.x1) / 2, c.y + 11, c.t] });
     }
   }
   const hollow = lod ? null : F.massifHollow(i, j, k);
@@ -235,7 +235,9 @@ export function genMassif(F, B, box) {
       if (hash4(F.seed, i * 4 + side, lv, k, 515) < 0.4) {
         const lx = side === 0 ? blk.x0 - 1 : side === 1 ? blk.x1 + 1 : (blk.x0 + blk.x1) / 2;
         const lz = side === 2 ? blk.z0 - 1 : side === 3 ? blk.z1 + 1 : (blk.z0 + blk.z1) / 2;
-        B.light(lx, y + 4, lz, hash4(F.seed, i, lv, k * 4 + side, 516) < 0.6 ? SODIUM : FLUORO, 70, 'steady');
+        const wx = side === 0 ? blk.x0 : side === 1 ? blk.x1 : lx;
+        const wz = side === 2 ? blk.z0 : side === 3 ? blk.z1 : lz;
+        B.lamp(lx, y + 4, lz, hash4(F.seed, i, lv, k * 4 + side, 516) < 0.6 ? SODIUM : FLUORO, 70, 'steady', { to: [wx, y + 4.4, wz] });
       }
     }
   }
@@ -268,7 +270,7 @@ export function genMassif(F, B, box) {
       const dc = t + 7.5;
       if (alongZ) boxG(B, 'door', face + out * 0.02 - 0.05, yl, dc - 0.7, face + out * 0.02 + 0.05, yl + 2.4, dc + 0.7);
       else boxG(B, 'door', dc - 0.7, yl, face + out * 0.02 - 0.05, dc + 0.7, yl + 2.4, face + out * 0.02 + 0.05);
-      B.light(alongZ ? face + out * 2 : dc, yl + 3.2, alongZ ? dc : face + out * 2, SODIUM, 14, 'steady');
+      B.lamp(alongZ ? face + out * 1.2 : dc, yl + 3.2, alongZ ? dc : face + out * 1.2, SODIUM, 14, 'steady', { to: [alongZ ? face : dc, yl + 3.6, alongZ ? dc : face], size: 0.7 });
     }
   }
 
@@ -337,7 +339,7 @@ function buildHollow(F, B, h, i, j, k) {
     }
   }
   // luz de serviço junto às portas
-  for (const y of levels) B.light(ix0 + 3, y + 4.5, zc + 6, FLUORO, 30, 'faulty');
+  for (const y of levels) B.lamp(ix0 + 1.5, y + 4.5, zc + 6, FLUORO, 30, 'faulty', { to: [ix0, y + 4.9, zc + 6], size: 0.8 });
 
   if (type === 'silo') return buildSilo(B, r, { ix0, ix1, iz0, iz1, floorTop, levels, y1, zc, xc });
 
@@ -351,7 +353,7 @@ function buildHollow(F, B, h, i, j, k) {
     boxG(B, 'rib', ix0 + RING, y + 1, iz1 - RING, ix1 - RING, y + 1.12, iz1 - RING + 0.15);
     boxG(B, 'rib', ix0 + RING - 0.15, y + 1, iz0 + RING, ix0 + RING, y + 1.12, iz1 - RING);
     boxG(B, 'rib', ix1 - RING, y + 1, iz0 + RING, ix1 - RING + 0.15, y + 1.12, iz1 - RING);
-    if (r.chance(0.7)) B.light(xc, y + 5, iz0 + RING / 2, SODIUM, 50, r.chance(0.4) ? 'faulty' : 'steady');
+    if (r.chance(0.7)) B.lamp(xc, y + 5, iz0 + RING / 2, SODIUM, 50, r.chance(0.4) ? 'faulty' : 'steady', { to: [xc + 0.6, y, iz0 + RING / 2] });
   }
 
   if (type === 'maquinas') {
@@ -380,7 +382,7 @@ function buildHollow(F, B, h, i, j, k) {
         const top = A.clone().lerp(Bp, t).add(new THREE.Vector3(0, rad - 1, 0));
         B.add('duct', cylinderBetween(top, B.L(ix0 + 17 + len * t, y1 - 6, z), 2.6, 2.6, 10));
       }
-      B.light(ix0 + 12, floorTop + 4, z, WARN, 22, 'faulty');
+      B.lamp(ix0 + 12, floorTop + 4, z, WARN, 22, 'faulty', { to: [ix0 + 12.6, floorTop, z] });
     }
   } else {
     // depósito: pilhas de blocos em estantes, com corredores
@@ -396,7 +398,8 @@ function buildHollow(F, B, h, i, j, k) {
         if (n > 0) for (const [px, pz] of [[x + 0.6, z + 0.6], [x + cell - 0.6, z + cell - 0.6]]) boxG(B, 'rib', px - 0.25, floorTop, pz - 0.25, px + 0.25, floorTop + n * 8.2 + 2, pz + 0.25);
       }
     }
-    for (let x = ix0 + 30; x < ix1 - 20; x += 45) B.light(x, floorTop + 40, zc, SODIUM, 80, r.chance(0.3) ? 'faulty' : 'steady');
+    // luminárias penduradas do teto em cabos longos
+    for (let x = ix0 + 30; x < ix1 - 20; x += 45) B.lamp(x, floorTop + 40, zc, SODIUM, 80, r.chance(0.3) ? 'faulty' : 'steady', { to: [x, y1 - 6, zc], size: 1.4 });
   }
 }
 
@@ -453,5 +456,5 @@ function buildSilo(B, r, { ix0, ix1, iz0, iz1, floorTop, levels, y1, zc, xc }) {
     B.add('cable', cylinderBetween(B.L(cx, y1 - 6, cz), B.L(cx, y1 - 6 - r.float(40, 130), cz), 0.25, 0.25, 4));
   }
   B.add('beam', beamGeometry(B.L(xc, y1 - 6, zc), y1 - 6 - floorTop, 10, 16));
-  B.light(xc, floorTop + 30, zc, SODIUM, 120, 'steady');
+  B.lamp(xc, floorTop + 30, zc, SODIUM, 120, 'steady', { to: [xc, y1 - 6, zc], size: 1.6 }); // pendurada do teto, no eixo do silo
 }

@@ -58,10 +58,45 @@ export class ChunkBuilder {
     (this.parts[mat] ??= []).push(geom);
   }
 
-  /** Luz em coordenadas GLOBAIS. */
+  /**
+   * Luz em coordenadas GLOBAIS — só a luz. Use direto apenas quando a luz já
+   * nasce de algo que existe (uma tela, um braseiro, uma carcaça); senão, lamp().
+   */
   light(x, y, z, color, intensity, mode = 'steady') {
     if (this.lod) return; // chunks distantes não contribuem luzes
     this.lights.push({ x, y, z, color, intensity, mode, phase: Math.abs((x * 0.013 + y * 0.029 + z * 0.071) % 100) });
+  }
+
+  /**
+   * Uma luminária: a luz E o objeto que a produz. Na Cidade nenhuma luz fica
+   * no ar sem fonte (ver o cofre, 02-Direcao-de-Arte): há sempre uma carcaça
+   * escura com a lente acesa pela própria luz, logo acima dela, e — se a
+   * luminária não encosta em nada — uma haste até onde ela se prende.
+   *   to    ponto GLOBAL onde ela se prende. Abaixo da lâmpada: um poste até
+   *         a altura dela e um braço curto até a carcaça; acima ou ao lado:
+   *         uma haste direta. null = já encosta em algo.
+   *   size  escala (as luminárias das megaestruturas são enormes)
+   *   far   vista de longe (camada macro): materiais que não somem cedo
+   */
+  lamp(x, y, z, color, intensity, mode = 'steady', { to = null, size = 1, far = false } = {}) {
+    this.light(x, y, z, color, intensity, mode);
+    if (this.lod) return;
+    const s = size;
+    const L = this.L(x, y, z);
+    this.add('machine', place(new THREE.BoxGeometry(0.7 * s, 0.3 * s, 0.7 * s), { x: L.x, y: L.y + 0.27 * s, z: L.z }));
+    this.add(far ? 'lampFar' : 'lamp', place(new THREE.BoxGeometry(0.5 * s, 0.1 * s, 0.5 * s), { x: L.x, y: L.y + 0.08 * s, z: L.z }));
+    if (!to) return;
+    const rod = (a, b) => this.add(far ? 'frame' : 'duct', cylinderBetween(a, b, 0.06 * s + 0.03, 0.06 * s + 0.03, 5));
+    const top = new THREE.Vector3(L.x, L.y + 0.42 * s, L.z);
+    const T = this.L(to[0], to[1], to[2]);
+    if (T.y < L.y - 0.5) {
+      // poste do chão até a altura da lâmpada, e um braço curto até ela
+      const P = new THREE.Vector3(T.x, top.y + 0.25 * s, T.z);
+      rod(T, P);
+      if (Math.hypot(P.x - top.x, P.z - top.z) > 0.05) rod(P, top);
+    } else {
+      rod(top, T);
+    }
   }
 
   finish() {
@@ -260,8 +295,11 @@ function buildSegment(F, B, p, j, anchors) {
     const y = ya + r.float(0, SEG_H);
     F.pillarCenter(p, y, c);
     const ang = r.float(0, Math.PI * 2);
-    const rr = lerp(ra, rb, (y - ya) / SEG_H) + 3;
-    B.light(c.x + Math.cos(ang) * rr, y, c.z + Math.sin(ang) * rr, r.pick(COLORS), r.float(40, 120), r.chance(0.5) ? 'faulty' : 'steady');
+    const r0 = lerp(ra, rb, (y - ya) / SEG_H);
+    const rr = r0 + 2.2;
+    B.lamp(c.x + Math.cos(ang) * rr, y, c.z + Math.sin(ang) * rr, r.pick(COLORS), r.float(40, 120), r.chance(0.5) ? 'faulty' : 'steady', {
+      to: [c.x + Math.cos(ang) * (r0 - 0.3), y + 0.4, c.z + Math.sin(ang) * (r0 - 0.3)],
+    });
   }
 
   // extremidades: o pilar termina aqui (em cima e/ou embaixo)
@@ -288,8 +326,20 @@ function buildCrown(F, B, p, y, radius, r) {
     const oz = r.float(-0.7, 0.7) * radius;
     B.add('duct', cylinderBetween(L.clone().add(new THREE.Vector3(ox, 3, oz)), L.clone().add(new THREE.Vector3(ox, 3 + len, oz)), r.float(0.2, 0.7), 0.1, 5));
   }
-  if (r.chance(0.3)) B.light(c.x, y + 8, c.z, WARN, r.float(40, 90), 'faulty'); // luz de obstáculo
-  if (r.chance(0.25)) B.light(c.x, y + 12, c.z, r.pick(COLORS), r.float(60, 160), 'steady');
+  // luzes em postes na borda da laje (a casa de máquinas pode ocupar o centro)
+  const edge = (a, h) => {
+    const px = c.x + Math.cos(a) * radius * 0.85;
+    const pz = c.z + Math.sin(a) * radius * 0.85;
+    return [px, y + h, pz, [px + Math.cos(a) * 0.6, y + 3, pz + Math.sin(a) * 0.6]];
+  };
+  if (r.chance(0.3)) {
+    const [lx, ly, lz, to] = edge(r.float(0, Math.PI * 2), 8);
+    B.lamp(lx, ly, lz, WARN, r.float(40, 90), 'faulty', { to }); // luz de obstáculo
+  }
+  if (r.chance(0.25)) {
+    const [lx, ly, lz, to] = edge(r.float(0, Math.PI * 2), 12);
+    B.lamp(lx, ly, lz, r.pick(COLORS), r.float(60, 160), 'steady', { to });
+  }
 }
 
 function buildRoot(F, B, p, y, radius, r) {
@@ -412,8 +462,9 @@ function buildWalk(F, B, axis, u, y, t0, t1, w, salt, anchors) {
       B.add('rib', rib);
     }
     if (r.chance(0.1)) {
-      const [lx, ly, lz] = G(ts + len / 2, 5, r.sign() * 2);
-      B.light(lx, ly, lz, (m & 1) ? SODIUM : FLUORO, r.float(30, 50), r.chance(0.5) ? 'faulty' : 'steady');
+      const side = r.sign();
+      const [lx, ly, lz] = G(ts + len / 2, 5, side * 2);
+      B.lamp(lx, ly, lz, (m & 1) ? SODIUM : FLUORO, r.float(30, 50), r.chance(0.5) ? 'faulty' : 'steady', { to: G(ts + len / 2, 0.4, side * 2.7) });
     }
     if (r.chance(0.12)) {
       const [ax, ay, az] = G(ts + len / 2, -1.2, (w.track ? -w.track.side : r.sign()) * hw);
@@ -490,7 +541,7 @@ function buildDuct(F, B, axis, fa, fb, t0, t1, d) {
     const h = Math.abs(Math.sin(ts * 12.9898 + d.salt * 78.233) * 43758.5453) % 1;
     if (h < 0.03) {
       const [lx, ly, lz] = G(ts + piece / 2, R + 1.5, 0);
-      B.light(lx, ly, lz, FLUORO, 50, 'faulty');
+      B.lamp(lx, ly, lz, FLUORO, 50, 'faulty', { to: G(ts + piece / 2 + 0.6, R - 0.2, 0) });
     }
   }
 }
@@ -630,6 +681,13 @@ const FLOATERS = {
     const q2 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 4, Math.PI / 4, 0)).premultiply(q1);
     cube(S, q1);
     cube(S * 0.6, q2);
-    B.light(g[0], g[1], g[2], COLD, r.float(60, 120), 'faulty');
+    // a lâmpada no centro, pendurada do canto mais alto da gaiola de dentro
+    const h = S * 0.3;
+    let top = null;
+    for (const x of [-h, h]) for (const y of [-h, h]) for (const z of [-h, h]) {
+      const c = new THREE.Vector3(x, y, z).applyQuaternion(q2);
+      if (!top || c.y > top.y) top = c;
+    }
+    B.lamp(g[0], g[1], g[2], COLD, r.float(60, 120), 'faulty', { to: [g[0] + top.x, g[1] + top.y, g[2] + top.z] });
   },
 };

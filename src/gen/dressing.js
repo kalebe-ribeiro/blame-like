@@ -251,8 +251,9 @@ function dressShaft(F, B, box, s) {
         }
       }
       if (hash4(F.seed, k, sid, fi, 441) < 0.1) {
-        const l = G(mid, y + 5, 1);
-        B.light(l.x, l.y, l.z, hash4(F.seed, k, sid, fi, 442) < 0.15 ? WARN : SODIUM, 160, 'faulty');
+        const l = G(mid, y + 5, 1.2);
+        const w = G(mid, y + 5.4, 0);
+        B.lamp(l.x, l.y, l.z, hash4(F.seed, k, sid, fi, 442) < 0.15 ? WARN : SODIUM, 160, 'faulty', { to: [w.x, w.y, w.z] });
       }
     }
   });
@@ -318,7 +319,8 @@ function dressStairway(F, B, box, e) {
     if (n % 120 === 0) {
       const side = hash4(F.seed, n, Math.round(lat), 0, 460) < 0.5 ? -1 : 1;
       const p = alongX ? [ta, top + 5, lat + side * (e.width / 2 + 1)] : [lat + side * (e.width / 2 + 1), top + 5, ta];
-      B.light(p[0], p[1], p[2], hash4(F.seed, n, 1, 0, 461) < 0.8 ? SODIUM : COLD, 90, 'steady');
+      const foot = alongX ? [ta, top, lat + side * (e.width / 2 - 0.4)] : [lat + side * (e.width / 2 - 0.4), top, ta];
+      B.lamp(p[0], p[1], p[2], hash4(F.seed, n, 1, 0, 461) < 0.8 ? SODIUM : COLD, 90, 'steady', { to: foot });
     }
   }
 }
@@ -348,13 +350,13 @@ export function habitation(B, r, x, y, z, tall) {
   }
   // caixa d'água / casa de máquinas no topo
   if (r.chance(0.6)) blockG(B, 'dress', x + r.float(-w / 4, w / 4), top + 2.5, z + r.float(-d / 4, d / 4), 4, 5, 4);
-  if (r.chance(0.35)) B.light(x, top + 3, z, r.chance(0.8) ? SODIUM : FLUORO, 40, 'faulty');
+  if (r.chance(0.35)) B.lamp(x, top + 3, z, r.chance(0.8) ? SODIUM : FLUORO, 40, 'faulty', { to: [x + 0.6, top, z] });
 }
 
 function lampPost(B, x, y, z, r) {
   const h = r.float(6, 12);
   B.add('duct', cylinderBetween(B.L(x, y, z), B.L(x, y + h, z), 0.25, 0.18, 6));
   blockG(B, 'duct', x + 0.8, y + h, z, 2, 0.4, 0.8);
-  B.light(x + 1.2, y + h - 0.5, z, r.chance(0.8) ? SODIUM : FLUORO, r.float(30, 60), r.chance(0.3) ? 'faulty' : 'steady');
+  B.lamp(x + 1.2, y + h - 0.6, z, r.chance(0.8) ? SODIUM : FLUORO, r.float(30, 60), r.chance(0.3) ? 'faulty' : 'steady');
 }
 

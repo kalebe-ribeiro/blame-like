@@ -111,14 +111,14 @@ function buildPlatform(F, B, n) {
   if (h < 0.35) {
     // luz: plataformas são as "clareiras" do mundo
     const col = COLORS[Math.floor(h * 100) % 3];
-    B.light(n.x + r * 0.3, n.y + 5, n.z - r * 0.3, col, 25 + h * 80, h < 0.12 ? 'faulty' : 'steady');
+    B.lamp(n.x + r * 0.3, n.y + 5, n.z - r * 0.3, col, 25 + h * 80, h < 0.12 ? 'faulty' : 'steady', { to: [n.x + r * 0.3 + 0.7, n.y, n.z - r * 0.3] });
   }
   switch (n.feature) {
     case 'lamp': {
       const p = c.clone().add(new THREE.Vector3(r * 0.5, 0, 0));
       B.add('duct', cylinderBetween(p, p.clone().add(new THREE.Vector3(0, 6, 0)), 0.25, 0.12, 6));
       B.add('rib', place(new THREE.TorusGeometry(0.6, 0.12, 4, 12), { x: p.x, y: p.y + 6.2, z: p.z }));
-      B.light(n.x + r * 0.5, n.y + 6.5, n.z, FLUORO, 40, 'faulty');
+      B.lamp(n.x + r * 0.5, n.y + 5.7, n.z, FLUORO, 40, 'faulty'); // pendurada no topo do poste
       break;
     }
     case 'arch': {
@@ -232,7 +232,8 @@ const EDGES = {
     }
     if (e.r.chance(0.6)) {
       const m = s.clone().lerp(t, 0.5);
-      B.light(m.x + B.x0, m.y + B.y0 + R * 1.2, m.z + B.z0, e.r.chance(0.5) ? FLUORO : SODIUM, 30, 'faulty');
+      // pendurada do alto dos arcos do túnel
+      B.lamp(m.x + B.x0, m.y + B.y0 + R * 1.2, m.z + B.z0, e.r.chance(0.5) ? FLUORO : SODIUM, 30, 'faulty', { to: [m.x + B.x0, m.y + B.y0 + 2 * R - 1.1, m.z + B.z0] });
     }
   },
 
@@ -290,7 +291,7 @@ const EDGES = {
     // coluna central
     const colR = Math.max(1.5, Rh - w - 0.3);
     B.add('tower', cylinderBetween(B.L(C.x, a.y - 30, C.z), B.L(C.x, b.y + 10, C.z), colR, colR * 0.7, 8));
-    B.light(C.x, b.y + 12, C.z, r.pick(COLORS), 90, 'steady');
+    B.lamp(C.x, b.y + 12, C.z, r.pick(COLORS), 90, 'steady', { to: [C.x + 0.5, b.y + 10, C.z] }); // no topo da coluna
 
     // ângulos: começa virado para A, termina virado para B, ≥ 1,5 volta
     const thA = Math.atan2(a.z - C.z, a.x - C.x);

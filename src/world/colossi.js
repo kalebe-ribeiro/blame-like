@@ -184,7 +184,7 @@ export class ColossusSystem {
       m.group.position.set(x - origin.x, y - origin.y, z - origin.z);
       m.group.updateMatrixWorld(true);
       m.light.x = x;
-      m.light.y = y - 20;
+      m.light.y = y + 1; // sob a plataforma, junto das lâmpadas dela
       m.light.z = z;
       this.lights.push(m.light);
       // o baque das garras (só as que dá para ouvir)

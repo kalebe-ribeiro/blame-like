@@ -20,6 +20,7 @@ import { RNG } from '../core/rng.js';
 
 const SPAN = 150; // vão do pórtico
 const LEG_H = 70; // altura das pernas
+const _beacon = new THREE.Vector3();
 const BLOCK = { w: 12, h: 8 };
 const MOVE_SPEED = 3; // m/s do pórtico nos trilhos
 const LOWER_T = 9;
@@ -144,6 +145,10 @@ export class BuilderSystem {
     beam.translate(0, LEG_H + 4, 0);
     parts.push(beam);
     // cabine do operador (vazia)
+    // o farol no alto da viga (a lâmpada fica logo acima dele)
+    const beacon = new THREE.BoxGeometry(1.4, 0.8, 1.4);
+    beacon.translate(0, LEG_H + 8.4, 0);
+    parts.push(beacon);
     const cab = new THREE.BoxGeometry(6, 5, 6);
     cab.translate(across === 'x' ? SPAN / 2 - 8 : 0, LEG_H - 3, across === 'z' ? SPAN / 2 - 8 : 0);
     parts.push(cab);
@@ -213,8 +218,9 @@ export class BuilderSystem {
       if (site.dead) {
         // só a lâmpada de aviso, vermelha e fraca, no alto do pórtico torto
         site.group.updateMatrixWorld(true);
-        const gp = site.gantry.position;
-        this.lights.push({ x: d.x + gp.x, y: d.y + LEG_H + 4, z: d.z + gp.z, color: [0.85, 0.12, 0.05], intensity: 40, mode: 'faulty', phase: site.warn.phase, grid: false });
+        // o farol inclina junto com o pórtico torto
+        const bp = _beacon.set(0, LEG_H + 9, 0).applyMatrix4(site.gantry.matrix);
+        this.lights.push({ x: d.x + bp.x, y: d.y + bp.y, z: d.z + bp.z, color: [0.85, 0.12, 0.05], intensity: 40, mode: 'faulty', phase: site.warn.phase, grid: false });
         continue;
       }
       const task = site.task;
@@ -269,7 +275,7 @@ export class BuilderSystem {
 
       // luzes: farol âmbar no alto do pórtico, arco de solda no ponto de trabalho
       const gp = site.gantry.position;
-      this.lights.push({ x: d.x + gp.x, y: d.y + LEG_H + 10, z: d.z + gp.z, color: [1, 0.5, 0.17], intensity: 300, mode: 'faulty', phase: 3, grid: false });
+      this.lights.push({ x: d.x + gp.x, y: d.y + gp.y + LEG_H + 9, z: d.z + gp.z, color: [1, 0.5, 0.17], intensity: 300, mode: 'faulty', phase: 3, grid: false });
       if (task.phase === 'weld') {
         this.lights.push({ x: d.x + hx, y: d.y + target.y - BLOCK.h / 2 + 1, z: d.z + hz, color: [0.8, 0.88, 1], intensity: 700 * (0.4 + Math.random()), mode: 'steady', phase: 0, grid: false });
       }

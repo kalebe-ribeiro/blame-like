@@ -110,7 +110,7 @@ function genBarriers(F, B, box, owns) {
         if (hash4(F.seed, i, b.n, k, 360) < 0.03) {
           block(B, 'frame', xc, b.bottom - 22, zc, 0.6, 24, 0.6);
           block(B, 'frame', xc, b.bottom - 34.5, zc, 8, 1.5, 3);
-          B.light(xc, b.bottom - 37, zc, hash4(F.seed, i, b.n, k, 361) < 0.6 ? SODIUM : FLUORO, 1600, hash4(F.seed, i, b.n, k, 362) < 0.2 ? 'faulty' : 'steady');
+          B.lamp(xc, b.bottom - 36.4, zc, hash4(F.seed, i, b.n, k, 361) < 0.6 ? SODIUM : FLUORO, 1600, hash4(F.seed, i, b.n, k, 362) < 0.2 ? 'faulty' : 'steady', { size: 3, far: true });
         }
       }
       flush();
@@ -170,13 +170,13 @@ function genBarrierRelief(F, B, box) {
           // platibanda e casas de máquinas no telhado
           block(B, 'barrier', cx, y + p.h + 1, cz, w + 2, 2, d + 2);
           for (let q = r.int(0, 3); q > 0; q--) block(B, 'macro', cx + r.float(-0.35, 0.35) * w, y + p.h + 5, cz + r.float(-0.35, 0.35) * d, r.float(8, 18), 8, r.float(8, 18));
-          if (r.chance(0.2)) B.light(cx + w / 2 + 3, y + 6, cz, FLUORO, r.float(200, 400), 'faulty');
+          if (r.chance(0.2)) B.lamp(cx + w / 2 + 2, y + 6, cz, FLUORO, r.float(200, 400), 'faulty', { to: [cx + w / 2, y + 6.8, cz], size: 2, far: true });
         } else {
           block(B, 'barrier', cx, y + p.baseH / 2, cz, w, p.baseH, d);
           const L = B.L(cx, y + (p.baseH + p.h) / 2, cz);
           B.add('macro', place(new THREE.CylinderGeometry(p.stackR * 0.85, p.stackR, p.h - p.baseH, 10), { x: L.x, y: L.y, z: L.z }));
           block(B, 'frame', cx, y + p.h - 2, cz, p.stackR * 2.3, 1.2, p.stackR * 2.3);
-          if (p.light) B.light(cx, y + p.h + 3, cz, SODIUM, r.float(300, 600), 'faulty');
+          if (p.light) B.lamp(cx, y + p.h + 3, cz, SODIUM, r.float(300, 600), 'faulty', { to: [cx + 1, y + p.h, cz], size: 2, far: true });
         }
       }
     }
@@ -218,8 +218,8 @@ function passageTower(F, B, b, p) {
     const c = V(dx * (35 + len / 2), y0 - 0.6, dz * (35 + len / 2));
     B.add('floor', place(new THREE.BoxGeometry(dx ? len : 10, 1.2, dz ? len : 10), { ...toXYZ(c) }));
   }
-  B.light(p.x, yTop + 2, p.z, SODIUM, 2500, 'steady');
-  B.light(p.x + 30, y0 + 8, p.z + 30, FLUORO, 400, 'faulty');
+  B.lamp(p.x + hw - 4, yTop + 2, p.z + hw, SODIUM, 2500, 'steady', { to: [p.x + hw, yTop + 3.5, p.z + hw], size: 4, far: true });
+  B.lamp(p.x + 60, y0 + 8, p.z + 3, FLUORO, 400, 'faulty', { to: [p.x + 60, y0, p.z + 4.5], size: 2, far: true });
   // luz caindo pela passagem, do alto até a plataforma
   B.add('beam', beamGeometry(V(0, b.top + 200, 0), b.top + 200 - y0, 38, 44));
 }
@@ -285,7 +285,7 @@ function buildGallery(F, B, box, owns, g) {
         // clarabóia: uma placa do teto falta e a luz desce até o piso
         if (yc > g.floor && k > 0 && k < nS - 1 && hash4(F.seed, i, k, Math.round(g.c), 305) < 0.025) {
           B.add('beam', beamGeometry(B.L(x, g.top + W + 40, z), g.h + W + 40, sStep * 0.42, sStep * 0.5));
-          B.light(x, g.floor + 30, z, COLD, 900, 'steady');
+          B.light(x, g.top + W / 2, z, COLD, 900, 'steady'); // a própria abertura é a fonte
           continue;
         }
         const [sx, sy, sz] = size(T, W, sStep);
@@ -311,7 +311,7 @@ function buildGallery(F, B, box, owns, g) {
       const [lx, ly, lz] = G(tc, g.top - 30, g.c);
       if (owns(lx, ly, lz)) {
         const warm = hash4(F.seed, i, Math.round(g.c), 3, 304) < 0.4;
-        B.light(lx, ly - 10, lz, warm ? SODIUM : FLUORO, 7000, hash4(F.seed, i, 5, 3, 305) < 0.25 ? 'faulty' : 'steady');
+        B.lamp(lx, ly - 3.8, lz, warm ? SODIUM : FLUORO, 7000, hash4(F.seed, i, 5, 3, 305) < 0.25 ? 'faulty' : 'steady', { size: 6, far: true });
         const [sx, , sz] = size(40, 1, 12);
         block(B, 'wall', lx, ly, lz, sx, 6, sz); // a carcaça da luminária
         B.add('wall', cylinderBetween(B.L(lx, ly + 3, lz), B.L(lx, g.top, lz), 1.2, 1.2, 4)); // haste
@@ -320,7 +320,7 @@ function buildGallery(F, B, box, owns, g) {
     // luz de trabalho rara lá no alto: alguém ainda constrói aqui
     if (hash4(F.seed, i, Math.round(g.c), 7, 301) < 0.05) {
       const side = hash4(F.seed, i, 1, 7, 302) < 0.5 ? -1 : 1;
-      const [x, y, z] = G(tc, g.floor + g.h * (0.3 + 0.6 * hash4(F.seed, i, 2, 7, 303)), g.c + side * (g.w / 2 - 3));
+      const [x, y, z] = G(tc, g.floor + g.h * (0.3 + 0.6 * hash4(F.seed, i, 2, 7, 303)), g.c + side * (g.w / 2 - 0.8));
       if (owns(x, y, z)) B.light(x, y, z, WELD, 500, 'weld');
     }
   }
@@ -378,8 +378,8 @@ function buildShaft(F, B, box, owns, s) {
     // luzes de sinalização descendo pelo poço, a perder de vista
     if (hash4(F.seed, j, Math.round(s.x), Math.round(s.z), 310) < 0.18) {
       const lx = s.x + (hash4(F.seed, j, 1, 0, 311) - 0.5) * s.wx * 0.8;
-      const lz = s.z - hz + 3;
-      if (owns(lx, yc, lz)) B.light(lx, yc, lz, j % 3 === 0 ? FLUORO : SODIUM, 1200, hash4(F.seed, j, 2, 0, 312) < 0.3 ? 'faulty' : 'steady');
+      const lz = s.z - hz + 2;
+      if (owns(lx, yc, lz)) B.lamp(lx, yc, lz, j % 3 === 0 ? FLUORO : SODIUM, 1200, hash4(F.seed, j, 2, 0, 312) < 0.3 ? 'faulty' : 'steady', { to: [lx, yc + 0.8, s.z - hz], size: 2, far: true });
     }
   }
 }
@@ -430,7 +430,7 @@ function genStrata(F, B, box, owns) {
         block(B, 'wall', x, st.top + h / 2, z, side, h, side);
         block(B, 'wall', x, st.top + h + 6, z, side * 1.6, 12, side * 1.6); // capitel
         block(B, 'floor', x, st.top + 3, z, side * 1.4, 6, side * 1.4); // base
-        if (r.chance(0.3)) B.light(x + side * 0.8, st.top + 30, z, SODIUM, 1500, 'steady');
+        if (r.chance(0.3)) B.lamp(x + side / 2 + 2.5, st.top + 30, z, SODIUM, 1500, 'steady', { to: [x + side / 2, st.top + 31, z], size: 2, far: true });
       }
     }
   }
@@ -480,7 +480,7 @@ function genFrames(F, B, box, owns) {
         if (joints && clearOf(x, y, z, 15, 20)) {
           const n = 16 + hash4(F.seed, i, j, k, 330) * 14;
           block(B, 'wall', x, y, z, n, n, n);
-          if (hash4(F.seed, i, j, k, 331) < 0.06) B.light(x, y + n, z, hash4(F.seed, i, j, k, 332) < 0.5 ? SODIUM : COLD, 1200, 'faulty');
+          if (hash4(F.seed, i, j, k, 331) < 0.06) B.lamp(x, y + n / 2 + 3, z, hash4(F.seed, i, j, k, 332) < 0.5 ? SODIUM : COLD, 1200, 'faulty', { to: [x + 1, y + n / 2, z], size: 2, far: true });
         }
       }
     }
@@ -581,7 +581,8 @@ function genConduits(F, B, box) {
       // tiras de luz a cada 160 m
       if (Math.round(t / T) % 2 === 0) {
         const [lx, ly, lz] = G(t + T / 2, c.R * 0.75);
-        B.light(lx, ly, lz, hash4(F.seed, Math.round(t), 0, 0, 350) < 0.5 ? FLUORO : COLD, 1000, hash4(F.seed, Math.round(t), 1, 0, 351) < 0.2 ? 'faulty' : 'steady');
+        const [tx, ty, tz] = G(t + T / 2, c.R);
+        B.lamp(lx, ly, lz, hash4(F.seed, Math.round(t), 0, 0, 350) < 0.5 ? FLUORO : COLD, 1000, hash4(F.seed, Math.round(t), 1, 0, 351) < 0.2 ? 'faulty' : 'steady', { to: [tx, ty, tz], size: 1.5, far: true });
       }
     }
   }
@@ -623,6 +624,10 @@ const ANOMALIES = {
       const s = R * r.float(1.6, 2.6);
       B.add('wall', place(new THREE.BoxGeometry(s, r.float(8, 20), s), { x: p.x, y: p.y, z: p.z }));
     }
-    B.light(g[0], g[1], g[2], SODIUM, r.float(500, 1000), 'faulty');
+    const mid = a.clone().lerp(b, 0.5);
+    const gx = mid.x + B.x0;
+    const gy = mid.y + B.y0;
+    const gz = mid.z + B.z0;
+    B.lamp(gx + R + 4, gy, gz, SODIUM, r.float(500, 1000), 'faulty', { to: [gx, gy + 1, gz], size: 4, far: true });
   },
 };

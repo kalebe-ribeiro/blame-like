@@ -95,7 +95,8 @@ function buildLine(F, B, axis, u, y, t0, t1, w, salt) {
     box('slab', ts, 4.35, pc, L, pw + 0.6, 0.35);
     // placa numa ponta e a luz
     box('sign', ts + L / 2 - 1.2, 3.2, pc, 0.15, pw * 0.7, 0.9);
-    const lp = G(ts, 3.8, pc);
-    B.light(lp.x + B.x0, lp.y + B.y0, lp.z + B.z0, FLUORO, 45, (s & 3) === 0 ? 'faulty' : 'steady');
+    // pendurada da laje do abrigo
+    const lp = G(ts, 3.6, pc);
+    B.lamp(lp.x + B.x0, lp.y + B.y0, lp.z + B.z0, FLUORO, 45, (s & 3) === 0 ? 'faulty' : 'steady', { to: [lp.x + B.x0, lp.y + B.y0 + 0.6, lp.z + B.z0] });
   }
 }

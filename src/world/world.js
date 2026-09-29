@@ -50,9 +50,9 @@ const LOD0_RADIUS = 420;
 const LOD1_RADIUS = 1300;
 
 // materiais que somem perto do raio dos chunks / da camada macro
-const NEAR_MATS = ['tower', 'bridge', 'rib', 'cable', 'duct', 'dress', 'block', 'slab', 'monolith', 'organic', 'plaza', 'tube', 'hive', 'massif',
+const NEAR_MATS = ['lamp', 'tower', 'bridge', 'rib', 'cable', 'duct', 'dress', 'block', 'slab', 'monolith', 'organic', 'plaza', 'tube', 'hive', 'massif',
   'rungs', 'grate', 'door', 'sign', 'shack', 'cloth', 'screen', 'graffiti', 'water'];
-const FAR_MATS = ['wall', 'floor', 'frame', 'stairway', 'macro', 'anomaly', 'conduit', 'barrier', 'beam', 'cascade', 'pool', 'flood'];
+const FAR_MATS = ['lampFar', 'wall', 'floor', 'frame', 'stairway', 'macro', 'anomaly', 'conduit', 'barrier', 'beam', 'cascade', 'pool', 'flood'];
 /** Período do deslocamento de origem nos shaders (múltiplo de CHUNK). */
 const ORIGIN_PERIOD = CHUNK * 340; // ~65 km: o salto do padrão é raríssimo
 /** Distância da origem da cena que dispara a reindexação. */
@@ -234,6 +234,9 @@ export class World {
       // setores inundados: lâmina d'água parada de quilômetros
       flood: mk({ base: C(0.03, 0.032, 0.034), panel: 100, streaks: 0, accentAmount: 0, wet: 1, fogAmount: 0.6, fade: fadeMacro, reflect: true }),
       machine: mk({ ...steel, base: C(0.1, 0.1, 0.105), accentAmount: 0.6, panel: 2.5, fogAmount: 0.6 }),
+      // a lente das luminárias: clara, acesa pela própria luz logo abaixo dela
+      lamp: mk({ base: C(0.85, 0.82, 0.74), panel: 100, streaks: 0, accentAmount: 0, fogAmount: 0.5, fade: fadeNear }),
+      lampFar: mk({ base: C(0.85, 0.82, 0.74), panel: 100, streaks: 0, accentAmount: 0, fogAmount: 0.35, fade: fadeMacro }),
       // máquinas colossais nas trincheiras do teto (vistas a quilômetros)
       colossus: mk({ ...steel, base: C(0.085, 0.085, 0.09), accentAmount: 0.5, panel: 7, windows: 0.04, windowSize: [4, 2.5], windowColor: C(0.95, 0.62, 0.32), fogAmount: 0.35, fade: fadeMacro }),
       beam: createBeamMaterial(S, { color: new THREE.Vector3(0.95, 0.88, 0.75), intensity: 0.05, fade: fadeMacro }),
@@ -260,9 +263,21 @@ export class World {
     L.addFixed({ color: sodium, intensity: 450, mode: 'follow', offset: V3(40, -300, -60) }); // brasa distante lá embaixo
     L.addFixed({ color: cold, intensity: 700, mode: 'follow', offset: V3(-80, 450, -120) }); // clarão frio lá em cima
 
-    // estática (global): a lâmpada de sódio sobre a ponte inicial
+    // estática (global): a lâmpada de sódio da ponte inicial, num poste de verdade
     const S = (x, y, z, c, intensity, mode = 'steady') => ({ x, y, z, color: [c.x, c.y, c.z], intensity, mode, phase: rng.float(0, 100) });
-    this.staticLights = [S(3.5, 3.5, 44, sodium, 30)];
+    this.staticLights = [S(1.9, 3.75, 44, sodium, 30)];
+    const m = this.materials;
+    const post = [
+      [new THREE.CylinderGeometry(0.1, 0.13, 3.9, 6), m.duct, 2.5, 2.35, 44], // poste
+      [new THREE.BoxGeometry(0.7, 0.12, 0.12), m.duct, 2.2, 4.25, 44], // braço
+      [new THREE.BoxGeometry(0.7, 0.3, 0.7), m.machine, 1.9, 4.05, 44], // carcaça
+      [new THREE.BoxGeometry(0.5, 0.1, 0.5), m.lamp, 1.9, 3.85, 44], // lente
+    ];
+    for (const [geo, mat, x, y, z] of post) {
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, z);
+      this.staticGroup.add(mesh);
+    }
   }
 
   /**
