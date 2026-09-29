@@ -21,6 +21,12 @@
 //  outros envios (BatchSet.tick) — quando a página enche, a seguinte já está
 //  na GPU e só recebe atualizações parciais (baratas).
 //
+//  Fragmentação: vagas livres só servem a chunks de porte parecido, então com
+//  o tempo sobram buracos e as páginas se multiplicam (mais memória e mais
+//  trabalho por quadro). Num quadro calmo, a página mais esburacada é
+//  compactada (BatchedMesh.optimize: as vagas vivas deslizam para o começo,
+//  com envios parciais) e páginas que ficam vazias além da folga são jogadas fora.
+//
 //  Os shaders precisam de <batching_pars_vertex>/<batching_vertex> — ver
 //  shaders/materials.js.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,6 +37,7 @@ const PAGE_MAX = 1 << 17; // teto das páginas seguintes (~3 MB: um envio só pa
 const SPARE_AT = 0.3; // abaixo desta folga (fração de uma página), prepara a próxima
 const INDEX_PER_VERTEX = 2.5; // capacidade de índices por vértice numa página
 const START_INSTANCES = 64;
+const COMPACT_AT = 0.2; // fração da página em vagas livres para valer compactar
 
 /** Arredonda para cima numa escala de passos de ~25% (classes de vaga). */
 function sizeClass(n) {
@@ -55,9 +62,56 @@ class MaterialBatch {
     page.perObjectFrustumCulled = true;
     page.sortObjects = !this.material.transparent; // opacos de frente para trás (early-z)
     page.renderOrder = this.renderOrder;
+    page.freeV = 0; // vértices reservados em vagas livres nesta página
     this.pages.push(page);
     this.set.parent.add(page);
     return page;
+  }
+
+  /** Vértices ainda livres no fim das páginas. */
+  _tailFree() {
+    let free = 0;
+    for (const p of this.pages) free += p.unusedVertexCount;
+    return free;
+  }
+
+  /** A página mais esburacada (se valer a pena compactar), ou null. */
+  worstPage() {
+    let worst = null;
+    for (const p of this.pages) {
+      if (p.freeV > p._maxVertexCount * COMPACT_AT && (!worst || p.freeV > worst.freeV)) worst = p;
+    }
+    return worst;
+  }
+
+  /** Apaga as vagas livres da página e junta as vivas no começo dela. */
+  compact(page) {
+    const keep = [];
+    for (const s of this.free) {
+      if (s.page === page) page.deleteGeometry(s.geo);
+      else keep.push(s);
+    }
+    this.free = keep;
+    page.freeV = 0;
+    const live = page._geometryInfo.some((g) => g.active);
+    if (!live && this._tailFree() - page.unusedVertexCount >= PAGE_MAX * SPARE_AT) {
+      // vazia e sobra folga nas outras: descarta a página
+      this.pages.splice(this.pages.indexOf(page), 1);
+      page.removeFromParent();
+      page.dispose();
+      return;
+    }
+    if (live) {
+      page.optimize();
+      // no r170 o optimize() marca os trechos movidos mas não pede o envio
+      const geo = page.geometry;
+      for (const key in geo.attributes) if (geo.attributes[key].updateRanges.length) geo.attributes[key].needsUpdate = true;
+      if (geo.index?.updateRanges.length) geo.index.needsUpdate = true;
+    } else {
+      // optimize() não zera o fim quando não há nada vivo
+      page._nextVertexStart = 0;
+      page._nextIndexStart = 0;
+    }
   }
 
   add(geometry, matrix) {
@@ -78,6 +132,7 @@ class MaterialBatch {
       slot.page.setGeometryAt(slot.geo, geometry);
       slot.page.setMatrixAt(slot.inst, matrix);
       slot.page.setVisibleAt(slot.inst, true);
+      slot.page.freeV -= slot.rv;
       slot.v = v;
       return slot;
     }
@@ -85,7 +140,18 @@ class MaterialBatch {
     // 2) uma vaga nova no fim de alguma página com espaço
     const rv = sizeClass(v);
     const ri = sizeClass(i);
-    let page = this.pages.find((p) => p.unusedVertexCount >= rv && p.unusedIndexCount >= ri);
+    const fits = (p) => p.unusedVertexCount >= rv && p.unusedIndexCount >= ri;
+    let page = this.pages.find(fits);
+    if (!page) {
+      // antes de abrir uma página nova (mais memória, mais trabalho por quadro),
+      // compacta a mais esburacada se os buracos dela bastam (~3 ms)
+      let holed = null;
+      for (const p of this.pages) if (p.freeV >= rv && (!holed || p.freeV > holed.freeV)) holed = p;
+      if (holed) {
+        this.compact(holed);
+        if (holed.parent && fits(holed)) page = holed;
+      }
+    }
     page ??= this._newPage(rv, ri);
     if (page._availableInstanceIds.length === 0 && page._instanceInfo.length >= page.maxInstanceCount) {
       page.setInstanceCount(page.maxInstanceCount * 2);
@@ -94,21 +160,18 @@ class MaterialBatch {
     const inst = page.addInstance(geo);
     page.setMatrixAt(inst, matrix);
     // pouca folga sobrando: pede uma página reserva (criada num quadro calmo)
-    let free = 0;
-    for (const p of this.pages) free += p.unusedVertexCount;
-    if (free < PAGE_MAX * SPARE_AT) this.set.wantSpare.add(this);
+    if (this._tailFree() < PAGE_MAX * SPARE_AT) this.set.wantSpare.add(this);
     return { page, geo, inst, rv, ri, v };
   }
 
   /** Cria a página reserva vazia (vai para a GPU no próximo desenho). */
   spare() {
-    let free = 0;
-    for (const p of this.pages) free += p.unusedVertexCount;
-    if (free < PAGE_MAX * SPARE_AT) this._newPage(64, 64);
+    if (this._tailFree() < PAGE_MAX * SPARE_AT) this._newPage(64, 64);
   }
 
   remove(slot) {
     slot.page.setVisibleAt(slot.inst, false);
+    slot.page.freeV += slot.rv;
     slot.v = 0;
     this.free.push(slot);
   }
@@ -121,16 +184,41 @@ export class BatchSet {
     this.batches = new Map(); // material → MaterialBatch
     this.wantSpare = new Set();
     this._addedThisFrame = 0;
+    this._sinceCompact = 0;
   }
 
-  /** Uma vez por quadro, depois dos envios: num quadro sem envios, cria uma página reserva. */
+  /**
+   * Uma vez por quadro, depois dos envios. Num quadro sem envios faz UMA
+   * tarefa de manutenção: criar uma página reserva ou compactar uma página.
+   */
   tick() {
-    if (this._addedThisFrame === 0 && this.wantSpare.size) {
+    const quiet = this._addedThisFrame === 0;
+    this._addedThisFrame = 0;
+    if (!quiet) return;
+    if (this.wantSpare.size) {
       const mb = this.wantSpare.values().next().value;
       this.wantSpare.delete(mb);
       mb.spare();
+      return;
     }
-    this._addedThisFrame = 0;
+    // de tempos em tempos procura a página mais esburacada de todos os materiais
+    if (++this._sinceCompact < 8) return;
+    this._sinceCompact = 0;
+    let best = null;
+    let bestMb = null;
+    for (const mb of this.batches.values()) {
+      const p = mb.worstPage();
+      if (p && (!best || p.freeV / p._maxVertexCount > best.freeV / best._maxVertexCount)) {
+        best = p;
+        bestMb = mb;
+      }
+    }
+    if (best) {
+      const t0 = performance.now();
+      bestMb.compact(best);
+      this.compactMs = Math.max(this.compactMs ?? 0, performance.now() - t0);
+      this.compactions = (this.compactions ?? 0) + 1;
+    }
   }
 
   /**
@@ -162,15 +250,17 @@ export class BatchSet {
     let used = 0;
     let cap = 0;
     let pages = 0;
+    let freeSlots = 0;
     for (const mb of this.batches.values()) {
+      freeSlots += mb.free.length;
       for (const p of mb.pages) {
         cap += p._maxVertexCount;
         pages++;
-        for (const g of p._geometryInfo) used += g.vertexCount ?? 0;
+        for (const g of p._geometryInfo) if (g.active) used += g.vertexCount;
       }
       for (const s of mb.free) used -= s.page._geometryInfo[s.geo].vertexCount ?? 0;
     }
-    return { pages, used, cap };
+    return { pages, used, cap, freeSlots, materials: this.batches.size };
   }
 
   dispose() {

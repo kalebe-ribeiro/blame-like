@@ -21,6 +21,9 @@ export function setupDev(ctx) {
 
   // --stats: FPS e streaming no terminal a cada 2 s
   if (params.get('stats')) {
+    const gl = renderer.getContext();
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    console.warn(`gpu=${dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)}`);
     let frames = 0;
     const count = () => {
       frames++;
@@ -31,9 +34,11 @@ export function setupDev(ctx) {
       const g = world.toGlobal(camera.position);
       const s = world.stats;
       const info = renderer.info.render;
+      const bs = world.batches.stats;
       console.warn(
         `fps=${(frames / 2).toFixed(0)} chunks=${s.chunks} lod1=${s.lod1} lod2=${s.lod2} macro=${s.macro} fila=${s.pending} ` +
-          `lotes=${world.batches.stats.pages} draws=${info.calls} tris=${(info.triangles / 1e6).toFixed(2)}M pos=${g.x.toFixed(0)},${g.y.toFixed(0)},${g.z.toFixed(0)} região=${world.regionAt(camera.position)}`,
+          `lotes=${bs.pages} uso=${Math.round((100 * bs.used) / bs.cap)}% livres=${bs.freeSlots} mats=${bs.materials} comp=${world.batches.compactions ?? 0}/${(world.batches.compactMs ?? 0).toFixed(1)}ms draws=${info.calls} tris=${(info.triangles / 1e6).toFixed(2)}M pos=${g.x.toFixed(0)},${g.y.toFixed(0)},${g.z.toFixed(0)} região=${world.regionAt(camera.position)}` +
+          (performance.memory ? ` heap=${Math.round(performance.memory.usedJSHeapSize / 1048576)}MB` : ''),
       );
       frames = 0;
     }, 2000);
