@@ -7,10 +7,18 @@
 //  (transporte, novo lugar) viram tracejado. Marcos: quedas grandes, viagens
 //  de trilho, fotos. Guardado no mundo salvo (app/saves.js).
 //
+//  Descobertas (ver o cofre, Mapa-de-descobertas), dadas por quem abre o mapa
+//  (setFound): os setores por onde você passou (a mancha do tamanho de um
+//  setor, com o estado da energia), os terminais lidos, as estruturas únicas
+//  e — na Peregrinação — as PISTAS: um círculo tracejado com a área de
+//  incerteza (encolhe conforme você junta partes e entende as palavras) e a
+//  rota, escrita como a Cidade escreve.
+//
 //  A vista gira devagar sozinha; arrastar gira, a roda aproxima.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { t, fmtNum, fmtDist, applyDom } from '../i18n/index.js';
+import { drawTokens } from '../lang/ancient.js';
 
 const STEP = 8; // m entre pontos
 const MAX = 40000;
@@ -25,6 +33,18 @@ export class TrailMap {
     this.pitch = 0.5;
     this.zoom = 1;
     this.open = false;
+    this.found = { places: [], leads: [], sectors: [] };
+  }
+
+  /**
+   * O que foi descoberto, para desenhar junto do rastro:
+   *   places  [{ x, y, z, unique }]           terminais lidos (unique: estrutura única)
+   *   leads   [{ x, y, z, r, open, tokens }]   pistas (centro estimado e raio)
+   *   sectors [{ x, y, z, state }]             setores por onde passou
+   *   known(w), word(w)                        o léxico, para escrever as rotas
+   */
+  setFound(found) {
+    this.found = found;
   }
 
   /** Carrega o rastro do mundo salvo (null = começa vazio). */
@@ -76,6 +96,7 @@ export class TrailMap {
       <div class="tm-legend">
         <span><i class="tm-l0"></i><b data-i18n="map.path"></b></span><span><i class="tm-l1"></i><b data-i18n="map.rails"></b></span>
         <span><i class="tm-l2"></i><b data-i18n="map.jump"></b></span><span><i class="tm-q"></i><b data-i18n="map.fall"></b></span><span><i class="tm-f"></i><b data-i18n="map.photo"></b></span>
+        <span><i class="tm-t"></i><b data-i18n="map.terminal"></b></span><span><i class="tm-u"></i><b data-i18n="map.unique"></b></span><span class="tm-lead-key"><i class="tm-p"></i><b data-i18n="map.lead"></b></span><span><i class="tm-s"></i><b data-i18n="map.sector"></b></span>
         <span class="tm-hint" data-i18n="map.hint"></span>
       </div>`;
     document.body.appendChild(root);
@@ -129,6 +150,8 @@ export class TrailMap {
     g.fillRect(0, 0, W, H);
     const pts = this.pts;
     const cur = this.current;
+    const F = this.found;
+    this.el.querySelector('.tm-lead-key').style.display = F.known ? '' : 'none';
     if (!pts.length) {
       g.fillStyle = 'rgba(200,196,184,0.5)';
       g.font = `${13 * devicePixelRatio}px Consolas, monospace`;
@@ -137,14 +160,17 @@ export class TrailMap {
     }
     // caixa envolvente → centro e escala
     let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
-    for (const p of pts) {
-      if (p[0] < x0) x0 = p[0];
-      if (p[0] > x1) x1 = p[0];
-      if (p[1] < y0) y0 = p[1];
-      if (p[1] > y1) y1 = p[1];
-      if (p[2] < z0) z0 = p[2];
-      if (p[2] > z1) z1 = p[2];
-    }
+    const grow = (x, y, z, r = 0) => {
+      if (x - r < x0) x0 = x - r;
+      if (x + r > x1) x1 = x + r;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+      if (z - r < z0) z0 = z - r;
+      if (z + r > z1) z1 = z + r;
+    };
+    for (const p of pts) grow(p[0], p[1], p[2]);
+    // as pistas abertas entram na moldura: o mapa mostra para onde elas apontam
+    for (const l of F.leads) if (l.open) grow(l.x, l.y, l.z, l.r);
     const cx = (x0 + x1) / 2;
     const cy = (y0 + y1) / 2;
     const cz = (z0 + z1) / 2;
@@ -185,8 +211,29 @@ export class TrailMap {
       g.lineTo(bx, by);
       g.stroke();
     }
-    // o caminho
     const dpr = devicePixelRatio;
+    // um círculo no plano horizontal (em projeção): polígono de 40 lados
+    const ring = (x, y, z, r) => {
+      g.beginPath();
+      for (let i = 0; i <= 40; i++) {
+        const a = (i / 40) * Math.PI * 2;
+        const [px, py] = proj(x + Math.cos(a) * r, y, z + Math.sin(a) * r);
+        if (i) g.lineTo(px, py);
+        else g.moveTo(px, py);
+      }
+    };
+    // os setores por onde passou: manchas fracas, com o estado da energia
+    for (const s of F.sectors) {
+      ring(s.x, s.y, s.z, 380);
+      g.fillStyle = s.state === 'powered' ? 'rgba(200,206,196,0.035)' : s.state === 'unstable' ? 'rgba(215,160,90,0.035)' : 'rgba(0,0,0,0)';
+      g.fill();
+      g.setLineDash(s.state === 'dark' ? [2 * dpr, 5 * dpr] : []);
+      g.strokeStyle = s.state === 'powered' ? 'rgba(200,206,196,0.09)' : s.state === 'unstable' ? 'rgba(215,160,90,0.1)' : 'rgba(150,146,136,0.1)';
+      g.lineWidth = 1 * dpr;
+      g.stroke();
+    }
+    g.setLineDash([]);
+    // o caminho
     let prev = null;
     for (const p of pts) {
       const q = proj(p[0], p[1], p[2]);
@@ -220,6 +267,39 @@ export class TrailMap {
         g.strokeStyle = 'rgba(200,196,184,0.8)';
         g.strokeRect(mx - 3 * dpr, my - 3 * dpr, 6 * dpr, 6 * dpr);
       }
+    }
+    // terminais lidos e estruturas únicas
+    for (const p of F.places) {
+      const [px, py] = proj(p.x, p.y, p.z);
+      if (p.unique) {
+        g.strokeStyle = 'rgba(215,196,154,0.9)';
+        g.lineWidth = 1.4 * dpr;
+        g.strokeRect(px - 6 * dpr, py - 6 * dpr, 12 * dpr, 12 * dpr);
+        g.fillStyle = 'rgba(215,196,154,0.9)';
+        g.fillRect(px - 2 * dpr, py - 2 * dpr, 4 * dpr, 4 * dpr);
+      } else {
+        g.fillStyle = 'rgba(159,174,159,0.85)';
+        g.beginPath();
+        g.moveTo(px, py - 4 * dpr);
+        g.lineTo(px + 4 * dpr, py);
+        g.lineTo(px, py + 4 * dpr);
+        g.lineTo(px - 4 * dpr, py);
+        g.fill();
+      }
+    }
+    // as pistas: a área de incerteza (tracejada) e a rota ao lado
+    for (const l of F.leads) {
+      if (!l.open) continue;
+      ring(l.x, l.y, l.z, l.r);
+      g.setLineDash([4 * dpr, 5 * dpr]);
+      g.strokeStyle = 'rgba(215,160,90,0.55)';
+      g.lineWidth = 1.2 * dpr;
+      g.stroke();
+      g.setLineDash([]);
+      const [px, py] = proj(l.x, l.y, l.z);
+      g.fillStyle = 'rgba(215,160,90,0.8)';
+      g.fillRect(px - 1.5 * dpr, py - 1.5 * dpr, 3 * dpr, 3 * dpr);
+      if (F.known) drawTokens(g, l.tokens, px + 8 * dpr, py - 5 * dpr, F.known, F.word, { h: 7 * dpr, font: `${9 * dpr}px Consolas, monospace`, color: 'rgba(215,196,154,0.75)', maxW: 520 * dpr });
     }
     // início e onde você está
     const [sx, sy] = proj(pts[0][0], pts[0][1], pts[0][2]);

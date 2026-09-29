@@ -18,6 +18,7 @@
 //    electron . --outage=4 → força um apagão de setor aos 4 s
 //    electron . --collapse=4 → força um colapso distante aos 4 s
 //    electron . --wake=4 → desmaio aos 4 s (a sequência de queda e despertar)
+//    electron . --map=20 → abre o mapa da travessia aos 20 s
 //    electron . --sensor=terminal → com o sensor ligado (terminal | energy | motion), só na sessão
 //    electron . --stats   → imprime FPS e estatísticas do streaming no terminal
 //    electron . --novsync → sem limite de quadros (medir desempenho)
@@ -138,6 +139,7 @@ function createWindow() {
   if (argValue('archive')) query.set('archive', argValue('archive'));
   if (process.argv.includes('--lantern')) query.set('lantern', '1');
   if (argValue('sensor')) query.set('sensor', argValue('sensor'));
+  if (argValue('map')) query.set('map', argValue('map'));
   if (argValue('collapse')) query.set('collapse', argValue('collapse'));
   if (checkMode) {
     query.set('check', argValue('check') || '1'); // --check=trelica,escadaria: só esses

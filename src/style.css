@@ -87,6 +87,10 @@ html, body {
 .tm-q { width: 4px !important; height: 4px !important; border: none !important; background: rgba(176, 118, 62, 0.9); }
 .tm-f { width: 5px !important; height: 5px !important; border: 1px solid rgba(200, 196, 184, 0.8) !important; }
 .tm-hint { color: rgba(150, 146, 136, 0.55); }
+.tm-t { width: 6px !important; height: 6px !important; border: none !important; background: rgba(159, 174, 159, 0.85); transform: rotate(45deg); }
+.tm-u { width: 8px !important; height: 8px !important; border: 1px solid rgba(215, 196, 154, 0.9) !important; }
+.tm-p { width: 12px !important; height: 12px !important; border: 1px dashed rgba(215, 160, 90, 0.7) !important; border-radius: 50%; }
+.tm-s { width: 12px !important; height: 12px !important; border: 1px solid rgba(200, 206, 196, 0.25) !important; border-radius: 50%; }
 
 /* diário da travessia */
 .gate-diary {

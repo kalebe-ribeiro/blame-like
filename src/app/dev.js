@@ -41,6 +41,8 @@ export function setupDev(ctx) {
   }
   // --read=12: abre a leitura do terminal em frente aos N segundos
   if (params.get('read')) setTimeout(() => ctx.reading.tryUse(), Number(params.get('read')) * 1000);
+  // --map=20: abre o mapa da travessia aos N segundos
+  if (params.get('map')) setTimeout(() => ctx.ui.toggleMap(), Number(params.get('map')) * 1000);
   // --wake=4: desmaio (queda fatal) aos N segundos — para ver a sequência de despertar
   if (params.get('wake')) setTimeout(() => ctx.wake.start('impact'), Number(params.get('wake')) * 1000);
 

@@ -10,6 +10,7 @@ import { storeSlot } from './saves.js';
 import { TrailMap } from '../ui/trailmap.js';
 import { renderArchive } from '../ui/archive.js';
 import { leadLine } from '../lang/leads.js';
+import { t } from '../i18n/index.js';
 
 export function createTravel(ctx) {
   const { world, camera, controls } = ctx;
@@ -82,11 +83,25 @@ export function createTravel(ctx) {
     trail.mark(world.toGlobal(camera.position, g), 'foto');
   });
 
+  /** As descobertas deste mundo, para o mapa (ui/trailmap.js → setFound). */
+  function found() {
+    const places = Object.values(slot.archive?.records ?? {}).map((r) => ({ x: r.x, y: r.y, z: r.z, unique: r.kind.startsWith('unique') }));
+    const leads = ctx.rules.leads
+      ? ctx.leads.list().map(([id, rec]) => {
+          const a = ctx.leads.area(rec);
+          return { x: a.x, y: a.y, z: a.z, r: a.r, open: rec.state === 'open', tokens: leadLine(world.field, { id, ...rec }, rec.parts) };
+        })
+      : [];
+    const sectors = Object.values(slot.sectors ?? {});
+    return { places, leads, sectors, ...(ctx.rules.leads ? { known: (w) => ctx.lexicon.known(w), word: (w) => t(`word.${w}`) } : {}) };
+  }
+
   return {
     diary,
     trail,
     save,
     renderDiary,
+    found,
     here: () => world.toGlobal(camera.position, new THREE.Vector3()),
     /** Mundo novo na hora (R, modo Livre): rastro e mudanças do mundo zerados; o diário continua. */
     newWorld() {
@@ -95,6 +110,7 @@ export function createTravel(ctx) {
       slot.seed = ctx.seed;
       slot.changes = {};
       slot.leads = {};
+      slot.sectors = {};
     },
     update(dt) {
       world.toGlobal(camera.position, g);
@@ -117,6 +133,10 @@ export function createTravel(ctx) {
       if (regionTimer <= 0) {
         regionTimer = 1;
         diary.region(world.regionAt(camera.position));
+        // o setor em que você está (para o mapa): guardado uma vez, onde você entrou nele
+        const s = world.field.sectorAt(g.x, g.y, g.z);
+        slot.sectors ??= {};
+        if (!slot.sectors[s.id] && Object.keys(slot.sectors).length < 3000) slot.sectors[s.id] = { x: Math.round(g.x), y: Math.round(g.y), z: Math.round(g.z), state: s.state };
       }
       saveTimer -= dt;
       if (saveTimer <= 0) {

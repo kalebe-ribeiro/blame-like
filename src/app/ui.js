@@ -186,6 +186,7 @@ export function createUI(ctx) {
     if (settings.isOpen) settings.close();
     if (transport.isOpen) transport.close();
     gate.classList.add('hidden');
+    trail.setFound(ctx.travel.found());
     trail.show(ctx.travel.here());
   }
 
