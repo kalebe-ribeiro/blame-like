@@ -34,7 +34,7 @@ export class BuilderSystem {
     this.materials = materials;
     this.sites = new Map();
     this.lights = [];
-    this.events = []; // { kind: 'clang'|'weld', x, y, z } — consumidos pelo áudio
+    this.bus = null; // evento builder:work { kind: 'clang'|'weld', x, y, z }
     this.field = null;
     this._scanTimer = 0;
   }
@@ -244,7 +244,7 @@ export class BuilderSystem {
         // clarões de solda e marteladas
         if (Math.random() < dt * 6) {
           const wp = target.clone().add(site.group.position).add(origin);
-          this.events.push({ kind: Math.random() < 0.3 ? 'clang' : 'weld', x: wp.x, y: wp.y - BLOCK.h / 2, z: wp.z });
+          this.bus?.emit('builder:work', { kind: Math.random() < 0.3 ? 'clang' : 'weld', x: wp.x, y: wp.y - BLOCK.h / 2, z: wp.z });
         }
         if (tt >= WELD_T) {
           site.built.push(site.plan.shift());

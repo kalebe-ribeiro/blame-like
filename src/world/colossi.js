@@ -36,8 +36,7 @@ export class ColossusSystem {
     this.machines = new Map(); // id → { group, lane, k, pos, light }
     this.lanes = [];
     this.lights = [];
-    /** Baques para o som: { x, y, z } (consumidos por app/sound.js). */
-    this.events = [];
+    this.bus = null; // evento colossus:clamp { x, y, z }
     this._scan = 0;
     this._geo = null;
   }
@@ -190,9 +189,8 @@ export class ColossusSystem {
       this.lights.push(m.light);
       // o baque das garras (só as que dá para ouvir)
       const before = Math.floor((time - dt + m.clamp) / CLAMP);
-      if (Math.floor((time + m.clamp) / CLAMP) !== before && m.pos.distanceTo(g) < HEAR) this.events.push({ x, y, z });
+      if (Math.floor((time + m.clamp) / CLAMP) !== before && m.pos.distanceTo(g) < HEAR) this.bus?.emit('colossus:clamp', { x, y, z });
     }
-    if (this.events.length > 8) this.events.splice(0, this.events.length - 8);
   }
 
   /** A origem flutuante andou `delta`. */

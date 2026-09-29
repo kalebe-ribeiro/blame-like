@@ -16,52 +16,48 @@ export function createWorldSound(ctx) {
   let sawColossus = false;
   const g = new THREE.Vector3();
 
-  /** Liga os acontecimentos do mundo atual (chamado de novo a cada mundo novo). */
-  function wire() {
-    world.outages.onStart = (ev) => {
-      audio.powerDown(...ctx.placeOf(ev.c.x, ev.c.y, ev.c.z), ev.maxR);
-      controls.rumble(0.25, 0.1, 300);
-      ctx.travel.witnessed('outages');
-      hud.push(t('hud.outage.start', { sector: sectorName(ev) }));
-    };
-    world.outages.onRestore = (ev) => {
-      audio.powerUp(...ctx.placeOf(ev.c.x, ev.c.y, ev.c.z), ev.maxR);
-      hud.push(t('hud.outage.restore', { sector: sectorName(ev) }));
-    };
-    world.collapses.onStart = (ev) => {
-      const [pan, dist] = ctx.placeOf(ev.pos.x, ev.pos.y, ev.pos.z);
-      audio.collapseStart(pan, dist, ev.delay);
-      ctx.travel.witnessed('collapses');
-      hud.push(t('hud.collapse'));
-    };
-    world.collapses.onImpact = (ev) => {
-      const [pan, dist] = ctx.placeOf(ev.pos.x, ev.pos.y, ev.pos.z);
-      audio.collapseImpact(pan, dist);
-      setTimeout(() => controls.rumble(Math.max(0, 0.6 - dist / 800), 0.3, 700), Math.min(dist, 3000) / 0.34);
-    };
-    world.particles.onDrip = (x, y, z) => audio.dripAt(...ctx.placeOf(x, y, z));
-  }
-  wire();
+  // os acontecimentos do mundo chegam pelo barramento (core/events.js); ele
+  // sobrevive a um mundo novo, então basta escutar uma vez
+  const { bus } = world;
+  bus.on('outage:start', (ev) => {
+    audio.powerDown(...ctx.placeOf(ev.c.x, ev.c.y, ev.c.z), ev.maxR);
+    controls.rumble(0.25, 0.1, 300);
+    hud.push(t('hud.outage.start', { sector: sectorName(ev) }));
+  });
+  bus.on('outage:restore', (ev) => {
+    audio.powerUp(...ctx.placeOf(ev.c.x, ev.c.y, ev.c.z), ev.maxR);
+    hud.push(t('hud.outage.restore', { sector: sectorName(ev) }));
+  });
+  bus.on('collapse:start', (ev) => {
+    const [pan, dist] = ctx.placeOf(ev.pos.x, ev.pos.y, ev.pos.z);
+    audio.collapseStart(pan, dist, ev.delay);
+    hud.push(t('hud.collapse'));
+  });
+  bus.on('collapse:impact', (ev) => {
+    const [pan, dist] = ctx.placeOf(ev.pos.x, ev.pos.y, ev.pos.z);
+    audio.collapseImpact(pan, dist);
+    setTimeout(() => controls.rumble(Math.max(0, 0.6 - dist / 800), 0.3, 700), Math.min(dist, 3000) / 0.34);
+  });
+  bus.on('drip', (ev) => audio.dripAt(...ctx.placeOf(ev.x, ev.y, ev.z)));
+  // obras dos Construtores: marteladas e solda, onde acontecem
+  bus.on('builder:work', (ev) => {
+    const [pan, dist] = ctx.placeOf(ev.x, ev.y, ev.z);
+    if (ev.kind === 'clang') audio.clangAt(pan, dist);
+    else audio.weldAt(pan, dist);
+  });
+  // máquinas colossais: o baque das garras; perto, o chão treme junto
+  bus.on('colossus:clamp', (ev) => {
+    const [pan, dist] = ctx.placeOf(ev.x, ev.y, ev.z);
+    audio.colossusClamp(pan, dist);
+    if (dist < 900) setTimeout(() => controls.rumble(0.5 * (1 - dist / 900), 0.2, 400), dist / 0.34);
+    if (dist < 1500 && !sawColossus) {
+      sawColossus = true;
+      hud.push(t('hud.colossus'));
+    }
+  });
 
   return {
-    wire,
     update(dt) {
-      // obras dos Construtores: marteladas e solda, onde acontecem
-      for (const ev of world.builders.events.splice(0)) {
-        const [pan, dist] = ctx.placeOf(ev.x, ev.y, ev.z);
-        if (ev.kind === 'clang') audio.clangAt(pan, dist);
-        else audio.weldAt(pan, dist);
-      }
-      // máquinas colossais: o baque das garras; perto, o chão treme junto
-      for (const ev of world.colossi.events.splice(0)) {
-        const [pan, dist] = ctx.placeOf(ev.x, ev.y, ev.z);
-        audio.colossusClamp(pan, dist);
-        if (dist < 900) setTimeout(() => controls.rumble(0.5 * (1 - dist / 900), 0.2, 400), dist / 0.34);
-        if (dist < 1500 && !sawColossus) {
-          sawColossus = true;
-          hud.push(t('hud.colossus'));
-        }
-      }
       spaceTimer -= dt;
       if (spaceTimer > 0) return;
       spaceTimer = 0.5;

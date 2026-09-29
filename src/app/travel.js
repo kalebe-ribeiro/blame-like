@@ -36,22 +36,26 @@ export function createTravel(ctx) {
       diary.lines().map(([k, v]) => `<div class="diary-row"><span>${k}</span><b>${v}</b></div>`).join('');
   }
 
+  // o diário escuta o barramento (core/events.js)
+  const { bus } = world;
+  bus.on('outage:start', () => diary.add('outages'));
+  bus.on('collapse:start', () => diary.add('collapses'));
+  bus.on('player:board', () => diary.add('rides'));
+  bus.on('player:fall', ({ height }) => {
+    diary.fall(height);
+    if (height > 40) trail.mark(world.toGlobal(camera.position, g), 'queda', height);
+  });
+  bus.on('player:photo', () => {
+    diary.add('photos');
+    trail.mark(world.toGlobal(camera.position, g), 'foto');
+  });
+
   return {
     diary,
     trail,
     save,
     renderDiary,
     here: () => world.toGlobal(camera.position, new THREE.Vector3()),
-    fell(height) {
-      diary.fall(height);
-      if (height > 40) trail.mark(world.toGlobal(camera.position, g), 'queda', height);
-    },
-    boarded: () => diary.add('rides'),
-    witnessed: (what) => diary.add(what),
-    photographed() {
-      diary.add('photos');
-      trail.mark(world.toGlobal(camera.position, g), 'foto');
-    },
     /** Mundo novo: rastro novo, nada de "salto" contado como distância. */
     newWorld() {
       hasLast = false;

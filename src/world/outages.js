@@ -33,8 +33,7 @@ export class OutageSystem {
     this.shared = shared;
     this.events = []; // { id, c: Vector3 global, maxR, t0, dark, done }
     this.enabled = true;
-    this.onStart = null; // (evento) — áudio / interface
-    this.onRestore = null;
+    this.bus = null; // eventos outage:start / outage:restore (core/events.js)
     this._next = 50 + Math.random() * 40; // o primeiro não vem logo de cara
     this._id = 0;
   }
@@ -59,7 +58,7 @@ export class OutageSystem {
     };
     ev.tEnd = ev.t0 + ev.maxR / SPREAD + ev.dark + (ev.maxR + EDGE * 2) / RESTORE + 6;
     this.events.push(ev);
-    this.onStart?.(ev);
+    this.bus?.emit('outage:start', ev);
   }
 
   /** Raios atuais da frente de queda e de religamento. */
@@ -83,7 +82,7 @@ export class OutageSystem {
       const [, back] = this._fronts(ev, time);
       if (!ev.restoring && back > 0) {
         ev.restoring = true;
-        this.onRestore?.(ev);
+        this.bus?.emit('outage:restore', ev);
       }
     }
     this.events = this.events.filter((ev) => time < ev.tEnd && ev.c.distanceTo(g) < 6000);

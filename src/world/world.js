@@ -32,6 +32,7 @@ import { SilhouetteSystem } from './silhouettes.js';
 import { CollapseSystem } from './collapses.js';
 import { TransitCars } from './transitCars.js';
 import { ColossusSystem } from './colossi.js';
+import { EventBus } from '../core/events.js';
 import { TerminalSystem } from './terminals.js';
 import { CHUNK, MACRO, Field } from '../gen/field.js';
 
@@ -77,7 +78,10 @@ export class World {
     this.staticGroup = null;
     this.streamGroup = null;
     this.lights = new LightRig(shared);
+    /** Tudo o que acontece no mundo passa por aqui (core/events.js). */
+    this.bus = new EventBus();
     this.outages = new OutageSystem(shared);
+    this.outages.bus = this.bus;
     this.lights.outages = this.outages;
     this.staticLights = [];
     this.seed = 0;
@@ -135,26 +139,26 @@ export class World {
     this.elevators.field = this.field;
     this.builders = new BuilderSystem(this.streamGroup, m);
     this.builders.field = this.field;
+    this.builders.bus = this.bus;
     this.transit = new TransitCars(this.streamGroup, m);
     this.transit.field = this.field;
     this.transit.outages = this.outages;
     this.colossi = new ColossusSystem(this.streamGroup, m);
     this.colossi.field = this.field;
+    this.colossi.bus = this.bus;
     this.elevators.outages = this.outages;
     this.terminals = new TerminalSystem(this.streamGroup, m, this.seed);
     Object.assign(this.terminals, { field: this.field, transit: this.transit, outages: this.outages });
     this.particles = new ParticleSystem(this.streamGroup);
+    this.particles.bus = this.bus;
     // o horizonte impossível: estruturas a dezenas de km, só sombras na poeira
     this.silhouettes = new SilhouetteSystem(this.streamGroup, this.shared, this.seed);
     // pedaços de pilares distantes se soltando
     const prevCollapses = this.collapses;
     this.collapses = new CollapseSystem(this.streamGroup, m, this.shared);
     this.collapses.field = this.field;
-    if (prevCollapses) {
-      this.collapses.enabled = prevCollapses.enabled;
-      this.collapses.onStart = prevCollapses.onStart;
-      this.collapses.onImpact = prevCollapses.onImpact;
-    }
+    this.collapses.bus = this.bus;
+    if (prevCollapses) this.collapses.enabled = prevCollapses.enabled;
     this.space = 200;
 
     // ── luzes ──

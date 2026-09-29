@@ -25,7 +25,7 @@ export class ParticleSystem {
     this.steam = null;
     this._timer = 0;
     this._near = []; // gotas perto (para o som)
-    this.onDrip = null; // (x, y, z globais) — uma gota tocou o chão
+    this.bus = null; // evento drip { x, y, z } — uma gota tocou o chão
   }
 
   update(time, dt, g, origin, emitters) {
@@ -40,7 +40,7 @@ export class ParticleSystem {
     // som das gotas mais próximas: detecta quando a fase "dá a volta" (impacto)
     for (const d of this._near) {
       const ph = (time * d.rate + d.phase) % 1;
-      if (ph < d.last) this.onDrip?.(d.x, d.y - d.len, d.z);
+      if (ph < d.last) this.bus?.emit('drip', { x: d.x, y: d.y - d.len, z: d.z });
       d.last = ph;
     }
   }

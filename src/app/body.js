@@ -39,7 +39,7 @@ export function createBody(ctx) {
     audio.land(Math.min(1, impact / 30));
     audio.impact(impact);
     controls.rumble(Math.min(1, Math.max(0, impact - 6) / 40), Math.min(1, impact / 30), 120 + Math.min(500, impact * 10));
-    ctx.travel.fell(height);
+    world.bus.emit('player:fall', { height });
     if (height > 80) hud.push(t('hud.fall', { m: fmtNum(Math.round(height)) }));
   };
   controls.onModeChange = (mode) => {
@@ -89,7 +89,7 @@ export function createBody(ctx) {
   function feelRide(dt) {
     const car = controls.mode === 'walk' && w.grounded ? world.transit.carOf(w.groundObj) : null;
     world.transit.riding = car;
-    if (car && !lastCar) ctx.travel.boarded();
+    if (car && !lastCar) world.bus.emit('player:board', { car });
     if (car && car === lastCar && car.powered !== lastPowered) {
       hud.push(t(car.powered ? 'hud.transit.power' : 'hud.transit.nopower'));
     }

@@ -54,8 +54,7 @@ export class CollapseSystem {
     this.enabled = true;
     this.maxDist = 380;
     this.events = [];
-    this.onStart = null; // (ev) — estalo
-    this.onImpact = null; // (ev) — estrondo lá embaixo
+    this.bus = null; // eventos collapse:start (estalo) / collapse:impact (estrondo lá embaixo)
     this._next = 40 + Math.random() * 50;
 
     // poeira: um anel de partículas compartilhado por todos os colapsos
@@ -166,7 +165,7 @@ export class CollapseSystem {
       this._puff(ev.pos.x + (Math.random() - 0.5) * size, ev.pos.y + (Math.random() - 0.5) * size, ev.pos.z + (Math.random() - 0.5) * size, time + ev.delay + Math.random() * 0.8, size * 0.5);
     }
     this.events.push(ev);
-    this.onStart?.(ev);
+    this.bus?.emit('collapse:start', ev);
     return ev;
   }
 
@@ -229,7 +228,7 @@ export class CollapseSystem {
       ev.deb.instanceMatrix.needsUpdate = true;
       if (!ev.impacted && t > ev.delay + ev.impactAt) {
         ev.impacted = true;
-        this.onImpact?.(ev);
+        this.bus?.emit('collapse:impact', ev);
       }
     }
     // remove os que já sumiram lá embaixo

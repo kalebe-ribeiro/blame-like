@@ -114,6 +114,7 @@ export function createUI(ctx) {
     const eye = dest.feet.clone().sub(world.origin);
     eye.y += 1.7;
     controls.setView({ pos: eye, yaw: dest.yaw, pitch: dest.pitch, scale: 1 });
+    world.bus.emit('player:transfer', { kind, from: g, to: dest.feet });
     hud.push(t('hud.transfer', { label: label.toUpperCase(), dist: fmtDist(dest.feet.distanceTo(g)) }));
     audio.start();
     audio.transfer(1);
@@ -139,7 +140,7 @@ export function createUI(ctx) {
   function photo() {
     takePhoto(ctx);
     audio.shutter();
-    ctx.travel.photographed();
+    world.bus.emit('player:photo');
   }
 
   // ─── novo mundo (R ou o botão) ───
@@ -148,7 +149,6 @@ export function createUI(ctx) {
     world.build(ctx.seed);
     world.setView({ renderDistance: ctx.settings.renderDistance, fog: ctx.settings.fog });
     ctx.travel.newWorld();
-    ctx.sound.wire();
     controls.setView(VIEWS.spawn);
     onWorldBuilt(ctx);
     applySettings(ctx.settings);
