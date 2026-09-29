@@ -65,6 +65,7 @@ export function createWorldSound(ctx) {
       if (spaceTimer > 0) return;
       spaceTimer = 0.5;
       audio.setSpace(world.spaceSize(camera.position));
+      audio.region = world.regionAt(camera.position); // a harmonia da trilha
       // rugido da cascata mais próxima (distância até a coluna d'água)
       world.toGlobal(camera.position, g);
       let best = Infinity;

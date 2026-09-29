@@ -19,12 +19,33 @@
 const rand = (a, b) => a + Math.random() * (b - a);
 const randInt = (a, b) => Math.floor(rand(a, b + 1));
 
+/**
+ * Trilha: acordes raros e lentos sobre o drone, com a harmonia do lugar.
+ * root em Hz (perto do ré do drone); cada conjunto em semitons acima da raiz.
+ */
+const HARMONY = {
+  deriva: { root: 73.42, sets: [[0, 7, 14, 17], [0, 5, 12, 19], [-2, 5, 10, 14]] }, // quintas e suspensões abertas
+  ponte: { root: 73.42, sets: [[0, 7, 14, 17], [0, 5, 12, 19]] },
+  abismo: { root: 49.0, sets: [[0, 7, 13], [0, 3, 7, 13], [0, 1, 12]] }, // segundas menores no fundo
+  altura: { root: 110.0, sets: [[0, 7, 11, 16], [0, 4, 11, 14], [0, 7, 14, 23]] }, // aberto, frio
+  colmeia: { root: 69.3, sets: [[0, 3, 10, 15], [0, 2, 7, 10], [0, 3, 8, 14]] }, // fechado, apertado
+  macico: { root: 41.2, sets: [[0, 7, 12, 19], [0, 12, 19], [0, 5, 12]] }, // quintas paralelas, colossal
+  vazio: { root: 146.8, sets: [[0, 7, 19], [0, 12, 23], [0, 14]] }, // quase nada, alto
+  camada: { root: 61.74, sets: [[0, 5, 10, 15], [0, 5, 10, 17]] }, // quartas
+  estrato: { root: 82.41, sets: [[0, 5, 7, 12], [0, 7, 12, 14]] },
+  galeria: { root: 65.41, sets: [[0, 7, 10, 14], [0, 3, 7, 10]] },
+  poco: { root: 65.41, sets: [[0, 7, 10, 14], [0, 12, 15]] },
+  conduto: { root: 65.41, sets: [[0, 7, 10, 14], [0, 5, 10]] },
+};
+
 export class AudioEngine {
   constructor() {
     this.ctx = null;
     this._timers = [];
     this.droneOscs = [];
     this.pitch = 1;
+    this.music = true; // trilha ligada (configurações)
+    this.region = 'deriva';
   }
 
   get running() {
@@ -75,6 +96,53 @@ export class AudioEngine {
     this._loop(() => this._randomAmbient(), () => rand(1.5, 7));
     this._loop(() => this._groan(), () => rand(22, 50), rand(8, 15));
     this._loop(() => this._construction(), () => rand(6, 20), rand(3, 6));
+    this._loop(() => this.music && this._chord(), () => rand(60, 150), rand(25, 45));
+  }
+
+  /**
+   * Um acorde da trilha: sobe devagar (~7 s), fica, e se desfaz na reverberação
+   * (~14 s). Cada voz são duas ondas levemente desafinadas, abertas no estéreo,
+   * por um filtro que respira. Nada de melodia: só a harmonia do lugar mudando.
+   */
+  _chord() {
+    const ctx = this.ctx;
+    const h = HARMONY[this.region] ?? HARMONY.deriva;
+    const set = h.sets[randInt(0, h.sets.length - 1)];
+    const t = ctx.currentTime;
+    const rise = rand(6, 9);
+    const hold = rand(6, 11);
+    const fall = rand(12, 16);
+    const end = t + rise + hold + fall;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.Q.value = 0.7;
+    lp.frequency.setValueAtTime(280, t);
+    lp.frequency.linearRampToValueAtTime(rand(650, 950), t + rise + hold * 0.5);
+    lp.frequency.linearRampToValueAtTime(240, end);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.linearRampToValueAtTime(1, t + rise);
+    env.gain.setValueAtTime(1, t + rise + hold);
+    env.gain.exponentialRampToValueAtTime(0.0001, end);
+    lp.connect(env);
+    this._out(env, 0.45, 1.1);
+    const level = 0.04 / Math.sqrt(set.length);
+    set.forEach((semi, i) => {
+      const f = h.root * Math.pow(2, semi / 12);
+      const pan = this._panner(((i / Math.max(1, set.length - 1)) * 2 - 1) * 0.6);
+      pan.connect(lp);
+      for (const [type, cents, a] of [['triangle', -4, 1], ['sine', 5, 0.8]]) {
+        const o = ctx.createOscillator();
+        o.type = type;
+        o.frequency.value = f;
+        o.detune.value = cents + rand(-2, 2);
+        const g = ctx.createGain();
+        g.gain.value = level * a;
+        o.connect(g).connect(pan);
+        o.start(t);
+        o.stop(end + 0.1);
+      }
+    });
   }
 
   // ── infraestrutura ────────────────────────────────────────────────────────

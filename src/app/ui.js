@@ -65,6 +65,7 @@ export function createUI(ctx) {
     if (is('taa')) scenePass.taaEnabled = s.taa;
     if (is('shafts')) scenePass.shaftsEnabled = s.shafts;
     if (is('reflections')) reflection.enabled = s.reflections;
+    if (is('music')) audio.music = s.music;
     if (is('headBob')) controls.walker.bobScale = s.headBob ? 1 : 0;
     if (is('motionFx')) controls.walker.dipScale = s.motionFx ? 1 : 0;
     if (is('invertY')) controls.invertY = s.invertY;

@@ -22,6 +22,7 @@ export const DEFAULTS = {
   taa: true, // antialiasing temporal
   shafts: true, // raios de luz na névoa
   reflections: true, // reflexo da água nos setores inundados
+  music: true, // trilha: acordes raros e lentos sobre o drone
   headBob: true, // balanço da cabeça ao andar
   motionFx: true, // na queda: campo de visão abrindo, tremor, afundamento no pouso
   invertY: false, // inverter o eixo vertical (mouse e controle)
@@ -43,6 +44,7 @@ const FIELDS = [
   { key: 'taa', label: 'antialiasing temporal (TAA)', type: 'toggle' },
   { key: 'shafts', label: 'raios de luz na névoa', type: 'toggle' },
   { key: 'reflections', label: 'reflexo da água (setores inundados)', type: 'toggle' },
+  { key: 'music', label: 'trilha (acordes raros e lentos)', type: 'toggle' },
   { key: 'headBob', label: 'balanço da cabeça ao andar', type: 'toggle' },
   { key: 'motionFx', label: 'efeitos de queda (campo de visão, tremor)', type: 'toggle' },
   { key: 'invertY', label: 'inverter eixo vertical', type: 'toggle' },
