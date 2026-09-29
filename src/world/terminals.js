@@ -2,9 +2,10 @@
 //  Terminais mortos: consoles nas estações dos transportadores e no alto das
 //  passagens das camadas. A tela mostra registros procedurais — manutenção
 //  adiada há milhões de ciclos, avisos, listas de setores, "habitantes
-//  registrados: 0" — algumas palavras gastas a ponto de quase sumir. Nas
-//  estações, uma linha é viva: o horário real do próximo vagão.
-//  (Na fase 2 do plano estes terminais passam a falar a língua antiga.)
+//  registrados: 0" — na LÍNGUA ANTIGA (lang/ancient.js, lang/records.js):
+//  palavras já entendidas aparecem no idioma do jogo, as outras na escrita de
+//  estêncil; números sempre legíveis. Nas estações, uma linha é viva: o
+//  horário real do próximo vagão.
 //
 //  Só os terminais perto do observador existem (e só estes redesenham a
 //  tela). Sem energia (apagão), a tela apaga.
@@ -13,46 +14,14 @@ import * as THREE from 'three';
 import { TRANSIT, MEGA } from '../gen/field.js';
 import { stationT } from '../gen/transit.js';
 import { hash4, rngAt } from '../gen/hash.js';
-import { t, fmtNum } from '../i18n/index.js';
+import { t as tr } from '../i18n/index.js';
+import { drawTokens } from '../lang/ancient.js';
+import { terminalRecords } from '../lang/records.js';
 
 const RANGE = 90; // m: terminais existem só perto
 const W = 256;
 const H = 176;
 const LINE_H = 13;
-
-const hex = (n, d = 3) => `0x${(n >>> 0).toString(16).toUpperCase().padStart(d, '0').slice(-d)}`;
-const num = (n) => fmtNum(Math.round(n));
-
-/** Registros de um terminal (determinísticos pela semente; no idioma atual). */
-function writeLog(r, kind) {
-  const L = [];
-  const sector = hex(r.int(0, 4095));
-  L.push(t('term.header', { id: hex(r.int(0, 65535), 4), sector }));
-  L.push('────────────────────────────');
-  const pool = [
-    () => t('term.maint', { state: t(`term.maint.${r.int(0, 2)}`), n: num(r.int(40000, 9000000)) }),
-    () => t('term.inhabitants'),
-    () => t('term.lastAccess'),
-    () => t('term.gene'),
-    () => t('term.power', { p: r.int(3, 61), state: t(`term.power.${r.int(0, 2)}`) }),
-    () => t('term.construction'),
-    () => t('term.sectors', { a: hex(r.int(0, 4095)), b: hex(r.int(0, 4095)), c: hex(r.int(0, 4095)) }),
-    () => t('term.barrier', { n: r.int(2, 90) }),
-    () => t('term.passage', { km: fmtNum(r.float(1.5, 40), 1) }),
-    () => t('term.request', { id: hex(r.int(0, 65535), 4), n: num(r.int(300, 90000)) }),
-    () => t('term.floors', { n: num(r.int(1e5, 9e6)) }),
-    () => t('term.damaged', { p: r.int(0, 12) }),
-    () => t('term.object', { n: num(r.int(1000, 900000)) }),
-    () => t('term.route'),
-  ];
-  if (kind === 'passage') {
-    L.push(t('term.elevator', { n: r.int(2, 60) }));
-    L.push(t('term.thickness', { m: MEGA.barrierThick }));
-  }
-  const n = 7 + r.int(0, 3);
-  for (let i = 0; i < n; i++) L.push(r.pick(pool)());
-  return L;
-}
 
 export class TerminalSystem {
   constructor(parent, materials, seed) {
@@ -127,7 +96,7 @@ export class TerminalSystem {
     group.rotation.y = site.yaw;
     this.parent.add(group);
     const r = rngAt(this.seed, Math.round(site.x), Math.round(site.y), Math.round(site.z), 950);
-    return { site, group, screen, canvas, ctx: canvas.getContext('2d'), tex, lines: writeLog(r, site.kind), shown: 0, next: 0, r, powered: true };
+    return { site, group, screen, canvas, ctx: canvas.getContext('2d'), tex, lines: terminalRecords(this.field, site), shown: 0, next: 0, r, powered: true };
   }
 
   _draw(t, time) {
@@ -138,9 +107,10 @@ export class TerminalSystem {
       t.tex.needsUpdate = true;
       return;
     }
-    c.font = '10px Consolas, "Courier New", monospace';
-    c.textBaseline = 'top';
     const lines = t.lines.slice(0, t.shown);
+    const lex = this.world?.lexicon;
+    const known = (w) => !!lex && lex.known(w);
+    const word = (w) => tr(`word.${w}`);
     // linha viva nas estações: o horário do vagão
     if (t.site.kind === 'station' && this.transit) {
       const st = this.transit.stationStatus(t.site.line, t.site.s, time);
@@ -148,19 +118,8 @@ export class TerminalSystem {
     }
     let y = 8;
     for (let i = 0; i < lines.length && y < H - 12; i++) {
-      const line = lines[i];
-      const live = i === 2 && t.site.kind === 'station'; // o horário: sempre legível
-      c.fillStyle = i === 0 ? '#c9d4c8' : live ? '#d7c49a' : '#9fae9f';
-      let x = 8;
-      // palavras gastas pela tela velha: quase apagadas
-      for (const word of line.split(' ')) {
-        const h = hash4(this.seed, word.length * 31 + i, x, y, 951);
-        const worn = h < 0.1 && word.length > 2 && i > 1 && !live;
-        c.globalAlpha = worn ? 0.22 : 1;
-        c.fillText(word, x, y);
-        c.globalAlpha = 1;
-        x += c.measureText(word + ' ').width;
-      }
+      const live = i === 2 && t.site.kind === 'station'; // o horário: a linha viva
+      drawTokens(c, lines[i], 8, y, known, word, { h: 7, font: '10px Consolas, "Courier New", monospace', color: i === 0 ? '#c9d4c8' : live ? '#d7c49a' : '#9fae9f', maxW: W - 16 });
       y += LINE_H;
     }
     // cursor

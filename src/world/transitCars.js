@@ -22,7 +22,6 @@ import * as THREE from 'three';
 import { TRANSIT } from '../gen/field.js';
 import { stationT } from '../gen/transit.js';
 import { mergeAll, place } from './geometry.js';
-import { t } from '../i18n/index.js';
 
 const S = TRANSIT.station;
 const ACC = 0.9; // m/s² — pico de ~36 m/s (130 km/h) no meio do trecho
@@ -105,16 +104,17 @@ export class TransitCars {
     return { group: g, line, k, t: null, light: { x: 0, y: 0, z: 0, color: [0.66, 0.78, 0.7], intensity: 28, mode: 'steady', phase: k * 1.7 } };
   }
 
-  /** Texto do painel de horários da estação s (terminais). */
+  /** O horário da estação s (terminais), em tokens da língua antiga (lang/ancient.js). */
   stationStatus(line, s, time) {
     const k = this.clocks.get(line.id);
     const c = k ? k.c : time;
-    if (k && k.rate < 0.05) return t('transit.suspended');
+    if (k && k.rate < 0.05) return [{ w: 'CAR' }, { w: 'SUSPENDED' }, { p: '·' }, { w: 'POWER' }, { p: ':' }, { w: 'NONE' }];
     const tau = ((c % PERIOD) + PERIOD) % PERIOD;
-    const dir = t('transit.dir', { sign: line.track.dir > 0 ? '+' : '−', axis: line.axis.toUpperCase() });
-    if (tau < DWELL) return t('transit.boarding', { s: Math.ceil(DWELL - tau), dir });
+    const dir = [{ w: 'DIRECTION' }, { n: `${line.track.dir > 0 ? '+' : '−'}${line.axis.toUpperCase()}` }];
+    if (tau < DWELL) return [{ w: 'BOARDING' }, { p: '·' }, { w: 'DEPARTURE' }, { n: `${Math.ceil(DWELL - tau)} S` }, { p: '·' }, ...dir];
     const eta = Math.ceil(PERIOD - tau);
-    return t('transit.next', { s: eta, late: k && k.rate < 0.95 ? t('transit.late') : '', dir });
+    const late = k && k.rate < 0.95 ? [{ w: 'DELAYED' }] : [];
+    return [{ w: 'NEXT' }, { w: 'CAR' }, { n: `${eta} S` }, ...late, { p: '·' }, ...dir];
   }
 
   /** Posição ao longo da linha do vagão k no tempo `time`. */

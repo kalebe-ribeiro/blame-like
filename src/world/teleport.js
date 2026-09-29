@@ -35,6 +35,7 @@ export const DESTINATIONS = [
   { group: 'other', kind: 'cascata' },
   { group: 'other', kind: 'transportador' },
   { group: 'other', kind: 'colosso' },
+  { group: 'other', kind: 'terminal' },
   { group: 'other', kind: 'ponte' },
 ];
 
@@ -354,6 +355,31 @@ export function findDestination(F, kind, g, recent = new Set(), opts = {}) {
             const tx = L.axis === 'z' ? lat + side * 10 : ts;
             const tz = L.axis === 'z' ? ts : lat + side * 10;
             cands.push({ id: `${L.id}:${s}`, feet: V(x, L.y + 0.05, z), yaw: yawTo(x, z, tx, tz), pitch: 0.02 });
+          }
+        }
+        if (cands.length) break;
+      }
+      return pick(cands, g, recent);
+    },
+
+    // ── diante de um terminal com energia (o das estações — ver world/terminals.js) ──
+    terminal: () => {
+      const cands = [];
+      const S = TRANSIT.station;
+      for (const R of [1500, 4000]) {
+        for (const L of F.transitLinesNear(g.x, g.y, g.z, R)) {
+          const tp = L.axis === 'z' ? g.z : g.x;
+          for (let s = Math.round((tp - S / 2) / S) - 2; s <= Math.round((tp - S / 2) / S) + 2; s++) {
+            const ts = s * S + S / 2;
+            const t = ts - (TRANSIT.carLen + 4) / 2 + 1.4; // o terminal, na ponta da plataforma
+            const lat = L.u + L.track.side * (L.w.width / 2 + 0.9);
+            const tx = L.axis === 'z' ? lat : t;
+            const tz = L.axis === 'z' ? t : lat;
+            if (F.sectorAt(tx, L.y, tz).state === 'dark') continue;
+            // de pé na frente da tela (que olha para +t)
+            const fx = L.axis === 'z' ? lat : t + 1.4;
+            const fz = L.axis === 'z' ? t + 1.4 : lat;
+            cands.push({ id: `T${L.id}:${s}`, feet: V(fx, L.y + 0.05, fz), yaw: yawTo(fx, fz, tx, tz), pitch: -0.2 });
           }
         }
         if (cands.length) break;

@@ -151,7 +151,7 @@ export class World {
     this.colossi.bus = this.bus;
     this.elevators.outages = this.outages;
     this.terminals = new TerminalSystem(this.streamGroup, m, this.seed);
-    Object.assign(this.terminals, { field: this.field, transit: this.transit, outages: this.outages });
+    Object.assign(this.terminals, { field: this.field, transit: this.transit, outages: this.outages, world: this });
     this.particles = new ParticleSystem(this.streamGroup);
     this.particles.bus = this.bus;
     // o horizonte impossível: estruturas a dezenas de km, só sombras na poeira

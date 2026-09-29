@@ -26,7 +26,8 @@ import { AudioEngine } from './audio/audio.js';
 import { HUD } from './ui/hud.js';
 import { t } from './i18n/index.js';
 import { loadSettings } from './ui/settings.js';
-import { loadProfile, migrateLegacy, loadSlot, newSlot, storeSlot, WorldState } from './app/saves.js';
+import { loadProfile, storeProfile, migrateLegacy, loadSlot, newSlot, storeSlot, WorldState } from './app/saves.js';
+import { Lexicon } from './lang/lexicon.js';
 import { rulesFor } from './app/modes.js';
 import { createPlayerState } from './app/player.js';
 import { createRenderer, setupRender, renderFrame } from './app/render.js';
@@ -96,6 +97,11 @@ ctx.scene = new THREE.Scene();
 ctx.camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.08, 12000);
 ctx.shared = createSharedUniforms();
 ctx.world = new World(ctx.scene, ctx.shared);
+// a língua antiga: o léxico é global (perfil) e só cresce na Peregrinação
+ctx.lexicon = new Lexicon(profile, () => ctx.rules.translation, () => {
+  if (ctx.persist) storeProfile(profile);
+});
+ctx.world.lexicon = ctx.lexicon;
 ctx.world.build(ctx.seed);
 ctx.dust = createDust();
 ctx.scene.add(ctx.dust);
