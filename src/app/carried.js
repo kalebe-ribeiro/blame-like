@@ -141,6 +141,9 @@ export function createCarried(ctx) {
   const strength = (d, R) => Math.max(0, 1 - d / R);
 
   function listen(g, time) {
+    // a antena de transmissão (app/uniques.js) amplia o alcance
+    const boost = ctx.uniques?.sensorBoost() ?? 1;
+    const RR = (k) => RANGE[k] * boost;
     const F = world.field;
     let best = null;
     const consider = (x, y, z, R, lead = false) => {
@@ -148,31 +151,31 @@ export function createCarried(ctx) {
       if (k > 0 && (!best || k > best.k)) best = { x, y, z, k: Math.min(1, k), lead };
     };
     if (sensor === 'terminal') {
-      for (const s of terminalSitesNear(F, g.x, g.y, g.z, RANGE.terminal)) if (s.kind !== 'unique') consider(s.x, s.y + 1, s.z, RANGE.terminal, ctx.leads?.isOpenTarget(s.id));
-      for (const u of F.uniquesNear(g.x, g.y, g.z, RANGE.unique)) {
+      for (const s of terminalSitesNear(F, g.x, g.y, g.z, RR('terminal'))) if (s.kind !== 'unique') consider(s.x, s.y + 1, s.z, RR('terminal'), ctx.leads?.isOpenTarget(s.id));
+      for (const u of F.uniquesNear(g.x, g.y, g.z, RR('unique'))) {
         const s = uniqueTerminal(F, u);
-        consider(s.x, s.y + 1, s.z, RANGE.unique, ctx.leads?.isOpenTarget(s.id));
+        consider(s.x, s.y + 1, s.z, RR('unique'), ctx.leads?.isOpenTarget(s.id));
       }
     } else if (sensor === 'energy') {
       // energia viva: o setor com energia mais perto (e as tomadas carregadas)
-      for (let r = 100; r <= RANGE.energy; r += 110) {
+      for (let r = 100; r <= RR('energy'); r += 110) {
         for (let i = 0; i < 12; i++) {
           const a = (i / 12) * Math.PI * 2 + r * 0.01;
           const x = g.x + Math.cos(a) * r;
           const z = g.z + Math.sin(a) * r;
-          if (F.sectorLight(x, g.y, z, time) >= 0.5 && world.outages.power(x, g.y, z, 2, time) >= 0.5) consider(x, g.y, z, RANGE.energy);
+          if (F.sectorLight(x, g.y, z, time) >= 0.5 && world.outages.power(x, g.y, z, 2, time) >= 0.5) consider(x, g.y, z, RR('energy'));
         }
         if (best) break; // o anel mais perto que tiver energia
       }
-      for (const s of world.sockets()) if (socketPowered(s, time)) consider(s.x, s.y, s.z, RANGE.energy);
-      for (const u of F.uniquesNear(g.x, g.y, g.z, RANGE.unique)) consider(u.x, u.y + 10, u.z, RANGE.unique);
+      for (const s of world.sockets()) if (socketPowered(s, time)) consider(s.x, s.y, s.z, RR('energy'));
+      for (const u of F.uniquesNear(g.x, g.y, g.z, RR('unique'))) consider(u.x, u.y + 10, u.z, RR('unique'));
     } else if (sensor === 'motion') {
       // o que se move: máquinas colossais e vagões
       const c = world.colossi.nearest(F, g, time);
-      if (c) consider(c.x, c.y, c.z, RANGE.motion);
+      if (c) consider(c.x, c.y, c.z, RR('motion'));
       for (const car of world.transit.cars.values()) {
         const p = car.group.position;
-        consider(p.x + world.origin.x, p.y + world.origin.y, p.z + world.origin.z, RANGE.motion * 0.5);
+        consider(p.x + world.origin.x, p.y + world.origin.y, p.z + world.origin.z, RR('motion') * 0.5);
       }
     }
     return best;

@@ -23,7 +23,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Terminais-com-conteudo]] | ✔ feita (fase 2) | alta |
 | [[Traducao-como-progresso]] | ✔ feita (fase 2) | alta |
 | [[Pistas]] (antes "peregrinação") | ✔ feita (fase 3) | alta |
-| [[Estruturas-unicas]] | em andamento (3 tipos na fase 3) | alta |
+| [[Estruturas-unicas]] | em andamento (5 tipos com efeito na fase 4.5; vila e berço reservados) | alta |
 | [[Mapa-de-descobertas]] | ✔ feita (fase 3) | média |
 | [[Luz-como-recurso]] | ✔ feita (fase 1) | média |
 | [[Religar-setores]] | ✔ feita (fase 4.1) | média |

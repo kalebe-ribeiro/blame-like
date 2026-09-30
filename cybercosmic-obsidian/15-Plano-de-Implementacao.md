@@ -102,6 +102,7 @@
 > 4.2 ✔ subir nas máquinas colossais (escotilhas, escada, plataforma, horário no terminal, convés que carrega).
 > 4.3 ✔ marcas do jogador (tinta em estêncil, V / LB, no mapa e no mundo salvo).
 > 4.4 ✔ seeds compartilháveis (código com seed, modo e marcas; copiar/colar no painel MUNDOS).
+> 4.5 ✔ estruturas únicas com efeito + sala de controle dos Construtores + terminal de transmissão.
 
 **Objetivo**: mudar a Cidade e atravessá-la de verdade.
 

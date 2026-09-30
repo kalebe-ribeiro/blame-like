@@ -34,7 +34,7 @@ export class TrailMap {
     this.pitch = 0.5;
     this.zoom = 1;
     this.open = false;
-    this.found = { places: [], leads: [], sectors: [], marks: [] };
+    this.found = { places: [], leads: [], sectors: [], marks: [], builders: [] };
   }
 
   /**
@@ -43,6 +43,7 @@ export class TrailMap {
    *   leads   [{ x, y, z, r, open, tokens, ring? }] pistas (centro estimado e raio; ring {R,w}: anel em volta de quem citou)
    *   sectors [{ x, y, z, state }]             setores por onde passou
    *   marks   [{ x, y, z, dx, dz, shared }]    marcas pintadas (as suas; as de quem compartilhou a seed)
+   *   builders [{ x, y, z, dead }]             canteiros dos Construtores (a sala de controle os mostra)
    *   known(w), word(w)                        o léxico, para escrever as rotas
    */
   setFound(found) {
@@ -98,7 +99,7 @@ export class TrailMap {
       <div class="tm-legend">
         <span><i class="tm-l0"></i><b data-i18n="map.path"></b></span><span><i class="tm-l1"></i><b data-i18n="map.rails"></b></span>
         <span><i class="tm-l2"></i><b data-i18n="map.jump"></b></span><span><i class="tm-q"></i><b data-i18n="map.fall"></b></span><span><i class="tm-f"></i><b data-i18n="map.photo"></b></span>
-        <span><i class="tm-t"></i><b data-i18n="map.terminal"></b></span><span><i class="tm-u"></i><b data-i18n="map.unique"></b></span><span class="tm-lead-key"><i class="tm-p"></i><b data-i18n="map.lead"></b></span><span><i class="tm-s"></i><b data-i18n="map.sector"></b></span><span><i class="tm-m"></i><b data-i18n="map.mark"></b></span>
+        <span><i class="tm-t"></i><b data-i18n="map.terminal"></b></span><span><i class="tm-u"></i><b data-i18n="map.unique"></b></span><span class="tm-lead-key"><i class="tm-p"></i><b data-i18n="map.lead"></b></span><span><i class="tm-s"></i><b data-i18n="map.sector"></b></span><span><i class="tm-m"></i><b data-i18n="map.mark"></b></span><span><i class="tm-b"></i><b data-i18n="map.builders"></b></span>
         <span class="tm-hint" data-i18n="map.hint"></span>
       </div>`;
     document.body.appendChild(root);
@@ -301,6 +302,18 @@ export class TrailMap {
         g.lineTo(px - 4 * dpr, py);
         g.fill();
       }
+    }
+    // canteiros dos Construtores: um pórtico (duas pernas e a viga)
+    for (const b of F.builders ?? []) {
+      const [px, py] = proj(b.x, b.y, b.z);
+      g.strokeStyle = b.dead ? 'rgba(150,146,136,0.55)' : 'rgba(215,160,90,0.85)';
+      g.lineWidth = 1.2 * dpr;
+      g.beginPath();
+      g.moveTo(px - 5 * dpr, py + 4 * dpr);
+      g.lineTo(px - 5 * dpr, py - 4 * dpr);
+      g.lineTo(px + 5 * dpr, py - 4 * dpr);
+      g.lineTo(px + 5 * dpr, py + 4 * dpr);
+      g.stroke();
     }
     // as marcas pintadas: uma setinha na direção da tinta (a de outra pessoa, cor de ferrugem)
     for (const m of F.marks ?? []) {

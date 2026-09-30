@@ -189,6 +189,8 @@ function kindWords(lead) {
   if (lead.kind === 'passage') return [W('PASSAGE'), W('TERMINAL')];
   if (lead.uniqueKind === 'archive') return [W('ARCHIVE')];
   if (lead.uniqueKind === 'plant') return [W('PLANT')];
+  if (lead.uniqueKind === 'builders') return [W('BUILDERS'), W('TERMINAL')];
+  if (lead.uniqueKind === 'antenna') return [W('SIGNAL'), W('TERMINAL')];
   return [W('TERMINAL'), W('ACTIVE')];
 }
 

@@ -58,6 +58,11 @@ export function createLeads(ctx) {
     }
   }
 
+  // o console ativo de uma estrutura única revela as vizinhas (app/uniques.js): pistas completas
+  world.bus.on('lead:reveal', (lead) => {
+    if (!on()) return;
+    add(lead);
+  });
   world.bus.on('player:read', ({ id, leads = [] }) => {
     if (!on()) return;
     reach(id);

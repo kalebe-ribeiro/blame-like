@@ -362,6 +362,47 @@ function buildUnique(F, B, u) {
       const [x, z] = P(ha * (0.7 - q * 0.45), (u.doorOff + r.float(-0.08, 0.08)) * hc);
       B.lamp(x, y0 + u.h - 6, z, FLUORO, 120, q === 2 ? 'faulty' : 'steady', { to: [x, y0 + u.h, z], size: 1.6, grid: false });
     }
+  } else if (u.kind === 'builders') {
+    // a sala de controle dos Construtores: um salão baixo, a mesa dos canteiros no meio,
+    // monitores mortos em volta (uma mesa só acende: a que ainda fala com eles)
+    off = shell(B, f, y0, u.h, T, 7, 6, r);
+    box(B, 'macro', 0, y0 + u.h, 0, ha + 1, 1.4, hc + 1);
+    box(B, 'machine', -4, y0, 0, 5, 1.1, 8); // a mesa
+    box(B, 'frame', -4, y0 + 1.1, 0, 4.6, 0.08, 7.6); // a grade da mesa (o mapa)
+    for (let q = 0; q < 7; q++) {
+      const a = -4 + Math.cos((q / 7) * Math.PI * 2 + 0.4) * 11;
+      const c = Math.sin((q / 7) * Math.PI * 2 + 0.4) * 13;
+      box(B, 'machine', a, y0, c, 0.6, 1.6 + r.float(0, 0.8), 1.4);
+    }
+    for (let q = 0; q < 3; q++) box(B, 'frame', r.float(-0.7, 0.7) * ha, y0, r.float(-0.8, 0.8) * hc, 0.7, u.h, 0.7);
+    const [lx, lz] = P(-4, 0);
+    B.lamp(lx, y0 + u.h - 4, lz, FLUORO, 90, 'steady', { to: [lx, y0 + u.h, lz], size: 1.6, grid: false });
+  } else if (u.kind === 'antenna') {
+    // o terminal de transmissão: uma casinha e, atrás dela, um mastro treliçado de 110 m
+    off = shell(B, f, y0, u.h, T, 3, 3.2, r);
+    box(B, 'macro', 0, y0 + u.h, 0, ha + 1, 1, hc + 1);
+    const H = 110 + r.float(-10, 20);
+    const mA = -ha - 9; // atrás da casinha
+    const legs = [[-5, -5], [5, -5], [5, 5], [-5, 5]];
+    for (const [da, dc] of legs) box(B, 'frame', mA + da, y0, dc, 1.3, H, 1.3);
+    for (let y = 6; y < H; y += 8) {
+      for (let q = 0; q < 4; q++) {
+        const [a0, c0] = legs[q];
+        const [a1, c1] = legs[(q + 1) % 4];
+        const [x0, z0] = P(mA + a0, c0);
+        const [x1, z1] = P(mA + a1, c1);
+        B.add('frame', cylinderBetween(B.L(x0, y0 + y, z0), B.L(x1, y0 + y + 8, z1), 0.3, 0.3, 4));
+      }
+    }
+    box(B, 'grate', mA, y0 + H, 0, 7, 0.5, 7); // plataforma no topo
+    // pratos e antenas (quadros, não curvas: tudo de chapa e cantoneira)
+    for (let q = 0; q < 3; q++) box(B, 'machine', mA + r.float(-3, 3), y0 + H - 12 - q * 14, r.float(-3, 3), 5, 5, 0.4);
+    box(B, 'frame', mA, y0 + H + 0.2, 0, 0.3, 14, 0.3);
+    // a luz de alerta no topo (vermelha, falhando) e a da casinha
+    const [tx, tz] = P(mA, 0);
+    B.lamp(tx, y0 + H + 15, tz, [0.85, 0.12, 0.05], 700, 'faulty', { to: [tx, y0 + H + 14, tz], size: 1.4, far: true, grid: false });
+    const [lx, lz] = P(-2, 0);
+    B.lamp(lx, y0 + u.h - 1.4, lz, FLUORO, 30, 'steady', { to: [lx, y0 + u.h, lz], size: 1.1, grid: false });
   } else {
     // o console: um salão quadrado com um pedestal no meio; o teto tem um rasgo
     off = shell(B, f, y0, u.h, T, 6, 7, r);
@@ -376,7 +417,7 @@ function buildUnique(F, B, u) {
   }
   // luz de sinal no telhado, vista de longe (a Cidade ainda sabe que isto existe)
   const [sx, sz] = P(ha - 4, hc - 4);
-  const top = u.kind === 'plant' ? y0 + 13.5 : y0 + u.h + 1.6;
+  const top = u.kind === 'plant' ? y0 + 13.5 : u.kind === 'antenna' ? y0 + u.h + 1 : y0 + u.h + 1.6;
   B.lamp(sx, top + 2, sz, SODIUM, r.float(500, 900), 'steady', { to: [sx, top, sz], size: 2.5, far: true, grid: false });
   return off;
 }

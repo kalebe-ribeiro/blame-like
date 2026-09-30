@@ -127,3 +127,4 @@ Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de sh
 | como embarcar nas máquinas | escotilhas na laje a cada ~1,3 km de trincheira, escada até uma plataforma rente às longarinas; máquinas mais frequentes (4 m/s) |
 | marcas | só tinta (seta de estêncil), sem sinalizadores; até 400; V / LB |
 | seed compartilhada leva o estado? | **não**: só o mundo cru + as marcas (em ferrugem para quem recebe) |
+| efeito das estruturas únicas | só na **primeira** leitura do console, por mundo; valores: arquivo 14 palavras, usina 2,5 km, console 3 vizinhas, Construtores 6 km (mesma laje), antena ×2,5 |

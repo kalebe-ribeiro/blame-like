@@ -81,7 +81,15 @@ Não há missões. Uma pista é um endereço que você leu e decide seguir.
 - **Estreitar**: a distância é um número, sempre legível, e sozinha já dá um **anel** em volta de onde a pista foi lida. O setor e o nível só valem quando a palavra (SETOR, NÍVEL) já foi entendida. Juntar partes e aprender palavras encolhe a área de incerteza da pista, no mapa e no diário. Os códigos de setor pintados nas paredes dizem se você está no lugar certo, e o sensor confirma.
 - **Chegar**: ler o terminal citado fecha a pista, e lá, muitas vezes, há outra.
 - **Cadeias**: os terminais comuns apontam para a **estrutura única** mais próxima (um elo alguns quilômetros mais perto dela, ou ela mesma); o console de uma estrutura única aponta para um terminal a 40–55% do caminho até a próxima. As cadeias nunca voltam para onde estiveram e nunca acabam.
-- **Estruturas únicas**: raras (uma a cada ~16 km, no alto das camadas), com porta, luzes e um console com energia própria. Há três tipos: console ativo, arquivo de registros e usina.
+- **Estruturas únicas**: raras (uma a cada ~16 km, no alto das camadas), com porta, luzes e um console com energia própria. Ler o console pela primeira vez num mundo tem um efeito:
+
+  | estrutura | efeito |
+  |---|---|
+  | arquivo de registros | salto de tradução: 14 palavras ainda não entendidas passam a ser entendidas |
+  | usina | religa os setores apagados a até 2,5 km, com a luz saindo dali |
+  | console ativo | mostra no mapa as 3 estruturas únicas mais perto (pistas completas) |
+  | sala de controle dos Construtores | marca no mapa os canteiros da laje, num raio de 6 km (vivos e mortos) |
+  | terminal de transmissão | uma casinha ao pé de um mastro de ~110 m com luz de alerta; o sensor passa a ouvir 2,5× mais longe |
 
 ## Religar setores (fase 4)
 
@@ -326,6 +334,7 @@ src/
   app/power.js              religar um setor na subestação em frente
   app/marks.js              marcas pintadas (V / LB): no mundo salvo, no mapa
   app/share.js              o código de um mundo (seed, modo, marcas) e a área de transferência
+  app/uniques.js            o efeito de cada estrutura única (na primeira leitura do console)
   world/substations.js      subestações (armários) e os setores religados (luz em cascata, shaders)
   app/wake.js               queda e despertar (Peregrinação)
   app/reading.js            ler terminais (E), o leitor portátil, pegar o sensor

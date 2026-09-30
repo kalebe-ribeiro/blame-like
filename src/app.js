@@ -42,6 +42,7 @@ import { createReading } from './app/reading.js';
 import { createLeads } from './app/leads.js';
 import { createPower } from './app/power.js';
 import { createMarks } from './app/marks.js';
+import { createUniques } from './app/uniques.js';
 import { bindings } from './controls/bindings.js';
 import { startPlace } from './lang/leads.js';
 
@@ -172,6 +173,7 @@ ctx.carried = createCarried(ctx);
 ctx.reading = createReading(ctx);
 ctx.power = createPower(ctx);
 ctx.marks = createMarks(ctx);
+ctx.uniques = createUniques(ctx);
 setupDev(ctx);
 
 // ─── loop ───────────────────────────────────────────────────────────────────

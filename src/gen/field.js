@@ -103,6 +103,8 @@ export const SECTOR = { cell: 900, dark: 0.3, unstable: 0.15, salt: 910 };
  *   console  terminal ativo: um salão com um console que ainda tem energia própria
  *   archive  arquivo de registros: um salão comprido cheio de estantes
  *   plant    usina: um bloco-núcleo com chaminés
+ *   builders sala de controle dos Construtores: um salão com a mesa dos canteiros (fase 4.5)
+ *   antenna  terminal de transmissão: uma casinha ao pé de um mastro de 110 m (fase 4.5)
  */
 /** Religar um setor (app/power.js): a frente da luz voltando, em m/s. */
 export const RESTORE_SPEED = 40;
@@ -402,8 +404,12 @@ export class Field {
       if (!b || hash4(this.seed, ui, n, uk, 980) > UNIQUE.prob) return null;
       const r = rngAt(this.seed, ui, n, uk, 981);
       const C = UNIQUE.cell;
-      const kind = UNIQUE.kinds[r.int(0, UNIQUE.kinds.length - 1)];
-      const [hx, hz, h] = kind === 'console' ? [30, 30, 22] : kind === 'archive' ? [66, 26, 26] : [42, 42, 34];
+      let kind = UNIQUE.kinds[r.int(0, UNIQUE.kinds.length - 1)];
+      // os tipos da fase 4.5 vêm de um sorteio à parte (os mundos antigos mantêm os seus)
+      const alt = hash4(this.seed, ui, n, uk, 983);
+      if (alt < 0.3) kind = alt < 0.15 ? 'builders' : 'antenna';
+      const DIMS = { console: [30, 30, 22], archive: [66, 26, 26], plant: [42, 42, 34], builders: [34, 34, 18], antenna: [14, 14, 8] };
+      const [hx, hz, h] = DIMS[kind];
       // tenta alguns pontos da célula até achar um lugar limpo
       for (let tries = 0; tries < 6; tries++) {
         const x = (ui + r.float(0.25, 0.75)) * C;
@@ -460,6 +466,10 @@ export class Field {
     } else if (u.kind === 'archive') {
       a = ha - 7;
       c = u.doorOff * hc + 4;
+    } else if (u.kind === 'builders') {
+      a = 2; // entre a porta e a mesa dos canteiros
+    } else if (u.kind === 'antenna') {
+      a = -4; // no fundo da casinha
     } else {
       a = ha - 2 * ha * UNIQUE.plantHall + 3 + 4;
     }

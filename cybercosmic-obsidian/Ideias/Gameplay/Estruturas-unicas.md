@@ -6,6 +6,8 @@ tags: [gameplay, mundo, direcao]
 
 # Estruturas únicas
 
+> **Fase 4.5** (`app/uniques.js`; `builders`/`antenna` em `uniqueSite`/`buildUnique`): **efeitos na primeira leitura do console** (salvos em `slot.uniques`): arquivo = 14 palavras entendidas de uma vez; usina = religa os setores apagados a 2,5 km (`restoreSector`); console ativo = 3 únicas vizinhas no mapa como pistas completas (`lead:reveal`); **sala de controle dos Construtores** (nova) = canteiros da laje a 6 km no mapa; **terminal de transmissão** (novo: casinha + mastro de ~110 m com luz de alerta) = sensor 2,5× (`slot.boosts.antenna`). Os tipos novos saem de um sorteio à parte (hash 983, 30%), então os mundos antigos mantêm os seus. Ainda reservados: vila abandonada, berço de Safeguards.
+
 > **Fase 3.1** (`uniqueSite` em `gen/field.js`, `buildUnique` em `gen/macrogen.js`): console ativo, arquivo de registros e usina — uma por ~16 km, no alto das camadas, fim das cadeias de [[Pistas]]; o console tem energia própria e guarda o [[Ferramentas|sensor]] (até você ter um). Os efeitos (salto de tradução, religar a região, ampliar o sensor) e as outras estruturas ficam para a fase 4 em diante.
 
 > Escolhida (2026-09-29). São os **objetivos** do jogo: raras, no fim de cadeias de [[Pistas|pistas]].

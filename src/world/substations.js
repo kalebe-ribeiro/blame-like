@@ -52,11 +52,17 @@ export class SubstationSystem {
   /** Religa o setor desta subestação agora: a frente sai daqui. */
   restore(site, time, worldState) {
     if (this.isLive(site)) return false;
-    this.field.restored.set(site.sector, { x: site.x, y: site.y + 1, z: site.z, t0: time });
-    worldState?.set(`sector:${site.sector}`, { x: Math.round(site.x), y: Math.round(site.y + 1), z: Math.round(site.z), at: Date.now() });
     const it = this.items.get(site.id);
     if (it) it.anim = 0;
-    this.bus?.emit('sector:restore', { id: site.id, sector: site.sector, x: site.x, y: site.y, z: site.z });
+    return this.restoreSector(site.sector, site.x, site.y + 1, site.z, time, worldState, site.id);
+  }
+
+  /** Religa um setor com a luz saindo de (x,y,z) — a subestação, ou a usina (app/uniques.js). */
+  restoreSector(sector, x, y, z, time, worldState, id = `sector:${sector}`) {
+    if (this.field.restored.has(sector)) return false;
+    this.field.restored.set(sector, { x, y, z, t0: time });
+    worldState?.set(`sector:${sector}`, { x: Math.round(x), y: Math.round(y), z: Math.round(z), at: Date.now() });
+    this.bus?.emit('sector:restore', { id, sector, x, y, z });
     return true;
   }
 

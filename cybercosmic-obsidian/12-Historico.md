@@ -128,3 +128,8 @@ Por que as coisas estão como estão, em ordem.
 ## 2026-09-30 — 4.4 seeds compartilháveis
 
 - Código `CYC1.` (seed, modo, marcas) no painel MUNDOS: COPIAR / COLAR, com confirmação; área de transferência via Electron. O teste do controle copia e cola de verdade.
+
+## 2026-09-30 — 4.5 estruturas únicas com efeito
+
+- Primeira leitura do console: arquivo (14 palavras), usina (religou 12 setores no teste), console (3 únicas no mapa), sala dos Construtores (nova — 22 canteiros no teste, depois de filtrar para a mesma laje: antes marcava 194), antena (nova — sensor 2,5×).
+- Na Peregrinação, o primeiro E num console único pega o sensor (se ainda não tiver) — o efeito vem na leitura seguinte.

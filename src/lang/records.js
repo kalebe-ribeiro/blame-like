@@ -99,6 +99,12 @@ export function terminalRecords(field, site) {
     } else if (u.kind === 'archive') {
       lines.push([W('ARCHIVE'), code, P('·'), W('RECORD'), W('COUNT'), P(':'), N(num(r.int(1e6, 9e8)))]);
       lines.push([W('RECORD'), W('DAMAGED'), P(':'), N(`${r.int(60, 99)}%`), P('·'), W('RECOVERY'), W('IN'), W('WORK')]);
+    } else if (u.kind === 'builders') {
+      lines.push([W('BUILDERS'), W('SITE'), W('COUNT'), P(':'), N(num(r.int(40, 900))), P('·'), W('WORK'), W('SUSPENDED')]);
+      lines.push([W('CONSTRUCTION'), W('IN'), W('WORK'), P('·'), W('DEADLINE'), P(':'), P('∞')]);
+    } else if (u.kind === 'antenna') {
+      lines.push([W('SIGNAL'), code, P('·'), W('OUTPUT'), P(':'), N(`${r.int(2, 14)}%`), P('·'), W('REPLY'), W('NONE')]);
+      lines.push([W('NET'), W('TERMINAL'), W('GENE'), P(':'), W('NO'), W('DETECTED')]);
     } else {
       lines.push([W('PLANT'), code, P('·'), W('STATUS'), P(':'), W('ACTIVE')]);
       lines.push([W('OUTPUT'), P(':'), N(`${r.int(1, 9)}%`), P('·'), W('GRID'), W('SECTOR'), sectorCode(field, sector), W('DARK')]);
