@@ -1,10 +1,12 @@
 ---
-status: futuro (fase 6)
+status: futuro (fase 6) — método decidido
 prioridade: futura
 tags: [futuro, arma, safeguards, terreno]
 ---
 
 # A arma do Killy — emissor de feixe gravitacional (fase 6)
+
+> **Decidido (2026-09-30):** quando a arma for implementada, o buraco será feito pelo **método "de shader"** descrito abaixo (cilindros salvos + `discard` + borda pintada + colisão ignorando). Nada de CSG. Continua em aberto: se a arma existe mesmo (combate × só fuga), o que ela não fura, alcance, custo.
 
 > Discussão de 2026-09-30. O usuário perguntou quão difícil seria implementar a arma do Killy (*Blame!*, [[14-Universo-Blame]]) **capaz de destruir terreno e obstáculos, deixando um buraco circular por onde o feixe passa**. Nada decidido: registrado para a fase 6 ("combate ou só fuga" — [[15-Plano-de-Implementacao]]).
 
@@ -13,12 +15,12 @@ tags: [futuro, arma, safeguards, terreno]
 | parte | nota | comentário |
 |---|---|---|
 | a arma em si (modelo, carga, recuo, clarão, feixe na névoa, estrondo, gasto de energia, botão no teclado **e no controle**) | ~15 | igual à lanterna e ao aparelho: objeto preso à câmera |
-| buraco "de shader" (recomendado) | ~60 no total | ver abaixo |
+| buraco "de shader" (**escolhido**) | ~60 no total | ver abaixo |
 | buraco de geometria de verdade (CSG) | ~85 no total | recortar a malha de cada chunk atingido num worker; o feixe atravessa quilômetros → dezenas de chunks por tiro, engasgos; e todo chunk recarregado teria de reaplicar os cortes |
 
 Por que o buraco é o difícil: o mundo **não é feito de blocos**. Cada chunk é gerado por fórmula (`Field`) e juntado numa malha só por material (`BatchedMesh`). Não existe "o pedaço de parede" para apagar.
 
-## O buraco "de shader" (o caminho recomendado)
+## O buraco "de shader" (o método escolhido)
 
 A ideia: **não cortar a geometria — esconder o que está dentro do buraco, e fazer o corpo ignorar o que está escondido.**
 

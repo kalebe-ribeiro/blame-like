@@ -113,3 +113,7 @@ Como está feito:
 - um painel aberto no jogo pelo controle volta ao jogo ao fechar;
 - tela cheia pelo controle via `preload.js` (IPC; um botão do controle não é gesto para a Fullscreen API);
 - `npm run check:pad` (`dev/padtest.js`): um controle falso joga os dois modos e confere tudo.
+
+### A arma do Killy — método do buraco (2026-09-30)
+
+Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de shader"**: cada tiro guarda um cilindro (origem, direção, raio) no mundo; todos os shaders descartam o que está dentro; o lado de dentro das caixas é pintado como borda fundida; a colisão ignora o que está dentro. **Não** recortar geometria (CSG). Detalhes em [[Ideias/Futuro/Arma-do-Killy]]. Em aberto para a fase 6: combate × só fuga, o que o feixe não fura (recomendação: camadas e estruturas únicas), alcance, custo em energia, alerta dos Safeguards.
