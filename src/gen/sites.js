@@ -12,6 +12,7 @@
 //  site: { id, x, y (pés), z, yaw, kind, line?, s?, unique? } — GLOBAL
 // ─────────────────────────────────────────────────────────────────────────────
 import { TRANSIT, MEGA, WALK } from './field.js';
+import { hash4 } from './hash.js';
 
 const S = TRANSIT.station;
 const stationT = (s) => s * S + S / 2; // o mesmo de gen/transit.js
@@ -96,4 +97,77 @@ export function siteById(F, id) {
     return L ? stationSite(L, s) : null;
   }
   return null;
+}
+
+// ── subestações (fase 4 — religar setores; world/substations.js, app/power.js) ──
+//  Um setor apagado tem uma subestação por faixa de ~480 m de altura: um
+//  armário com alavanca numa plataforma de estação do próprio setor (na ponta
+//  da placa, oposta ao terminal). Qualquer uma delas religa o setor inteiro.
+
+const SLAB = 480; // m de altura por subestação
+
+// a estação onde um mundo da Peregrinação começa nunca tem subestação (o começo
+// perderia o escuro): lang/leads.js registra quem sabe qual é (sem import circular)
+let startSiteOf = null;
+export function setStartSiteFn(fn) {
+  startSiteOf = fn;
+}
+
+/** A subestação do setor na faixa de altura de y: { id, sector, x, y (pés), z, yaw, slab } ou null. */
+export function substationFor(F, sector, y) {
+  const slab = Math.floor(y / SLAB);
+  return F._memo(`SS${sector.id}:${slab}`, () => {
+    const hx = hash4(F.seed, sector.i, slab, sector.k, 1310);
+    const hz = hash4(F.seed, sector.k, slab, sector.i, 1311);
+    const tx = sector.px + (hx - 0.5) * 260;
+    const tz = sector.pz + (hz - 0.5) * 260;
+    const ty = (slab + 0.5) * SLAB;
+    const avoid = startSiteOf?.(F);
+    for (const R of [700, 1300]) {
+      let best = null;
+      let bd = Infinity;
+      for (const s of terminalSitesNear(F, tx, ty, tz, R)) {
+        if (s.kind !== 'station' || F.sectorAt(s.x, s.y, s.z, true).id !== sector.id) continue;
+        if (avoid && s.line.id === avoid.line?.id && s.s === avoid.s) continue;
+        const d = Math.hypot(s.x - tx, (s.y - ty) * 1.5, s.z - tz);
+        if (d < bd) {
+          bd = d;
+          best = s;
+        }
+      }
+      if (best) {
+        const L = best.line;
+        const ts = stationT(best.s);
+        const t = ts + (TRANSIT.carLen + 4) / 2 - 2.6; // na ponta da placa
+        const lat = L.u + L.track.side * (L.w.width / 2 + 0.9);
+        return {
+          id: `ss:${sector.id}:${slab}`,
+          sector: sector.id,
+          x: L.axis === 'z' ? lat : t,
+          y: L.y,
+          z: L.axis === 'z' ? t : lat,
+          yaw: best.yaw + Math.PI, // de frente para o meio da plataforma
+          slab,
+        };
+      }
+    }
+    return null;
+  });
+}
+
+/** Subestações de setores apagados (pela lei do mundo) a até R de (x,y,z). */
+export function substationsNear(F, x, y, z, R) {
+  const seen = new Set();
+  const out = [];
+  for (const [dx, dz] of [[0, 0], [R, 0], [-R, 0], [0, R], [0, -R]]) {
+    const sec = F.sectorAt(x + dx, y, z + dz, true);
+    if (sec.state !== 'dark' || seen.has(sec.id)) continue;
+    seen.add(sec.id);
+    for (const dy of [0, SLAB, -SLAB]) {
+      const s = substationFor(F, sec, y + dy);
+      // (duas faixas podem cair na mesma estação: um armário só)
+      if (s && !out.some((o) => o.id === s.id || (o.x === s.x && o.y === s.y && o.z === s.z)) && Math.hypot(s.x - x, s.y - y, s.z - z) < R) out.push(s);
+    }
+  }
+  return out;
 }

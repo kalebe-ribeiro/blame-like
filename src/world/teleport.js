@@ -13,6 +13,7 @@
 import * as THREE from 'three';
 import { MEGA, HIVE, TRANSIT, MACRO } from '../gen/field.js';
 import { startPlace } from '../lang/leads.js';
+import { substationsNear } from '../gen/sites.js';
 
 /** Tipos de destino (os nomes na tela vêm de i18n: 'dest.<kind>', 'dest.group.<group>'). */
 export const DESTINATIONS = [
@@ -38,6 +39,7 @@ export const DESTINATIONS = [
   { group: 'other', kind: 'colosso' },
   { group: 'other', kind: 'terminal' },
   { group: 'other', kind: 'unica' },
+  { group: 'other', kind: 'subestacao' },
   { group: 'other', kind: 'inicio' },
   { group: 'other', kind: 'ponte' },
 ];
@@ -388,6 +390,25 @@ export function findDestination(F, kind, g, recent = new Set(), opts = {}) {
             const fx = L.axis === 'z' ? lat : t + 1.4;
             const fz = L.axis === 'z' ? t + 1.4 : lat;
             cands.push({ id: `T${L.id}:${s}`, feet: V(fx, L.y + 0.05, fz), yaw: yawTo(fx, fz, tx, tz), pitch: -0.2 });
+          }
+        }
+        if (cands.length) break;
+      }
+      return pick(cands, g, recent);
+    },
+
+    // ── uma subestação (setor apagado): de pé diante do armário ──
+    subestacao: () => {
+      const cands = [];
+      for (const R of [1500, 4000]) {
+        for (let k = 0; k < 24 && cands.length < 6; k++) {
+          const a = k * 2.4;
+          const r = R * ((k % 5) + 1) / 5;
+          for (const s of substationsNear(F, g.x + Math.cos(a) * r, g.y, g.z + Math.sin(a) * r, 700)) {
+            if (cands.some((c) => c.id === s.id)) continue;
+            const fx = s.x + Math.sin(s.yaw) * 1.6;
+            const fz = s.z + Math.cos(s.yaw) * 1.6;
+            cands.push({ id: s.id, feet: V(fx, s.y + 0.05, fz), yaw: yawTo(fx, fz, s.x, s.z), pitch: -0.15 });
           }
         }
         if (cands.length) break;

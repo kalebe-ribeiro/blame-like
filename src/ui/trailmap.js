@@ -238,10 +238,11 @@ export class TrailMap {
     // os setores por onde passou: manchas fracas, com o estado da energia
     for (const s of F.sectors) {
       ring(s.x, s.y, s.z, 380);
-      g.fillStyle = s.state === 'powered' ? 'rgba(200,206,196,0.035)' : s.state === 'unstable' ? 'rgba(215,160,90,0.035)' : 'rgba(0,0,0,0)';
+      // religado por você: âmbar, mais marcado que os outros
+      g.fillStyle = s.state === 'restored' ? 'rgba(217,162,90,0.07)' : s.state === 'powered' ? 'rgba(200,206,196,0.035)' : s.state === 'unstable' ? 'rgba(215,160,90,0.035)' : 'rgba(0,0,0,0)';
       g.fill();
       g.setLineDash(s.state === 'dark' ? [2 * dpr, 5 * dpr] : []);
-      g.strokeStyle = s.state === 'powered' ? 'rgba(200,206,196,0.09)' : s.state === 'unstable' ? 'rgba(215,160,90,0.1)' : 'rgba(150,146,136,0.1)';
+      g.strokeStyle = s.state === 'restored' ? 'rgba(217,162,90,0.35)' : s.state === 'powered' ? 'rgba(200,206,196,0.09)' : s.state === 'unstable' ? 'rgba(215,160,90,0.1)' : 'rgba(150,146,136,0.1)';
       g.lineWidth = 1 * dpr;
       g.stroke();
     }

@@ -52,9 +52,11 @@ export async function runPadTest(ctx) {
   async function focusOn(sel) {
     const hit = () => !!focused()?.matches(sel);
     for (let k = 0; k < 10 && !hit(); k++) await press(UP);
-    for (let row = 0; row < 14 && !hit(); row++) {
+    for (let row = 0; row < 30 && !hit(); row++) {
       for (let k = 0; k < 5 && !hit(); k++) await press(LEFT);
       for (let k = 0; k < 8 && !hit(); k++) await press(RIGHT);
+      // desce pela coluna da esquerda (as linhas curtas começam nela)
+      for (let k = 0; k < 8 && !hit(); k++) await press(LEFT);
       if (!hit()) await press(DOWN);
     }
     return hit();

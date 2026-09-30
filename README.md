@@ -82,6 +82,14 @@ Não há missões. Uma pista é um endereço que você leu e decide seguir.
 - **Cadeias**: os terminais comuns apontam para a **estrutura única** mais próxima (um elo alguns quilômetros mais perto dela, ou ela mesma); o console de uma estrutura única aponta para um terminal a 40–55% do caminho até a próxima. As cadeias nunca voltam para onde estiveram e nunca acabam.
 - **Estruturas únicas**: raras (uma a cada ~16 km, no alto das camadas), com porta, luzes e um console com energia própria. Há três tipos: console ativo, arquivo de registros e usina.
 
+## Religar setores (fase 4)
+
+- **Subestações**: um setor permanentemente apagado tem subestações, uma por faixa de ~480 m de altura. São armários de manobra com alavanca, na ponta da placa de uma plataforma de estação do próprio setor. Qualquer uma delas religa o setor inteiro. A estação onde um mundo da Peregrinação começa nunca tem uma, para o começo continuar no escuro.
+- **Achar**: os terminais de um setor apagado citam a subestação dele numa linha de ROTA (setor, nível, distância). É uma pista como as outras e fecha quando o setor é religado.
+- **Religar**: E (Y no controle) diante do armário. Na Peregrinação a subestação precisa de um tranco da sua célula (20%); no Livre é de graça. A alavanca sobe, a lâmpada âmbar acende e a luz volta como uma frente que sai dali a 40 m/s: lâmpadas, janelas e linhas técnicas, trens, elevadores, terminais (texto completo) e tomadas.
+- **A Cidade lembra**: o setor religado fica no mundo salvo, aparece no mapa em âmbar e conta no diário (SETORES RELIGADOS).
+- Transporte (modo Livre): destino **Subestação**. Desenvolvimento: `--goto=subestacao --restore=8` religa aos 8 s.
+
 ## Setores de energia
 
 A Cidade é dividida em setores de formas e tamanhos irregulares (só as camadas os separam na vertical). Cerca de 30% estão **permanentemente apagados**: lâmpadas, janelas, trens, elevadores e terminais sem energia. Uns 15% são **instáveis**: a luz vai e vem em ondas. O resto tem energia. A mesma conta roda na CPU (lâmpadas) e na GPU (janelas), então as duas sempre concordam.
@@ -299,6 +307,8 @@ src/
   app/modes.js              modos de jogo (Livre, Peregrinação) e suas regras
   app/player.js             estado do corpo: energia, ferramentas, o que carrega, acesso
   app/carried.js            o aparelho na mão: lanterna, célula de energia, tomadas, sensor (Peregrinação)
+  app/power.js              religar um setor na subestação em frente
+  world/substations.js      subestações (armários) e os setores religados (luz em cascata, shaders)
   app/wake.js               queda e despertar (Peregrinação)
   app/reading.js            ler terminais (E), o leitor portátil, pegar o sensor
   app/leads.js              as pistas do mundo (abrir, estreitar, alcançar)

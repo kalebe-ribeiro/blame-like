@@ -26,7 +26,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Estruturas-unicas]] | em andamento (3 tipos na fase 3) | alta |
 | [[Mapa-de-descobertas]] | ✔ feita (fase 3) | média |
 | [[Luz-como-recurso]] | ✔ feita (fase 1) | média |
-| [[Religar-setores]] | ★ escolhida | média |
+| [[Religar-setores]] | ✔ feita (fase 4.1) | média |
 | [[Ferramentas]] (sensor + leitor portátil) | ✔ feita (leitor na fase 2, sensor na fase 3) | média |
 | [[Subir-nas-maquinas]] | ★ escolhida | média |
 | [[Diario-como-arquivo]] | ✔ feita (fase 2) | média |

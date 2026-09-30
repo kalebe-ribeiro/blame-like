@@ -168,6 +168,7 @@ export default {
   'diary.events': 'OUTAGES / COLLAPSES',
   'diary.photos': 'RECORDS (PHOTOS)',
   'diary.time': 'TIME IN THE CITY',
+  'diary.restored': 'SECTORS RESTORED',
 
   // ── mapa da travessia ──
   'map.title': 'CROSSING MAP',
@@ -216,6 +217,12 @@ export default {
   'transit.next': 'NEXT CAR: {s} S{late} · {dir}',
   'transit.late': ' · DELAYED',
   // ── o aparelho na mão (Peregrinação) ──
+  'device.substation': 'SUBSTATION  [{key}]',
+  'device.substationLive': 'SECTOR POWERED',
+  'device.substationWeak': 'NEEDS {n}% OF THE CELL',
+  'device.substationOn': 'SECTOR RESTORED',
+  'hud.sectorRestored': 'SECTOR RESTORED',
+  'dest.subestacao': 'Substation',
   'device.charging': 'CHARGING',
   'device.noPower': 'NO POWER HERE',
   'device.socket': 'SOCKET  [{key}]',

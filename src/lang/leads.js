@@ -26,7 +26,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { hash4, rngAt } from '../gen/hash.js';
 import { MEGA } from '../gen/field.js';
-import { terminalSitesNear, uniqueTerminal, standBefore } from '../gen/sites.js';
+import { terminalSitesNear, uniqueTerminal, standBefore, setStartSiteFn, substationFor } from '../gen/sites.js';
 import { sectorCode, levelNumber } from './records.js';
 
 export const LEAD = {
@@ -163,7 +163,7 @@ export function startSite(F) {
     const y = r.float(-1200, 1200);
     if (F.inBarrier(y, 40)) continue;
     const sites = terminalSitesNear(F, x, y, z, 1600)
-      .filter((s) => s.kind === 'station' && F.sectorAt(s.x, s.y, s.z).state === 'dark' && !F.inBarrier(s.y, 10))
+      .filter((s) => s.kind === 'station' && F.sectorAt(s.x, s.y, s.z, true).state === 'dark' && !F.inBarrier(s.y, 10))
       .sort((a, b) => d3(a, { x, y, z }) - d3(b, { x, y, z }));
     for (const s of sites.slice(0, 4)) {
       if (!leadFor(F, s, { force: true })) continue;
@@ -184,6 +184,7 @@ export function startPlace(F) {
 // ── a linha da pista ────────────────────────────────────────────────────────
 
 function kindWords(lead) {
+  if (lead.kind === 'substation') return [W('SUBSTATION')];
   if (lead.kind === 'station') return [W('STATION'), W('TERMINAL')];
   if (lead.kind === 'passage') return [W('PASSAGE'), W('TERMINAL')];
   if (lead.uniqueKind === 'archive') return [W('ARCHIVE')];
@@ -265,4 +266,21 @@ export function areaDistance(a, p) {
   const d = Math.hypot(p.x - a.x, p.z - a.z);
   if (a.ring) return Math.max(0, Math.abs(d - a.ring.R) - a.ring.w);
   return Math.max(0, d - a.r);
+}
+
+// as subestações evitam a estação do começo (gen/sites.js)
+setStartSiteFn((F) => startSite(F));
+
+/**
+ * Num setor apagado (e ainda não religado), o terminal diz onde fica a
+ * subestação do setor na faixa de altura dele (gen/sites.js). Uma pista do
+ * tipo 'substation' — fecha quando o setor é religado (app/leads.js).
+ */
+export function substationLead(F, site) {
+  if (site.kind === 'unique') return null;
+  const sec = F.sectorAt(site.x, site.y + 1, site.z);
+  if (sec.state !== 'dark') return null;
+  const ss = substationFor(F, sec, site.y);
+  if (!ss) return null;
+  return { id: ss.id, x: ss.x, y: ss.y, z: ss.z, kind: 'substation', from: { id: site.id, x: site.x, y: site.y, z: site.z } };
 }

@@ -12,7 +12,7 @@ import { t, fmtNum, fmtDist } from '../i18n/index.js';
 const EMPTY = {
   walked: 0, flown: 0, rode: 0, rides: 0,
   maxFall: 0, minY: null, maxY: null,
-  regions: [], outages: 0, collapses: 0, photos: 0,
+  regions: [], outages: 0, collapses: 0, photos: 0, restored: 0,
   time: 0, sessions: 0,
 };
 
@@ -64,6 +64,7 @@ export class Diary {
       [t('diary.regions'), `${this._regions.size}/${REGIONS.length} :: ${[...this._regions].map((r) => t(`region.${r}`)).join(' · ') || '—'}`],
       [t('diary.events'), `${d.outages} / ${d.collapses}`],
       [t('diary.photos'), `${d.photos}`],
+      ...(d.restored ? [[t('diary.restored'), `${d.restored}`]] : []),
       [t('diary.time'), h ? `${h} h ${String(m).padStart(2, '0')} min` : `${m} min`],
     ];
   }

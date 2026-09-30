@@ -122,6 +122,8 @@ export function createCarried(ctx) {
   let bearing = 0; // de que lado vem o sinal (rad, suavizado; + = à esquerda)
   let vert = 0; // acima (+1), abaixo (−1) ou no mesmo nível (0)
   let found = 0; // s: "SENSOR  [G]" na tela depois de pegar o sensor
+  let note = null; // aviso curto na telinha: { text, until } (say())
+  let nearSub = null; // a subestação ao alcance (app/power.js)
   const _g = new THREE.Vector3();
   const _lens = new THREE.Vector3();
   const _fwd = new THREE.Vector3();
@@ -192,6 +194,8 @@ export function createCarried(ctx) {
     g2.fillStyle = '#9fae9f';
     let line = '';
     if (plugged) line = socketPowered(plugged, time) ? t('device.charging') : t('device.noPower');
+    else if (note && time < note.until) line = note.text;
+    else if (nearSub) line = world.substations.isLive(nearSub.site) ? t('device.substationLive') : t('device.substation', { key: bindings.label('use') });
     else if (near) line = t('device.socket', { key: bindings.label('use') });
     else if (e <= 0) line = t('device.empty');
     else if (found > 0) line = t('device.sensorFound', { key: bindings.label('sensor') });
@@ -278,6 +282,11 @@ export function createCarried(ctx) {
   return {
     toggleLantern,
     togglePlug,
+    /** Um aviso curto na telinha do aparelho (s segundos). */
+    say(text, s = 3) {
+      note = { text, until: (ctx.time ?? 0) + s };
+      redraw = 0;
+    },
     cycleSensor,
     /** Acabou de pegar o sensor: ele já liga, escutando terminais. */
     gotSensor() {
@@ -309,6 +318,7 @@ export function createCarried(ctx) {
       scan -= dt;
       if (scan <= 0) {
         scan = 0.25;
+        nearSub = ctx.power?.near() ?? null;
         near = null;
         let best = REACH;
         for (const s of world.sockets()) {

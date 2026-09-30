@@ -263,6 +263,7 @@ export function createUI(ctx) {
     world.build(ctx.seed);
     world.setView({ renderDistance: ctx.settings.renderDistance, fog: ctx.settings.fog });
     ctx.travel.newWorld();
+    world.field.restored.clear(); // o build leu os setores religados do mundo anterior
     controls.setView(VIEWS.spawn);
     onWorldBuilt(ctx);
     applySettings(ctx.settings);
@@ -295,7 +296,7 @@ export function createUI(ctx) {
     if (name === 'hud' && rules.hud) hud.toggle();
     if (name === 'lantern') ctx.carried.toggleLantern();
     if (name === 'sensor') ctx.carried.cycleSensor();
-    if (name === 'use') ctx.reading.tryUse() || ctx.carried.togglePlug();
+    if (name === 'use') ctx.reading.tryUse() || ctx.power.tryUse() || ctx.carried.togglePlug();
     if (name === 'map') toggleMap();
     if (name === 'transport' && rules.teleport) openTransport();
     if (name === 'regenerate' && rules.regenerate && !ctx.choosing) regenerate();
@@ -321,7 +322,7 @@ export function createUI(ctx) {
     if (is('map')) toggleMap();
     if (e.code === 'Escape' && trail.open) toggleMap();
     // usar: ler o terminal em frente (ou fechar a leitura); senão, a tomada
-    if (is('use') && (controls.locked || ctx.reading.isOpen)) ctx.reading.tryUse() || ctx.carried.togglePlug();
+    if (is('use') && (controls.locked || ctx.reading.isOpen)) ctx.reading.tryUse() || ctx.power.tryUse() || ctx.carried.togglePlug();
     if (e.code === 'Escape' && ctx.reading.isOpen) ctx.reading.close();
   });
 

@@ -65,6 +65,7 @@ export class CollisionWorld {
     for (const m of w.elevators?.meshes ?? []) consider(m);
     for (const m of w.transit?.meshes ?? []) consider(m);
     for (const m of w.terminals?.meshes ?? []) consider(m);
+    for (const m of w.substations?.meshes ?? []) consider(m);
     for (const s of w.builders?.sites.values() ?? []) {
       if (s.builtMesh) consider(s.builtMesh);
     }

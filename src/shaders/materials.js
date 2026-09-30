@@ -59,6 +59,9 @@ export function createSharedUniforms() {
     uFlashPos: { value: new THREE.Vector3(0, -1e6, 0) }, // a lente (cena)
     uFlashDir: { value: new THREE.Vector3(0, 0, -1) }, // para onde aponta
     uFlashColor: { value: new THREE.Vector3() }, // cor · intensidade (0 = apagada)
+    // setores religados perto (world/substations.js): (i, faixa, k, ativo) e (subestação x, z em cena, frente da luz, y)
+    uRestoredId: { value: Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 0, 0)) },
+    uRestoredFront: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
   };
 }
 

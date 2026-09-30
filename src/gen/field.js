@@ -95,6 +95,8 @@ export const SECTOR = { cell: 900, dark: 0.3, unstable: 0.15, salt: 910 };
  *   archive  arquivo de registros: um salão comprido cheio de estantes
  *   plant    usina: um bloco-núcleo com chaminés
  */
+/** Religar um setor (app/power.js): a frente da luz voltando, em m/s. */
+export const RESTORE_SPEED = 40;
 export const UNIQUE = { cell: 16000, prob: 0.75, kinds: ['console', 'archive', 'plant'], plantHall: 0.45 };
 export const HIVE = 48; // célula da colmeia (uma sala)
 
@@ -147,6 +149,7 @@ export class Field {
    *        caixas onde nada é gerado (keepWalkways: passarelas continuam passando)
    */
   constructor(seed, reserved = []) {
+    this.restored = new Map(); // setores religados pelo jogador: id → { x, y, z, t0 } (app/power.js)
     this.seed = seed >>> 0;
     this.noise3 = createNoise3D(mulberry32(this.seed ^ 0x9e3779b9));
     this.reserved = reserved;
@@ -264,7 +267,12 @@ export class Field {
   // ── setores de energia ───────────────────────────────────────────────────
 
   /** Setor em (x, y, z): { id, band, i, k, state: 'dark'|'unstable'|'powered', phase }. */
-  sectorAt(x, y, z) {
+  /**
+   * O setor em (x,y,z). raw: a lei do mundo pura, sem o que o jogador mudou
+   * (setores religados — this.restored, app/power.js). Um setor apagado que
+   * foi religado vem com state 'restored' (conta como energizado).
+   */
+  sectorAt(x, y, z, raw = false) {
     const C = SECTOR.cell;
     const band = Math.floor((y - MEGA.barrierTop0) / MEGA.barrier);
     const ci = Math.floor(x / C);
@@ -287,8 +295,16 @@ export class Field {
       }
     }
     const r = hash4(this.seed, bi, band, bk, SECTOR.salt + 1);
-    const state = r < SECTOR.dark ? 'dark' : r < SECTOR.dark + SECTOR.unstable ? 'unstable' : 'powered';
-    return { id: `S${band},${bi},${bk}`, band, i: bi, k: bk, state, phase: hash4(this.seed, bi, band, bk, SECTOR.salt + 2) };
+    let state = r < SECTOR.dark ? 'dark' : r < SECTOR.dark + SECTOR.unstable ? 'unstable' : 'powered';
+    const id = `S${band},${bi},${bk}`;
+    if (!raw && state === 'dark' && this.restored.has(id)) state = 'restored';
+    const h = Math.floor(hash4(this.seed, bi, band, bk, SECTOR.salt) * 4294967296);
+    return {
+      id, band, i: bi, k: bk, state,
+      phase: hash4(this.seed, bi, band, bk, SECTOR.salt + 2),
+      px: (bi + (h & 1023) / 1024) * C, // o ponto que gera a célula (perto do "meio" do setor)
+      pz: (bk + ((h >>> 10) & 1023) / 1024) * C,
+    };
   }
 
   /** Luz do setor em (x,y,z) agora: 0 apagado · onda 0..1 instável · 1 com energia. */
@@ -296,6 +312,13 @@ export class Field {
     const s = this.sectorAt(x, y, z);
     if (s.state === 'dark') return 0;
     if (s.state === 'powered') return 1;
+    if (s.state === 'restored') {
+      // religado: a luz volta como uma frente que sai da subestação (40 m/s)
+      const r = this.restored.get(s.id);
+      const d = Math.hypot(x - r.x, z - r.z) + Math.abs(y - r.y) * 0.5;
+      const front = (time - r.t0) * RESTORE_SPEED;
+      return Math.min(1, Math.max(0, (front - d) / 24));
+    }
     const w = Math.sin(time * 0.6 + s.phase * 6.2831 + (x + z) * 0.004);
     const t = Math.min(1, Math.max(0, (w + 0.3) / 0.4));
     return t * t * (3 - 2 * t);

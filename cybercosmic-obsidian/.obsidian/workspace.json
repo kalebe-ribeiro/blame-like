@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "15-Plano-de-Implementacao.md",
+                "file": "Ideias/Futuro/NPCs-e-Safeguards.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "15-Plano-de-Implementacao"
+              "title": "NPCs-e-Safeguards"
             }
           }
         ]
@@ -190,12 +190,14 @@
   },
   "active": "ce4c8cf8abaf8e7f",
   "lastOpenFiles": [
+    "Ideias/Gameplay/Plano-de-Gameplay.md",
+    "15-Plano-de-Implementacao.md",
+    "04-Mundo-e-Geracao.md",
     "14-Universo-Blame.md",
     "Ideias/Mundo/Enderecamento-da-Cidade.md",
     "Ideias/Gameplay/Copiar-inscricoes.md",
     "Copiar-glifos.md",
     "Ideias/00-Ideias.md",
-    "15-Plano-de-Implementacao.md",
     "Ideias/Gameplay/Interface-diegetica.md",
     "Ideias/Gameplay/Inicio-do-mundo.md",
     "Ideias/Gameplay/Queda-e-despertar.md",
@@ -208,7 +210,6 @@
     "Ideias/Futuro/NPCs-e-Safeguards.md",
     "Ideias/Futuro",
     "13-Decisoes.md",
-    "Ideias/Gameplay/Plano-de-Gameplay.md",
     "Ideias/Gameplay/Marcas-do-jogador.md",
     "Ideias/Gameplay/Seeds-compartilhaveis.md",
     "Ideias/Gameplay/Modo-expedicao.md",
@@ -217,7 +218,6 @@
     "Ideias/Gameplay/Elevadores-e-trens-como-quebra-cabeca.md",
     "Ideias/Gameplay/Diario-como-arquivo.md",
     "Ideias/Gameplay/Subir-nas-maquinas.md",
-    "Ideias/Gameplay/Credenciais-de-acesso.md",
-    "Ideias/Gameplay/Ferramentas.md"
+    "Ideias/Gameplay/Credenciais-de-acesso.md"
   ]
 }

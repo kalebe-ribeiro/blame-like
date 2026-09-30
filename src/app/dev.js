@@ -42,6 +42,8 @@ export function setupDev(ctx) {
   }
   // --read=12: abre a leitura do terminal em frente aos N segundos
   if (params.get('read')) setTimeout(() => ctx.reading.tryUse(), Number(params.get('read')) * 1000);
+  // --restore=8: religa o setor da subestação em frente aos N s
+  if (params.get('restore')) setTimeout(() => ctx.power.tryUse(), Number(params.get('restore')) * 1000);
   // --controls=3: abre a aba CONTROLES aos N segundos
   if (params.get('controls')) setTimeout(() => ctx.ui.openControls(), Number(params.get('controls')) * 1000);
   // --map=20: abre o mapa da travessia aos N segundos

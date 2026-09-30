@@ -65,7 +65,7 @@ export function createReading(ctx) {
     p.energy.value -= FRAGMENT_COST;
     it.fragments = (it.fragments ?? 0) + 1;
     const text = world.terminals.readable(it, ctx.time);
-    const route = text.find((line) => line.lead); // a pista, se este terminal cita alguém
+    const routes = text.filter((line) => line.lead); // as pistas deste terminal (a cadeia; a subestação)
     const all = text.filter((line) => line.length > 1 && !line.lead);
     // o cabeçalho e 2–3 linhas, escolhidas pelo número do fragmento
     const n = 2 + (hash4(1, it.fragments, it.site.x | 0, 0, 970) < 0.5 ? 1 : 0);
@@ -78,6 +78,9 @@ export function createReading(ctx) {
     // No primeiro terminal do mundo, o primeiro fragmento sempre traz a rota (a primeira pista).
     let lead = null;
     const first = it.fragments === 1 && startSite(world.field)?.id === it.site.id;
+    // cada fragmento arranca (talvez) uma das rotas; o primeiro do mundo, a da cadeia
+    const chain = routes.find((l) => l.lead.kind !== 'substation');
+    const route = first && chain ? chain : routes[Math.floor(hash4(5, it.fragments, it.site.x | 0, 0, 975) * routes.length)];
     if (route && (first || hash4(2, it.fragments, it.site.x | 0, it.site.z | 0, 972) < 0.6)) {
       const keys = Object.keys(PARTS);
       const o = Math.floor(hash4(3, it.fragments, it.site.x | 0, it.site.z | 0, 973) * 3);
@@ -89,7 +92,7 @@ export function createReading(ctx) {
       lead = { lead: route.lead, parts: shown };
     }
     const learned = ctx.lexicon.see(it.site.id, conceptsIn(lines)); // a mesma fonte do terminal: cada palavra conta uma vez
-    world.bus.emit('player:read', { id: it.site.id, site: it.site, learned, fragment: true, lead });
+    world.bus.emit('player:read', { id: it.site.id, site: it.site, learned, fragment: true, leads: lead ? [lead] : [] });
     audio.deviceClick?.(true);
     document.exitPointerLock?.();
     panel.open(lines, known, word, learned, { dim: true, note: t('reader.fragment', { cost: Math.round(FRAGMENT_COST * 100), key: bindings.label('use') }) });
@@ -106,8 +109,8 @@ export function createReading(ctx) {
     if (!it.powered) return readFragment(it);
     const lines = world.terminals.readable(it, ctx.time);
     const learned = ctx.lexicon.see(it.site.id, conceptsIn(lines));
-    const route = lines.find((line) => line.lead);
-    world.bus.emit('player:read', { id: it.site.id, site: it.site, learned, lead: route ? { lead: route.lead, parts: route.parts } : null });
+    const leads = lines.filter((line) => line.lead).map((line) => ({ lead: line.lead, parts: line.parts }));
+    world.bus.emit('player:read', { id: it.site.id, site: it.site, learned, leads });
     audio.deviceClick?.(true);
     document.exitPointerLock?.();
     panel.open(lines, known, word, learned, { note: t(ctx.rules.translation ? 'reader.hint' : 'reader.freeNote', { key: bindings.label('use') }) });

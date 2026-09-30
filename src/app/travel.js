@@ -74,6 +74,12 @@ export function createTravel(ctx) {
     if (height > 40) trail.mark(world.toGlobal(camera.position, g), 'queda', height);
   });
   // o arquivo do mundo: cada registro lido (o texto é refeito do Field pelo lugar — ver lang/records.js)
+  // setor religado: o mapa passa a mostrá-lo como seu
+  bus.on('sector:restore', ({ sector, x, y, z }) => {
+    slot.sectors ??= {};
+    slot.sectors[sector] = { ...(slot.sectors[sector] ?? { x: Math.round(x), y: Math.round(y), z: Math.round(z) }), state: 'restored' };
+    diary.add('restored');
+  });
   bus.on('player:read', ({ id, site }) => {
     slot.archive ??= { records: {} };
     slot.archive.records[id] ??= { x: site.x, y: site.y, z: site.z, kind: site.kind === 'unique' ? `unique:${site.unique.kind}` : site.kind, at: Date.now() };

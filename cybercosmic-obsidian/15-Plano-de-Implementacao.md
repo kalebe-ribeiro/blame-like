@@ -12,17 +12,17 @@
 
 ## Visão geral
 
-| fase | nome | em uma frase |
-|---|---|---|
-| 0 ✔ | Fundação | limpar, preparar idiomas, modos, salvamento e a base para tudo o que vem |
-| 1 ✔ | Corpo e risco | a queda que acaba em despertar, a energia, o escuro |
-| 2 ✔ | Ler a Cidade | a língua antiga, os endereços, os terminais, o leitor, o diário |
-| 3 ✔ | Seguir rastros | pistas, sensor, mapa, o começo de um mundo, as primeiras estruturas únicas |
-| 4 | Energia e travessia | religar setores, subir nas máquinas, marcas, seeds compartilháveis |
-| 5 | Preparar os seres | tudo o que Safeguards e NPCs vão precisar — ainda sem nenhum deles |
-| 6 | Safeguards | o sistema de defesa da Cidade |
-| 7 | NPCs | humanos, transumanos, vida de silício — a fase final |
-| — | contínuo | desempenho, distribuição, polimento |
+| fase | nome                | em uma frase                                                               |
+| ---- | ------------------- | -------------------------------------------------------------------------- |
+| 0 ✔  | Fundação            | limpar, preparar idiomas, modos, salvamento e a base para tudo o que vem   |
+| 1 ✔  | Corpo e risco       | a queda que acaba em despertar, a energia, o escuro                        |
+| 2 ✔  | Ler a Cidade        | a língua antiga, os endereços, os terminais, o leitor, o diário            |
+| 3 ✔  | Seguir rastros      | pistas, sensor, mapa, o começo de um mundo, as primeiras estruturas únicas |
+| 4    | Energia e travessia | religar setores, subir nas máquinas, marcas, seeds compartilháveis         |
+| 5    | Preparar os seres   | tudo o que Safeguards e NPCs vão precisar — ainda sem nenhum deles         |
+| 6    | Safeguards          | o sistema de defesa da Cidade                                              |
+| 7    | NPCs                | humanos, transumanos, vida de silício — a fase final                       |
+| —    | contínuo            | desempenho, distribuição, polimento                                        |
 
 ---
 
@@ -96,7 +96,9 @@
 
 ---
 
-## Fase 4 — Energia e travessia
+## Fase 4 — Energia e travessia (em andamento)
+
+> 4.1 ✔ religar setores (subestações, cascata, pistas para a subestação, salvo no mundo).
 
 **Objetivo**: mudar a Cidade e atravessá-la de verdade.
 

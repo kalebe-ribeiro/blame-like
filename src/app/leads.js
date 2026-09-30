@@ -19,17 +19,19 @@ export function createLeads(ctx) {
   const on = () => ctx.rules.leads;
   const all = () => (slot.leads ??= {});
 
-  world.bus.on('player:read', ({ id, lead }) => {
-    if (!on()) return;
-    const leads = all();
-    // chegou: este é o lugar de uma pista aberta
-    const here = leads[id];
+  /** Chegou ao lugar citado por uma pista aberta: ela fecha. */
+  function reach(id) {
+    const here = all()[id];
     if (here && here.state === 'open') {
       here.state = 'reached';
       here.reachedAt = Date.now();
       world.bus.emit('lead:reached', { id, lead: here });
     }
-    if (!lead) return;
+  }
+
+  /** Uma rota lida (inteira ou em partes): abre a pista ou junta as partes novas. */
+  function add(lead) {
+    const leads = all();
     const L = lead.lead;
     let rec = leads[L.id];
     if (!rec) {
@@ -41,8 +43,8 @@ export function createLeads(ctx) {
         ...(L.uniqueKind ? { uniqueKind: L.uniqueKind } : {}),
         from: L.from,
         parts: [],
-        // já esteve lá (leu o terminal antes de saber dele): a pista nasce fechada
-        state: slot.archive?.records?.[L.id] ? 'reached' : 'open',
+        // já esteve lá (leu o terminal antes de saber dele; o setor já foi religado): nasce fechada
+        state: slot.archive?.records?.[L.id] || (L.kind === 'substation' && world.field.restored.has(L.id.split(':')[1])) ? 'reached' : 'open',
         at: Date.now(),
       };
       rec.parts.push(...lead.parts);
@@ -54,6 +56,18 @@ export function createLeads(ctx) {
       rec.parts.push(...fresh);
       world.bus.emit('lead:narrow', { id: L.id, lead: rec });
     }
+  }
+
+  world.bus.on('player:read', ({ id, leads = [] }) => {
+    if (!on()) return;
+    reach(id);
+    for (const lead of leads) add(lead);
+  });
+  // religou o setor: a pista da subestação (e qualquer outra do mesmo setor) fecha
+  world.bus.on('sector:restore', ({ id, sector }) => {
+    if (!on()) return;
+    reach(id);
+    for (const [k, rec] of Object.entries(all())) if (rec.kind === 'substation' && k.split(':')[1] === sector) reach(k);
   });
 
   return {

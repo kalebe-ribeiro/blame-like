@@ -109,3 +109,9 @@ Por que as coisas estão como estão, em ordem.
 ## 2026-09-30 — estudo: a arma do Killy
 
 - O usuário perguntou a dificuldade de uma arma que fura o terreno deixando buraco circular. Registrado em [[Ideias/Futuro/Arma-do-Killy]]: ~60/100 com buraco de shader (cilindros salvos + `discard` + borda pintada + colisão ignorando), ~85 com CSG. Decisão de jogo pendente para a fase 6 (camadas indestrutíveis?).
+
+## 2026-09-30 — fase 4 começa: 4.1 religar setores
+
+- Subestações (armário com alavanca) nas plataformas das estações dos setores apagados, uma por faixa de 480 m (nunca na estação do começo). Terminais do setor citam a subestação (pista `substation`); pistas passaram a aceitar várias por terminal.
+- Religar: 20% da célula (Peregrinação); luz volta em frente de 40 m/s (CPU e shader); salvo no mundo, âmbar no mapa, no diário.
+- O check achou o aviso X4000 do compilador do Windows (return depois de laço no shader) — corrigido com um return só. O teste do controle precisou varrer mais linhas no painel de transporte (novo destino Subestação).

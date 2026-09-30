@@ -110,6 +110,8 @@ uniform vec3  uLightFog[LIGHT_COUNT];     // cor * intensidade * atenuação at�
 uniform vec3  uFlashPos;                  // a lanterna: a lente (cena)
 uniform vec3  uFlashDir;                  //   para onde aponta
 uniform vec3  uFlashColor;                //   cor · intensidade (0 = apagada)
+uniform vec4  uRestoredId[8];             // setores religados: (i, faixa, k, 1 = ativo)
+uniform vec4  uRestoredFront[8];          //   (subestação x, z em cena, frente da luz em m, y em cena)
 uniform vec4  uOutageA[4];                // apagões: centro (cena) + frente da queda (m)
 uniform vec4  uOutageB[4];                // frente do religamento (m), raio do setor
 
@@ -152,10 +154,23 @@ float sectorPower(vec3 wp) {
     }
   }
   float r = float(sectorHash(bi, band, bk, 911)) / 4294967296.0;
-  if (r < 0.3) return 0.0;
-  if (r >= 0.45) return 1.0;
-  float phase = float(sectorHash(bi, band, bk, 912)) / 4294967296.0;
-  return smoothstep(-0.3, 0.1, sin(uTime * 0.6 + phase * 6.2831 + (g.x + g.z) * 0.004));
+  // um só return (o compilador do Windows reclama de returns depois de laços)
+  float res = 1.0;
+  if (r < 0.3) {
+    // apagado — a não ser que o jogador tenha religado (a luz volta como uma frente)
+    res = 0.0;
+    for (int j = 0; j < 8; j++) {
+      vec4 id = uRestoredId[j];
+      vec4 f = uRestoredFront[j];
+      float match = step(0.5, id.w) * float(int(id.x) == bi && int(id.y) == band && int(id.z) == bk);
+      float d = length(wp.xz - f.xy) + abs(wp.y - f.w) * 0.5;
+      res = max(res, match * clamp((f.z - d) / 24.0, 0.0, 1.0));
+    }
+  } else if (r < 0.45) {
+    float phase = float(sectorHash(bi, band, bk, 912)) / 4294967296.0;
+    res = smoothstep(-0.3, 0.1, sin(uTime * 0.6 + phase * 6.2831 + (g.x + g.z) * 0.004));
+  }
+  return res;
 }
 
 float outagePower(vec3 wp, float j) {

@@ -20,6 +20,7 @@
 //    electron . --wake=4 → desmaio aos 4 s (a sequência de queda e despertar)
 //    electron . --map=20 → abre o mapa da travessia aos 20 s
 //    electron . --controls=3 → abre a aba CONTROLES aos 3 s
+//    electron . --goto=subestacao --restore=8 → religa o setor da subestação em frente aos 8 s
 //    electron . --sensor=terminal → com o sensor ligado (terminal | energy | motion), só na sessão
 //    electron . --stats   → imprime FPS e estatísticas do streaming no terminal
 //    electron . --novsync → sem limite de quadros (medir desempenho)
@@ -144,6 +145,7 @@ function createWindow() {
   if (argValue('sensor')) query.set('sensor', argValue('sensor'));
   if (argValue('map')) query.set('map', argValue('map'));
   if (argValue('controls')) query.set('controls', argValue('controls'));
+  if (argValue('restore')) query.set('restore', argValue('restore'));
   if (argValue('collapse')) query.set('collapse', argValue('collapse'));
   if (checkMode) {
     query.set('check', argValue('check') || '1'); // --check=trelica,escadaria: só esses

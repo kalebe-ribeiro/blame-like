@@ -35,6 +35,7 @@ import { ColossusSystem } from './colossi.js';
 import { EventBus } from '../core/events.js';
 import { InscriptionSystem } from './inscriptions.js';
 import { TerminalSystem } from './terminals.js';
+import { SubstationSystem } from './substations.js';
 import { CHUNK, MACRO, Field } from '../gen/field.js';
 
 /** Raio de carregamento padrão dos chunks normais (m). A névoa esconde a borda. */
@@ -153,6 +154,10 @@ export class World {
     this.elevators.outages = this.outages;
     this.terminals = new TerminalSystem(this.streamGroup, m, this.seed);
     Object.assign(this.terminals, { field: this.field, transit: this.transit, outages: this.outages, world: this });
+    // subestações: religar setores apagados (fase 4); o que foi religado vem do mundo salvo
+    this.substations = new SubstationSystem(this.streamGroup, m, this.shared);
+    Object.assign(this.substations, { field: this.field, bus: this.bus });
+    this.substations.load(this.worldState);
     // o endereçamento pintado nas paredes (na língua antiga)
     this.inscriptions = new InscriptionSystem(this.streamGroup, this.seed);
     Object.assign(this.inscriptions, { field: this.field, world: this });
@@ -510,6 +515,7 @@ export class World {
     this.transit.update(time, dt, g, this.origin);
     this.colossi.update(time, dt, g, this.origin);
     this.terminals.update(time, dt, g, this.origin);
+    this.substations.update(time, dt, g, this.origin);
     this.inscriptions.update(time, dt, g, this.origin, camera);
     this.particles.update(time, dt, g, this.origin, () => [...this.chunkLayer.allEmitters(), ...this.macroLayer.allEmitters()]);
 
@@ -523,6 +529,7 @@ export class World {
       yield* self.transit.lights;
       yield* self.colossi.lights;
       yield* self.terminals.lights;
+      yield* self.substations.lights;
     }
     this.outages.update(time, dt, g, _fwd, this.origin);
     this.silhouettes.update(g, this.origin);
@@ -535,6 +542,7 @@ export class World {
     this.transit?.dispose();
     this.colossi?.dispose();
     this.terminals?.dispose();
+    this.substations?.dispose();
     this.inscriptions?.dispose();
     this.builders?.dispose();
     this.particles?.dispose();

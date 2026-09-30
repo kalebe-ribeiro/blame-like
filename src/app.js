@@ -40,6 +40,7 @@ import { createWake } from './app/wake.js';
 import { createCarried } from './app/carried.js';
 import { createReading } from './app/reading.js';
 import { createLeads } from './app/leads.js';
+import { createPower } from './app/power.js';
 import { bindings } from './controls/bindings.js';
 import { startPlace } from './lang/leads.js';
 
@@ -109,6 +110,7 @@ ctx.lexicon = new Lexicon(profile, () => ctx.rules.translation, () => {
   if (ctx.persist) storeProfile(profile);
 });
 ctx.world.lexicon = ctx.lexicon;
+ctx.world.worldState = ctx.worldState; // o que o jogador mudou (setores religados…) — lido no build
 ctx.world.build(ctx.seed);
 ctx.dust = createDust();
 ctx.scene.add(ctx.dust);
@@ -167,6 +169,7 @@ ctx.ui = createUI(ctx);
 ctx.wake = createWake(ctx);
 ctx.carried = createCarried(ctx);
 ctx.reading = createReading(ctx);
+ctx.power = createPower(ctx);
 setupDev(ctx);
 
 // ─── loop ───────────────────────────────────────────────────────────────────

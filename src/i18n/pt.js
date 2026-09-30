@@ -167,6 +167,7 @@ export default {
   'diary.regions': 'REGIÕES',
   'diary.events': 'APAGÕES / COLAPSOS',
   'diary.photos': 'REGISTROS (FOTOS)',
+  'diary.restored': 'SETORES RELIGADOS',
   'diary.time': 'TEMPO NA CIDADE',
 
   // ── mapa da travessia ──
@@ -216,6 +217,12 @@ export default {
   'transit.next': 'PRÓXIMA COMPOSIÇÃO: {s} S{late} · {dir}',
   'transit.late': ' · ATRASADA',
   // ── o aparelho na mão (Peregrinação) ──
+  'device.substation': 'SUBESTAÇÃO  [{key}]',
+  'device.substationLive': 'SETOR COM ENERGIA',
+  'device.substationWeak': 'PRECISA DE {n}% DA CÉLULA',
+  'device.substationOn': 'SETOR RELIGADO',
+  'hud.sectorRestored': 'SETOR RELIGADO',
+  'dest.subestacao': 'Subestação',
   'device.charging': 'CARREGANDO',
   'device.noPower': 'SEM ENERGIA AQUI',
   'device.socket': 'TOMADA  [{key}]',
