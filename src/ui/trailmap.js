@@ -123,9 +123,11 @@ export class TrailMap {
     return root;
   }
 
-  show(current) {
+  /** current: onde você está (GLOBAL) · heading: para onde olhava ao abrir (vetor no plano, opcional) */
+  show(current, heading = null) {
     this.open = true;
     this.current = current;
+    this.heading = heading;
     this._auto = true;
     this.el.querySelector('.tm-hint').textContent = t('map.hint', { key: bindings.label('map') });
     this.el.classList.add('open');
@@ -330,9 +332,32 @@ export class TrailMap {
     if (cur) {
       const [px, py] = proj(cur.x, cur.y, cur.z);
       const t = performance.now() / 1000;
-      g.fillStyle = `rgba(215,160,90,${0.6 + 0.4 * Math.sin(t * 3)})`;
+      g.fillStyle = `rgba(215,160,90,${0.7 + 0.3 * Math.sin(t * 3)})`;
+      // um ponteiro na direção em que você olhava ao abrir o mapa (girando junto com o mapa)
+      const h = this.heading;
+      let ang = null;
+      if (h) {
+        const [qx, qy] = proj(cur.x + h.x * ext * 0.05, cur.y, cur.z + h.z * ext * 0.05);
+        if (Math.hypot(qx - px, qy - py) > 0.5) ang = Math.atan2(qy - py, qx - px);
+      }
       g.beginPath();
-      g.arc(px, py, 4 * dpr, 0, Math.PI * 2);
+      if (ang === null) {
+        g.arc(px, py, 4 * dpr, 0, Math.PI * 2); // de lado ao plano (visto de perfil): só o ponto
+      } else {
+        const L = 15 * dpr;
+        const Wd = 7.5 * dpr;
+        const ca = Math.cos(ang);
+        const sa = Math.sin(ang);
+        const P = (a, b) => [px + ca * a - sa * b, py + sa * a + ca * b];
+        g.moveTo(...P(L, 0)); // a ponta
+        g.lineTo(...P(-L * 0.55, Wd));
+        g.lineTo(...P(-L * 0.25, 0)); // o entalhe de trás
+        g.lineTo(...P(-L * 0.55, -Wd));
+        g.closePath();
+        g.strokeStyle = 'rgba(5,5,5,0.9)'; // contorno: lê por cima das linhas e do anel do início
+        g.lineWidth = 2 * dpr;
+        g.stroke();
+      }
       g.fill();
     }
     // barra de escala

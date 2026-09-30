@@ -244,7 +244,10 @@ export function createUI(ctx) {
     if (transport.isOpen) transport.close();
     gate.classList.add('hidden');
     trail.setFound(ctx.travel.found());
-    trail.show(ctx.travel.here());
+    // para onde você olha agora (no plano): o ponteiro do mapa
+    const look = camera.getWorldDirection(new THREE.Vector3());
+    look.y = 0;
+    trail.show(ctx.travel.here(), look.lengthSq() > 1e-6 ? look.normalize() : null);
   }
 
   // ─── foto (F2) ───
