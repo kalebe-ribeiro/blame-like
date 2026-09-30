@@ -110,7 +110,7 @@ function genBarriers(F, B, box, owns) {
         }
         // luminárias penduradas do teto, raras e distantes umas das outras
         if (hash4(F.seed, i, b.n, k, 360) < 0.03) {
-          block(B, 'frame', xc, b.bottom - 22, zc, 0.6, 24, 0.6);
+          block(B, 'frame', xc, b.bottom - 17, zc, 0.6, 34, 0.6); // da laje (b.bottom) até a luminária
           block(B, 'frame', xc, b.bottom - 34.5, zc, 8, 1.5, 3);
           B.lamp(xc, b.bottom - 36.4, zc, hash4(F.seed, i, b.n, k, 361) < 0.6 ? SODIUM : FLUORO, 1600, hash4(F.seed, i, b.n, k, 362) < 0.2 ? 'faulty' : 'steady', { size: 3, far: true });
         }
@@ -236,8 +236,8 @@ function buildHatch(F, B, b, h, T) {
   for (const s of [-1, 1]) box('frame', 59.6, (deck + ceil) / 2, t + s * 1.9, 0.18, ceil - deck, 0.18);
   // luzes com energia própria (a manutenção das máquinas não depende do setor)
   const [lx, lz] = P(59, t + 1.8);
-  B.lamp(lx, deck + 2.6, lz, [1.0, 0.62, 0.3], 60, 'steady', { to: [lx, deck + 4, lz], size: 1.2, grid: false });
-  const [tx, tz] = P(T - 1.5, t + 1.6);
+  B.lamp(lx, deck + 2.6, lz, [1.0, 0.62, 0.3], 60, 'steady', { to: [lx, ceil, lz], size: 1.2, grid: false }); // pendurada do teto da trincheira
+  const [tx, tz] = P(T + 1.5, t + 1.6); // já na laje cheia, depois da borda do vão
   B.lamp(tx, top + 2.4, tz, [1.0, 0.62, 0.3], 40, 'faulty', { to: [tx, top, tz], size: 1.2, grid: false });
 }
 
@@ -300,7 +300,7 @@ function shell(B, f, y, h, T, doorW, doorH, r) {
   box(B, 'floor', ha + 2, y, off, 2, 0.35, doorW / 2 + 0.5);
   // uma luminária sobre a porta, presa ao umbral
   const [lx, lz] = f.P(ha + 1.6, off);
-  const [mx, mz] = f.P(ha + 0.6, off);
+  const [mx, mz] = f.P(ha, off); // a face da parede, acima do umbral
   B.lamp(lx, y + doorH + 1.6, lz, FLUORO, 40, 'steady', { to: [mx, y + doorH + 2.2, mz], size: 1.3, grid: false });
   return off;
 }
@@ -412,7 +412,7 @@ function buildUnique(F, B, u) {
     box(B, 'floor', 0, y0, 0, 6, 0.6, 6);
     // colunas desalinhadas
     for (let q = 0; q < 4; q++) box(B, 'frame', r.float(-0.7, 0.7) * ha, y0, r.float(-0.7, 0.7) * hc, 0.8, u.h, 0.8);
-    const [lx, lz] = P(-2.5, 2.5);
+    const [lx, lz] = P(-(gap / 2 + 1.5), 2.5); // sob o teto, não sob o rasgo
     B.lamp(lx, y0 + 7, lz, FLUORO, 70, 'steady', { to: [lx, y0 + u.h, lz], size: 1.6, grid: false });
   }
   // luz de sinal no telhado, vista de longe (a Cidade ainda sabe que isto existe)
@@ -473,9 +473,9 @@ function passageTower(F, B, b, p) {
     // o patamar de cima: da ponte até a escada
     B.add('grate', place(new THREE.BoxGeometry(3.4, 0.3, 2.4), { ...toXYZ(V(6.4, b.top - 0.15, mz)) }));
     // luzes pequenas ao longo da subida (a manutenção tem energia própria)
-    for (let y = yb + 30; y < yt; y += 60) B.lamp(p.x + mx + 0.9, y, p.z + mz + 0.9, SODIUM, 25, 'faulty', { to: [p.x + mx + 0.9, y + 1, p.z + mz + 0.6], size: 0.9, grid: false });
+    for (let y = yb + 30; y < yt; y += 60) B.lamp(p.x + mx + 0.9, y, p.z + mz + 0.9, SODIUM, 25, 'faulty', { to: [p.x + mx + 0.4, y + 1, p.z + mz], size: 0.9, grid: false }); // presa ao mastro
   }
-  B.lamp(p.x + hw - 4, yTop + 2, p.z + hw, SODIUM, 2500, 'steady', { to: [p.x + hw, yTop + 3.5, p.z + hw], size: 4, far: true });
+  B.lamp(p.x + hw - 4, yTop + 2, p.z + hw, SODIUM, 2500, 'steady', { to: [p.x + hw, yTop, p.z + hw], size: 4, far: true }); // no topo do pilar do canto
   B.lamp(p.x + 60, y0 + 8, p.z + 3, FLUORO, 400, 'faulty', { to: [p.x + 60, y0, p.z + 4.5], size: 2, far: true });
   // luz caindo pela passagem, do alto até a plataforma
   B.add('beam', beamGeometry(V(0, b.top + 200, 0), b.top + 200 - y0, 38, 44));

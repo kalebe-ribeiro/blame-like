@@ -282,7 +282,7 @@ export class World {
     this.staticLights = [S(1.9, 3.75, 44, sodium, 30)];
     const m = this.materials;
     const post = [
-      [new THREE.CylinderGeometry(0.1, 0.13, 3.9, 6), m.duct, 2.5, 2.35, 44], // poste
+      [new THREE.CylinderGeometry(0.1, 0.13, 4.35, 6), m.duct, 2.5, 2.15, 44], // poste: do tabuleiro (topo em y = 0) até o braço
       [new THREE.BoxGeometry(0.7, 0.12, 0.12), m.duct, 2.2, 4.25, 44], // braço
       [new THREE.BoxGeometry(0.7, 0.3, 0.7), m.machine, 1.9, 4.05, 44], // carcaça
       [new THREE.BoxGeometry(0.5, 0.1, 0.5), m.lamp, 1.9, 3.85, 44], // lente

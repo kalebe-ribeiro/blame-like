@@ -155,3 +155,8 @@ Por que as coisas estão como estão, em ordem.
 - Fotos: cano vertical terminando no ar (dutos com lacunas por ruído → trechos soltos: agora contínuos), cubos da treliça (a zona era uma bolha 3D no ar e parava 20 m antes das camadas: agora ocupa a faixa inteira entre duas camadas, as colunas entram nas lajes e não falham), cabos dos elevadores com 400 m fixos (pontas no ar acima da torre: agora esticados até o cabeçote; o elevador de fachada ganhou uma viga de cabeçote).
 - Só o `check` rodou (mudança de geração do mundo/elevadores, igual nos dois modos) — ver a tabela em [[10-Comandos-e-Verificacao]].
 
+## 2026-09-30 — o poste que sempre flutuou
+
+- O poste das passarelas tinha o pé **0,4 m acima do tabuleiro** (e o poste fixo da ponte inicial, no `world.js`, também). Eu tinha olhado a foto e dito que estava certo — erro meu: não medi. Corrigido e provado com captura rente ao tabuleiro.
+- Na mesma revisão (42 luminárias com haste): a lâmpada de cima da escotilha ficava sobre o vão; a da plataforma pendia de uma haste que acabava no ar (agora vai ao teto da trincheira); o braço da luminária da porta das únicas acabava 0,6 m antes da parede; a lâmpada do console podia pender sob o rasgo do teto; as lâmpadas da escada da passagem ficavam a 0,2 m do mastro; a do topo da torre, 3,5 m acima do pilar; as hastes das luminárias do teto das camadas acabavam 10 m abaixo da laje.
+
