@@ -480,9 +480,10 @@ function buildWalk(F, B, axis, u, y, t0, t1, w, salt, anchors) {
       B.add('rib', cylinderBetween(P(t2, -1.05, -rad - tube), P(t2, -1.05, rad + tube), tube + 0.12, tube + 0.12, 6));
     }
     if (r.chance(0.1)) {
-      const side = r.sign();
-      const [lx, ly, lz] = G(ts + len / 2, 5, side * 2);
-      const post = G(ts + len / 2, 0.4, side * 2.7);
+      // o poste fica em cima do tabuleiro, rente à borda (longe do trilho, se houver)
+      const side = w.track ? -w.track.side : r.sign();
+      const [lx, ly, lz] = G(ts + len / 2, 5, side * Math.max(0.6, hw - 1.3));
+      const post = G(ts + len / 2, 0.4, side * Math.max(1.2, hw - 0.45));
       B.lamp(lx, ly, lz, (m & 1) ? SODIUM : FLUORO, r.float(30, 50), r.chance(0.5) ? 'faulty' : 'steady', { to: post });
       B.socket(post[0], post[1] + 1.1, post[2], rotY + (side > 0 ? Math.PI : 0));
     }

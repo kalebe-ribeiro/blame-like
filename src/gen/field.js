@@ -1561,14 +1561,53 @@ export class Field {
    * uma plataforma solta no ar seria mágica.
    */
   nodeLinked(n) {
-    return this._memo(`nl${n.i},${n.l},${n.k}`, () => {
-      for (const d of EDGE_DIRS) {
-        if (this.edge(n, d)) return true;
-        const m = this.node(n.i - d[0], n.l - d[1], n.k - d[2]);
-        if (m && this.edge(m, d)) return true;
+    // ligado não basta: o GRUPO inteiro (plataformas ligadas por pontes) precisa
+    // chegar a uma passarela infinita por algum conector — senão é uma ilha no ar
+    const key = `${n.i},${n.l},${n.k}`;
+    this._anchored ??= new Map();
+    if (this._anchored.has(key)) return this._anchored.get(key);
+    const LIMIT = 1500; // grupos maiores que isso: presos em algum lugar (a rede é contínua)
+    const seen = new Map([[key, n]]);
+    const queue = [n];
+    let found = false;
+    let cut = false;
+    while (queue.length) {
+      const a = queue.shift();
+      if (this.nodeConnector(a)) {
+        found = true;
+        break;
       }
-      return this.nodeConnector(n);
-    });
+      if (seen.size > LIMIT) {
+        cut = true;
+        break;
+      }
+      for (const b of this._nodeNeighbors(a)) {
+        const kb = `${b.i},${b.l},${b.k}`;
+        if (seen.has(kb)) continue;
+        if (this._anchored.has(kb)) {
+          found = this._anchored.get(kb);
+          queue.length = 0;
+          break;
+        }
+        seen.set(kb, b);
+        queue.push(b);
+      }
+    }
+    const ok = found || cut;
+    if (this._anchored.size > 60000) this._anchored.clear();
+    for (const k of seen.keys()) this._anchored.set(k, ok);
+    return ok;
+  }
+
+  /** As plataformas ligadas a n por uma aresta (as dele e as dos vizinhos até ele). */
+  _nodeNeighbors(n) {
+    const out = [];
+    for (const d of EDGE_DIRS) {
+      if (this.edge(n, d)) out.push(this.node(n.i + d[0], n.l + d[1], n.k + d[2]));
+      const m = this.node(n.i - d[0], n.l - d[1], n.k - d[2]);
+      if (m && this.edge(m, d)) out.push(m);
+    }
+    return out;
   }
 
   /** Um conector liga este nó a uma passarela infinita? (a mesma regra de network.js) */

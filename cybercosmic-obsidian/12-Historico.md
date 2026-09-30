@@ -145,3 +145,8 @@ Por que as coisas estão como estão, em ordem.
 - Fotos do usuário: texto pintado no ar (inscrições de galeria na placa que a passarela remove — 298 de 50 mil tinham parede!), arcos soltos na ponte inicial, plataforma no ar. Correções: objetos flutuantes removidos; pilares só em trechos presos (30% dos segmentos eram pedaços soltos); costelas viraram pórticos com travessa; plataformas só com ligação (22 de 540 estavam soltas) e sem a "raiz" cônica; monólitos/agulhas de camada a camada; inscrições só onde `galleryWallAt` diz que há parede.
 - Lanterna no modo Livre (atalho `torch`: L / RT), sem célula nem aparelho.
 - Regra registrada: nada flutua, nada é mágico — pensar sempre no contexto de *Blame!*.
+
+## 2026-09-30 — nada flutua (segunda rodada)
+
+- Novas fotos do usuário (bioma teia e outros). Corrigidos: o poste das passarelas ficava fora do tabuleiro nas estreitas (a 2,7 m do eixo); a borda das plataformas era um polígono girado com as pontas no ar (agora nos cantos do piso); **grupos de plataformas ligados só entre si** — agora um grupo só existe se, pelas pontes, chega a uma passarela (`nodeLinked` faz uma busca no grafo; 9% das plataformas eram ilhas); sacadas das galerias presas a placas de parede que não existem (`galleryWallAt`) e dos poços onde uma passarela fura a parede; objetos do piso das galerias sobre buracos.
+

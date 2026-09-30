@@ -133,6 +133,7 @@ function dressGallery(F, B, box, g) {
         if (F.noise3(ta * 0.004, k * 0.7, gid * 0.13) < -0.45) continue; // trechos desabados
         const c = G(ta + 12, y - 0.6, depth / 2);
         if (F.insideVoid(...G(ta + 12, y, -5).toArray(), g.id)) continue; // a parede some aqui
+        if (!F.galleryWallAt(g, side, ta + 2, y + 2) || !F.galleryWallAt(g, side, ta + 22, y + 2)) continue; // sem placa de parede atrás: nada para segurar a sacada
         if (blocked(ta + 12, y, 14, 5)) continue; // uma passarela atravessa aqui
         const sx = along === 'x' ? 24 : depth;
         const sz = along === 'x' ? depth : 24;
@@ -171,6 +172,7 @@ function dressGallery(F, B, box, g) {
         const z = (k + 0.5) * C;
         const s = along === 'x' ? z : x;
         if (Math.abs(s - g.c) > g.w / 2 - 20) continue;
+        if (F.insideVoid(x, g.floor - 9, z, g.id)) continue; // o piso some aqui (outro volume)
         const r = rngAt(F.seed, i, Math.round(g.floor), k, 420);
         const roll = r.next();
         if (roll < 0.1) habitation(B, r, x, g.floor, z, false);
@@ -229,6 +231,8 @@ function dressShaft(F, B, box, s) {
       if (F.inBarrier(y, LEVEL + 4)) continue;
       if (!isStairFace && hash4(F.seed, k, sid, fi, 440) > 0.35) continue;
       if (F.insideVoid(...G((tr[0] + tr[1]) / 2, y + 5, -5).toArray(), s.id)) continue;
+      // onde uma passarela fura a parede do poço, a placa inteira (80 m) some: sem sacada nessa altura
+      if (F.walkwayCrossings(axis === 'x' ? 'z' : 'x', face, tr[0] - 90, tr[1] + 90, y - 90, y + 90).length) continue;
       // sacada ao longo da face (no trecho deste chunk)
       const mid = (tr[0] + tr[1]) / 2;
       const c = G(mid, y - 0.6, depth / 2);
