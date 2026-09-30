@@ -1105,7 +1105,10 @@ export class Field {
   // ── treliça espacial ─────────────────────────────────────────────────────
 
   frameZone(x, y, z) {
-    return this.noise3(x * 0.00032 + 11.1, y * 0.0005, z * 0.00032 - 4.2) > 0.32;
+    // a treliça ocupa a faixa inteira entre duas camadas (da laje de baixo ao teto
+    // da de cima), para estar presa a elas — não uma bolha no meio do ar
+    const band = Math.floor((y - MEGA.barrierTop0) / MEGA.barrier);
+    return this.noise3(x * 0.00032 + 11.1, band * 7.31, z * 0.00032 - 4.2) > 0.32;
   }
 
   /**
@@ -1127,7 +1130,7 @@ export class Field {
   /** Espessura da viga na linha (eixo, u, v), trecho n — ou 0 se faltar. */
   frameBeam(axis, u, v, n) {
     const salt = axis === 'x' ? 230 : axis === 'y' ? 231 : 232;
-    if (hash4(this.seed, u, v, n, salt) < 0.14) return 0; // falhas na treliça
+    if (axis !== 'y' && hash4(this.seed, u, v, n, salt) < 0.14) return 0; // falhas na treliça (as colunas não falham: seguram tudo)
     return 7 + hash4(this.seed, u, v, 0, salt + 5) * 9;
   }
 
@@ -1462,7 +1465,9 @@ export class Field {
   }
 
   ductGap(salt, t) {
-    return this.noise3(t * 0.004, salt * 0.13, 7.7) < -0.42;
+    // (antes: lacunas por ruído — cada trecho entre duas lacunas ficava solto no ar.
+    //  Um duto é contínuo; só acaba onde entra numa camada.)
+    return false;
   }
 
   // ── rede andável ─────────────────────────────────────────────────────────

@@ -725,7 +725,9 @@ function genFrames(F, B, box, owns) {
           joints++;
         }
         const ty = F.frameBeam('y', i, k, j);
-        if (ty && inZone(x, y + S / 2, z) && clearOf(x, y + S / 2, z, S / 2, ty / 2 + 8)) {
+        // as colunas podem entrar na laje de uma camada: é onde a treliça se prende
+        const colZone = F.frameZone(x, y + S / 2, z) && F.isOpenBiome(x, y + S / 2, z) && !F.insideVoid(x, y + S / 2, z);
+        if (ty && colZone && clearOf(x, y + S / 2, z, S / 2, ty / 2 + 8)) {
           block(B, 'frame', x, y + S / 2, z, ty, S, ty);
           joints++;
         }

@@ -150,3 +150,8 @@ Por que as coisas estão como estão, em ordem.
 
 - Novas fotos do usuário (bioma teia e outros). Corrigidos: o poste das passarelas ficava fora do tabuleiro nas estreitas (a 2,7 m do eixo); a borda das plataformas era um polígono girado com as pontas no ar (agora nos cantos do piso); **grupos de plataformas ligados só entre si** — agora um grupo só existe se, pelas pontes, chega a uma passarela (`nodeLinked` faz uma busca no grafo; 9% das plataformas eram ilhas); sacadas das galerias presas a placas de parede que não existem (`galleryWallAt`) e dos poços onde uma passarela fura a parede; objetos do piso das galerias sobre buracos.
 
+## 2026-09-30 — nada flutua (terceira rodada)
+
+- Fotos: cano vertical terminando no ar (dutos com lacunas por ruído → trechos soltos: agora contínuos), cubos da treliça (a zona era uma bolha 3D no ar e parava 20 m antes das camadas: agora ocupa a faixa inteira entre duas camadas, as colunas entram nas lajes e não falham), cabos dos elevadores com 400 m fixos (pontas no ar acima da torre: agora esticados até o cabeçote; o elevador de fachada ganhou uma viga de cabeçote).
+- Só o `check` rodou (mudança de geração do mundo/elevadores, igual nos dois modos) — ver a tabela em [[10-Comandos-e-Verificacao]].
+

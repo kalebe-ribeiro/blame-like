@@ -56,11 +56,7 @@ export class ElevatorSystem {
       parts.push({ mat: 'machine', g: place(new THREE.BoxGeometry(w, 0.1, 0.1), { y: 0.6, z: s * (d / 2 - 0.1) }) });
       parts.push({ mat: 'machine', g: place(new THREE.BoxGeometry(w, 0.1, 0.1), { y: 0.95, z: s * (d / 2 - 0.1) }) });
     }
-    // cabos de tração subindo até sumir
-    const cableH = big ? 400 : 120;
-    for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-      parts.push({ mat: 'machine', g: place(new THREE.CylinderGeometry(big ? 0.25 : 0.08, big ? 0.25 : 0.08, cableH, 4, 1, true), { x: sx * (w / 2 - 1), y: cableH / 2, z: sz * (d / 2 - 1) }) });
-    }
+    // (os cabos de tração são uma malha à parte: esticada a cada quadro do carro até o cabeçote)
     if (big) {
       // uma cabine de operação vazia num canto
       parts.push({ mat: 'machine', g: place(new THREE.BoxGeometry(5, 3.2, 4), { x: w / 2 - 4, y: 1.6, z: d / 2 - 4 }) });
@@ -70,6 +66,23 @@ export class ElevatorSystem {
     parts.push({ mat: 'machine', g: place(new THREE.BoxGeometry(0.7, 0.4, 0.7), lamp) });
     def.lamp = { x: lamp.x, y: lamp.y + 0.35, z: lamp.z };
     const group = new THREE.Group();
+    // cabos: altura 1, esticados em update() até o cabeçote (a torre da passagem; no
+    // elevador de fachada, uma viga de cabeçote logo acima da parada de cima)
+    const cg = [];
+    for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      cg.push(place(new THREE.CylinderGeometry(big ? 0.25 : 0.08, big ? 0.25 : 0.08, 1, 4, 1, true), { x: sx * (w / 2 - 1), y: 0.5, z: sz * (d / 2 - 1) }));
+    }
+    const cables = new THREE.Mesh(mergeAll(cg), this.materials.machine);
+    cables.userData.noCollide = true;
+    cables.matrixAutoUpdate = false;
+    def.cables = cables;
+    def.headY = big ? def.y1 + 76 : def.y1 + 7; // as polias do alto da torre / a viga de cabeçote
+    if (!big) {
+      // a viga de cabeçote do elevador de fachada (presa à parede do maciço)
+      const head = new THREE.Mesh(new THREE.BoxGeometry(w + 2, 0.8, 1.2), this.materials.machine);
+      head.userData.noCollide = true;
+      def.head = head;
+    }
     for (const mat of ['grate', 'machine']) {
       const g = mergeAll(parts.filter((p) => p.mat === mat).map((p) => p.g));
       const mesh = new THREE.Mesh(g, this.materials[mat]);
@@ -96,6 +109,10 @@ export class ElevatorSystem {
         if (!want.has(id)) {
           car.group.traverse((o) => o.geometry?.dispose());
           car.group.removeFromParent();
+          for (const m of [car.def.cables, car.def.head]) {
+            m?.geometry.dispose();
+            m?.removeFromParent();
+          }
           this.cars.delete(id);
         }
       }
@@ -120,6 +137,21 @@ export class ElevatorSystem {
       car.y = y;
       car.group.position.set(car.def.x - origin.x, y - origin.y, car.def.z - origin.z);
       car.group.updateMatrixWorld(true);
+      // os cabos: do carro até o cabeçote, nem mais nem menos
+      const cab = car.def.cables;
+      if (cab) {
+        if (!cab.parent) this.group.add(cab);
+        cab.position.set(car.def.x - origin.x, y - origin.y, car.def.z - origin.z);
+        cab.scale.set(1, Math.max(0.5, car.def.headY - y), 1);
+        cab.updateMatrix();
+        cab.updateMatrixWorld(true);
+      }
+      const head = car.def.head;
+      if (head) {
+        if (!head.parent) this.group.add(head);
+        head.position.set(car.def.x - origin.x, car.def.headY - origin.y + 0.4, car.def.z - origin.z);
+        head.updateMatrixWorld(true);
+      }
       for (const m of car.group.children) m.userData.dy = dy;
       // lâmpada de sinalização presa ao carro (âmbar parado, vermelha em movimento)
       const moving = Math.abs(dy) > 1e-3;
@@ -129,7 +161,11 @@ export class ElevatorSystem {
   }
 
   dispose() {
-    for (const car of this.cars.values()) car.group.traverse((o) => o.geometry?.dispose());
+    for (const car of this.cars.values()) {
+      car.group.traverse((o) => o.geometry?.dispose());
+      car.def.cables?.geometry.dispose();
+      car.def.head?.geometry.dispose();
+    }
     this.cars.clear();
     this.group.removeFromParent();
   }
