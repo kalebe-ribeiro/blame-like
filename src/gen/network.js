@@ -59,7 +59,21 @@ function side(a, b) {
   return s.lengthSq() > 0 ? s.normalize() : new THREE.Vector3(1, 0, 0);
 }
 
-/** Pontos de saída na borda de cada plataforma, em direção à outra. */
+/**
+ * Distância do centro de uma plataforma até a BORDA do piso na direção (ux, uz).
+ * O piso é um polígono regular (CylinderGeometry com n.sides lados, girado por
+ * n.spin): em direção ao meio de um lado a borda fica mais perto que o raio —
+ * usar o raio deixava as pontes terminando no ar, antes da plataforma.
+ */
+function edgeDist(n, ux, uz) {
+  const k = n.sides;
+  const seg = (Math.PI * 2) / k;
+  let a = Math.atan2(ux, uz) - n.spin; // o mesmo ângulo dos cantos (x = sin θ, z = cos θ)
+  a = ((a % seg) + seg) % seg;
+  return (n.r * Math.cos(Math.PI / k)) / Math.cos(a - Math.PI / k);
+}
+
+/** Pontos de saída na borda de cada plataforma, em direção à outra (um pouco para dentro do piso). */
 function endpoints(B, e) {
   const { a, b } = e;
   const dx = b.x - a.x;
@@ -67,8 +81,10 @@ function endpoints(B, e) {
   const hd = Math.hypot(dx, dz) || 1;
   const ux = dx / hd;
   const uz = dz / hd;
-  const s = B.L(a.x + ux * (a.r - 0.8), a.y, a.z + uz * (a.r - 0.8));
-  const t = B.L(b.x - ux * (b.r - 0.8), b.y, b.z - uz * (b.r - 0.8));
+  const da = edgeDist(a, ux, uz) - 0.8;
+  const db = edgeDist(b, -ux, -uz) - 0.8;
+  const s = B.L(a.x + ux * da, a.y, a.z + uz * da);
+  const t = B.L(b.x - ux * db, b.y, b.z - uz * db);
   return [s, t];
 }
 
@@ -113,7 +129,8 @@ function buildPlatform(F, B, n) {
   B.add('tower', place(new THREE.BoxGeometry(r * 0.5, 2.4, r * 0.5), { x: c.x, y: c.y - 2.8, z: c.z, ry: n.spin }));
   for (let q = 0; q < n.sides; q++) {
     const a = n.spin + (q / n.sides) * Math.PI * 2;
-    const e = new THREE.Vector3(c.x + Math.cos(a) * (r - 0.6), c.y - 1.7, c.z + Math.sin(a) * (r - 0.6));
+    // para os cantos do piso (a mesma convenção dos cantos: x = sin θ, z = cos θ)
+    const e = new THREE.Vector3(c.x + Math.sin(a) * (r - 0.6), c.y - 1.7, c.z + Math.cos(a) * (r - 0.6));
     B.add('rib', cylinderBetween(new THREE.Vector3(c.x, c.y - 2.6, c.z), e, 0.28, 0.2, 4));
   }
 
@@ -188,11 +205,16 @@ const EDGES = {
     for (let d = 6; d < len - 4; d += e.r.float(8, 16)) {
       if (!e.r.chance(0.5)) continue;
       const p = s.clone().addScaledVector(dir, d);
-      const rib = new THREE.TorusGeometry(w / 2 + 2.5, 0.25, 5, 24, Math.PI);
+      const R = w / 2 + 2.5;
+      const rib = new THREE.TorusGeometry(R, 0.25, 5, 24, Math.PI);
       rib.scale(1, e.r.float(1, 1.5), 1);
       rib.rotateY(Math.atan2(dir.x, dir.z));
       rib.translate(p.x, p.y - 0.3, p.z);
       B.add('rib', rib);
+      // a travessa: de pé a pé do arco, por baixo do tabuleiro (os pés não ficam no ar)
+      const perp = new THREE.Vector3(dir.z, 0, -dir.x).normalize().multiplyScalar(R + 0.25);
+      const q = new THREE.Vector3(p.x, p.y - 0.75, p.z);
+      B.add('rib', cylinderBetween(q.clone().sub(perp), q.clone().add(perp), 0.35, 0.35, 5));
     }
   },
 
@@ -329,14 +351,16 @@ const EDGES = {
     // conectores: plataforma A → início da hélice; fim da hélice → plataforma B
     const S = at(thA, a.y);
     const dAC = Math.hypot(C.x - a.x, C.z - a.z);
-    const ea = B.L(a.x + ((C.x - a.x) / dAC) * (a.r - 0.8), a.y, a.z + ((C.z - a.z) / dAC) * (a.r - 0.8));
+    const eA = edgeDist(a, (C.x - a.x) / dAC, (C.z - a.z) / dAC) - 0.8;
+    const ea = B.L(a.x + ((C.x - a.x) / dAC) * eA, a.y, a.z + ((C.z - a.z) / dAC) * eA);
     B.add('bridge', slabBetween(ea, S, w));
     const E = at(thA + delta, b.y);
     const toB = Math.hypot(b.x - (E.x + B.x0), b.z - (E.z + B.z0));
     if (toB > b.r) {
       const ux = (b.x - (E.x + B.x0)) / toB;
       const uz = (b.z - (E.z + B.z0)) / toB;
-      const eb = B.L(b.x - ux * (b.r - 0.8), b.y, b.z - uz * (b.r - 0.8));
+      const eB = edgeDist(b, -ux, -uz) - 0.8;
+      const eb = B.L(b.x - ux * eB, b.y, b.z - uz * eB);
       B.add('bridge', slabBetween(E, eb, w));
       rails(B, E, eb, w);
     }
@@ -356,7 +380,7 @@ function connectToWalkways(F, B, n) {
     if (w && Math.abs(n.x - lx) < NODE.h * 1.5 && !F.walkGap(a * 7919 + b * 104729, tMid(n.z), w.main, n.y)) {
       const sgn = Math.sign(lx - n.x) || 1;
       if (w.track && -sgn === w.track.side) return; // a ligação cruzaria o trilho do transportador
-      const s = B.L(n.x + sgn * (n.r - 0.8), n.y, n.z);
+      const s = B.L(n.x + sgn * (edgeDist(n, sgn, 0) - 0.8), n.y, n.z);
       const t = B.L(lx - sgn * (w.width / 2 - 0.3), n.y, n.z);
       if (Math.abs(t.x - s.x) > 1) {
         B.add('bridge', slabBetween(s, t, 3.5));
@@ -373,7 +397,7 @@ function connectToWalkways(F, B, n) {
     if (w && Math.abs(n.z - lz) < NODE.h * 1.5 && !F.walkGap(b * 15485863 + c * 7919 + 17, tMid(n.x), false, n.y)) {
       const sgn = Math.sign(lz - n.z) || 1;
       if (w.track && -sgn === w.track.side) return;
-      const s = B.L(n.x, n.y, n.z + sgn * (n.r - 0.8));
+      const s = B.L(n.x, n.y, n.z + sgn * (edgeDist(n, 0, sgn) - 0.8));
       const t = B.L(n.x, n.y, lz - sgn * (w.width / 2 - 0.3));
       if (Math.abs(t.z - s.z) > 1) {
         B.add('bridge', slabBetween(s, t, 3.5));

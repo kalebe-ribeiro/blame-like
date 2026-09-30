@@ -160,3 +160,9 @@ Por que as coisas estão como estão, em ordem.
 - O poste das passarelas tinha o pé **0,4 m acima do tabuleiro** (e o poste fixo da ponte inicial, no `world.js`, também). Eu tinha olhado a foto e dito que estava certo — erro meu: não medi. Corrigido e provado com captura rente ao tabuleiro.
 - Na mesma revisão (42 luminárias com haste): a lâmpada de cima da escotilha ficava sobre o vão; a da plataforma pendia de uma haste que acabava no ar (agora vai ao teto da trincheira); o braço da luminária da porta das únicas acabava 0,6 m antes da parede; a lâmpada do console podia pender sob o rasgo do teto; as lâmpadas da escada da passagem ficavam a 0,2 m do mastro; a do topo da torre, 3,5 m acima do pilar; as hastes das luminárias do teto das camadas acabavam 10 m abaixo da laje.
 
+## 2026-09-30 — pontes da rede que paravam antes da plataforma
+
+- As pontes da rede (e os conectores e as rampas em espiral) terminavam no raio do círculo da plataforma, mas o piso é um polígono regular: em direção ao meio de um lado a borda fica mais perto → vão de ~2 m no ar. Agora `edgeDist` calcula a borda real do polígono em cada direção.
+- As costelas das pontes da rede (outro gerador, não revisado antes) tinham os pés no ar: agora pórticos com travessa, como nas passarelas.
+- Erro meu da rodada anterior: as vigas radiais sob as plataformas usavam a convenção de ângulo trocada (x = cos em vez de x = sin) e saíam pela borda. Corrigido e provado com captura de cima.
+
