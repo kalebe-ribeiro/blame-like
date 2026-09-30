@@ -65,6 +65,14 @@ export default {
   'worlds.continue': 'CONTINUAR',
   'worlds.new': 'NOVO MUNDO',
   'worlds.confirmNew': 'SUBSTITUIR ESTE MUNDO?',
+  'worlds.copy': 'COPIAR CÓDIGO',
+  'worlds.copied': 'código copiado: seed, modo e as suas marcas',
+  'worlds.copyFail': 'não deu para copiar',
+  'worlds.paste': 'COLAR CÓDIGO',
+  'worlds.badCode': 'a área de transferência não tem um código de mundo',
+  'worlds.pasted': 'código: seed {seed} · {mode} · {n} marcas',
+  'worlds.import': 'COMEÇAR ESTE MUNDO',
+  'worlds.importReplace': 'SUBSTITUIR O MUNDO DESTE MODO',
   'worlds.hint': 'um mundo salvo por modo · um mundo nunca troca de modo',
 
   // ── configurações ──

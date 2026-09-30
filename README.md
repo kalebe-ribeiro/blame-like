@@ -102,6 +102,10 @@ Não há missões. Uma pista é um endereço que você leu e decide seguir.
 
 **V** (LB no controle) pinta uma seta de estêncil em spray na superfície para onde você olha, até 7 m. Ela aponta na direção do olhar projetada na superfície: mire um pouco para o lado e ela aponta para o lado; olhando reto para uma parede, aponta para cima. Mirar numa marca e apertar de novo a apaga. A tinta só aparece com luz (a mesma conta das inscrições, lanterna incluída). As marcas ficam no mundo salvo (até 400), aparecem no mapa como setinhas e vão junto quando você compartilha a seed. As de outra pessoa vêm em cor de ferrugem.
 
+## Seeds compartilháveis (fase 4)
+
+No painel **MUNDOS**, **COPIAR CÓDIGO** põe na área de transferência um código com a seed, o modo e as suas marcas. Quem recebe usa **COLAR CÓDIGO**, confere (seed, modo, quantas marcas) e começa aquele mundo, que substitui o mundo salvo daquele modo, com confirmação. Como o mundo é determinístico, é a mesma Cidade, com o mesmo começo e as suas setas pintadas em cor de ferrugem. O estado da sua travessia (setores religados, pistas, léxico) não vai junto: cada um faz a própria. Tudo por botões, então funciona pelo controle.
+
 ## Setores de energia
 
 A Cidade é dividida em setores de formas e tamanhos irregulares (só as camadas os separam na vertical). Cerca de 30% estão **permanentemente apagados**: lâmpadas, janelas, trens, elevadores e terminais sem energia. Uns 15% são **instáveis**: a luz vai e vem em ondas. O resto tem energia. A mesma conta roda na CPU (lâmpadas) e na GPU (janelas), então as duas sempre concordam.
@@ -321,6 +325,7 @@ src/
   app/carried.js            o aparelho na mão: lanterna, célula de energia, tomadas, sensor (Peregrinação)
   app/power.js              religar um setor na subestação em frente
   app/marks.js              marcas pintadas (V / LB): no mundo salvo, no mapa
+  app/share.js              o código de um mundo (seed, modo, marcas) e a área de transferência
   world/substations.js      subestações (armários) e os setores religados (luz em cascata, shaders)
   app/wake.js               queda e despertar (Peregrinação)
   app/reading.js            ler terminais (E), o leitor portátil, pegar o sensor
@@ -445,7 +450,7 @@ Teste de fumaça: numa seed fixa, visita todos os destinos do painel de transpor
 ```bash
 npx electron . --stats
 ```
-Imprime FPS, chunks carregados, fila de geração, lotes (uso, vagas livres, compactações), draw calls, triângulos, heap e a GPU em uso. Também mostra o tempo de CPU das listas de desenho e, perto da água, o tempo de GPU do reflexo. Com `--novsync` o limite de quadros é removido, para medir desempenho de verdade. `--outage=4` força um apagão de setor aos 4 s, e `--collapse=4` um colapso distante. `--wake=4` dispara o desmaio aos 4 s, `--lantern` começa com a lanterna acesa e `--game=pilgrimage` abre a sessão no modo Peregrinação. `--read=N` abre a leitura do terminal em frente aos N s, `--lexicon=N` já entende as palavras até a classe N (1 comuns, 2 incomuns, 3 raras) e `--archive=records|lexicon|leads` escolhe a aba do diário. `--sensor=terminal|energy|motion` dá o sensor já ligado nesse modo, `--map=N` abre o mapa aos N s e `--controls=N` a aba CONTROLES. `npm run check:pad` joga os dois modos só com um controle simulado (tela de entrada, configurações, troca de botão, abas, transporte, mapa, tela cheia, leitura, lanterna, mundos).
+Imprime FPS, chunks carregados, fila de geração, lotes (uso, vagas livres, compactações), draw calls, triângulos, heap e a GPU em uso. Também mostra o tempo de CPU das listas de desenho e, perto da água, o tempo de GPU do reflexo. Com `--novsync` o limite de quadros é removido, para medir desempenho de verdade. `--outage=4` força um apagão de setor aos 4 s, e `--collapse=4` um colapso distante. `--wake=4` dispara o desmaio aos 4 s, `--lantern` começa com a lanterna acesa e `--game=pilgrimage` abre a sessão no modo Peregrinação. `--read=N` abre a leitura do terminal em frente aos N s, `--lexicon=N` já entende as palavras até a classe N (1 comuns, 2 incomuns, 3 raras) e `--archive=records|lexicon|leads` escolhe a aba do diário. `--sensor=terminal|energy|motion` dá o sensor já ligado nesse modo, `--map=N` abre o mapa aos N s e `--controls=N` a aba CONTROLES. `npm run check:pad` (que usa a área de transferência do sistema para testar o código de mundo) joga os dois modos só com um controle simulado (tela de entrada, configurações, troca de botão, abas, transporte, mapa, tela cheia, leitura, lanterna, mundos).
 
 ```bash
 npx electron . --capture=shot.png --pos=2000,-800,3000,0.3,0 --seed=abc --delay=8 --show

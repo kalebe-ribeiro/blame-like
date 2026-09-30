@@ -33,7 +33,7 @@
 //    electron . --game=pilgrimage        → modo de jogo desta sessão (free | pilgrimage)
 //    electron . --fog=0.3 --dist=1500     → sobrescreve névoa/distância nesta sessão (não salva)
 // ─────────────────────────────────────────────────────────────────────────────
-const { app, BrowserWindow, Menu, protocol, session, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, protocol, session, ipcMain, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -163,6 +163,11 @@ function createWindow() {
   // tela cheia pedida pela página (atalho 'fullscreen', teclado ou controle)
   ipcMain.removeAllListeners('fullscreen:toggle');
   ipcMain.on('fullscreen:toggle', () => win.setFullScreen(!win.isFullScreen()));
+  // a área de transferência (códigos de seed compartilháveis — src/app/share.js)
+  ipcMain.removeHandler('clipboard:write');
+  ipcMain.removeHandler('clipboard:read');
+  ipcMain.handle('clipboard:write', (_e, text) => clipboard.writeText(String(text).slice(0, 200000)));
+  ipcMain.handle('clipboard:read', () => clipboard.readText().slice(0, 200000));
 
   win.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return;

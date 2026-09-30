@@ -175,6 +175,14 @@ export async function runPadTest(ctx) {
   report('pad:foco-mundos', await focusOn('#open-worlds'), 'não chegou ao botão MUNDOS');
   await press(A);
   report('pad:mundos-abre', shown('#worlds'), 'A não abriu MUNDOS');
+  // seeds compartilháveis: copiar o código do mundo aberto e colar de volta
+  report('pad:foco-copiar', await focusOn('#worlds [data-act="copy"]'), 'não chegou a COPIAR CÓDIGO');
+  await press(A);
+  await sleep(400);
+  report('pad:foco-colar', await focusOn('#worlds [data-act="paste"]'), 'não chegou a COLAR CÓDIGO');
+  await press(A);
+  await sleep(400);
+  report('pad:colar', shown('#worlds [data-act="import"]'), `o código colado não foi reconhecido (${document.querySelector('.worlds-note')?.textContent})`);
   await press(B);
   report('pad:mundos-fecha', !shown('#worlds') && !gate.classList.contains('hidden'), 'B não voltou para a tela de entrada');
   // 13. e de volta ao jogo com START

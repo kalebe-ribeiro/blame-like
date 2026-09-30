@@ -5,9 +5,14 @@
 //  (pede confirmação).
 //
 //  Trocar de mundo recarrega o jogo (app/ui.js): o mundo inteiro é refeito.
+//
+//  Seeds compartilháveis (app/share.js): COPIAR CÓDIGO de um mundo salvo (a
+//  seed, o modo e as marcas), e COLAR CÓDIGO para começar um mundo a partir de
+//  um código (substitui o mundo salvo daquele modo — pede confirmação).
 // ─────────────────────────────────────────────────────────────────────────────
 import { t, onLangChange, fmtDist } from '../i18n/index.js';
 import { MODE_IDS, loadSlot } from '../app/saves.js';
+import { encodeWorld, decodeWorld, copyText, pasteText } from '../app/share.js';
 
 export class WorldsPanel {
   /**
@@ -16,10 +21,14 @@ export class WorldsPanel {
    *   onContinue (mode) — abrir o mundo salvo daquele modo
    *   onNew      (mode) — começar um mundo novo naquele modo
    */
-  constructor({ current, onContinue, onNew }) {
+  constructor({ current, onContinue, onNew, onImport, liveSlot }) {
     this.current = current;
     this.onContinue = onContinue;
     this.onNew = onNew;
+    this.onImport = onImport; // (world { seed, mode, marks }) — começar a partir de um código
+    this.liveSlot = liveSlot; // () → o mundo aberto agora (o salvo pode estar uns segundos atrás)
+    this.pasted = null; // o código colado, esperando a confirmação
+    this.note = '';
     this.onClose = null;
     this.confirming = null; // modo esperando a confirmação de "novo mundo"
     this.el = document.createElement('div');
@@ -40,6 +49,8 @@ export class WorldsPanel {
 
   open() {
     this.confirming = null;
+    this.pasted = null;
+    this.note = '';
     this._render();
     this.el.classList.add('open');
   }
@@ -69,6 +80,7 @@ export class WorldsPanel {
           <div class="worlds-actions">
             ${slot && !active ? `<button data-act="continue" data-mode="${mode}">${t('worlds.continue')}</button>` : ''}
             <button data-act="new" data-mode="${mode}" class="${confirm ? 'warn' : ''}">${confirm ? t('worlds.confirmNew') : t('worlds.new')}</button>
+            ${slot || active ? `<button data-act="copy" data-mode="${mode}">${t('worlds.copy')}</button>` : ''}
           </div>
         </div>`;
     }).join('');
@@ -76,6 +88,13 @@ export class WorldsPanel {
       <div class="settings-box">
         <div class="settings-title">${t('worlds.title')}</div>
         ${rows}
+        <div class="worlds-share">
+          ${this.pasted
+            ? `<span class="settings-hint">${t('worlds.pasted', { seed: this.pasted.seed.toString(36).toUpperCase(), mode: t(`mode.${this.pasted.mode}`), n: this.pasted.marks.length })}</span>
+               <button data-act="import" class="warn">${t(loadSlot(this.pasted.mode) ? 'worlds.importReplace' : 'worlds.import')}</button>`
+            : `<button data-act="paste">${t('worlds.paste')}</button>`}
+          <span class="settings-hint worlds-note">${this.note}</span>
+        </div>
         <div class="settings-actions">
           <span class="settings-hint">${t('worlds.hint')}</span>
           ${this.current ? `<button data-act="close">${t('settings.back')}</button>` : ''}
@@ -89,6 +108,26 @@ export class WorldsPanel {
     if (!b) return;
     const { act, mode } = b.dataset;
     if (act === 'close') return this.close();
+    if (act === 'copy') {
+      // o mundo aberto agora vem da memória (o salvo pode estar uns segundos atrás)
+      const slot = (mode === this.current && this.liveSlot?.()) || loadSlot(mode);
+      copyText(encodeWorld(slot))
+        .then(() => (this.note = t('worlds.copied')))
+        .catch(() => (this.note = t('worlds.copyFail')))
+        .finally(() => this._render());
+      return;
+    }
+    if (act === 'paste') {
+      pasteText()
+        .then((txt) => {
+          this.pasted = decodeWorld(txt);
+          this.note = this.pasted ? '' : t('worlds.badCode');
+        })
+        .catch(() => (this.note = t('worlds.badCode')))
+        .finally(() => this._render());
+      return;
+    }
+    if (act === 'import' && this.pasted) return this.onImport?.(this.pasted);
     if (act === 'continue') return this.onContinue(mode);
     if (act === 'new') {
       // substituir um mundo salvo pede um segundo clique

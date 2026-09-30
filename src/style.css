@@ -112,6 +112,10 @@ html, body {
 #settings.open, #transport.open, #worlds.open, #controls.open { display: flex; }
 
 /* aba CONTROLES */
+.worlds-share { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.worlds-share button { background: none; border: 1px solid rgba(178, 188, 172, 0.3); color: rgba(200, 196, 184, 0.85); font: 11px "Consolas", "Courier New", monospace; letter-spacing: 0.2em; padding: 7px 14px; cursor: pointer; }
+.worlds-share button.warn { border-color: #b0763e; color: #d8b07e; }
+.worlds-note { color: rgba(176, 118, 62, 0.8); }
 .controls-box { max-height: 88vh; display: flex; flex-direction: column; }
 .controls-rows { overflow-y: auto; scrollbar-color: rgba(178, 188, 172, 0.25) transparent; scrollbar-width: thin; padding-right: 6px; }
 .controls-head, .controls-row { display: grid; grid-template-columns: 1fr 110px 110px; gap: 10px; align-items: center; }

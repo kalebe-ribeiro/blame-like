@@ -86,6 +86,16 @@ export function createUI(ctx) {
     current: ctx.choosing ? null : ctx.mode,
     onContinue: (mode) => switchWorld(mode, null),
     onNew: (mode) => switchWorld(mode, newSlot(mode, Math.floor(Math.random() * 2 ** 31))),
+    // um código de seed compartilhado (app/share.js): a mesma Cidade, com as marcas de quem mandou
+    onImport: ({ seed, mode, marks }) => {
+      const fresh = newSlot(mode, seed);
+      fresh.marks = marks;
+      switchWorld(mode, fresh);
+    },
+    liveSlot: () => {
+      ctx.travel.save();
+      return ctx.slot;
+    },
   });
   worlds.onClose = () => gate.classList.remove('hidden');
   document.getElementById('open-worlds').addEventListener('click', (e) => {

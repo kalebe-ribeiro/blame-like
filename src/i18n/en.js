@@ -65,6 +65,14 @@ export default {
   'worlds.continue': 'CONTINUE',
   'worlds.new': 'NEW WORLD',
   'worlds.confirmNew': 'REPLACE THIS WORLD?',
+  'worlds.copy': 'COPY CODE',
+  'worlds.copied': 'code copied: seed, mode and your marks',
+  'worlds.copyFail': 'could not copy',
+  'worlds.paste': 'PASTE CODE',
+  'worlds.badCode': 'the clipboard has no world code',
+  'worlds.pasted': 'code: seed {seed} · {mode} · {n} marks',
+  'worlds.import': 'START THIS WORLD',
+  'worlds.importReplace': 'REPLACE THE WORLD OF THIS MODE',
   'worlds.hint': 'one saved world per mode · a world never changes mode',
 
   // ── configurações ──

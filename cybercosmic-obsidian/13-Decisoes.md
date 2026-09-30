@@ -117,3 +117,13 @@ Como está feito:
 ### A arma do Killy — método do buraco (2026-09-30)
 
 Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de shader"**: cada tiro guarda um cilindro (origem, direção, raio) no mundo; todos os shaders descartam o que está dentro; o lado de dentro das caixas é pintado como borda fundida; a colisão ignora o que está dentro. **Não** recortar geometria (CSG). Detalhes em [[Ideias/Futuro/Arma-do-Killy]]. Em aberto para a fase 6: combate × só fuga, o que o feixe não fura (recomendação: camadas e estruturas únicas), alcance, custo em energia, alerta dos Safeguards.
+
+### Fase 4 — escolhas feitas por padrão, **a confirmar** (2026-09-30)
+
+| pergunta | escolha |
+|---|---|
+| custo de religar um setor | 20% da célula na Peregrinação; de graça no Livre |
+| onde ficam as subestações | armário numa plataforma de estação do setor apagado, uma por faixa de 480 m; nunca na estação do começo |
+| como embarcar nas máquinas | escotilhas na laje a cada ~1,3 km de trincheira, escada até uma plataforma rente às longarinas; máquinas mais frequentes (4 m/s) |
+| marcas | só tinta (seta de estêncil), sem sinalizadores; até 400; V / LB |
+| seed compartilhada leva o estado? | **não**: só o mundo cru + as marcas (em ferrugem para quem recebe) |

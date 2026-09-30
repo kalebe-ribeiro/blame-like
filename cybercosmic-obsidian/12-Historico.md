@@ -124,3 +124,7 @@ Por que as coisas estão como estão, em ordem.
 ## 2026-09-30 — 4.3 marcas do jogador
 
 - Seta de estêncil em spray pintada onde se olha (V / LB), apaga mirando nela; mundo salvo, mapa. Primeiro teste "não achou onde pintar": era o chão ainda não carregado para a colisão logo depois do `--pos`.
+
+## 2026-09-30 — 4.4 seeds compartilháveis
+
+- Código `CYC1.` (seed, modo, marcas) no painel MUNDOS: COPIAR / COLAR, com confirmação; área de transferência via Electron. O teste do controle copia e cola de verdade.

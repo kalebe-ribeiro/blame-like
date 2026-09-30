@@ -31,7 +31,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Subir-nas-maquinas]] | ✔ feita (fase 4.2) | média |
 | [[Diario-como-arquivo]] | ✔ feita (fase 2) | média |
 | [[Travessias-dificeis]] | ★ escolhida | média |
-| [[Seeds-compartilhaveis]] | ★ escolhida | baixa |
+| [[Seeds-compartilhaveis]] | ✔ feita (fase 4.4) | baixa |
 | [[Marcas-do-jogador]] | ✔ feita (fase 4.3) | baixa |
 | [[Cargas]] | standby (com NPCs) | futura |
 | [[Copiar-inscricoes]] | proposta | média |
