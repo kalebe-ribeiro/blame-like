@@ -48,15 +48,6 @@ html, body {
 
 .gate-sub { font-size: 13px; letter-spacing: 0.35em; color: #b0763e; opacity: 0.8; }
 
-.gate-keys {
-  margin-top: 26px;
-  font-size: 11px;
-  line-height: 2;
-  letter-spacing: 0.12em;
-  text-align: center;
-  color: rgba(150, 146, 136, 0.55);
-}
-.gate-keys span { color: rgba(200, 196, 184, 0.8); }
 
 
 /* ── Botão de configurações na tela de entrada ──────────────────────────── */
@@ -106,7 +97,7 @@ html, body {
 .gate-settings:hover { border-color: rgba(200, 196, 184, 0.8); color: #e2ded4; }
 
 /* ── Painel de configurações ────────────────────────────────────────────── */
-#settings, #transport, #worlds {
+#settings, #transport, #worlds, #controls {
   position: fixed;
   inset: 0;
   display: none;
@@ -117,7 +108,30 @@ html, body {
   font-family: "Consolas", "Courier New", monospace;
   color: #b2bcac;
 }
-#settings.open, #transport.open, #worlds.open { display: flex; }
+#settings.open, #transport.open, #worlds.open, #controls.open { display: flex; }
+
+/* aba CONTROLES */
+.controls-box { max-height: 88vh; display: flex; flex-direction: column; }
+.controls-rows { overflow-y: auto; scrollbar-color: rgba(178, 188, 172, 0.25) transparent; scrollbar-width: thin; padding-right: 6px; }
+.controls-head, .controls-row { display: grid; grid-template-columns: 1fr 110px 110px; gap: 10px; align-items: center; }
+.controls-head { font-size: 10px; letter-spacing: 0.3em; color: rgba(176, 118, 62, 0.8); padding: 0 6px 6px 0; }
+.controls-head span { text-align: center; }
+.controls-group { font-size: 10px; letter-spacing: 0.35em; color: rgba(150, 146, 136, 0.6); margin: 14px 0 4px; }
+.controls-row { padding: 5px 0; border-bottom: 1px solid rgba(178, 188, 172, 0.08); font-size: 12px; letter-spacing: 0.06em; }
+.controls-cell {
+  background: none;
+  border: 1px solid rgba(178, 188, 172, 0.25);
+  color: #d8d4cc;
+  font: 11px "Consolas", "Courier New", monospace;
+  letter-spacing: 0.12em;
+  padding: 5px 4px;
+  text-align: center;
+  cursor: pointer;
+}
+button.controls-cell:hover { border-color: rgba(200, 196, 184, 0.8); }
+.controls-cell.waiting { color: #b0763e; border-color: #b0763e; }
+.controls-row.fixed .controls-cell { border-color: transparent; color: rgba(150, 146, 136, 0.7); cursor: default; }
+.controls-note { font-size: 10px; color: rgba(150, 146, 136, 0.7); margin-top: 12px; min-height: 14px; letter-spacing: 0.06em; }
 
 .settings-box {
   width: min(560px, 90vw);

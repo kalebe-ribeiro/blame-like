@@ -19,6 +19,7 @@
 
 import { t, fmtNum, fmtDist, applyDom } from '../i18n/index.js';
 import { drawTokens } from '../lang/ancient.js';
+import { bindings } from '../controls/bindings.js';
 
 const STEP = 8; // m entre pontos
 const MAX = 40000;
@@ -126,6 +127,7 @@ export class TrailMap {
     this.open = true;
     this.current = current;
     this._auto = true;
+    this.el.querySelector('.tm-hint').textContent = t('map.hint', { key: bindings.label('map') });
     this.el.classList.add('open');
     const loop = () => {
       if (!this.open) return;

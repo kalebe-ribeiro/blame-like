@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { drawTokens } from '../lang/ancient.js';
 import { t } from '../i18n/index.js';
+import { bindings } from '../controls/bindings.js';
 
 const LINE_H = 24;
 
@@ -53,7 +54,7 @@ export class ReaderPanel {
     this._size();
     this._draw();
     this.newEl.textContent = '';
-    this.hintEl.textContent = opts.note ?? t('reader.hint');
+    this.hintEl.textContent = opts.note ?? t('reader.hint', { key: bindings.label('use') });
     clearTimeout(this._timer);
     if (learned.length) {
       // um instante na escrita antiga, depois a palavra se resolve

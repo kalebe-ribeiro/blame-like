@@ -7,13 +7,13 @@
 //  • Célula de energia (ctx.player.energy): a lanterna e o sensor gastam; sem
 //    carga, você ainda anda — só enxerga o que a Cidade ilumina. Carga baixa:
 //    a luz falha.
-//  • F liga/desliga a lanterna (na Peregrinação não se voa, a tecla fica livre).
+//  • A lanterna liga/desliga pelo atalho 'lantern' (F — controls/bindings.js).
 //  • Tomadas (ChunkBuilder.socket): perto de uma, E conecta (se não houver
 //    um terminal em frente — app/ui.js decide); recarrega enquanto
 //    você fica ali — se o setor tiver energia.
 //  • A lanterna é uma luz de verdade (o espaço 'carried' do LightRig), presa à
 //    lente do aparelho: ilumina o caminho e a poeira em volta.
-//  • SENSOR (quando achado — ctx.player.inventory): G troca o que ele escuta
+//  • SENSOR (quando achado — ctx.player.inventory): o atalho troca o que ele escuta
 //    (terminais → energia → movimento → desligado). Na tela: de que lado vem
 //    o sinal mais forte, se está ACIMA ou ABAIXO (▲ ▼ — as pistas trocam de
 //    camada) e o quanto ele é nítido — nunca a que distância. No
@@ -23,6 +23,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { t } from '../i18n/index.js';
+import { bindings } from '../controls/bindings.js';
 import { terminalSitesNear, uniqueTerminal } from '../gen/sites.js';
 
 const DRAIN = 1 / 420; // lanterna: carga cheia dura 7 min
@@ -140,9 +141,9 @@ export function createCarried(ctx) {
     g2.fillStyle = '#9fae9f';
     let line = '';
     if (plugged) line = socketPowered(plugged, time) ? t('device.charging') : t('device.noPower');
-    else if (near) line = t('device.socket');
+    else if (near) line = t('device.socket', { key: bindings.label('use') });
     else if (e <= 0) line = t('device.empty');
-    else if (found > 0) line = t('device.sensorFound');
+    else if (found > 0) line = t('device.sensorFound', { key: bindings.label('sensor') });
     if (on) {
       g2.font = '10px Consolas, monospace';
       g2.fillText(t(`device.sensor.${sensor}`), 8, 14);
@@ -194,7 +195,7 @@ export function createCarried(ctx) {
     audio.deviceClick?.(lanternOn);
   }
 
-  /** G: terminais → energia → movimento → desligado. */
+  /** Atalho do sensor (G): terminais → energia → movimento → desligado. */
   function cycleSensor() {
     if (!active() || ctx.wake?.active || !hasSensor()) return;
     sensor = sensor === null ? MODES[0] : MODES[MODES.indexOf(sensor) + 1] ?? null;
@@ -214,8 +215,8 @@ export function createCarried(ctx) {
 
   document.addEventListener('keydown', (e) => {
     if (e.repeat || !controls.locked) return;
-    if (e.code === 'KeyF' && !ctx.rules.fly) toggleLantern();
-    if (e.code === 'KeyG') cycleSensor();
+    if (bindings.is('lantern', e.code)) toggleLantern();
+    if (bindings.is('sensor', e.code)) cycleSensor();
     // E é tratado em app/ui.js (terminal primeiro, depois tomada)
   });
 

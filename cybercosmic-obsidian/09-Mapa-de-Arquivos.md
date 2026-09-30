@@ -73,11 +73,13 @@ src/
   shaders/post.js           filme: dessaturação, grão, vinheta
 
   controls/noclip.js        entrada (teclado, mouse, controle), olhar, andar/voar, piloto
+  controls/bindings.js      todos os atalhos (teclado + controle), trocáveis
   controls/walker.js        física de caminhada
   audio/audio.js            áudio procedural
   ui/hud.js                 leitura de instrumento (modo Livre)
   ui/worlds.js              painel MUNDOS (modos de jogo)
   ui/settings.js            configurações (O)
+  ui/controlsPanel.js       aba CONTROLES (K)
   ui/transport.js           painel de transporte (T)
   ui/journey.js             diário (os dados ficam no mundo salvo)
   ui/trailmap.js            mapa da travessia (M), com as descobertas

@@ -1,19 +1,26 @@
 # 08 — Interface e travessia
 
-## Controles
+## Controles (aba CONTROLES — `controls/bindings.js`, `ui/controlsPanel.js`)
 
-| tecla | ação |
-|---|---|
-| clique | entrar (trava o mouse, liga o áudio) |
-| F | andar ↔ voar |
-| WASD + mouse | mover |
-| ESPAÇO | pular / subir voando |
-| SHIFT | correr / acelerar voando |
-| P | piloto automático (voo contemplativo) |
-| T | transporte · O configurações · M mapa · H interface · F2 foto · R mundo novo |
-| F / E / G (Peregrinação) | lanterna / ler um terminal, pegar o sensor ou conectar numa tomada / sensor (terminais → energia → movimento → desligado) |
+**Todas** as teclas e botões do controle vivem numa lista só (`ACTIONS` em `controls/bindings.js`): cada ação tem tecla, botão do controle e os modos em que existe. A aba **CONTROLES** (K, ou o botão na tela de entrada) mostra só as do modo aberto e deixa trocar: clicar e apertar; ESC cancela; BACKSPACE apaga; conflito no mesmo modo → as duas trocam (avisa). Salvo no localStorage (`cybercosmic.bindings.v1`). A tela de entrada **não lista mais teclas** (estava inchada).
 
-**Controle de videogame** suportado (entra direto, vibração em quedas, apagões, colapsos, máquinas).
+| ação | teclado | controle | modo |
+|---|---|---|---|
+| mover / olhar | WASD / mouse | analógicos (fixos) | |
+| pular · subir voando | ESPAÇO | A | |
+| descer voando | CTRL | B | Livre |
+| correr | SHIFT | LT | |
+| andar ↔ voar / piloto automático | F / P | X / ↑ | Livre |
+| ler terminal · tomada | E | Y | |
+| lanterna / sensor | F / G | X / ↓ | Peregrinação |
+| foto / mapa | F2 / M | RB / START | |
+| interface / transporte / mundo novo | H / T / R | SELECT / — / — | Livre |
+| configurações / controles | O / K | — | |
+| fixos | ESC, F11, F12 | | |
+
+Regras: F serve a voar (Livre) e à lanterna (Peregrinação) — duas ações podem dividir tecla se nunca existirem no mesmo modo. Textos que citam tecla usam `bindings.label(ação)` (mostra o botão do controle se o controle foi o último usado). Enquanto a aba espera uma tecla, `bindings.capturing` faz o jogo ignorar tudo. Saíram os atalhos duplicados de antes (E/Q/C para subir/descer voando: E era também "ler").
+
+**Controle de videogame** suportado (entra direto, vibração em quedas, apagões, colapsos, máquinas); gatilhos contam como apertados a partir de 40%.
 
 ## Modos e mundos (tela de entrada, painel MUNDOS — `ui/worlds.js`)
 

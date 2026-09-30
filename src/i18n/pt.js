@@ -4,22 +4,51 @@ export default {
   'gate.title': 'ATRAVESSAR',
   'gate.enter': 'clique para entrar na Cidade',
   'gate.continue': 'clique para continuar a travessia',
-  'gate.keys':
-    '<span>WASD</span> mover &nbsp;·&nbsp; <span>MOUSE</span> olhar &nbsp;·&nbsp; <span>ESPAÇO</span> pular / subir &nbsp;·&nbsp; ' +
-    '<span>CTRL / Q</span> descer (voo) &nbsp;·&nbsp; <span>F</span> andar ↔ voar<br />' +
-    '<span>SHIFT</span> acelerar &nbsp;·&nbsp; <span>P</span> piloto automático &nbsp;·&nbsp; <span>R</span> regenerar &nbsp;·&nbsp; ' +
-    '<span>H</span> interface &nbsp;·&nbsp; <span>O</span> configurações &nbsp;·&nbsp; <span>T</span> transporte &nbsp;·&nbsp; ' +
-    '<span>F2</span> foto &nbsp;·&nbsp; <span>M</span> mapa &nbsp;·&nbsp; <span>F11</span> tela cheia &nbsp;·&nbsp; <span>ESC</span> soltar',
   'gate.transport': 'TRANSPORTE',
   'gate.settings': 'CONFIGURAÇÕES',
   'gate.newWorld': 'NOVO MUNDO',
+  'gate.controls': 'CONTROLES',
+  'controls.title': 'CONTROLES',
+  'controls.keyboard': 'TECLADO',
+  'controls.gamepad': 'CONTROLE',
+  'controls.hint': 'clique numa tecla para trocar · ESC cancela · BACKSPACE apaga',
+  'controls.pressKey': 'aperte uma tecla…',
+  'controls.pressButton': 'aperte um botão…',
+  'controls.swapped': '{a} pegou a tecla de {b}; as duas trocaram',
+  'controls.resetDone': 'padrões restaurados',
+  'controls.group.move': 'MOVIMENTO',
+  'controls.group.act': 'AÇÕES',
+  'controls.group.ui': 'INTERFACE',
+  'controls.group.fixed': 'FIXOS',
+  'controls.action.forward': 'frente',
+  'controls.action.back': 'trás',
+  'controls.action.left': 'esquerda',
+  'controls.action.right': 'direita',
+  'controls.action.jump': 'pular · subir (voando)',
+  'controls.action.jump.walk': 'pular',
+  'controls.action.descend': 'descer (voando)',
+  'controls.action.run': 'correr · acelerar',
+  'controls.action.fly': 'andar ↔ voar',
+  'controls.action.autopilot': 'piloto automático',
+  'controls.action.use': 'ler terminal · conectar',
+  'controls.action.lantern': 'lanterna',
+  'controls.action.sensor': 'sensor',
+  'controls.action.photo': 'foto',
+  'controls.action.map': 'mapa',
+  'controls.action.hud': 'interface',
+  'controls.action.transport': 'transporte',
+  'controls.action.regenerate': 'mundo novo',
+  'controls.action.settings': 'configurações',
+  'controls.action.controls': 'controles',
+  'controls.fixed.look': 'olhar',
+  'controls.fixed.walk': 'mover (controle)',
+  'controls.fixed.release': 'soltar o mouse · fechar',
+  'controls.fixed.fullscreen': 'tela cheia',
+  'controls.fixed.mouse': 'MOUSE',
+  'controls.fixed.rs': 'ANALÓG. D',
+  'controls.fixed.ls': 'ANALÓG. E',
   'gate.worlds': 'MUNDOS',
   'gate.choose': 'escolha como entrar na Cidade',
-  'gate.keys.pilgrimage':
-    '<span>WASD</span> mover &nbsp;·&nbsp; <span>MOUSE</span> olhar &nbsp;·&nbsp; <span>ESPAÇO</span> pular &nbsp;·&nbsp; ' +
-    '<span>SHIFT</span> correr &nbsp;·&nbsp; <span>F</span> lanterna &nbsp;·&nbsp; <span>E</span> ler um terminal · conectar numa tomada &nbsp;·&nbsp; <span>G</span> sensor<br />' +
-    '<span>O</span> configurações &nbsp;·&nbsp; <span>F2</span> foto &nbsp;·&nbsp; <span>M</span> mapa &nbsp;·&nbsp; ' +
-    '<span>F11</span> tela cheia &nbsp;·&nbsp; <span>ESC</span> soltar',
 
   // ── modos de jogo e mundos salvos ──
   'mode.free': 'LIVRE',
@@ -149,7 +178,7 @@ export default {
   'map.unique': 'estrutura única',
   'map.lead': 'pista (incerteza)',
   'map.sector': 'setor atravessado',
-  'map.hint': 'arrastar gira · roda aproxima · M ou ESC fecha',
+  'map.hint': 'arrastar gira · roda aproxima · {key} ou ESC fecha',
   'map.empty': 'nenhum trecho registrado ainda',
   'map.info': 'extensão {w} × {d} · desnível {h} · {n} pontos',
 
@@ -187,9 +216,9 @@ export default {
   // ── o aparelho na mão (Peregrinação) ──
   'device.charging': 'CARREGANDO',
   'device.noPower': 'SEM ENERGIA AQUI',
-  'device.socket': 'TOMADA  [E]',
+  'device.socket': 'TOMADA  [{key}]',
   'device.empty': 'CÉLULA VAZIA',
-  'device.sensorFound': 'SENSOR  [G]',
+  'device.sensorFound': 'SENSOR  [{key}]',
   'device.sensor.terminal': 'SENSOR · TERMINAIS',
   'device.sensor.energy': 'SENSOR · ENERGIA VIVA',
   'device.sensor.motion': 'SENSOR · MOVIMENTO',
@@ -306,10 +335,10 @@ export default {
   'word.OUTPUT': 'SAÍDA',
   'word.OWN': 'PRÓPRIA',
   // ── a tela de leitura ──
-  'reader.hint': 'E / ESC  fechar · a roda rola',
-  'reader.freeNote': 'modo Livre: aqui nada se aprende · E / ESC  fechar',
+  'reader.hint': '{key} / ESC  fechar · a roda rola',
+  'reader.freeNote': 'modo Livre: aqui nada se aprende · {key} / ESC  fechar',
   'reader.learned': 'entendido agora: {words}',
-  'reader.fragment': 'leitor portátil: um fragmento · célula −{cost}% · E / ESC  fechar',
+  'reader.fragment': 'leitor portátil: um fragmento · célula −{cost}% · {key} / ESC  fechar',
   // ── o diário como arquivo ──
   'archive.records': 'REGISTROS ({n})',
   'archive.leads': 'PISTAS ({n})',
@@ -325,5 +354,5 @@ export default {
   'archive.kind.unique:plant': 'usina',
   'archive.kind.station': 'terminal de estação',
   'archive.kind.passage': 'terminal de passagem',
-  'reader.archived': 'do arquivo · relido com o que você sabe agora · E / ESC  fechar',
+  'reader.archived': 'do arquivo · relido com o que você sabe agora · {key} / ESC  fechar',
 };

@@ -85,3 +85,7 @@ Por que as coisas estão como estão, em ordem.
 - Revisada a branch `claude/dreamy-tesla-8pvapl`: checks passam, cadeias sem loops (~1 ms por terminal).
 - Ajustes: sensor com acima/abaixo; distância sempre legível (anel no mapa e no diário); elo das únicas a 40–55%; começo com a lanterna apagada; comentário das cadeias corrigido. Mergeado em main.
 
+## 2026-09-29 — aba CONTROLES
+
+- A tela de entrada listava todas as teclas (inchada). Agora: `controls/bindings.js` guarda todos os atalhos (teclado e controle, por modo) e a aba **CONTROLES** (K) troca qualquer um, com troca automática em conflito.
+- Controle revisado: mapa no START, o resto trocável; saíram os atalhos duplicados de voo (E/Q/C). Textos que citam teclas seguem o atalho atual.

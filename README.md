@@ -20,13 +20,33 @@ O jogo é em **inglês** por padrão, com **português** como opção nas config
 
 ## Controles
 
-Os do modo Livre. Na Peregrinação não há voo (P), transporte (T), mundo novo (R) nem interface (H), e duas teclas mudam:
+Todas as teclas e botões do controle estão na aba **CONTROLES** (tecla **K**, ou o botão na tela de entrada), só com o que existe no modo do mundo aberto. Clicar numa célula e apertar outra tecla (ou outro botão do controle) troca o atalho; ESC cancela e BACKSPACE apaga. Se a tecla já era de outra ação do mesmo modo, as duas trocam, e a aba avisa. Os atalhos ficam salvos (`controls/bindings.js`), e os textos do jogo que citam uma tecla ("TOMADA [E]", "E / ESC fechar"…) usam o atalho atual, ou o botão do controle, se foi ele o último usado.
 
-| tecla | na Peregrinação |
-|---|---|
-| **F** | liga/desliga a lanterna do aparelho na mão (no controle: X) |
-| **E** | lê o terminal em frente (ou pega o sensor largado ao pé dele); se não houver, conecta numa tomada de recarga (no controle: Y) |
-| **G** | o sensor: terminais → energia viva → movimento → desligado (no controle: direcional ↓) |
+Padrões:
+
+| ação | teclado | controle | modo |
+|---|---|---|---|
+| mover | WASD | analógico esquerdo (fixo) | |
+| olhar | mouse (fixo) | analógico direito (fixo) | |
+| pular · subir voando | ESPAÇO | A | |
+| descer voando | CTRL | B | Livre |
+| correr · acelerar 6× voando | SHIFT | LT | |
+| andar ↔ voar | F | X | Livre |
+| piloto automático (voo): deriva sozinho, curvando devagar | P | direcional ↑ | Livre |
+| ler um terminal · conectar numa tomada | E | Y | |
+| lanterna | F | X | Peregrinação |
+| sensor | G | direcional ↓ | Peregrinação |
+| foto: um quadro limpo (sem interface nem grão, 16 quadros de TAA) em até 4K, em Imagens/CYBERCOSMIC | F2 | RB | |
+| mapa da travessia | M | START | |
+| interface (posição, região, seed, registro) | H | SELECT | Livre |
+| transporte | T | — | Livre |
+| mundo novo (nova seed) | R | — | Livre |
+| configurações | O | — | |
+| controles | K | — | |
+| soltar o mouse · fechar (fixo) | ESC | | |
+| tela cheia / DevTools (fixos) | F11 / F12 | | |
+
+Numa escada, frente e trás sobem e descem (encostado nela); esquerda e direita soltam para o patamar do lado. Clicar na tela de entrada entra no mundo (trava o mouse e liga o áudio).
 
 ### O corpo na Peregrinação
 
@@ -60,25 +80,6 @@ Não há missões. Uma pista é um endereço que você leu e decide seguir.
 ## Setores de energia
 
 A Cidade é dividida em setores de formas e tamanhos irregulares (só as camadas os separam na vertical). Cerca de 30% estão **permanentemente apagados**: lâmpadas, janelas, trens, elevadores e terminais sem energia. Uns 15% são **instáveis**: a luz vai e vem em ondas. O resto tem energia. A mesma conta roda na CPU (lâmpadas) e na GPU (janelas), então as duas sempre concordam.
-
-| tecla | ação |
-|---|---|
-| clique | entrar (trava o mouse e liga o áudio) |
-| **F** | alternar **andar** (padrão) ↔ **voar** |
-| WASD + mouse | andar / voar |
-| W / S numa escada | subir / descer (encostado nela) · **A/D** solta para o patamar do lado |
-| ESPAÇO | pular (andando) · subir (voando; E também) |
-| CTRL / Q / C | descer (voando) |
-| SHIFT | correr (andando) · acelerar 6× (voando) |
-| P | piloto automático em voo: deriva sozinho, curvando devagar (modo contemplação) |
-| R | regenerar o mundo com nova seed |
-| H | mostrar/ocultar a interface (posição, região, seed e o registro de acontecimentos) |
-| O | configurações (também pelo botão na tela de entrada) |
-| T | transporte: ir a uma região, estrutura ou aos Construtores (também pelo botão na tela de entrada) |
-| M | mapa da travessia: o caminho que você fez neste mundo, em 3D (arrastar gira, roda aproxima) |
-| F2 | foto: salva um quadro limpo (sem interface nem grão, 16 quadros de TAA acumulados) em até 4K, em Imagens/CYBERCOSMIC |
-| F11 / F12 | tela cheia / DevTools |
-| ESC | soltar o mouse |
 
 ## Direção de arte
 
@@ -216,7 +217,7 @@ Detalhes da implementação:
 
 ### Controle de videogame
 
-Analógico esquerdo move e o direito olha; **A** pula ou sobe, **B** desce, **LT/L3** corre, **X** alterna andar/voar, **RB** tira foto, **Select** esconde a interface e o **direcional ↑** liga o piloto automático. Na tela de entrada, qualquer botão entra (o controle não usa a trava do mouse). O controle vibra nos pousos, nas juntas do trilho, nos colapsos, nos apagões e quando um vagão passa rente.
+Os botões padrão estão na tabela de [Controles](#controles) e se trocam na mesma aba. Os gatilhos contam como apertados a partir de 40%. Na tela de entrada, qualquer botão entra (o controle não usa a trava do mouse). O controle vibra nos pousos, nas juntas do trilho, nos colapsos, nos apagões e quando um vagão passa rente.
 
 ## Transporte
 
@@ -333,6 +334,7 @@ src/
   world/lights.js           seleção dinâmica de luzes
   world/collision.js        colisão (BVH) para o modo andar
   controls/noclip.js        entrada, olhar, modos andar/voar, piloto automático
+  controls/bindings.js      todos os atalhos (teclado e controle), trocáveis e salvos
   controls/walker.js        física de caminhada (chão, paredes, degraus, pulo)
   world/geometry.js         tubo afunilado, merge, cilindro entre pontos
   world/lsystem.js          L-system estocástico 3D + tartaruga
@@ -343,6 +345,7 @@ src/
   audio/audio.js            áudio procedural (Web Audio)
   ui/hud.js                 leitura de instrumento do modo Livre
   ui/settings.js            painel de configurações (tecla O)
+  ui/controlsPanel.js       aba CONTROLES: trocar teclas e botões (tecla K)
   ui/transport.js           painel de transporte (tecla T)
 ```
 
@@ -400,7 +403,7 @@ Teste de fumaça: numa seed fixa, visita todos os destinos do painel de transpor
 ```bash
 npx electron . --stats
 ```
-Imprime FPS, chunks carregados, fila de geração, lotes (uso, vagas livres, compactações), draw calls, triângulos, heap e a GPU em uso. Também mostra o tempo de CPU das listas de desenho e, perto da água, o tempo de GPU do reflexo. Com `--novsync` o limite de quadros é removido, para medir desempenho de verdade. `--outage=4` força um apagão de setor aos 4 s, e `--collapse=4` um colapso distante. `--wake=4` dispara o desmaio aos 4 s, `--lantern` começa com a lanterna acesa e `--game=pilgrimage` abre a sessão no modo Peregrinação. `--read=N` abre a leitura do terminal em frente aos N s, `--lexicon=N` já entende as palavras até a classe N (1 comuns, 2 incomuns, 3 raras) e `--archive=records|lexicon|leads` escolhe a aba do diário. `--sensor=terminal|energy|motion` dá o sensor já ligado nesse modo, e `--map=N` abre o mapa aos N s.
+Imprime FPS, chunks carregados, fila de geração, lotes (uso, vagas livres, compactações), draw calls, triângulos, heap e a GPU em uso. Também mostra o tempo de CPU das listas de desenho e, perto da água, o tempo de GPU do reflexo. Com `--novsync` o limite de quadros é removido, para medir desempenho de verdade. `--outage=4` força um apagão de setor aos 4 s, e `--collapse=4` um colapso distante. `--wake=4` dispara o desmaio aos 4 s, `--lantern` começa com a lanterna acesa e `--game=pilgrimage` abre a sessão no modo Peregrinação. `--read=N` abre a leitura do terminal em frente aos N s, `--lexicon=N` já entende as palavras até a classe N (1 comuns, 2 incomuns, 3 raras) e `--archive=records|lexicon|leads` escolhe a aba do diário. `--sensor=terminal|energy|motion` dá o sensor já ligado nesse modo, `--map=N` abre o mapa aos N s e `--controls=N` a aba CONTROLES.
 
 ```bash
 npx electron . --capture=shot.png --pos=2000,-800,3000,0.3,0 --seed=abc --delay=8 --show

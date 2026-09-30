@@ -4,22 +4,51 @@ export default {
   'gate.title': 'TRAVERSE',
   'gate.enter': 'click to enter the City',
   'gate.continue': 'click to continue the crossing',
-  'gate.keys':
-    '<span>WASD</span> move &nbsp;·&nbsp; <span>MOUSE</span> look &nbsp;·&nbsp; <span>SPACE</span> jump / rise &nbsp;·&nbsp; ' +
-    '<span>CTRL / Q</span> descend (flight) &nbsp;·&nbsp; <span>F</span> walk ↔ fly<br />' +
-    '<span>SHIFT</span> speed up &nbsp;·&nbsp; <span>P</span> autopilot &nbsp;·&nbsp; <span>R</span> regenerate &nbsp;·&nbsp; ' +
-    '<span>H</span> interface &nbsp;·&nbsp; <span>O</span> settings &nbsp;·&nbsp; <span>T</span> transport &nbsp;·&nbsp; ' +
-    '<span>F2</span> photo &nbsp;·&nbsp; <span>M</span> map &nbsp;·&nbsp; <span>F11</span> fullscreen &nbsp;·&nbsp; <span>ESC</span> release',
   'gate.transport': 'TRANSPORT',
   'gate.settings': 'SETTINGS',
   'gate.newWorld': 'NEW WORLD',
+  'gate.controls': 'CONTROLS',
+  'controls.title': 'CONTROLS',
+  'controls.keyboard': 'KEYBOARD',
+  'controls.gamepad': 'GAMEPAD',
+  'controls.hint': 'click a key to change it · ESC cancels · BACKSPACE clears',
+  'controls.pressKey': 'press a key…',
+  'controls.pressButton': 'press a button…',
+  'controls.swapped': '{a} took that key from {b}; they swapped',
+  'controls.resetDone': 'defaults restored',
+  'controls.group.move': 'MOVEMENT',
+  'controls.group.act': 'ACTIONS',
+  'controls.group.ui': 'INTERFACE',
+  'controls.group.fixed': 'FIXED',
+  'controls.action.forward': 'forward',
+  'controls.action.back': 'back',
+  'controls.action.left': 'left',
+  'controls.action.right': 'right',
+  'controls.action.jump': 'jump · rise (flying)',
+  'controls.action.jump.walk': 'jump',
+  'controls.action.descend': 'descend (flying)',
+  'controls.action.run': 'run · speed up',
+  'controls.action.fly': 'walk ↔ fly',
+  'controls.action.autopilot': 'autopilot',
+  'controls.action.use': 'read a terminal · plug in',
+  'controls.action.lantern': 'lantern',
+  'controls.action.sensor': 'sensor',
+  'controls.action.photo': 'photo',
+  'controls.action.map': 'map',
+  'controls.action.hud': 'interface',
+  'controls.action.transport': 'transport',
+  'controls.action.regenerate': 'new world',
+  'controls.action.settings': 'settings',
+  'controls.action.controls': 'controls',
+  'controls.fixed.look': 'look',
+  'controls.fixed.walk': 'move (gamepad)',
+  'controls.fixed.release': 'release the mouse · close',
+  'controls.fixed.fullscreen': 'fullscreen',
+  'controls.fixed.mouse': 'MOUSE',
+  'controls.fixed.rs': 'R STICK',
+  'controls.fixed.ls': 'L STICK',
   'gate.worlds': 'WORLDS',
   'gate.choose': 'choose how to enter the City',
-  'gate.keys.pilgrimage':
-    '<span>WASD</span> move &nbsp;·&nbsp; <span>MOUSE</span> look &nbsp;·&nbsp; <span>SPACE</span> jump &nbsp;·&nbsp; ' +
-    '<span>SHIFT</span> run &nbsp;·&nbsp; <span>F</span> lantern &nbsp;·&nbsp; <span>E</span> read a terminal · plug into a socket &nbsp;·&nbsp; <span>G</span> sensor<br />' +
-    '<span>O</span> settings &nbsp;·&nbsp; <span>F2</span> photo &nbsp;·&nbsp; <span>M</span> map &nbsp;·&nbsp; ' +
-    '<span>F11</span> fullscreen &nbsp;·&nbsp; <span>ESC</span> release',
 
   // ── modos de jogo e mundos salvos ──
   'mode.free': 'FREE',
@@ -149,7 +178,7 @@ export default {
   'map.unique': 'unique structure',
   'map.lead': 'lead (uncertainty)',
   'map.sector': 'sector crossed',
-  'map.hint': 'drag rotates · wheel zooms · M or ESC closes',
+  'map.hint': 'drag rotates · wheel zooms · {key} or ESC closes',
   'map.empty': 'no stretch recorded yet',
   'map.info': 'extent {w} × {d} · height span {h} · {n} points',
 
@@ -187,9 +216,9 @@ export default {
   // ── o aparelho na mão (Peregrinação) ──
   'device.charging': 'CHARGING',
   'device.noPower': 'NO POWER HERE',
-  'device.socket': 'SOCKET  [E]',
+  'device.socket': 'SOCKET  [{key}]',
   'device.empty': 'CELL EMPTY',
-  'device.sensorFound': 'SENSOR  [G]',
+  'device.sensorFound': 'SENSOR  [{key}]',
   'device.sensor.terminal': 'SENSOR · TERMINALS',
   'device.sensor.energy': 'SENSOR · LIVE POWER',
   'device.sensor.motion': 'SENSOR · MOTION',
@@ -306,10 +335,10 @@ export default {
   'word.OUTPUT': 'OUTPUT',
   'word.OWN': 'OWN',
   // ── a tela de leitura ──
-  'reader.hint': 'E / ESC  close · wheel scrolls',
-  'reader.freeNote': 'Free mode: nothing is learned here · E / ESC  close',
+  'reader.hint': '{key} / ESC  close · wheel scrolls',
+  'reader.freeNote': 'Free mode: nothing is learned here · {key} / ESC  close',
   'reader.learned': 'now understood: {words}',
-  'reader.fragment': 'portable reader: a fragment · cell −{cost}% · E / ESC  close',
+  'reader.fragment': 'portable reader: a fragment · cell −{cost}% · {key} / ESC  close',
   // ── o diário como arquivo ──
   'archive.records': 'RECORDS ({n})',
   'archive.leads': 'LEADS ({n})',
@@ -325,5 +354,5 @@ export default {
   'archive.kind.unique:plant': 'power plant',
   'archive.kind.station': 'station terminal',
   'archive.kind.passage': 'passage terminal',
-  'reader.archived': 'from the archive · read again with what you know now · E / ESC  close',
+  'reader.archived': 'from the archive · read again with what you know now · {key} / ESC  close',
 };

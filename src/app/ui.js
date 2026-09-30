@@ -9,6 +9,8 @@ import { t, setLang, applyDom, fmtDist } from '../i18n/index.js';
 import { SettingsPanel } from '../ui/settings.js';
 import { TransportPanel } from '../ui/transport.js';
 import { WorldsPanel } from '../ui/worlds.js';
+import { ControlsPanel } from '../ui/controlsPanel.js';
+import { bindings } from '../controls/bindings.js';
 import { storeProfile, newSlot, storeSlot } from './saves.js';
 import { findDestination } from '../world/teleport.js';
 import { takePhoto, onWorldBuilt, resize } from './render.js';
@@ -23,7 +25,6 @@ export function createUI(ctx) {
   // ─── tela de entrada ───
   setLang(ctx.settings.lang);
   hud.setEnabled(rules.hud);
-  document.querySelector('.gate-keys').dataset.i18nHtml = rules.fly ? 'gate.keys' : 'gate.keys.pilgrimage';
   document.getElementById('open-transport').style.display = rules.teleport ? '' : 'none';
   const gateMode = document.getElementById('gate-mode');
   const showMode = () => {
@@ -38,7 +39,7 @@ export function createUI(ctx) {
   });
   controls.onLockChange = (locked) => {
     // com um painel aberto, a tela de entrada fica escondida atrás dele
-    gate.classList.toggle('hidden', locked || settings.isOpen || transport.isOpen || worlds.isOpen || trail.open || ctx.reading?.isOpen);
+    gate.classList.toggle('hidden', locked || settings.isOpen || transport.isOpen || worlds.isOpen || controlsPanel.isOpen || trail.open || ctx.reading?.isOpen);
     if (!locked) {
       ctx.travel.renderDiary();
       ctx.travel.save();
@@ -100,8 +101,29 @@ export function createUI(ctx) {
     document.exitPointerLock?.();
     if (transport.isOpen) transport.close();
     if (worlds.isOpen) worlds.close();
+    if (controlsPanel.isOpen) controlsPanel.close();
     gate.classList.add('hidden');
     settings.open();
+  }
+
+  // ─── controles: todos os atalhos, trocáveis (ui/controlsPanel.js) ───
+  const controlsPanel = new ControlsPanel();
+  controlsPanel.onClose = () => {
+    if (!controls.locked) gate.classList.remove('hidden');
+  };
+  document.getElementById('open-controls').addEventListener('click', (e) => {
+    e.stopPropagation();
+    openControls();
+  });
+  function openControls() {
+    if (controlsPanel.isOpen) return controlsPanel.close();
+    document.exitPointerLock?.();
+    if (settings.isOpen) settings.close();
+    if (transport.isOpen) transport.close();
+    if (worlds.isOpen) worlds.close();
+    if (trail.open) trail.hide();
+    gate.classList.add('hidden');
+    controlsPanel.open();
   }
 
   function applySettings(s, key) {
@@ -218,31 +240,39 @@ export function createUI(ctx) {
     if (!settings.isOpen && !transport.isOpen && !worlds.isOpen) gate.classList.add('hidden');
     hud.push(t('hud.gamepad'));
   };
+  // o mesmo que as teclas: controls/noclip.js chama com o nome da ação (bindings.js)
   controls.onPadButton = (name) => {
     if (name === 'photo') photo();
     if (name === 'hud' && rules.hud) hud.toggle();
     if (name === 'lantern') ctx.carried.toggleLantern();
     if (name === 'sensor') ctx.carried.cycleSensor();
     if (name === 'use') ctx.reading.tryUse() || ctx.carried.togglePlug();
+    if (name === 'map') toggleMap();
+    if (name === 'transport' && rules.teleport) openTransport();
+    if (name === 'regenerate' && rules.regenerate && !ctx.choosing) regenerate();
+    if (name === 'settings') openSettings();
+    if (name === 'controls') openControls();
   };
 
-  // ─── teclas globais ───
+  // ─── teclas globais (atalhos em controls/bindings.js; trocáveis na aba CONTROLES) ───
   document.addEventListener('keydown', (e) => {
-    if (e.repeat) return;
-    if (e.code === 'KeyR' && rules.regenerate && !ctx.choosing) regenerate();
-    if (e.code === 'KeyH' && rules.hud) hud.toggle();
-    if (e.code === 'KeyO') openSettings();
-    if (e.code === 'KeyT' && rules.teleport) openTransport();
-    if (e.code === 'F2') photo();
-    if (e.code === 'KeyM') toggleMap();
+    if (e.repeat || bindings.capturing) return;
+    const is = (id) => bindings.is(id, e.code);
+    if (is('regenerate') && rules.regenerate && !ctx.choosing) regenerate();
+    if (is('hud') && rules.hud) hud.toggle();
+    if (is('settings')) openSettings();
+    if (is('controls')) openControls();
+    if (is('transport') && rules.teleport) openTransport();
+    if (is('photo')) photo();
+    if (is('map')) toggleMap();
     if (e.code === 'Escape' && trail.open) toggleMap();
-    // E: ler o terminal em frente (ou fechar a leitura); senão, a tomada
-    if (e.code === 'KeyE' && (controls.locked || ctx.reading.isOpen)) ctx.reading.tryUse() || ctx.carried.togglePlug();
+    // usar: ler o terminal em frente (ou fechar a leitura); senão, a tomada
+    if (is('use') && (controls.locked || ctx.reading.isOpen)) ctx.reading.tryUse() || ctx.carried.togglePlug();
     if (e.code === 'Escape' && ctx.reading.isOpen) ctx.reading.close();
   });
 
   // primeira vez: o painel de mundos já aberto
   if (ctx.choosing) openWorlds();
 
-  return { teleport, regenerate, toggleMap, photo };
+  return { teleport, regenerate, toggleMap, photo, openControls };
 }

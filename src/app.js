@@ -40,6 +40,7 @@ import { createWake } from './app/wake.js';
 import { createCarried } from './app/carried.js';
 import { createReading } from './app/reading.js';
 import { createLeads } from './app/leads.js';
+import { bindings } from './controls/bindings.js';
 import { startPlace } from './lang/leads.js';
 
 /** A névoa de altura é relativa ao observador: sempre mais densa abaixo. */
@@ -116,6 +117,7 @@ ctx.scene.add(ctx.dust);
 const controls = (ctx.controls = new NoclipControls(ctx.camera, ctx.canvas));
 controls.walker = new Walker(new CollisionWorld(ctx.world));
 controls.canFly = ctx.rules.fly;
+bindings.mode = ctx.mode; // os atalhos que valem neste modo (controls/bindings.js)
 controls.setView(VIEWS[params.get('view')] ?? VIEWS.spawn);
 if (params.get('pos')) {
   const [x, y, z, yaw = 0, pitch = 0] = params.get('pos').split(',').map(Number);

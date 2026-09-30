@@ -18,6 +18,7 @@ import { conceptsIn } from '../lang/ancient.js';
 import { t } from '../i18n/index.js';
 import { hash4 } from '../gen/hash.js';
 import { terminalRecords } from '../lang/records.js';
+import { bindings } from '../controls/bindings.js';
 import { leadLine, leadFor, startSite, PARTS } from '../lang/leads.js';
 
 const FRAGMENT_COST = 0.08; // da célula (1 = cheia)
@@ -91,7 +92,7 @@ export function createReading(ctx) {
     world.bus.emit('player:read', { id: it.site.id, site: it.site, learned, fragment: true, lead });
     audio.deviceClick?.(true);
     document.exitPointerLock?.();
-    panel.open(lines, known, word, learned, { dim: true, note: t('reader.fragment', { cost: Math.round(FRAGMENT_COST * 100) }) });
+    panel.open(lines, known, word, learned, { dim: true, note: t('reader.fragment', { cost: Math.round(FRAGMENT_COST * 100), key: bindings.label('use') }) });
     return true;
   }
 
@@ -109,7 +110,7 @@ export function createReading(ctx) {
     world.bus.emit('player:read', { id: it.site.id, site: it.site, learned, lead: route ? { lead: route.lead, parts: route.parts } : null });
     audio.deviceClick?.(true);
     document.exitPointerLock?.();
-    panel.open(lines, known, word, learned, { note: ctx.rules.translation ? t('reader.hint') : t('reader.freeNote') });
+    panel.open(lines, known, word, learned, { note: t(ctx.rules.translation ? 'reader.hint' : 'reader.freeNote', { key: bindings.label('use') }) });
     return true;
   }
 
@@ -133,7 +134,7 @@ export function createReading(ctx) {
     }
     const lines = terminalRecords(world.field, site);
     fromArchive = true;
-    panel.open(lines, known, word, [], { note: t('reader.archived') });
+    panel.open(lines, known, word, [], { note: t('reader.archived', { key: bindings.label('use') }) });
   }
 
   return {

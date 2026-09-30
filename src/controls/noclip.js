@@ -1,19 +1,24 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  Controles do observador (pointer lock), com dois modos:
 //
-//    ANDAR (padrão)  WASD mover · mouse olhar · ESPAÇO pular · SHIFT correr
+//    ANDAR (padrão)  mover · mouse olhar · pular · correr
 //                    gravidade e colisão reais (ver walker.js)
-//    VOAR (noclip)   WASD mover · ESPAÇO/E subir · CTRL/Q/C descer · SHIFT acelerar
+//    VOAR (noclip)   mover · subir (a tecla de pular) · descer · acelerar
 //                    com inércia, para parecer flutuação
 //
-//    F alterna entre os modos.
-//    P piloto automático (voo): deriva sozinho, curvando devagar.
+//    "voar" alterna entre os modos (só onde se voa).
+//    Piloto automático (voo): deriva sozinho, curvando devagar.
 //      Qualquer tecla de movimento ou o mouse devolve o controle.
+//
+//  As teclas e os botões vêm de controls/bindings.js (trocáveis na aba CONTROLES).
 //
 //  "scale" é a escala do observador: muda ao atravessar portais de tamanhos
 //  diferentes e multiplica velocidade, altura dos olhos, gravidade etc.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { bindings } from './bindings.js';
+
+const MOVE = ['forward', 'back', 'left', 'right', 'jump', 'descend'];
 
 export class NoclipControls {
   constructor(camera, dom) {
@@ -44,14 +49,17 @@ export class NoclipControls {
     this._wish = new THREE.Vector3();
 
     document.addEventListener('keydown', (e) => {
-      if (e.code === 'KeyP' && !e.repeat) {
+      if (bindings.capturing) return;
+      bindings.lastDevice = 'key';
+      if (bindings.is('autopilot', e.code) && !e.repeat) {
         if (!this.canFly) return;
         this.autopilot = !this.autopilot;
         if (this.autopilot) this.setMode('fly');
-      } else if (e.code === 'KeyF' && !e.repeat) {
+      } else if (bindings.is('fly', e.code) && !e.repeat) {
+        if (!this.canFly) return;
         this.autopilot = false;
         this.setMode(this.mode === 'walk' ? 'fly' : 'walk');
-      } else if (/^Key[WASDEQC]$|^Space$|^Control/.test(e.code)) {
+      } else if (MOVE.some((a) => bindings.is(a, e.code))) {
         this.autopilot = false;
       }
       this.keys.add(e.code);
@@ -132,6 +140,12 @@ export class NoclipControls {
     const rx = dz(ax[2] ?? 0);
     const ry = dz(ax[3] ?? 0);
     const any = lx || ly || rx || ry || gp.buttons.some((x) => x.pressed);
+    if (bindings.capturing) {
+      // a aba CONTROLES está esperando um botão: o jogo não reage
+      this.pad.prev = gp.buttons.map((x) => x.pressed);
+      return out;
+    }
+    if (any) bindings.lastDevice = 'pad';
     if (any && !this.pad.active) {
       this.pad.active = true;
       this.onPadStart?.();
@@ -147,27 +161,29 @@ export class NoclipControls {
       this.pitch = THREE.MathUtils.clamp(this.pitch - ry * rate * 0.75 * dt * (this.invertY ? -1 : 1), -1.55, 1.55);
     }
     if (lx || ly) this.autopilot = false;
-    out.run = b(10) || val(6) > 0.4; // L3 ou gatilho esquerdo
-    out.jump = b(0); // A
-    out.u = (b(0) ? 1 : 0) - (b(1) ? 1 : 0); // A sobe, B desce (voando)
+    // botões pela aba CONTROLES (bindings.js); gatilhos analógicos contam a partir de 40%
+    const down = (i) => i !== null && i !== undefined && (b(i) || val(i) > 0.4);
+    const hold = (id) => bindings.available(id) && down(bindings.pad(id));
+    const edge = (id) => {
+      const i = bindings.pad(id);
+      return bindings.available(id) && down(i) && !this.pad.prev[i];
+    };
+    out.run = hold('run');
+    out.jump = hold('jump');
+    out.u = (hold('jump') ? 1 : 0) - (hold('descend') ? 1 : 0); // voando: pular sobe, descer desce
     // botões de ação: uma vez por aperto
-    const edge = (i) => b(i) && !this.pad.prev[i];
-    if (edge(2)) {
-      // X: andar/voar — ou, onde não se voa (Peregrinação), a lanterna
-      if (this.canFly) {
-        this.autopilot = false;
-        this.setMode(this.mode === 'walk' ? 'fly' : 'walk');
-      } else this.onPadButton?.('lantern');
+    if (edge('fly') && this.canFly) {
+      this.autopilot = false;
+      this.setMode(this.mode === 'walk' ? 'fly' : 'walk');
     }
-    if (edge(3)) this.onPadButton?.('use'); // Y: conectar numa tomada
-    if (edge(12) && this.canFly) {
-      this.autopilot = !this.autopilot; // direcional ↑
+    if (edge('autopilot') && this.canFly) {
+      this.autopilot = !this.autopilot;
       if (this.autopilot) this.setMode('fly');
     }
-    if (edge(5)) this.onPadButton?.('photo'); // RB
-    if (edge(13)) this.onPadButton?.('sensor'); // direcional ↓: o sensor (Peregrinação)
-    if (edge(8)) this.onPadButton?.('hud'); // Select/Back
-    this.pad.prev = gp.buttons.map((x) => x.pressed);
+    for (const id of ['use', 'lantern', 'sensor', 'photo', 'map', 'hud', 'transport', 'regenerate', 'settings', 'controls']) {
+      if (edge(id)) this.onPadButton?.(id);
+    }
+    this.pad.prev = gp.buttons.map((x) => x.pressed || (x.value ?? 0) > 0.4);
     return out;
   }
 
@@ -182,21 +198,18 @@ export class NoclipControls {
     const k = this.keys;
     const pad = this._readPad(dt);
     const clamp1 = (v) => Math.max(-1, Math.min(1, v));
-    const f = clamp1((k.has('KeyW') ? 1 : 0) - (k.has('KeyS') ? 1 : 0) + pad.f);
-    const r = clamp1((k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0) + pad.r);
-    const run = k.has('ShiftLeft') || k.has('ShiftRight') || pad.run;
+    const h = (id) => (bindings.held(id, k) ? 1 : 0);
+    const f = clamp1(h('forward') - h('back') + pad.f);
+    const r = clamp1(h('right') - h('left') + pad.r);
+    const run = !!h('run') || pad.run;
     this._applyRotation(time);
 
     if (this.mode === 'walk' && this.walker) {
-      this.walker.step(dt, this.camera, { f, r, run, jump: k.has('Space') || pad.jump }, this.yaw, this.scale, time);
+      this.walker.step(dt, this.camera, { f, r, run, jump: !!h('jump') || pad.jump }, this.yaw, this.scale, time);
       return;
     }
 
-    const u = clamp1(
-      (k.has('Space') || k.has('KeyE') ? 1 : 0) -
-      (k.has('ControlLeft') || k.has('ControlRight') || k.has('KeyQ') || k.has('KeyC') ? 1 : 0) +
-      pad.u,
-    );
+    const u = clamp1(h('jump') - h('descend') + pad.u);
     this.camera.getWorldDirection(this._fwd);
     this._right.crossVectors(this._fwd, this.camera.up).normalize();
 
