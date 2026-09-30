@@ -32,6 +32,7 @@ export default {
   'controls.action.autopilot': 'piloto automático',
   'controls.action.use': 'ler terminal · conectar',
   'controls.action.lantern': 'lanterna',
+  'controls.action.torch': 'lanterna',
   'controls.action.sensor': 'sensor',
   'controls.action.mark': 'pintar marca · apagar',
   'controls.action.photo': 'foto',

@@ -68,7 +68,12 @@ export class InscriptionSystem {
           const id = `ig:${gal.id}:${side}:${c.t}:${c.y}`;
           if (!keep(id)) continue;
           const dir = hash4(this.seed, c.t, c.y, side, 961) < 0.5 ? -1 : 1;
-          const t = c.t + dir * (c.width / 2 + 6); // começa perto da abertura e segue ao longo da parede
+          // a placa que a passarela atravessa não existe (o vão dela): o texto começa
+          // na placa seguinte, perto da borda do vão, e segue ao longo da parede
+          const T = MEGA.tile;
+          const edge = dir > 0 ? (Math.floor(c.t / T) + 1) * T : Math.floor(c.t / T) * T;
+          const t = edge + dir * 4;
+          if (!F.galleryWallAt(gal, side, t, c.y + 4.5) || !F.galleryWallAt(gal, side, t + dir * 30, c.y + 4.5)) continue; // sem parede: sem tinta
           const face = wallPos - side * 0.1; // a face de dentro da galeria
           const [x, z] = gal.axis === 'x' ? [t, face] : [face, t];
           const y = c.y + 4.5;

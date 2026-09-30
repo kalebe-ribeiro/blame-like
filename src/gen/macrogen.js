@@ -851,30 +851,38 @@ function genAnomalies(F, B, box, mx, my, mz) {
   const r = rngAt(F.seed, mx, my, mz, 70);
   if (!r.chance(0.22)) return;
   const g = [box.x0 + r.float(200, MACRO - 200), box.y0 + r.float(200, MACRO - 200), box.z0 + r.float(200, MACRO - 200)];
-  if (F.insideVoid(g[0], g[1], g[2]) || !F.isOpenBiome(g[0], g[1], g[2]) || F.touchesBarrier(g[1] - 1600, g[1] + 1600)) return;
+  if (F.insideVoid(g[0], g[1], g[2]) || !F.isOpenBiome(g[0], g[1], g[2])) return;
+  // de pé entre duas camadas: da laje de baixo até o teto da de cima (nada solto no ar)
+  const bs = F.barriersNear(g[1]);
+  const below = bs.filter((b) => b.top <= g[1]).sort((a, b) => b.top - a.top)[0];
+  const above = bs.filter((b) => b.bottom > g[1]).sort((a, b) => a.bottom - b.bottom)[0];
+  if (!below || !above) return;
+  const y0 = below.top;
+  const y1 = above.bottom;
+  // só nascem na célula macro que contém o meio (uma vez só)
+  const ym = (y0 + y1) / 2;
+  if (ym < box.y0 || ym >= box.y1) return;
+  if (!F.barrierSolid(below, g[0], g[2]) || !F.barrierSolid(above, g[0], g[2])) return;
   const kind = r.pick(['monolith', 'needle']);
-  const ext = 1600;
-  if (F.reservedHit(g[0] - ext, g[1] - ext, g[2] - ext, g[0] + ext, g[1] + ext, g[2] + ext)) return;
-  ANOMALIES[kind](B, B.L(...g), r, g);
+  const ext = 200;
+  if (F.reservedHit(g[0] - ext, y0, g[2] - ext, g[0] + ext, y1, g[2] + ext)) return;
+  ANOMALIES[kind](B, B.L(g[0], ym, g[2]), r, [g[0], ym, g[2]], y1 - y0);
 }
 
 const ANOMALIES = {
-  /** Monólito: laje de quilômetros, perfeitamente plana. */
-  monolith(B, o, r, g) {
+  /** Monólito: laje de quilômetros, de pé da camada de baixo ao teto da de cima. */
+  monolith(B, o, r, g, H) {
     const w = r.float(60, 170);
-    const h = r.float(1200, 3000);
     const d = r.float(18, 40);
-    B.add('macro', place(new THREE.BoxGeometry(w, h, d, 6, 50, 2), {
-      x: o.x, y: o.y, z: o.z, rx: r.float(-0.2, 0.2), ry: r.float(0, Math.PI), rz: r.float(-0.2, 0.2),
-    }));
+    B.add('macro', place(new THREE.BoxGeometry(w, H + 4, d, 6, 50, 2), { x: o.x, y: o.y, z: o.z, ry: r.float(0, Math.PI) }));
   },
 
-  /** Agulha: uma torre que atravessa a célula inteira. */
-  needle(B, o, r, g) {
+  /** Agulha: uma torre da laje de uma camada ao teto da outra. */
+  needle(B, o, r, g, H) {
     const R = r.float(40, 90);
-    const h = 3200;
-    const a = o.clone().add(new THREE.Vector3(r.float(-80, 80), -h / 2, r.float(-80, 80)));
-    const b = o.clone().add(new THREE.Vector3(r.float(-80, 80), h / 2, r.float(-80, 80)));
+    const h = H + 4;
+    const a = o.clone().add(new THREE.Vector3(r.float(-40, 40), -h / 2, r.float(-40, 40)));
+    const b = o.clone().add(new THREE.Vector3(r.float(-40, 40), h / 2, r.float(-40, 40)));
     B.add('macro', cylinderBetween(a, b, R * r.float(0.6, 1), R * r.float(0.2, 0.6), 4, { heightSegments: 60 }));
     for (let i = 0; i < 6; i++) {
       const p = a.clone().lerp(b, r.float(0.1, 0.9));

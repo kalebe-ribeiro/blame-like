@@ -139,3 +139,9 @@ Por que as coisas estão como estão, em ordem.
 - Escada de manutenção em cada torre de passagem (~220 m, com patamar na ponte e lâmpadas próprias): o setor apagado deixa de ser beco sem saída.
 - Pistas para as escotilhas (passagem → escotilha; escotilha → a próxima no sentido das máquinas).
 - **Fase 4 completa**: 4.1 religar setores · 4.2 subir nas máquinas · 4.3 marcas · 4.4 seeds compartilháveis · 4.5 estruturas únicas com efeito (+ Construtores, antena) · 4.6 travessias. A fase 5 só quando o usuário pedir.
+
+## 2026-09-30 — nada flutua; lanterna no Livre
+
+- Fotos do usuário: texto pintado no ar (inscrições de galeria na placa que a passarela remove — 298 de 50 mil tinham parede!), arcos soltos na ponte inicial, plataforma no ar. Correções: objetos flutuantes removidos; pilares só em trechos presos (30% dos segmentos eram pedaços soltos); costelas viraram pórticos com travessa; plataformas só com ligação (22 de 540 estavam soltas) e sem a "raiz" cônica; monólitos/agulhas de camada a camada; inscrições só onde `galleryWallAt` diz que há parede.
+- Lanterna no modo Livre (atalho `torch`: L / RT), sem célula nem aparelho.
+- Regra registrada: nada flutua, nada é mágico — pensar sempre no contexto de *Blame!*.

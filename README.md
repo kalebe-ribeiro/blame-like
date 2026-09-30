@@ -37,6 +37,7 @@ Padrões:
 | piloto automático (voo): deriva sozinho, curvando devagar | P | direcional ↑ | Livre |
 | ler um terminal · conectar numa tomada | E | Y | |
 | lanterna | F | X | Peregrinação |
+| lanterna (sem célula) | L | RT | Livre |
 | sensor | G | direcional ↓ | Peregrinação |
 | pintar uma marca (ou apagar a marca em que você mira) | V | LB | |
 | foto: um quadro limpo (sem interface nem grão, 16 quadros de TAA) em até 4K, em Imagens/CYBERCOSMIC | F2 | RB | |
@@ -125,6 +126,8 @@ A Cidade é dividida em setores de formas e tamanhos irregulares (só as camadas
 
 ## Direção de arte
 
+**Nada flutua, nada é mágico.** Como na Cidade de *Blame!*, toda estrutura está apoiada, pendurada ou presa a alguma coisa, toda luz tem uma fonte, e texto só existe pintado numa superfície. Pilares só existem em trechos presos a uma camada (ou a um volume sólido), as costelas das passarelas são pórticos sobre uma travessa sob o tabuleiro, as plataformas da rede só existem ligadas a alguma ponte, e monólitos e agulhas vão de uma camada à outra.
+
 - **Sem neon.** A superfície de tudo é concreto e aço, com:
   - juntas de placas, escorrimentos verticais, ferrugem e tom variando por placa;
   - **milhares de janelas minúsculas acesas**, feitas no próprio shader, sem geometria. Longe, elas viram uma média sem cintilar.
@@ -170,7 +173,7 @@ O caráter do mundo muda de lugar para lugar, por um ruído de baixíssima frequ
 
 | região | o que é |
 |---|---|
-| **Teia** | a trama aberta: pilares, rede andável, cabos, objetos flutuantes, treliças. |
+| **Teia** | a trama aberta: pilares, rede andável, cabos, treliças. |
 | **Colmeia** | interior **fechado**: um labirinto 3D de salas de 48 m. As salas se comunicam por portas (ou sem parede, fundidas). Algumas têm janelões para poços de luz; outras, escadas em dois lances subindo por um vão no teto, colunas, lâmpadas, entulho. |
 | **Maciço** | blocos de concreto de ~150 m de lado e altura sem fim, separados por **vielas-cânion** de 14–48 m. Recuos viram terraços; há sacadas nas fachadas e pontes cruzando as vielas. As passarelas atravessam os blocos por túneis. |
 | **Vazio** | quase nada além das megaestruturas. Pilares e plataformas ficam raros. |
@@ -427,7 +430,6 @@ Uma estrutura contínua entre chunks (como pilares e dutos) precisa ser definida
 
 Parâmetros globais (espaçamentos, probabilidades, espessuras) ficam em `MEGA` (`field.js`).
 
-**Novo objeto flutuante**: adicione uma entrada em `FLOATERS` (`src/gen/chunkgen.js`).
 
 **Novo tipo de ligação andável**: adicione uma entrada em `EDGES` (`src/gen/network.js`) e sorteie-a em `Field.edge()`. Mantenha o topo das superfícies na altura do caminho e a inclinação ≤ ~36°.
 

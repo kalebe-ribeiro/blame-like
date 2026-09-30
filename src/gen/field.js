@@ -5,9 +5,10 @@
 //  sem fim. Os geradores de chunk só perguntam ao Field "o que existe aqui?"
 //  e constroem a parte que cai dentro do próprio cubo.
 //
-//   PILARES   colunas verticais em grade 2D (x,z). Infinitas em y, mas com
-//             lacunas definidas por ruído → torres que pendem do nada, torres
-//             que sobem do nada, fragmentos flutuando. Oscilam suavemente.
+//   PILARES   colunas verticais em grade 2D (x,z), com lacunas por ruído —
+//             mas todo trecho está preso: sobe de uma camada (ou de um volume
+//             sólido) ou pende do teto de uma. Nada de fragmentos soltos.
+//             O eixo ondula de leve com a altura.
 //   PASSARELAS  retas infinitas em treliça (ao longo de Z e de X), em alturas
 //             periódicas. A ponte inicial é a passarela (0,0) ao longo de Z.
 //   DUTOS     tubos infinitos ao longo de X, Z e Y — o "sistema".
@@ -1238,21 +1239,44 @@ export class Field {
     return p.baseR * (0.65 + 0.7 * hash4(this.seed, p.i, j, p.k, 3));
   }
 
-  /** O segmento j (de j·SEG_H a (j+1)·SEG_H) existe? */
+  /**
+   * O segmento j (de j·SEG_H a (j+1)·SEG_H) existe? Um trecho de pilar só existe
+   * se estiver PRESO: embaixo na laje de uma camada (ou num volume sólido —
+   * colmeia, maciço), ou em cima no teto de uma camada. Pilar que sobe de uma
+   * base e acaba no ar, ou que pende de um teto, sim; pedaço solto, não
+   * (na Cidade não há mágica).
+   */
   segmentPresent(p, j) {
-    const n = this.noise3(p.i * 1.31 + 0.5, j * SEG_H * p.gapScale, p.k * 1.31 + 0.5);
-    if (n < p.gapThr) return false;
-    const y0 = j * SEG_H;
-    const y1 = y0 + SEG_H;
-    const c = this.pillarCenter(p, y0 + SEG_H / 2);
-    const bio = this.biome(c.x, y0 + SEG_H / 2, c.z);
-    if (bio === 'colmeia' || bio === 'macico') return false;
-    if (this.touchesBarrier(y0, y1)) return false;
-    if (bio === 'vazio' && hash4(this.seed, p.i, 0, p.k, 530) < 0.7) return false;
-    const R = p.baseR * 3.8 + 8;
-    if (this.walkwayNear(c.x, y0, y1, c.z, R)) return false;
-    if (this.reservedHit(c.x - R, y0, c.z - R, c.x + R, y1, c.z + R)) return false;
-    return true;
+    return this._memo(`sg${p.i},${p.k},${j}`, () => {
+      if (this._segRaw(p, j) !== 'ok') return false;
+      // o trecho contínuo em volta de j, e o que há logo abaixo e logo acima dele
+      let a = j;
+      while (a > j - 70 && this._segRaw(p, a - 1) === 'ok') a--;
+      let b = j;
+      while (b < j + 70 && this._segRaw(p, b + 1) === 'ok') b++;
+      const below = this._segRaw(p, a - 1);
+      const above = this._segRaw(p, b + 1);
+      return below === 'barrier' || below === 'solid' || above === 'barrier' || above === 'solid';
+    });
+  }
+
+  /** O segmento j pela lei crua: 'ok' | 'barrier' (encosta numa camada) | 'solid' (colmeia/maciço) | 'gap'. */
+  _segRaw(p, j) {
+    return this._memo(`sr${p.i},${p.k},${j}`, () => {
+      const y0 = j * SEG_H;
+      const y1 = y0 + SEG_H;
+      if (this.touchesBarrier(y0, y1)) return 'barrier';
+      const c = this.pillarCenter(p, y0 + SEG_H / 2);
+      const bio = this.biome(c.x, y0 + SEG_H / 2, c.z);
+      if (bio === 'colmeia' || bio === 'macico') return 'solid';
+      const n = this.noise3(p.i * 1.31 + 0.5, j * SEG_H * p.gapScale, p.k * 1.31 + 0.5);
+      if (n < p.gapThr) return 'gap';
+      if (bio === 'vazio' && hash4(this.seed, p.i, 0, p.k, 530) < 0.7) return 'gap';
+      const R = p.baseR * 3.8 + 8;
+      if (this.walkwayNear(c.x, y0, y1, c.z, R)) return 'gap';
+      if (this.reservedHit(c.x - R, y0, c.z - R, c.x + R, y1, c.z + R)) return 'gap';
+      return 'ok';
+    });
   }
 
   // ── passarelas ───────────────────────────────────────────────────────────
@@ -1531,6 +1555,75 @@ export class Field {
     return { kind, a: n, b: m, r, width: r.float(3, 6) };
   }
 
+  /**
+   * O nó está ligado a alguma coisa? (uma aresta dele, uma aresta de um vizinho
+   * até ele, ou um conector até uma passarela). Nó sem ligação não é construído:
+   * uma plataforma solta no ar seria mágica.
+   */
+  nodeLinked(n) {
+    return this._memo(`nl${n.i},${n.l},${n.k}`, () => {
+      for (const d of EDGE_DIRS) {
+        if (this.edge(n, d)) return true;
+        const m = this.node(n.i - d[0], n.l - d[1], n.k - d[2]);
+        if (m && this.edge(m, d)) return true;
+      }
+      return this.nodeConnector(n);
+    });
+  }
+
+  /** Um conector liga este nó a uma passarela infinita? (a mesma regra de network.js) */
+  nodeConnector(n) {
+    const { spacing, ySpacing, module } = WALK;
+    const tMid = (t) => Math.floor(t / module) * module + module / 2;
+    if (n.y % ySpacing === 0) {
+      const b = n.y / ySpacing;
+      const a = Math.round(n.x / spacing);
+      const w = this.walkZ(a, b);
+      const lx = a * spacing;
+      if (w && Math.abs(n.x - lx) < NODE.h * 1.5 && !this.walkGap(a * 7919 + b * 104729, tMid(n.z), w.main, n.y)) {
+        const sgn = Math.sign(lx - n.x) || 1;
+        if (!(w.track && -sgn === w.track.side) && Math.abs(lx - sgn * (w.width / 2 - 0.3) - (n.x + sgn * (n.r - 0.8))) > 1) return true;
+      }
+    }
+    if ((n.y - ySpacing / 2) % ySpacing === 0) {
+      const b = (n.y - ySpacing / 2) / ySpacing;
+      const c = Math.round((n.z - spacing / 2) / spacing);
+      const w = this.walkX(b, c);
+      const lz = c * spacing + spacing / 2;
+      if (w && Math.abs(n.z - lz) < NODE.h * 1.5 && !this.walkGap(b * 15485863 + c * 7919 + 17, tMid(n.x), false, n.y)) {
+        const sgn = Math.sign(lz - n.z) || 1;
+        if (!(w.track && -sgn === w.track.side) && Math.abs(lz - sgn * (w.width / 2 - 0.3) - (n.z + sgn * (n.r - 0.8))) > 1) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * A placa de parede lateral da galeria g (lado ±1) existe em (t, y)? — a mesma
+   * regra de buildGallery (gen/macrogen.js): some dentro de outro volume, numa
+   * camada, onde uma passarela atravessa, ou num vão ao acaso.
+   */
+  galleryWallAt(g, side, t, y) {
+    const T = MEGA.tile;
+    const W = MEGA.wall;
+    const alongX = g.axis === 'x';
+    const yMin = g.floor - W;
+    const yMax = g.top + (g.roof ? W : 0);
+    const nY = Math.max(1, Math.round((yMax - yMin) / T));
+    const yStep = (yMax - yMin) / nY;
+    const i = Math.floor(t / T);
+    const j = Math.floor((y - yMin) / yStep);
+    if (j < 0 || j >= nY) return false;
+    const tc = (i + 0.5) * T;
+    const yc = yMin + (j + 0.5) * yStep;
+    const sc = g.c + side * (g.w / 2 + W / 2);
+    const [x, z] = alongX ? [tc, sc] : [sc, tc];
+    if (this.insideVoid(x, yc, z, g.id) || this.inBarrier(yc, yStep / 2)) return false;
+    if (this.walkwayCrossings(alongX ? 'z' : 'x', sc, tc - T / 2 - 8, tc + T / 2 + 8, yc - yStep / 2 - 2, yc + yStep / 2 - 8).length) return false;
+    if (hash4(this.seed, i, j, side, 300) < 0.012) return false;
+    return true;
+  }
+
   /** Nó mais próximo de um ponto global (usado para "realocar" quem cai). */
   nearestNode(x, y, z, { below = 8, above = 2, reach = 3 } = {}) {
     const ci = Math.floor(x / NODE.h);
@@ -1542,7 +1635,7 @@ export class Field {
       for (let i = ci - reach; i <= ci + reach; i++) {
         for (let k = ck - reach; k <= ck + reach; k++) {
           const n = this.node(i, l, k);
-          if (!n) continue;
+          if (!n || !this.nodeLinked(n)) continue;
           const d = Math.hypot(n.x - x, (n.y - y) * 0.5, n.z - z);
           if (d < bestD) {
             bestD = d;

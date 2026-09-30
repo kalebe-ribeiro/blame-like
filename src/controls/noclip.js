@@ -196,7 +196,7 @@ export class NoclipControls {
       this.autopilot = !this.autopilot;
       if (this.autopilot) this.setMode('fly');
     }
-    for (const id of ['use', 'lantern', 'sensor', 'mark', 'photo', 'map', 'hud', 'transport', 'regenerate', 'settings', 'controls', 'fullscreen']) {
+    for (const id of ['use', 'lantern', 'torch', 'sensor', 'mark', 'photo', 'map', 'hud', 'transport', 'regenerate', 'settings', 'controls', 'fullscreen']) {
       if (edge(id)) this.onPadButton?.(id);
     }
     this.pad.prev = gp.buttons.map((x) => x.pressed || (x.value ?? 0) > 0.4);

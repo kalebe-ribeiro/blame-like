@@ -6,7 +6,7 @@
 //  precisão de float32 mesmo a milhões de metros da origem.
 //
 //  Camadas (na ordem):
-//    pilares → passarelas → dutos → cabos → objetos flutuantes → rede andável
+//    pilares → passarelas → dutos → cabos → rede andável
 //    → vestimenta das megaestruturas (sacadas, escadas, prédios; ver dressing.js)
 //
 //  Para adicionar algo novo: escreva gen<Algo>(F, B, box) e chame em
@@ -184,7 +184,6 @@ export function generateChunk(F, cx, cy, cz, level = 0) {
           genWalkways(F, B, box, anchors);
           genTransit(F, B, box);
           genDucts(F, B, box);
-          genFloaters(F, B, box, fx, fy, fz);
         }
         if (level === 0) {
           genCables(F, B, anchors);
@@ -464,18 +463,21 @@ function buildWalk(F, B, axis, u, y, t0, t1, w, salt, anchors) {
     }
     if (res) continue; // dentro de zona reservada: só o tabuleiro
 
-    // costelas em "regiões costeladas"
+    // costelas em "regiões costeladas": pórticos — um arco inteiro de pé sobre uma
+    // travessa que passa por baixo do tabuleiro (a travessa segura a passarela; nada solto)
     const ribbed = F.noise3(ts * 0.01, salt * 0.001, 9.1) > -0.1;
     if (ribbed && r.chance(0.55)) {
-      const arc = r.chance(0.25) ? Math.PI * r.float(0.45, 0.8) : Math.PI;
       const rad = hw + (w.track ? r.float(1.8, 2.4) : r.float(3, 5.5)); // com trilho: longe do vagão
-      const rib = new THREE.TorusGeometry(rad, r.float(0.2, 0.45), 6, 30, arc);
-      rib.rotateZ(r.float(-0.12, 0.12) + (arc < Math.PI ? r.float(0, Math.PI - arc) : 0));
+      const tube = r.float(0.2, 0.45);
+      const rib = new THREE.TorusGeometry(rad, tube, 6, 30, Math.PI);
       rib.scale(1, r.float(1.0, 1.6), 1);
       rib.rotateY(rotY);
       const q = P(ts + len / 2, -1);
       rib.translate(q.x, q.y, q.z);
       B.add('rib', rib);
+      // a travessa: de pé a pé do arco, rente à face de baixo do tabuleiro
+      const t2 = ts + len / 2;
+      B.add('rib', cylinderBetween(P(t2, -1.05, -rad - tube), P(t2, -1.05, rad + tube), tube + 0.12, tube + 0.12, 6));
     }
     if (r.chance(0.1)) {
       const side = r.sign();
@@ -625,87 +627,6 @@ function genCables(F, B, anchors) {
   }
 }
 
-// ─── objetos flutuantes ─────────────────────────────────────────────────────
-
-function genFloaters(F, B, box, cx, cy, cz) {
-  const r = rngAt(F.seed, cx, cy, cz, 60);
-  let n = r.chance(0.55) ? 1 : 0;
-  if (r.chance(0.18)) n++;
-  for (let q = 0; q < n; q++) {
-    const gx = box.x0 + r.float(30, CHUNK - 30);
-    const gy = box.y0 + r.float(30, CHUNK - 30);
-    const gz = box.z0 + r.float(30, CHUNK - 30);
-    if (F.reservedHit(gx - 70, gy - 70, gz - 70, gx + 70, gy + 70, gz + 70)) continue;
-    if (F.walkwayNear(gx, gy - 50, gy + 50, gz, 50)) continue;
-    if (!F.isOpenBiome(gx, gy, gz) || F.insideVoid(gx, gy, gz) || F.touchesBarrier(gy - 80, gy + 80)) continue;
-    // só coisas construídas: blocos, lajes, gaiolas, anéis
-    const kind = r.pick(['block', 'block', 'block', 'slab', 'slab', 'cage', 'cage', 'ring']);
-    const o = B.L(gx, gy, gz);
-    if (B.lod) {
-      if (kind === 'block' || kind === 'slab') B.add('block', place(new THREE.BoxGeometry(r.float(15, 40), r.float(20, 80), r.float(15, 40)), { x: o.x, y: o.y, z: o.z }));
-      continue;
-    }
-    FLOATERS[kind](B, o, r, [gx, gy, gz]);
-  }
-}
-
-const Z = new THREE.Vector3(0, 0, 1);
-
-const FLOATERS = {
-  /** Bloco habitacional sem chão: prédios inteiros suspensos, presos a nada. */
-  block(B, o, r, g) {
-    habitation(B, r, g[0], g[1], g[2], true);
-    // a laje de onde ele foi arrancado
-    const w = r.float(30, 60);
-    B.add('dress', place(new THREE.BoxGeometry(w, 3, w * r.float(0.6, 1)), { x: o.x, y: o.y - 1.5, z: o.z, ry: r.float(0, 1) }));
-    if (r.chance(0.5)) B.add('cable', plumbLine(o.clone().add(new THREE.Vector3(r.float(-8, 8), -3, r.float(-8, 8))), r.float(40, 160), { rng: r, radius: 0.2 }));
-  },
-
-  /** Laje: um pequeno monólito à deriva. */
-  slab(B, o, r) {
-    const w = r.float(10, 30);
-    const h = r.float(60, 220);
-    const d = r.float(3, 6);
-    const g = new THREE.BoxGeometry(w, h, d, 3, Math.ceil(h / 10), 1);
-    B.add('monolith', place(g, { x: o.x, y: o.y, z: o.z, rx: r.float(-0.3, 0.3), ry: r.float(0, Math.PI), rz: r.float(-0.4, 0.4) }));
-  },
-
-  /** Anel: halo menor, às vezes duplo. */
-  ring(B, o, r) {
-    const R = r.float(12, 45);
-    const rot = { x: o.x, y: o.y, z: o.z, rx: r.float(0, Math.PI), ry: r.float(0, Math.PI) };
-    B.add('dress', place(new THREE.TorusGeometry(R, r.float(1.5, 5), 4, 32, Math.PI * r.float(1.3, 2)), rot));
-    if (r.chance(0.5)) {
-      B.add('dress', place(new THREE.TorusGeometry(R * 0.7, r.float(0.8, 2.5), 4, 24, Math.PI * r.float(1, 2)), { ...rot, rz: r.float(0, 3) }));
-    }
-  },
-
-  /** Gaiola: dois cubos de arestas, um girado dentro do outro. */
-  cage(B, o, r, g) {
-    const S = r.float(16, 50);
-    const thick = r.float(0.4, 1.2);
-    const cube = (size, quat) => {
-      const h = size / 2;
-      const corners = [];
-      for (const x of [-h, h]) for (const y of [-h, h]) for (const z of [-h, h]) corners.push(new THREE.Vector3(x, y, z).applyQuaternion(quat).add(o));
-      for (let a = 0; a < 8; a++) {
-        for (let b = a + 1; b < 8; b++) {
-          const diff = (a ^ b);
-          if (diff === 1 || diff === 2 || diff === 4) B.add('duct', cylinderBetween(corners[a], corners[b], thick, thick, 4));
-        }
-      }
-    };
-    const q1 = new THREE.Quaternion().setFromEuler(new THREE.Euler(r.float(0, 1), r.float(0, 3), r.float(0, 1)));
-    const q2 = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 4, Math.PI / 4, 0)).premultiply(q1);
-    cube(S, q1);
-    cube(S * 0.6, q2);
-    // a lâmpada no centro, pendurada do canto mais alto da gaiola de dentro
-    const h = S * 0.3;
-    let top = null;
-    for (const x of [-h, h]) for (const y of [-h, h]) for (const z of [-h, h]) {
-      const c = new THREE.Vector3(x, y, z).applyQuaternion(q2);
-      if (!top || c.y > top.y) top = c;
-    }
-    B.lamp(g[0], g[1], g[2], COLD, r.float(60, 120), 'faulty', { to: [g[0] + top.x, g[1] + top.y, g[2] + top.z] });
-  },
-};
+// (Os "objetos flutuantes" — prédios, lajes, gaiolas e anéis presos a nada —
+//  foram removidos: na Cidade de Blame! não há mágica; tudo o que existe está
+//  apoiado, pendurado ou preso a alguma coisa.)

@@ -306,7 +306,7 @@ export function createUI(ctx) {
     if (name === 'photo') photo();
     if (name === 'mark') ctx.marks.toggle();
     if (name === 'hud' && rules.hud) hud.toggle();
-    if (name === 'lantern') ctx.carried.toggleLantern();
+    if (name === 'lantern' || name === 'torch') ctx.carried.toggleLantern();
     if (name === 'sensor') ctx.carried.cycleSensor();
     if (name === 'use') ctx.reading.tryUse() || ctx.power.tryUse() || ctx.carried.togglePlug();
     if (name === 'map') toggleMap();

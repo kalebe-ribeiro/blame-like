@@ -249,7 +249,7 @@ export function createCarried(ctx) {
 
   /** Liga (a mão traz a lanterna e ela acende) ou desliga (apaga e a mão guarda). */
   function toggleLantern() {
-    if (!active() || ctx.wake?.active) return;
+    if (ctx.wake?.active) return; // (no modo Livre também: sem célula, sem gasto)
     lanternWant = !lanternWant;
     if (!lanternWant && lanternOn) {
       lanternOn = false;
@@ -277,7 +277,7 @@ export function createCarried(ctx) {
 
   document.addEventListener('keydown', (e) => {
     if (e.repeat || !controls.locked) return;
-    if (bindings.is('lantern', e.code)) toggleLantern();
+    if (bindings.is('lantern', e.code) || bindings.is('torch', e.code)) toggleLantern();
     if (bindings.is('sensor', e.code)) cycleSensor();
     // E é tratado em app/ui.js (terminal primeiro, depois tomada)
   });
@@ -305,17 +305,20 @@ export function createCarried(ctx) {
     },
     update(dt, time) {
       const light = world.carriedLight;
-      const on = active() && !ctx.wake?.active;
+      const awake = !ctx.wake?.active;
+      // o aparelho (célula, tomadas, sensor) é da Peregrinação; a lanterna, dos dois modos
+      const on = active() && awake;
       device.visible = on;
-      if (!on) {
+      if (!awake) {
         if (light) light.intensity = 0;
         sh.uFlashColor.value.set(0, 0, 0);
         flashlight.visible = false;
         raise = 0;
         return;
       }
-      const en = player.energy;
+      const en = on ? player.energy : { value: 1, max: 1 }; // no Livre: carga infinita
       world.toGlobal(camera.position, _g);
+      if (on) {
 
       // a tomada mais próxima (a cada 0,25 s)
       scan -= dt;
@@ -367,6 +370,8 @@ export function createCarried(ctx) {
         }
       }
 
+      } // (fim do que é só do aparelho)
+
       // a mão esquerda: sobe com a lanterna (0,45 s), acende quando chega; desce ao apagar
       raise = lanternWant ? Math.min(1, raise + dt / 0.45) : Math.max(0, raise - dt / 0.35);
       if (lanternWant && !lanternOn && raise >= 1 && en.value > 0) {
@@ -411,7 +416,7 @@ export function createCarried(ctx) {
       }
 
       redraw -= dt;
-      if (redraw <= 0) {
+      if (on && redraw <= 0) {
         redraw = sensor ? 0.08 : 0.25;
         draw(time);
       }

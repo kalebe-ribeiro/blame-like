@@ -4,6 +4,8 @@
 > Tudo o que for criado no mundo passa por esta lista.
 > **Referência direta para qualquer decisão: *Blame!*** (Tsutomu Nihei) — ver [[14-Universo-Blame]].
 
+
+> **REGRA (2026-09-30): nada flutua, nada é mágico.** Na Cidade de *Blame!* não existe mágica: toda estrutura está **apoiada, pendurada ou presa** a alguma coisa; toda luz tem fonte; texto só existe pintado numa superfície que existe. **Ao criar qualquer coisa, perguntar: isso faz sentido em *Blame!*? Onde se apoia? De onde vem a energia?** Removidos/corrigidos em 2026-09-30: os "objetos flutuantes" (prédios, lajes, gaiolas e anéis presos a nada), os pedaços soltos de pilar (um trecho só existe preso a uma camada ou a um volume sólido), as costelas das passarelas sem apoio (agora pórticos sobre uma travessa sob o tabuleiro), as plataformas da rede sem ligação (e a "raiz" cônica virou estrutura de aço), monólitos e agulhas no ar (agora vão de uma camada à outra), inscrições pintadas em paredes que não existem.
 ## Proibido
 
 - **Neon** e cores chamativas.

@@ -32,6 +32,7 @@ export default {
   'controls.action.autopilot': 'autopilot',
   'controls.action.use': 'read a terminal · plug in',
   'controls.action.lantern': 'lantern',
+  'controls.action.torch': 'lantern',
   'controls.action.sensor': 'sensor',
   'controls.action.mark': 'paint a mark · erase',
   'controls.action.photo': 'photo',

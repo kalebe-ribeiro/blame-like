@@ -35,7 +35,7 @@ export function genNetwork(F, B, box) {
     for (let k = k0; k < k0 + nh; k++) {
       for (let l = l0; l < l0 + nv; l++) {
         const n = F.node(i, l, k);
-        if (!n) continue;
+        if (!n || !F.nodeLinked(n)) continue; // plataforma sem ligação nenhuma: não existe
         if (B.lod) {
           lodNode(F, B, n);
           continue;
@@ -103,9 +103,14 @@ function buildPlatform(F, B, n) {
   B.add('plaza', place(new THREE.CylinderGeometry(r, r * 0.92, 1.6, n.sides, 1, false), { x: c.x, y: c.y - 0.8, z: c.z, ry: n.spin }));
   // borda em relevo, baixa o suficiente para passar por cima
   B.add('rib', place(new THREE.TorusGeometry(r - 0.4, 0.18, 4, n.sides), { x: c.x, y: c.y + 0.02, z: c.z, rx: Math.PI / 2, rz: n.spin }));
-  // raiz por baixo: cone invertido + às vezes tentáculos
-  const rootLen = r * (1 + (n.i * 7 + n.k * 13 + n.l * 3) % 5 * 0.3);
-  B.add('tower', place(new THREE.ConeGeometry(r * 0.9, rootLen, n.sides, 4, true), { x: c.x, y: c.y - 1.6 - rootLen / 2, z: c.z, rx: Math.PI, ry: n.spin }));
+  // por baixo: um cubo de ligação e vigas radiais até a borda (a plataforma é um nó
+  // de aço onde as pontes chegam — não uma ilha com raiz)
+  B.add('tower', place(new THREE.BoxGeometry(r * 0.5, 2.4, r * 0.5), { x: c.x, y: c.y - 2.8, z: c.z, ry: n.spin }));
+  for (let q = 0; q < n.sides; q++) {
+    const a = n.spin + (q / n.sides) * Math.PI * 2;
+    const e = new THREE.Vector3(c.x + Math.cos(a) * (r - 0.6), c.y - 1.7, c.z + Math.sin(a) * (r - 0.6));
+    B.add('rib', cylinderBetween(new THREE.Vector3(c.x, c.y - 2.6, c.z), e, 0.28, 0.2, 4));
+  }
 
   const h = Math.abs(Math.sin(n.i * 12.99 + n.l * 78.23 + n.k * 37.71) * 43758.54) % 1;
   if (h < 0.35) {
