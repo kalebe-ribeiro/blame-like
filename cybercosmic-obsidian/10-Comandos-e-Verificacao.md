@@ -52,3 +52,16 @@ npx electron . --capture=shot.png --pos=x,y,z,yaw,pitch --mode=fly --seed=abc --
 - Mensagens de commit em inglês, terminando com `Co-Authored-By: Claude …`.
 
 - `npm run check:pad` — o controle sozinho, nos dois modos (`dev/padtest.js`): um controle falso navega a tela de entrada, configurações, aba CONTROLES (troca um botão), abas do diário, transporte, mapa, tela cheia, leitura, lanterna e MUNDOS. **Rodar sempre que mexer em interface ou teclas** (regra absoluta).
+
+## Qual check rodar (pedido do usuário, 2026-09-30)
+
+Cada check leva minutos: rodar **só os pertinentes** à mudança.
+
+| mudança | check |
+|---|---|
+| geração do mundo, shaders, render | `npm run check` (ou `--check=<destinos>` do que mudou) |
+| mecânica da Peregrinação (célula, lanterna, leitura, pistas, sensor, subestação, despertar) | `npm run check:pilgrimage` (+ `check` se tocou código comum) |
+| teclas, bindings, interface, painéis, navegação pelo controle | `npm run check:pad` (obrigatório — regra absoluta do controle) |
+| só textos/i18n, documentação, cofre | nenhum (no máximo importar o módulo) |
+| mudança que toca tudo | os três |
+

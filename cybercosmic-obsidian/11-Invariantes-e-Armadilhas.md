@@ -59,4 +59,4 @@
 4. README atualizado se mudou controle, flag, destino ou estrutura.
 5. Este cofre atualizado se mudou algo daqui.
 6. **Commit (e push) ao fim de cada etapa e de cada fase** — pedido do usuário.
-7. **`npm run check:pad` passa** se mexeu em interface, teclas ou painéis — regra absoluta: o controle faz tudo sem teclado.
+7. **Só os checks pertinentes** (tabela em [[10-Comandos-e-Verificacao]]): `check:pad` se mexeu em interface, teclas ou painéis — regra absoluta: o controle faz tudo sem teclado.
