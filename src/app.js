@@ -43,6 +43,8 @@ import { createLeads } from './app/leads.js';
 import { createPower } from './app/power.js';
 import { createMarks } from './app/marks.js';
 import { createUniques } from './app/uniques.js';
+import { createAlert } from './app/alert.js';
+import { createBeings } from './app/beings.js';
 import { bindings } from './controls/bindings.js';
 import { startPlace } from './lang/leads.js';
 
@@ -174,6 +176,8 @@ ctx.reading = createReading(ctx);
 ctx.power = createPower(ctx);
 ctx.marks = createMarks(ctx);
 ctx.uniques = createUniques(ctx);
+ctx.alert = createAlert(ctx); // percepção: o alerta de cada setor (fase 5)
+ctx.beings = createBeings(ctx); // os corpos dos seres no mundo salvo (fase 5)
 setupDev(ctx);
 
 // ─── loop ───────────────────────────────────────────────────────────────────
@@ -203,6 +207,7 @@ function frame() {
   if (rebased) ctx.scenePass.shiftOrigin(rebased.delta);
   ctx.carried.update(dt, time); // a lanterna na mão (Peregrinação)
   ctx.marks.update(dt); // as marcas pintadas perto
+  ctx.alert.update(dt);
 
   // 3. mundo
   shared.uTime.value = time;

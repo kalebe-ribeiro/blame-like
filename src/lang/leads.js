@@ -192,6 +192,9 @@ function kindWords(lead) {
   if (lead.uniqueKind === 'plant') return [W('PLANT')];
   if (lead.uniqueKind === 'builders') return [W('BUILDERS'), W('TERMINAL')];
   if (lead.uniqueKind === 'antenna') return [W('SIGNAL'), W('TERMINAL')];
+  if (lead.uniqueKind === 'village') return [W('INHABITANTS'), W('HALL')];
+  if (lead.uniqueKind === 'graveyard') return [W('RESIDENT'), W('ILLEGAL'), W('SITE')];
+  if (lead.uniqueKind === 'cradle') return [W('SAFEGUARD'), W('CONSTRUCTION')];
   return [W('TERMINAL'), W('ACTIVE')];
 }
 

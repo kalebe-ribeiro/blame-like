@@ -219,10 +219,10 @@ export function createUI(ctx) {
   /** Destinos já visitados por tipo (para "repetir" levar a outro exemplar). */
   const visited = new Map();
   /** Leva o observador ao exemplar mais próximo do tipo pedido. */
-  function teleport(kind, label) {
+  function teleport(kind, label, extra = {}) {
     const g = world.toGlobal(camera.position, new THREE.Vector3());
     const recent = visited.get(kind) ?? new Set();
-    const dest = findDestination(world.field, kind, g, recent, { colossus: (accept) => world.colossi.nearest(world.field, g, ctx.time, accept) });
+    const dest = findDestination(world.field, kind, g, recent, { ...extra, colossus: (accept) => world.colossi.nearest(world.field, g, ctx.time, accept) });
     if (!dest) return false;
     recent.add(dest.id);
     if (recent.size > 8) recent.delete(recent.values().next().value);

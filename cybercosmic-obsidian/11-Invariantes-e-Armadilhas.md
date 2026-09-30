@@ -20,6 +20,8 @@
 - **Língua antiga**: texto da Cidade é sempre lista de tokens (nunca string pronta); traduzir é decidir, na hora de desenhar, quais palavras o léxico já entende. O que é conteúdo do mundo sai do Field (reabrir do arquivo refaz o texto pelo lugar).
 - **Terminais**: onde há terminal é só `gen/sites.js` (cena, pistas, sensor e começo usam a mesma conta e os mesmos ids). As pistas são puras (`lang/leads.js`): o que um terminal cita é função da seed e do lugar; o que o jogador juntou fica em `slot.leads`.
 - **REGRA ABSOLUTA — controle**: tudo que o teclado/mouse faz, o controle faz sozinho. Toda tecla nova vira ação em `controls/bindings.js` com botão; todo painel novo é navegável por `ui/padNav.js` (basta usar `<button>`, `<input>`, `<select>`, `[data-tab]`, `[data-id]` ou `[data-nav]`, e pôr a camada em `createPadNav({ layers })` em `app/ui.js`). Rodar `npm run check:pad`.
+- **Navegação espelha a geração**: `gen/nav.js` refaz as contas de `gen/network.js` (bordas, hélice da espiral com o mesmo RNG, curva da ponte suspensa, conectores) e de `buildWalk` (vãos, zonas reservadas). **Mudou a rede ou as passarelas → mudar o nav junto** e rodar `npm run check:beings`.
+- **Seres**: posições GLOBAIS; perto do jogador, só o `Walker` move um corpo (nada de teleportar um corpo visível); um corpo nunca anda onde o chão não carregou (fica parado). Um corpo de teste nunca entra no salvamento (`persist: false`).
 - **Modos**: o que um modo permite é perguntado a `ctx.rules` (`app/modes.js`); nada de `if (mode === ...)` espalhado. O modo Livre nunca pode quebrar.
 
 ## Armadilhas já pagas

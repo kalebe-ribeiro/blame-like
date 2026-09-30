@@ -6,7 +6,7 @@ tags: [tecnico, arquitetura, base]
 
 # Arquitetura para o futuro
 
-> **Fase 0 (2026-09-29)**: feitos os itens 1 (perfil × mundo salvo — `app/saves.js`), 2 (`WorldState` por id estável), 3 (barramento — `core/events.js`), 4 (estado do corpo — `app/player.js`) e 6 (modos — `app/modes.js`). O item 5 (entidades) é da fase 5.
+> **Fase 0 (2026-09-29)**: feitos os itens 1 (perfil × mundo salvo — `app/saves.js`), 2 (`WorldState` por id estável), 3 (barramento — `core/events.js`), 4 (estado do corpo — `app/player.js`) e 6 (modos — `app/modes.js`). O item 5 (entidades) foi feito na **fase 5** (`world/entities.js`, `gen/nav.js`, `app/alert.js` — ver [[15-Plano-de-Implementacao]]).
 
 O que precisa existir **antes** do gameplay, pensado para aguentar NPCs e Safeguards depois ([[NPCs-e-Safeguards]]). Proposta para discussão — sem código ainda.
 

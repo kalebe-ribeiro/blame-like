@@ -15,6 +15,7 @@
 //    • pouso pesado: a câmera afunda (dip) proporcionalmente ao impacto
 //
 //  Tudo escala com a escala do observador (portais de tamanhos diferentes).
+//  O mesmo controlador move os corpos dos seres (world/entities.js): a mesma física.
 //  Se o mundo ao redor ainda não foi gerado, o corpo "paira" até ficar pronto.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -49,6 +50,7 @@ export class Walker {
     this.speedScale = 1; // < 1 dentro d'água (setores inundados)
     this.dipScale = 1; // 0 = sem afundamento no pouso
     this.carrier = new THREE.Vector3(); // velocidade herdada do chão móvel (vagão) ao sair dele
+    this.canClimb = true; // escadas de marinheiro (os corpos dos seres de teste não sobem)
   }
 
   /** Posiciona o corpo a partir da câmera (ao entrar no modo andar). */
@@ -99,7 +101,7 @@ export class Walker {
     _d.set(-sin, 0, -cos);
     _o.copy(this.feet).y += eye * 0.6;
     const ladder = col.ray(_o, _d, 0.95 * s);
-    const onLadder = !!ladder && ladder.object.userData.mat === 'rungs';
+    const onLadder = this.canClimb && !!ladder && ladder.object.userData.mat === 'rungs';
     if (onLadder && (input.f !== 0 || this.climbing) && !(this.grounded && input.f < 0)) {
       if (!this.climbing) this.climbing = true;
       return this._climb(dt, camera, input, sin, cos, s, eye, ladder);

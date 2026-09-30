@@ -129,3 +129,16 @@ Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de sh
 | seed compartilhada leva o estado? | **não**: só o mundo cru + as marcas (em ferrugem para quem recebe) |
 | efeito das estruturas únicas | só na **primeira** leitura do console, por mundo; valores: arquivo 14 palavras, usina 2,5 km, console 3 vizinhas, Construtores 6 km (mesma laje), antena ×2,5 |
 | travessias difíceis | escada de manutenção (~220 m) em cada passagem; pistas das passagens para as escotilhas e de escotilha em escotilha |
+
+### Fase 5 — escolhas feitas por padrão, **a confirmar** (2026-09-30)
+
+| pergunta | escolha |
+|---|---|
+| seres procedurais ou modelos feitos à mão? | **procedurais** (corpos montados por código, animação procedural — como o resto do jogo; nenhum asset externo). O corpo de teste é uma figura humana magra, sem rosto |
+| velocidade de um corpo | ~2,3 m/s perto (o `Walker` do jogador a 55%); 1,3 m/s longe (abstrato) |
+| perto × longe | física completa a menos de 110 m do jogador (volta ao abstrato a 130 m); desenhado até 420 m |
+| por onde os seres andam | só pelo que a rede andável e as passarelas oferecem (grafo do Field). Nada de escadas de marinheiro, elevadores nem vagões ainda |
+| o que sobe o alerta de um setor | ler um terminal +0,06 · religar o setor +0,45 · pintar uma marca +0,02 · lanterna acesa num setor apagado +0,004/s. Esfria pela metade em 10 min. Avisos a 0,25 / 0,5 / 0,75 (`alert:rise`) — ninguém escuta ainda |
+| acesso do jogador | existe como dado (`player.access`, 0 = nenhum); abafa o alerta proporcionalmente. Ninguém dá acesso ainda |
+| lugares reservados | vila abandonada (galpão fechado com barracos), cemitério de vítimas (pátio murado com corpos embrulhados), berço de Safeguards (bloco lacrado, portão travado). São estruturas únicas com terminal; **sem efeito** na leitura. Sorteio à parte (hash 984, ~17% das únicas): em mundos já salvos algumas únicas mudam de tipo |
+| despertar com sorteio | pronto e **desligado**: Safeguards 55% → cemitério (carga a 5%, perde o que carregava, ferramentas ficam) · NPCs 20% → vila · resto: ninguém visto (como antes) |

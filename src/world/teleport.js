@@ -418,11 +418,13 @@ export function findDestination(F, kind, g, recent = new Set(), opts = {}) {
     // ── uma subestação (setor apagado): de pé diante do armário ──
     subestacao: () => {
       const cands = [];
-      for (const R of [1500, 4000]) {
+      // na altura do observador e, se não houver, nas faixas de cima e de baixo (no alto de
+      // uma camada, por exemplo, pode não haver estação nenhuma na mesma faixa)
+      for (const [R, dy] of [[1500, 0], [4000, 0], [4000, -480], [4000, 480], [4000, -960], [4000, 960]]) {
         for (let k = 0; k < 24 && cands.length < 6; k++) {
           const a = k * 2.4;
           const r = R * ((k % 5) + 1) / 5;
-          for (const s of substationsNear(F, g.x + Math.cos(a) * r, g.y, g.z + Math.sin(a) * r, 700)) {
+          for (const s of substationsNear(F, g.x + Math.cos(a) * r, g.y + dy, g.z + Math.sin(a) * r, 700)) {
             if (cands.some((c) => c.id === s.id)) continue;
             const fx = s.x + Math.sin(s.yaw) * 1.6;
             const fz = s.z + Math.cos(s.yaw) * 1.6;
@@ -437,8 +439,9 @@ export function findDestination(F, kind, g, recent = new Set(), opts = {}) {
     // ── uma estrutura única: de pé diante da porta, a ~40 m, olhando para ela ──
     unica: () => {
       const cands = [];
-      for (const R of [20000, 40000]) {
+      for (const R of opts.uniqueKind ? [20000, 40000, 80000] : [20000, 40000]) {
         for (const u of F.uniquesNear(g.x, g.y, g.z, R)) {
+          if (opts.uniqueKind && u.kind !== opts.uniqueKind) continue; // --gounique=village (desenvolvimento)
           const d = u.door;
           const ax = d === 0 ? [1, 0] : d === 1 ? [-1, 0] : d === 2 ? [0, 1] : [0, -1];
           const ha = d < 2 ? u.hx : u.hz;

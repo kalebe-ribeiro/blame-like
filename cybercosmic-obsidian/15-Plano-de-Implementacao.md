@@ -130,6 +130,15 @@
 
 **Pronto quando**: um corpo de teste (sem rosto, sem papel) atravessa a Cidade sozinho, de um lugar a outro, sem se perder nem atravessar paredes.
 
+> **Feita (2026-09-30).** `npm run check:beings` passa: 4 corpos de teste, em 4 plataformas da teia, andam 195–242 m cada (rampas, pontes, tubo, ponte suspensa) e chegam, sem queda e sem atravessar parede.
+> - Camada de entidades: `world/entities.js` (perto: o mesmo `Walker` do jogador; longe: abstrato pela polilinha a 1,3 m/s), salva em `slot.entities` (`app/beings.js`).
+> - Navegação: `gen/nav.js` — grafo grosso consultado sob demanda no Field (plataformas, pontes, rampas, escadas, tubos, pontes suspensas, torres em espiral, conectores, trechos de passarela sem vão), A* e desvio local (beirada, obstáculo, empacou → outro caminho).
+> - Percepção e alerta: `app/alert.js` (alerta por setor pelo barramento; o acesso do jogador abafa). `player.access` continua 0.
+> - Corpos: **procedurais** (`world/bodies.js`) — escolha por padrão, a confirmar.
+> - Lugares reservados: `village`, `graveyard`, `cradle` (estruturas únicas, sorteio à parte).
+> - Despertar com sorteio: `WAKE_LOTTERY` em `app/wake.js`, **desligado** (`--wakeas=safeguard|npc` para testar).
+> Escolhas feitas por padrão em [[13-Decisoes]] ("Fase 5").
+
 ---
 
 ## Fase 6 — Safeguards
@@ -174,6 +183,6 @@
 ## Perguntas que o plano deixa para a hora certa
 
 - Fase 0: vários mundos salvos, ou um por modo?
-- Fase 5: seres procedurais ou modelos feitos à mão?
+- ~~Fase 5: seres procedurais ou modelos feitos à mão?~~ procedurais, por padrão (a confirmar — [[13-Decisoes]]).
 - Fase 6: combate (a arma de Killy) ou só fuga? Safeguards no modo Livre?
 - Fase 7: quanta fala os NPCs têm?

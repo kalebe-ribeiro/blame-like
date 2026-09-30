@@ -36,6 +36,7 @@ export function createTravel(ctx) {
       diary: diary.d,
       trail: trail.toJSON(),
       player: ctx.player,
+      entities: ctx.beings?.serialize() ?? [],
     });
     storeSlot(slot);
   }
@@ -123,6 +124,8 @@ export function createTravel(ctx) {
       slot.builderSites = {};
       slot.boosts = {};
       slot.sectors = {};
+      slot.entities = [];
+      ctx.alert?.reset();
     },
     update(dt) {
       world.toGlobal(camera.position, g);

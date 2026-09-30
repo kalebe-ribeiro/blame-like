@@ -15,6 +15,13 @@
 //    despertar deitado, a visão volta, e o corpo se levanta devagar
 //
 //  Queda sem fim (o vazio): começa do "apagando", ainda no ar.
+//
+//  QUEM ARRASTA (fase 5 — pronto, ainda DESLIGADO: WAKE_LOTTERY.enabled):
+//    'safeguard' → acorda no cemitério de vítimas mais perto (estrutura única
+//                  'graveyard'), sem carga e sem o que carregava (as ferramentas ficam)
+//    'npc'       → acorda numa vila ('village'; hoje abandonada — os NPCs são da fase 7)
+//    ninguém     → um lugar qualquer, longe (como sempre foi)
+//  Nas sessões de desenvolvimento: --wakeas=safeguard|npc força o sorteio.
 //  As posições ficam em coordenadas GLOBAIS (a origem flutuante muda no salto).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -29,6 +36,10 @@ const smooth = (a, b, x) => {
   return t * t * (3 - 2 * t);
 };
 const rand = (a, b) => a + Math.random() * (b - a);
+
+/** O sorteio de quem arrasta o corpo desmaiado (ligado quando existirem Safeguards e NPCs). */
+export const WAKE_LOTTERY = { enabled: false, safeguard: 0.55, npc: 0.2 };
+const TAKER_PLACE = { safeguard: 'graveyard', npc: 'village' };
 
 export function createWake(ctx) {
   const { controls, camera, world, audio } = ctx;
@@ -49,6 +60,34 @@ export function createWake(ctx) {
       if (d && !d.fly && world.field.sectorAt(d.feet.x, d.feet.y, d.feet.z).state !== 'dark') return d.feet.clone();
     }
     return null;
+  }
+
+  /** Quem arrastou: 'safeguard', 'npc' ou null (ninguém visto). */
+  function drawTaker() {
+    const forced = ctx.params?.get('wakeas');
+    if (forced) return TAKER_PLACE[forced] ? forced : null;
+    if (!WAKE_LOTTERY.enabled) return null;
+    const x = Math.random();
+    return x < WAKE_LOTTERY.safeguard ? 'safeguard' : x < WAKE_LOTTERY.safeguard + WAKE_LOTTERY.npc ? 'npc' : null;
+  }
+
+  /** O lugar de quem arrastou: a estrutura única do tipo certo mais perto (ou null). */
+  function pickTakerPlace(taker, g) {
+    const kind = TAKER_PLACE[taker];
+    if (!kind) return null;
+    let best = null;
+    for (const R of [20000, 40000, 80000]) {
+      for (const u of world.field.uniquesNear(g.x, g.y, g.z, R)) {
+        if (u.kind !== kind) continue;
+        const d = Math.hypot(u.x - g.x, u.y - g.y, u.z - g.z);
+        if (!best || d < best.d) best = { u, d };
+      }
+      if (best) break;
+    }
+    if (!best) return null;
+    // largado junto do console, um passo para dentro (no chão do pátio / do galpão)
+    const c = world.field.uniqueConsole(best.u);
+    return new THREE.Vector3(c.x - Math.sin(c.yaw) * 1.6, best.u.y + 1.25, c.z - Math.cos(c.yaw) * 1.6);
   }
 
   /** Há chão logo abaixo deste ponto GLOBAL? (e o mundo em volta já carregou) */
@@ -117,8 +156,11 @@ export function createWake(ctx) {
       if (t >= 0.7 + dur) {
         s.phase = 'dark';
         s.darkT = t;
-        // o corpo é levado: um lugar qualquer, longe (o mundo começa a carregar lá)
-        const dest = pickDump(s.from) ?? s.from.clone().setY(s.from.y + 2);
+        // o corpo é levado: por quem arrastou (fase 5, desligado) ou a um lugar qualquer, longe
+        s.taker = drawTaker();
+        const taken = s.taker ? pickTakerPlace(s.taker, s.from) : null;
+        if (!taken) s.taker = null; // não havia o lugar: ninguém foi visto
+        const dest = taken ?? pickDump(s.from) ?? s.from.clone().setY(s.from.y + 2);
         s.feet = dest;
         s.dragDir = rand(0, Math.PI * 2);
         s.nextTug = 0;
@@ -254,7 +296,12 @@ export function createWake(ctx) {
     controls.yaw = s.lieYaw;
     controls.pitch = 0;
     controls.placeFeet(_v.copy(s.feet).sub(world.origin));
-    world.bus.emit('player:wake', { from: s.from, to: s.feet.clone(), cause: s.cause });
+    // os Safeguards descartam: sem carga e sem o que se carregava (as ferramentas ficam)
+    if (s.taker === 'safeguard') {
+      ctx.player.energy.value = Math.min(ctx.player.energy.value, 0.05);
+      ctx.player.carried = [];
+    }
+    world.bus.emit('player:wake', { from: s.from, to: s.feet.clone(), cause: s.cause, taker: s.taker ?? null });
     s = null;
   }
 

@@ -170,3 +170,15 @@ Por que as coisas estão como estão, em ordem.
 ## 2026-09-30 — código sem uso apagado
 
 - Apagados os materiais `organic` e `anomaly`, o ramo "carne" do shader de superfície (`uOrganic`, `uFleshColor`, `uVeinColor`, `uVeins`) e a respiração por vértice (`uDisplace`), `buildTendril` e `world/lsystem.js`. Nada os usava desde a remoção das formas orgânicas; o visual não muda (todos os materiais tinham `organic: 0`, `displace: 0`).
+
+## 2026-09-30 — fase 5: preparar os seres
+
+- **Camada de entidades** (`world/entities.js`): os seres como um sistema do mundo. Perto (< 110 m), o corpo anda com o **mesmo `Walker`** do jogador e a sua própria `CollisionWorld`; longe, avança pela polilinha do caminho, sem física. Um fiscal por quadro confere se o peito atravessou alguma parede.
+- **Navegação** (`gen/nav.js`): o grafo não é pré-calculado (o mundo é infinito) — é consultado no Field com **as mesmas regras** de `network.js` e `buildWalk` (bordas `edgeDist`, hélice das torres em espiral com o mesmo RNG, curva da ponte suspensa, trechos de passarela sem vão). A* ~1–20 ms para caminhos de até 4,5 km. Travessia das plataformas desvia do que está em cima delas (monólito, guarita, pés do arco, postes). `wander` escolhe destinos pelo custo andando (Dijkstra).
+- **Desvio local**: rumo com chão à frente e nada bloqueando (9 ângulos); empacou 3 s → desvio lateral; de novo → outro caminho sem a aresta; em cima do ponto mas noutro nível (uma rampa corre sob a ponte) → outro caminho na hora.
+- Bugs achados pelo teste: o destino "a 140 m" em linha reta virava um caminho de 4,6 km (agora pelo custo); a ponte suspensa cede ~3 m no meio e o caminho previa o piso reto (o corpo girava sobre o ponto); rampa e ponte saindo da mesma plataforma na mesma direção se sobrepõem.
+- **Corpo de teste** (`world/bodies.js`): figura magra sem rosto; passada procedural pela distância andada; o quadril fica na altura em que o pé mais baixo encosta no chão. Captura de lado provou o pé apoiado.
+- **Alerta** (`app/alert.js`) por setor, pelo barramento; `alert:rise` a 0,25/0,5/0,75. **Acesso** (`player.access`) abafa.
+- **Lugares reservados**: vila, cemitério de vítimas, berço de Safeguards (capturas feitas por fora e por dentro). A haste da luz de sinal da sala dos Construtores ficava 0,2 m acima do teto (teto de 1,4, haste até 1,6): corrigido junto (`ROOF` por tipo).
+- **Despertar com sorteio** pronto e desligado (`WAKE_LOTTERY`).
+- Teste novo: `npm run check:beings` (`dev/beingtest.js`). Flags: `--body=N`, `--bodydist`, `--bodyseed`, `--follow`, `--followside`, `--gounique=<tipo>`, `--wakeas=safeguard|npc`.

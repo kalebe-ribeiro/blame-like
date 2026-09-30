@@ -36,6 +36,7 @@ import { EventBus } from '../core/events.js';
 import { InscriptionSystem } from './inscriptions.js';
 import { TerminalSystem } from './terminals.js';
 import { SubstationSystem } from './substations.js';
+import { EntitySystem } from './entities.js';
 import { CHUNK, MACRO, Field } from '../gen/field.js';
 
 /** Raio de carregamento padrão dos chunks normais (m). A névoa esconde a borda. */
@@ -158,6 +159,9 @@ export class World {
     this.substations = new SubstationSystem(this.streamGroup, m, this.shared);
     Object.assign(this.substations, { field: this.field, bus: this.bus });
     this.substations.load(this.worldState);
+    // os seres (fase 5): corpos que andam pela Cidade pelo grafo de navegação (gen/nav.js)
+    this.entities = new EntitySystem(this.streamGroup, m, this);
+    this.entities.bus = this.bus;
     // o endereçamento pintado nas paredes (na língua antiga)
     this.inscriptions = new InscriptionSystem(this.streamGroup, this.seed);
     Object.assign(this.inscriptions, { field: this.field, world: this });
@@ -513,6 +517,7 @@ export class World {
     this.colossi.update(time, dt, g, this.origin);
     this.terminals.update(time, dt, g, this.origin);
     this.substations.update(time, dt, g, this.origin);
+    this.entities.update(time, dt, g, this.origin);
     this.inscriptions.update(time, dt, g, this.origin, camera);
     this.particles.update(time, dt, g, this.origin, () => [...this.chunkLayer.allEmitters(), ...this.macroLayer.allEmitters()]);
 
@@ -540,6 +545,7 @@ export class World {
     this.colossi?.dispose();
     this.terminals?.dispose();
     this.substations?.dispose();
+    this.entities?.dispose();
     this.inscriptions?.dispose();
     this.builders?.dispose();
     this.particles?.dispose();

@@ -14,6 +14,8 @@ export function setupDev(ctx) {
 
   // --goto=construtores (ou qualquer tipo do painel de transporte)
   if (params.get('goto')) ctx.ui.teleport(params.get('goto'), t(`dest.${params.get('goto')}`));
+  // --gounique=village|graveyard|cradle|…: a estrutura única mais perto desse tipo
+  if (params.get('gounique')) console.warn('GOUNIQUE: ' + !!ctx.ui.teleport('unica', params.get('gounique'), { uniqueKind: params.get('gounique') }));
   // --outage=4 / --collapse=4: força o acontecimento aos N segundos
   if (params.get('outage')) setTimeout(() => trigger(world.outages), Number(params.get('outage')) * 1000);
   if (params.get('collapse')) setTimeout(() => trigger(world.collapses), Number(params.get('collapse')) * 1000);
@@ -74,9 +76,28 @@ export function setupDev(ctx) {
   // --wake=4: desmaio (queda fatal) aos N segundos — para ver a sequência de despertar
   if (params.get('wake')) setTimeout(() => ctx.wake.start('impact'), Number(params.get('wake')) * 1000);
 
+  // --body=6: aos N s, um corpo de teste (fase 5) na plataforma ou passarela mais perto,
+  // andando até um lugar a ~--bodydist m (padrão 200); --follow: a câmera vai atrás dele
+  if (params.get('body')) {
+    setTimeout(() => {
+      const e = ctx.beings.spawnTest(world.toGlobal(camera.position), Number(params.get('bodydist') ?? 200), Number(params.get('bodyseed') ?? 1));
+      console.warn(e ? `BODY: caminho de ${Math.round(e.path?.length ?? 0)} m, ${e.path?.pts.length ?? 0} pontos, estado ${e.state}` : 'BODY: nenhum lugar por perto');
+      if (e && params.get('follow')) followBody(ctx, e);
+      // o rastro do corpo no terminal, a cada 2 s
+      if (e) {
+        const iv = setInterval(() => {
+          if (!world.entities.list.has(e.id)) return clearInterval(iv);
+          const p = e.path?.pts[e.pi];
+          console.warn(`BODY ${e.state} ${e.pi}/${e.path?.pts.length} pés ${[e.feet.x, e.feet.y, e.feet.z].map((v) => v.toFixed(1))} alvo ${p ? [p.x, p.y, p.z].map((v) => v.toFixed(1)) : '-'} vel ${e.speed.toFixed(2)} parado ${e.stuckT.toFixed(1)} chão ${e.walker.grounded} · ${e.why ?? ''}`);
+        }, 2000);
+      }
+    }, Number(params.get('body')) * 1000);
+  }
+
   // --check: roteiro automático por todos os destinos (npm run check)
   // --check=pad: o teste do controle (um controle falso joga sozinho — dev/padtest.js)
   if (params.get('check') === 'pad') import('../dev/padtest.js').then((m) => m.runPadTest(ctx));
+  else if (params.get('check') === 'beings') import('../dev/beingtest.js').then((m) => m.runBeingTest(ctx));
   else if (params.get('check')) {
     import('../dev/check.js').then((m) => m.runCheck({ teleport: ctx.ui.teleport, world, controls: ctx.controls, camera, THREE, getTime: () => ctx.time, only: params.get('check') }));
   }
@@ -160,4 +181,31 @@ export function setupDev(ctx) {
       frames = 0;
     }, 2000);
   }
+}
+
+/** A câmera (voando) acompanha um corpo: atrás e um pouco acima, olhando para ele. Devolve a função que para. */
+export function followBody(ctx, e) {
+  const { camera, world, controls } = ctx;
+  controls.setMode('fly');
+  const target = new THREE.Vector3();
+  const pos = new THREE.Vector3();
+  let on = true;
+  const tick = () => {
+    if (!on || !world.entities.list.has(e.id)) return;
+    requestAnimationFrame(tick);
+    target.copy(e.feet).sub(world.origin);
+    target.y += 1.2;
+    // atrás do corpo (ele olha para −sen yaw, −cos yaw)
+    // --followside: de lado, na altura do joelho (para ver os pés no chão)
+    if (ctx.params.get('followside')) pos.set(target.x + Math.cos(e.yaw) * 3.2, target.y - 0.6, target.z - Math.sin(e.yaw) * 3.2);
+    else pos.set(target.x + Math.sin(e.yaw) * 6, target.y + 2.6, target.z + Math.cos(e.yaw) * 6);
+    camera.position.lerp(pos, camera.position.distanceTo(pos) > 30 ? 1 : 0.08);
+    const d = target.clone().sub(camera.position);
+    controls.yaw = Math.atan2(-d.x, -d.z);
+    controls.pitch = Math.atan2(d.y, Math.hypot(d.x, d.z));
+  };
+  tick();
+  return () => {
+    on = false;
+  };
 }

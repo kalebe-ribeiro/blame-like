@@ -148,6 +148,13 @@ function createWindow() {
   if (argValue('restore')) query.set('restore', argValue('restore'));
   if (argValue('ride')) query.set('ride', argValue('ride'));
   if (argValue('mark')) query.set('mark', argValue('mark'));
+  if (argValue('wakeas')) query.set('wakeas', argValue('wakeas')); // --wakeas=safeguard|npc: o sorteio do despertar forçado
+  if (argValue('gounique')) query.set('gounique', argValue('gounique'));
+  if (argValue('body')) query.set('body', argValue('body')); // --body=6: um corpo de teste aos 6 s (fase 5)
+  if (argValue('bodydist')) query.set('bodydist', argValue('bodydist'));
+  if (argValue('bodyseed')) query.set('bodyseed', argValue('bodyseed'));
+  if (process.argv.includes('--follow')) query.set('follow', '1');
+  if (process.argv.includes('--followside')) query.set('followside', '1');
   if (argValue('collapse')) query.set('collapse', argValue('collapse'));
   if (checkMode) {
     query.set('check', argValue('check') || '1'); // --check=trelica,escadaria: só esses
@@ -185,7 +192,9 @@ function createWindow() {
   });
   if (checkMode) {
     win.webContents.on('render-process-gone', (_e, d) => finishCheck(`processo do renderer caiu: ${d.reason}`));
-    setTimeout(() => finishCheck('tempo esgotado (6 min)'), 6 * 60 * 1000);
+    // o teste dos corpos anda de verdade (a pé, a ~2,3 m/s): tem mais tempo
+    const limit = argValue('check') === 'beings' ? 12 : 6;
+    setTimeout(() => finishCheck(`tempo esgotado (${limit} min)`), limit * 60 * 1000);
   }
 
   if (capturePath) {
@@ -203,6 +212,7 @@ const checkRows = [];
 const checkErrors = [];
 function onCheckMessage(level, message, sourceId, line) {
   if (message === 'CHECK:DONE') return finishCheck();
+  if (message.startsWith('BEING ')) return console.log('    ' + message); // o rastro do teste dos corpos
   if (message.startsWith('CHECK:')) {
     const r = JSON.parse(message.slice(6));
     checkRows.push(r);

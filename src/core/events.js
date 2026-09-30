@@ -21,7 +21,10 @@
 //    lead:reveal      { lead, parts }      uma pista inteira, revelada (console ativo — app/uniques.js)
 //    sector:restore   { id, sector, x, y, z } religou um setor numa subestação (world/substations.js)
 //    player:learn     { words, source }   entendeu palavras numa inscrição (world/inscriptions.js)
-//    player:wake      { from, to, cause }  acordou depois de um desmaio (app/wake.js)
+//    player:wake      { from, to, cause, taker }  acordou depois de um desmaio (app/wake.js); taker: 'safeguard'|'npc'|null
+//    being:arrive     { id, x, y, z }      um corpo chegou aonde ia (world/entities.js)
+//    being:stuck      { id, x, y, z }      um corpo empacou de vez
+//    alert:rise       { sector, level, step, x, y, z } o alerta de um setor passou de 0,25/0,5/0,75 (app/alert.js)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export class EventBus {

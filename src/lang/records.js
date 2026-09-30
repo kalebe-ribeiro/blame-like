@@ -102,6 +102,18 @@ export function terminalRecords(field, site) {
     } else if (u.kind === 'builders') {
       lines.push([W('BUILDERS'), W('SITE'), W('COUNT'), P(':'), N(num(r.int(40, 900))), P('·'), W('WORK'), W('SUSPENDED')]);
       lines.push([W('CONSTRUCTION'), W('IN'), W('WORK'), P('·'), W('DEADLINE'), P(':'), P('∞')]);
+    } else if (u.kind === 'village') {
+      // a vila abandonada: um censo que ninguém mais atualiza
+      lines.push([W('INHABITANTS'), P(':'), N(num(r.int(40, 400))), P('·'), W('REGISTERED'), P(':'), N('0')]);
+      lines.push([W('HUMAN'), W('RESIDENT'), W('ILLEGAL'), P('·'), W('HERE'), W('REMAINS'), W('NOBODY')]);
+    } else if (u.kind === 'graveyard') {
+      // o cemitério de vítimas: a contagem dos descartados
+      lines.push([W('RESIDENT'), W('ILLEGAL'), P('·'), W('COUNT'), P(':'), N(num(r.int(300, 90000)))]);
+      lines.push([W('SAFEGUARD'), W('WORK'), P('·'), W('RECORD'), W('NO'), W('NAME')]);
+    } else if (u.kind === 'cradle') {
+      // o berço de Safeguards, lacrado
+      lines.push([W('SAFEGUARD'), W('CONSTRUCTION'), code, P('·'), W('STATUS'), P(':'), W('SUSPENDED')]);
+      lines.push([W('ACCESS'), W('NO'), W('AUTHORIZED'), P('·'), W('WARNING'), P('·'), W('NET'), W('GENE'), W('REQUEST')]);
     } else if (u.kind === 'antenna') {
       lines.push([W('SIGNAL'), code, P('·'), W('OUTPUT'), P(':'), N(`${r.int(2, 14)}%`), P('·'), W('REPLY'), W('NONE')]);
       lines.push([W('NET'), W('TERMINAL'), W('GENE'), P(':'), W('NO'), W('DETECTED')]);

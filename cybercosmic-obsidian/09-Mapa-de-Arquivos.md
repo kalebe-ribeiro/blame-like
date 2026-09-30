@@ -64,6 +64,12 @@ src/
   world/silhouettes.js      silhuetas a dezenas de km
   world/geometry.js         merge, cilindro entre pontos, tubo afunilado
   world/cables.js           catenárias e fios de prumo
+  world/entities.js         camada de entidades (fase 5): perto com física, longe abstrato
+  world/bodies.js           corpos procedurais (o corpo de teste) e a passada
+  gen/nav.js                grafo de navegação consultado no Field + A*
+  app/alert.js              percepção: alerta por setor (fase 5)
+  app/beings.js             os seres no mundo salvo; corpo de teste
+  dev/beingtest.js          npm run check:beings: corpos de teste atravessando a teia
 
   render/pipeline.js        ScenePass: SSAO, TAA, raios na névoa
   render/reflection.js      reflexo planar da água

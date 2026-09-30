@@ -403,6 +403,92 @@ function buildUnique(F, B, u) {
     B.lamp(tx, y0 + H + 15, tz, [0.85, 0.12, 0.05], 700, 'faulty', { to: [tx, y0 + H + 14, tz], size: 1.4, far: true, grid: false });
     const [lx, lz] = P(-2, 0);
     B.lamp(lx, y0 + u.h - 1.4, lz, FLUORO, 30, 'steady', { to: [lx, y0 + u.h, lz], size: 1.1, grid: false });
+  } else if (u.kind === 'village') {
+    // a vila abandonada (reservada para os NPCs — fase 7): escondida dentro de um galpão
+    // fechado (existem Safeguards), barracos de chapa encostados, alguns de dois andares,
+    // panos esquecidos sobre os tetos. Tudo no chão do galpão ou sobre um teto.
+    off = shell(B, f, y0, u.h, T, 4, 4.5, r);
+    box(B, 'macro', 0, y0 + u.h, 0, ha + 1, 1.4, hc + 1);
+    const shacks = [];
+    for (let q = 0; q < 40 && shacks.length < 16; q++) {
+      const w = r.float(1.1, 1.8);
+      const d = r.float(1.1, 1.8);
+      const h = r.float(2.4, 3.2);
+      const sa = r.float(-ha + T + w + 0.5, ha - T - w - 2);
+      const sc = r.float(-hc + T + d + 0.5, hc - T - d - 0.5);
+      if (Math.abs(sc - off) < d + 2.4) continue; // o corredor da porta (e o console)
+      if (shacks.some((s) => Math.abs(s.a - sa) < s.w + w + 0.7 && Math.abs(s.c - sc) < s.d + d + 0.7)) continue;
+      shacks.push({ a: sa, c: sc, w, d });
+      box(B, 'shack', sa, y0, sc, w, h, d);
+      box(B, 'dress', sa, y0 + h, sc, w + 0.25, 0.12, d + 0.25); // o teto de chapa, apoiado nas paredes
+      // a porta: uma placa escura na face voltada para o corredor
+      const face = Math.sign(off - sc) || 1;
+      box(B, 'door', sa, y0, sc + face * (d + 0.02), 0.45, 1.9, 0.02);
+      if (r.chance(0.35) && h + 2.7 < u.h - 1) {
+        // um segundo andar, menor, em pé sobre o teto do de baixo
+        box(B, 'shack', sa + r.float(-0.2, 0.2) * w, y0 + h + 0.12, sc, w * 0.75, 2.4, d * 0.75);
+      } else if (r.chance(0.4)) {
+        box(B, 'cloth', sa + r.float(-0.3, 0.3) * w, y0 + h + 0.12, sc, w * 0.7, 0.04, d * 0.8); // um pano largado no teto
+      }
+    }
+    // um tanque de água no meio (em pé no chão) e a única luz, pendurada do teto
+    const tc = off + (off > 0 ? -1 : 1) * r.float(6, 10);
+    if (!shacks.some((s) => Math.abs(s.a) < s.w + 2.5 && Math.abs(s.c - tc) < s.d + 2.5)) {
+      const [tx, tz] = P(0, tc);
+      const L = B.L(tx, y0 + 1.6, tz);
+      B.add('machine', place(new THREE.CylinderGeometry(1.6, 1.7, 3.2, 10), { x: L.x, y: L.y, z: L.z }));
+    }
+    const [lx, lz] = P(ha * 0.3, off);
+    B.lamp(lx, y0 + u.h - 3.5, lz, SODIUM, 45, 'faulty', { to: [lx, y0 + u.h, lz], size: 1, grid: false });
+  } else if (u.kind === 'graveyard') {
+    // o cemitério de vítimas (fase 5): um pátio murado, sem teto, onde os Safeguards largam
+    // os corpos que descartam. Formas embrulhadas, deitadas no chão, em fileiras tortas.
+    off = shell(B, f, y0, u.h, T, 5, 4.5, r);
+    const [cA, cC] = [ha - 5, off - 3]; // o console (Field.uniqueConsole)
+    for (let q = 0; q < 110; q++) {
+      const a = r.float(-ha + T + 1.4, ha - T - 1.4);
+      const c = r.float(-hc + T + 1.4, hc - T - 1.4);
+      if (a > ha - 14 && Math.abs(c - off) < 5) continue; // a entrada
+      if (Math.hypot(a - cA, c - cC) < 3) continue;
+      const [x, z] = P(a, c);
+      const L = B.L(x, y0, z);
+      const ry = r.float(0, Math.PI);
+      const len = r.float(1.5, 1.85);
+      // um corpo embrulhado: um volume só, mais largo nos ombros, deitado (a base no chão)
+      const g = new THREE.CylinderGeometry(0.2, 0.26, len, 6);
+      g.rotateZ(Math.PI / 2);
+      g.scale(1, 0.62, 1);
+      g.translate(0, 0.26 * 0.62, 0);
+      g.rotateY(ry);
+      g.translate(L.x, L.y, L.z);
+      B.add('cloth', g);
+    }
+    // um poste com a única luz, junto da entrada (o pé no chão do pátio)
+    const [px, pz] = P(ha - 8, off + 5);
+    block(B, 'frame', px, y0 + 3.2, pz, 0.3, 6.4, 0.3);
+    B.lamp(px + 0.6, y0 + 5.8, pz, FLUORO, 35, 'faulty', { to: [px, y0 + 6.2, pz], size: 1, grid: false });
+  } else if (u.kind === 'cradle') {
+    // o berço de Safeguards, lacrado (fase 5; eles saem daqui na fase 6): um bloco alto sem
+    // janelas; no lugar da porta, um portão enorme fechado, travado por barras presas aos batentes
+    off = u.doorOff * hc;
+    box(B, 'macro', 0, y0, 0, ha, u.h, hc);
+    box(B, 'barrier', 0, y0 + u.h, 0, ha + 0.5, 1.2, hc + 0.5);
+    box(B, 'frame', ha + 0.5, y0, off - 7, 0.5, 19, 0.8); // batentes
+    box(B, 'frame', ha + 0.5, y0, off + 7, 0.5, 19, 0.8);
+    box(B, 'frame', ha + 0.5, y0 + 19, off, 0.5, 1.4, 7.8); // verga
+    box(B, 'door', ha + 0.15, y0, off - 3.1, 0.15, 19, 3.05); // as duas folhas, fechadas
+    box(B, 'door', ha + 0.15, y0, off + 3.1, 0.15, 19, 3.05);
+    for (const yy of [4, 9.5, 15]) box(B, 'machine', ha + 0.6, y0 + yy, off, 0.3, 0.7, 7.2); // as travas
+    // frestas verticais nas outras faces (placas escuras rentes à parede)
+    for (let q = 0; q < 6; q++) {
+      const a = r.float(-0.8, 0.8) * ha;
+      const s = q % 2 ? 1 : -1;
+      box(B, 'door', a, y0 + 6, s * (hc + 0.03), 0.35, u.h - 12, 0.03);
+    }
+    // a luz de alerta sobre o portão: vermelha e fixa, presa à verga
+    const [lx, lz] = P(ha + 1.4, off);
+    const [mx, mz] = P(ha + 1, off);
+    B.lamp(lx, y0 + 21.2, lz, [0.85, 0.12, 0.05], 140, 'steady', { to: [mx, y0 + 20.4, mz], size: 1.2, grid: false });
   } else {
     // o console: um salão quadrado com um pedestal no meio; o teto tem um rasgo
     off = shell(B, f, y0, u.h, T, 6, 7, r);
@@ -415,9 +501,12 @@ function buildUnique(F, B, u) {
     const [lx, lz] = P(-(gap / 2 + 1.5), 2.5); // sob o teto, não sob o rasgo
     B.lamp(lx, y0 + 7, lz, FLUORO, 70, 'steady', { to: [lx, y0 + u.h, lz], size: 1.6, grid: false });
   }
-  // luz de sinal no telhado, vista de longe (a Cidade ainda sabe que isto existe)
+  // luz de sinal no telhado, vista de longe (a Cidade ainda sabe que isto existe) —
+  // a haste desce até o topo do telhado de cada tipo (o cemitério não tem teto: um mastro)
   const [sx, sz] = P(ha - 4, hc - 4);
-  const top = u.kind === 'plant' ? y0 + 13.5 : u.kind === 'antenna' ? y0 + u.h + 1 : y0 + u.h + 1.6;
+  const ROOF = { plant: 13.5 - u.h, antenna: 1, builders: 1.4, village: 1.4, cradle: 1.2, graveyard: 0 };
+  const top = y0 + u.h + (ROOF[u.kind] ?? 1.6);
+  if (u.kind === 'graveyard') block(B, 'frame', sx, y0 + (u.h + 8) / 2, sz, 0.4, u.h + 8, 0.4);
   B.lamp(sx, top + 2, sz, SODIUM, r.float(500, 900), 'steady', { to: [sx, top, sz], size: 2.5, far: true, grid: false });
   return off;
 }

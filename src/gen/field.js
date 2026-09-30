@@ -106,6 +106,11 @@ export const SECTOR = { cell: 900, dark: 0.3, unstable: 0.15, salt: 910 };
  *   plant    usina: um bloco-núcleo com chaminés
  *   builders sala de controle dos Construtores: um salão com a mesa dos canteiros (fase 4.5)
  *   antenna  terminal de transmissão: uma casinha ao pé de um mastro de 110 m (fase 4.5)
+ * Os lugares reservados para os seres (fase 5 — ainda vazios):
+ *   village   vila abandonada: barracos dentro de um galpão fechado (NPCs, fase 7)
+ *   cradle    berço de Safeguards: um bloco alto, lacrado, com um portão enorme fechado (fase 6)
+ *   graveyard cemitério de vítimas: pátio murado onde os Safeguards largam os corpos
+ *             (onde se acorda depois de ser arrastado por eles — app/wake.js)
  */
 /** Religar um setor (app/power.js): a frente da luz voltando, em m/s. */
 export const RESTORE_SPEED = 40;
@@ -409,7 +414,15 @@ export class Field {
       // os tipos da fase 4.5 vêm de um sorteio à parte (os mundos antigos mantêm os seus)
       const alt = hash4(this.seed, ui, n, uk, 983);
       if (alt < 0.3) kind = alt < 0.15 ? 'builders' : 'antenna';
-      const DIMS = { console: [30, 30, 22], archive: [66, 26, 26], plant: [42, 42, 34], builders: [34, 34, 18], antenna: [14, 14, 8] };
+      else {
+        // os lugares reservados para os seres (fase 5): outro sorteio à parte
+        const alt2 = hash4(this.seed, ui, n, uk, 984);
+        if (alt2 < 0.25) kind = alt2 < 0.1 ? 'village' : alt2 < 0.18 ? 'graveyard' : 'cradle';
+      }
+      const DIMS = {
+        console: [30, 30, 22], archive: [66, 26, 26], plant: [42, 42, 34], builders: [34, 34, 18], antenna: [14, 14, 8],
+        village: [40, 40, 14], graveyard: [44, 44, 6], cradle: [26, 26, 40],
+      };
       const [hx, hz, h] = DIMS[kind];
       // tenta alguns pontos da célula até achar um lugar limpo
       for (let tries = 0; tries < 6; tries++) {
@@ -471,6 +484,15 @@ export class Field {
       a = 2; // entre a porta e a mesa dos canteiros
     } else if (u.kind === 'antenna') {
       a = -4; // no fundo da casinha
+    } else if (u.kind === 'village') {
+      a = ha - 6; // logo depois da porta, no corredor entre os barracos
+      c = u.doorOff * hc + 3;
+    } else if (u.kind === 'graveyard') {
+      a = ha - 5; // junto do portão, por dentro
+      c = u.doorOff * hc - 3;
+    } else if (u.kind === 'cradle') {
+      a = ha + 2.5; // do lado de fora: ninguém entra no berço
+      c = u.doorOff * hc + 9;
     } else {
       a = ha - 2 * ha * UNIQUE.plantHall + 3 + 4;
     }

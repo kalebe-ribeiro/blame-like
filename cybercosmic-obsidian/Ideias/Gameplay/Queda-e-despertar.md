@@ -29,6 +29,8 @@ Quando você "morre" — hoje, numa **queda longa**; no futuro, também pelos **
   - **NPCs** → uma **colônia de NPCs** (alguém te recolheu).
   (Ver [[NPCs-e-Safeguards]]. Os corpos são do repertório de *Blame!* — não são as "formas orgânicas" proibidas.)
 
+> **Fase 5 (2026-09-30)**: o sorteio está pronto e **desligado** (`WAKE_LOTTERY` em `app/wake.js`): Safeguards 55% → o **cemitério de vítimas** mais perto (estrutura única `graveyard`), carga a 5% e sem o que carregava; NPCs 20% → a **vila** (`village`, hoje abandonada); o resto, ninguém visto. `--wakeas=safeguard|npc` força nas sessões de teste. O `player:wake` leva `taker`.
+
 ## Quando dispara
 - **Queda longa**: a partir de uma velocidade/altura de impacto que hoje seria fatal (quedas curtas continuam como agora: impacto, tremor, zumbido).
 - **Queda sem fim** (o vazio): depois de alguns segundos caindo, a tela escurece ainda no ar e a sequência começa do passo 3.
