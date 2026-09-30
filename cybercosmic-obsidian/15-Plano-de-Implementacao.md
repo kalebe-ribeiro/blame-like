@@ -155,6 +155,18 @@
 
 **Pronto quando**: a Cidade continua quieta e vazia quase sempre — e, quando um Safeguard aparece, é um evento que você não esquece.
 
+> **Proposta detalhada (2026-09-30) — aguardando as decisões do usuário.**
+> - **6.1 Percepção individual**: além do alerta por setor, cada Safeguard vê (cone, alcance que cresce com a luz: lanterna acesa, setor com energia) e ouve (correr, pouso pesado, alavanca, leitura). Esconder = escuro + distância + quebrar a linha de visão.
+> - **6.2 O Safeguard comum**: corpo procedural (o esqueleto da fase 5): alto, magro, pálido, sem rosto (uma fenda); anda, corre, pula de nível em nível; som próprio (passos secos, um zumbido).
+> - **6.3 Surgimento das paredes**: quando o alerta de um setor passa do limite, uma placa de parede perto (fora do alcance da mão, mas à vista) se abre e o Safeguard sai de dentro — físico, não mágico: a parede é uma fábrica da Netsfera. Níveis: 0,5 um vigia · 0,75 dois caçadores · 1,0 o setor fica "quente" por um tempo.
+> - **6.4 Comportamento**: patrulha → investiga o último ruído → caça (perseguição direta com o Walker perto; grafo de navegação longe) → perde o rastro → volta para a parede e some. Nunca mais que 2–3 ao mesmo tempo.
+> - **6.5 Captura**: o toque derruba → desmaio → `WAKE_LOTTERY` ligado (Safeguards → cemitério de vítimas, sem carga e sem o que carregava).
+> - **6.6 Defesa**: fugir e esconder (apagar a lanterna, subir escadas de marinheiro, pular num vagão, fechar distância vertical). Arma de Killy: decisão do usuário.
+> - **6.7 Acesso**: como `player.access` sobe (hoje sempre 0).
+> - **6.8 Modo Livre**: Safeguards ligáveis/desligáveis nas configurações (navegável pelo controle).
+> - **6.9 Teste**: `npm run check:safeguards` — força o alerta, confere o surgimento de uma parede, a caçada, o rastro perdido no escuro e o despertar no cemitério; nada atravessa parede.
+> Perguntas: combate × só fuga; um toque = captura ou dano acumulado; como se ganha acesso; no Livre ligado ou desligado por padrão; quão raros (primeiro encontro depois de quanto tempo de jogo).
+
 ---
 
 ## Fase 7 — NPCs (fase final)
