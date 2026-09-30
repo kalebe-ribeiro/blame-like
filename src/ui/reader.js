@@ -34,6 +34,12 @@ export class ReaderPanel {
     this.el.addEventListener('click', (e) => e.stopPropagation());
   }
 
+  /** Rola o texto (px; o controle usa isto — ui/padNav.js). */
+  scrollPx(px) {
+    this.scroll = Math.max(0, Math.min(this._maxScroll(), this.scroll + px));
+    this._draw();
+  }
+
   get isOpen() {
     return this.el.classList.contains('open');
   }

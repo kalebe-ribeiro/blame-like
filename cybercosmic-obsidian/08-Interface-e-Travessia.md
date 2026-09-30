@@ -13,14 +13,16 @@
 | andar ↔ voar / piloto automático | F / P | X / ↑ | Livre |
 | ler terminal · tomada | E | Y | |
 | lanterna / sensor | F / G | X / ↓ | Peregrinação |
-| foto / mapa | F2 / M | RB / START | |
-| interface / transporte / mundo novo | H / T / R | SELECT / — / — | Livre |
+| foto / mapa | F2 / M | RB / SELECT | |
+| menu (tela de entrada) | ESC | START | |
+| interface / transporte / mundo novo | H / T / R | → / — / — | Livre |
 | configurações / controles | O / K | — | |
-| fixos | ESC, F11, F12 | | |
+| tela cheia | F11 | ← | |
+| fixos | F12 | | |
 
 Regras: F serve a voar (Livre) e à lanterna (Peregrinação) — duas ações podem dividir tecla se nunca existirem no mesmo modo. Textos que citam tecla usam `bindings.label(ação)` (mostra o botão do controle se o controle foi o último usado). Enquanto a aba espera uma tecla, `bindings.capturing` faz o jogo ignorar tudo. Saíram os atalhos duplicados de antes (E/Q/C para subir/descer voando: E era também "ler").
 
-**Controle de videogame** suportado (entra direto, vibração em quedas, apagões, colapsos, máquinas); gatilhos contam como apertados a partir de 40%.
+**Controle de videogame — REGRA ABSOLUTA: independente do teclado.** Menus pelo controle em `ui/padNav.js` (foco com direcional, A aperta, B volta, ← → valores, LB/RB abas, analógico direito rola, START abre/fecha a tela de entrada; mapa com analógicos e gatilhos). Painel aberto no jogo pelo controle volta ao jogo. Tela cheia pelo controle via `preload.js`. Vibração em quedas, apagões, colapsos, máquinas; gatilhos contam a partir de 40%. Teste: `npm run check:pad`.
 
 ## Modos e mundos (tela de entrada, painel MUNDOS — `ui/worlds.js`)
 

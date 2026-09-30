@@ -9,7 +9,12 @@
 //  Livre, lanterna na Peregrinação).
 //
 //  Fixos (não se trocam): olhar (mouse / analógico direito), andar no controle
-//  (analógico esquerdo), ESC (soltar o mouse / fechar), F11 (tela cheia).
+//  (analógico esquerdo), ESC no teclado (menu: soltar o mouse / fechar) e,
+//  nos menus, os botões de navegação do controle (ui/padNav.js).
+//
+//  REGRA ABSOLUTA: tudo que se faz no teclado tem de dar para fazer só com o
+//  controle — toda ação tem (ou pode ganhar) um botão, e todo painel se
+//  navega pelo controle (ui/padNav.js).
 //
 //  Quem lê: controls/noclip.js (movimento, voo, piloto automático, botões do
 //  controle), app/ui.js (teclas globais), app/carried.js (lanterna, sensor).
@@ -34,17 +39,19 @@ export const ACTIONS = [
   { id: 'lantern', group: 'act', key: 'KeyF', pad: 2, modes: ['pilgrimage'] },
   { id: 'sensor', group: 'act', key: 'KeyG', pad: 13, modes: ['pilgrimage'] },
   { id: 'photo', group: 'act', key: 'F2', pad: 5 },
-  { id: 'map', group: 'ui', key: 'KeyM', pad: 9 },
-  { id: 'hud', group: 'ui', key: 'KeyH', pad: 8, modes: ['free'] },
+  { id: 'menu', group: 'ui', key: 'Escape', pad: 9, fixedKey: true },
+  { id: 'map', group: 'ui', key: 'KeyM', pad: 8 },
+  { id: 'hud', group: 'ui', key: 'KeyH', pad: 15, modes: ['free'] },
   { id: 'transport', group: 'ui', key: 'KeyT', pad: null, modes: ['free'] },
   { id: 'regenerate', group: 'ui', key: 'KeyR', pad: null, modes: ['free'] },
   { id: 'settings', group: 'ui', key: 'KeyO', pad: null },
   { id: 'controls', group: 'ui', key: 'KeyK', pad: null },
+  { id: 'fullscreen', group: 'ui', key: 'F11', pad: 14 },
 ];
 const BY_ID = Object.fromEntries(ACTIONS.map((a) => [a.id, a]));
 
 /** Teclas que o jogo reserva (não podem virar atalho). */
-const RESERVED = new Set(['Escape', 'F11', 'F12', 'MetaLeft', 'MetaRight', 'Tab']);
+const RESERVED = new Set(['Escape', 'F12', 'MetaLeft', 'MetaRight', 'Tab']);
 
 const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'SELECT', 'START', 'L3', 'R3', 'D↑', 'D↓', 'D←', 'D→', 'HOME'];
 
@@ -55,7 +62,7 @@ export function keyName(code) {
   if (/^Digit\d$/.test(code)) return code.slice(5);
   if (/^Numpad/.test(code)) return `NUM ${code.slice(6)}`;
   const named = {
-    Space: 'SPACE', ShiftLeft: 'SHIFT', ShiftRight: 'R SHIFT', ControlLeft: 'CTRL', ControlRight: 'R CTRL',
+    Escape: 'ESC', Space: 'SPACE', ShiftLeft: 'SHIFT', ShiftRight: 'R SHIFT', ControlLeft: 'CTRL', ControlRight: 'R CTRL',
     AltLeft: 'ALT', AltRight: 'ALT GR', Enter: 'ENTER', Backspace: 'BACKSPACE', CapsLock: 'CAPS',
     ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Backquote: '`', Minus: '-', Equal: '=',
     BracketLeft: '[', BracketRight: ']', Backslash: '\\', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/',
@@ -71,6 +78,7 @@ class Bindings {
     this.mode = 'free'; // o modo de jogo desta sessão (app.js)
     this.capturing = false; // a aba CONTROLES está esperando uma tecla: o jogo ignora tudo
     this.lastDevice = 'key'; // 'key' | 'pad': que nomes os textos mostram
+    this.uiActive = false; // um menu/painel está aberto: o controle navega nele (ui/padNav.js), não anda
     this.keys = {};
     this.pads = {};
     this._listeners = new Set();
@@ -163,6 +171,7 @@ class Bindings {
    * trocam entre si. Devolve as ações que trocaram (para avisar na aba).
    */
   set(kind, id, value) {
+    if (kind === 'key' && BY_ID[id].fixedKey) return [];
     const map = kind === 'key' ? this.keys : this.pads;
     const old = map[id];
     const others = this._owners(kind, id, value);

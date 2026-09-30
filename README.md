@@ -20,6 +20,8 @@ O jogo é em **inglês** por padrão, com **português** como opção nas config
 
 ## Controles
 
+**Regra absoluta: o controle de videogame é completamente independente do teclado e do mouse.** Tudo o que se faz com eles, no jogo e em todos os menus, dá para fazer só com o controle (`npm run check:pad` confere, com um controle simulado).
+
 Todas as teclas e botões do controle estão na aba **CONTROLES** (tecla **K**, ou o botão na tela de entrada), só com o que existe no modo do mundo aberto. Clicar numa célula e apertar outra tecla (ou outro botão do controle) troca o atalho; ESC cancela e BACKSPACE apaga. Se a tecla já era de outra ação do mesmo modo, as duas trocam, e a aba avisa. Os atalhos ficam salvos (`controls/bindings.js`), e os textos do jogo que citam uma tecla ("TOMADA [E]", "E / ESC fechar"…) usam o atalho atual, ou o botão do controle, se foi ele o último usado.
 
 Padrões:
@@ -37,14 +39,15 @@ Padrões:
 | lanterna | F | X | Peregrinação |
 | sensor | G | direcional ↓ | Peregrinação |
 | foto: um quadro limpo (sem interface nem grão, 16 quadros de TAA) em até 4K, em Imagens/CYBERCOSMIC | F2 | RB | |
-| mapa da travessia | M | START | |
-| interface (posição, região, seed, registro) | H | SELECT | Livre |
+| menu (a tela de entrada; nela, volta ao jogo) | ESC (fixo) | START | |
+| mapa da travessia | M | SELECT | |
+| interface (posição, região, seed, registro) | H | direcional → | Livre |
 | transporte | T | — | Livre |
 | mundo novo (nova seed) | R | — | Livre |
 | configurações | O | — | |
 | controles | K | — | |
-| soltar o mouse · fechar (fixo) | ESC | | |
-| tela cheia / DevTools (fixos) | F11 / F12 | | |
+| tela cheia | F11 | direcional ← | |
+| DevTools (fixo, desenvolvimento) | F12 | | |
 
 Numa escada, frente e trás sobem e descem (encostado nela); esquerda e direita soltam para o patamar do lado. Clicar na tela de entrada entra no mundo (trava o mouse e liga o áudio).
 
@@ -217,7 +220,20 @@ Detalhes da implementação:
 
 ### Controle de videogame
 
-Os botões padrão estão na tabela de [Controles](#controles) e se trocam na mesma aba. Os gatilhos contam como apertados a partir de 40%. Na tela de entrada, qualquer botão entra (o controle não usa a trava do mouse). O controle vibra nos pousos, nas juntas do trilho, nos colapsos, nos apagões e quando um vagão passa rente.
+O controle faz tudo sozinho, sem teclado nem mouse. No jogo, os botões da tabela de [Controles](#controles) (trocáveis). Em qualquer menu ou painel (tela de entrada, mundos, configurações, transporte, controles, diário, mapa, leitura), o controle para de mover o corpo e navega nele:
+
+| nos menus | botão |
+|---|---|
+| mover o foco | direcional ou analógico esquerdo (← → ficam na mesma linha) |
+| apertar o que está em foco | A |
+| voltar / fechar | B |
+| mudar um valor (controle deslizante, lista) | ← → |
+| aba anterior / seguinte (diário) | LB / RB |
+| rolar | analógico direito (na leitura, também o direcional) |
+| mapa: girar / aproximar | analógicos / RT e LT (ou ↑ ↓) |
+| abrir a tela de entrada / voltar ao jogo | START |
+
+Um painel aberto no meio do jogo pelo controle volta ao jogo ao fechar. Transportar pelo controle também. Na tela de entrada, A em "clique para entrar" entra. Os gatilhos contam como apertados a partir de 40%. A tela cheia pelo controle passa pelo Electron (`preload.js`), já que um botão do controle não conta como gesto para a Fullscreen API. O controle vibra nos pousos, nas juntas do trilho, nos colapsos, nos apagões e quando um vagão passa rente.
 
 ## Transporte
 
@@ -346,6 +362,7 @@ src/
   ui/hud.js                 leitura de instrumento do modo Livre
   ui/settings.js            painel de configurações (tecla O)
   ui/controlsPanel.js       aba CONTROLES: trocar teclas e botões (tecla K)
+  ui/padNav.js              menus pelo controle (foco, A/B, abas, rolar, mapa)
   ui/transport.js           painel de transporte (tecla T)
 ```
 
@@ -403,7 +420,7 @@ Teste de fumaça: numa seed fixa, visita todos os destinos do painel de transpor
 ```bash
 npx electron . --stats
 ```
-Imprime FPS, chunks carregados, fila de geração, lotes (uso, vagas livres, compactações), draw calls, triângulos, heap e a GPU em uso. Também mostra o tempo de CPU das listas de desenho e, perto da água, o tempo de GPU do reflexo. Com `--novsync` o limite de quadros é removido, para medir desempenho de verdade. `--outage=4` força um apagão de setor aos 4 s, e `--collapse=4` um colapso distante. `--wake=4` dispara o desmaio aos 4 s, `--lantern` começa com a lanterna acesa e `--game=pilgrimage` abre a sessão no modo Peregrinação. `--read=N` abre a leitura do terminal em frente aos N s, `--lexicon=N` já entende as palavras até a classe N (1 comuns, 2 incomuns, 3 raras) e `--archive=records|lexicon|leads` escolhe a aba do diário. `--sensor=terminal|energy|motion` dá o sensor já ligado nesse modo, `--map=N` abre o mapa aos N s e `--controls=N` a aba CONTROLES.
+Imprime FPS, chunks carregados, fila de geração, lotes (uso, vagas livres, compactações), draw calls, triângulos, heap e a GPU em uso. Também mostra o tempo de CPU das listas de desenho e, perto da água, o tempo de GPU do reflexo. Com `--novsync` o limite de quadros é removido, para medir desempenho de verdade. `--outage=4` força um apagão de setor aos 4 s, e `--collapse=4` um colapso distante. `--wake=4` dispara o desmaio aos 4 s, `--lantern` começa com a lanterna acesa e `--game=pilgrimage` abre a sessão no modo Peregrinação. `--read=N` abre a leitura do terminal em frente aos N s, `--lexicon=N` já entende as palavras até a classe N (1 comuns, 2 incomuns, 3 raras) e `--archive=records|lexicon|leads` escolhe a aba do diário. `--sensor=terminal|energy|motion` dá o sensor já ligado nesse modo, `--map=N` abre o mapa aos N s e `--controls=N` a aba CONTROLES. `npm run check:pad` joga os dois modos só com um controle simulado (tela de entrada, configurações, troca de botão, abas, transporte, mapa, tela cheia, leitura, lanterna, mundos).
 
 ```bash
 npx electron . --capture=shot.png --pos=2000,-800,3000,0.3,0 --seed=abc --delay=8 --show

@@ -49,7 +49,9 @@ export function setupDev(ctx) {
   if (params.get('wake')) setTimeout(() => ctx.wake.start('impact'), Number(params.get('wake')) * 1000);
 
   // --check: roteiro automático por todos os destinos (npm run check)
-  if (params.get('check')) {
+  // --check=pad: o teste do controle (um controle falso joga sozinho — dev/padtest.js)
+  if (params.get('check') === 'pad') import('../dev/padtest.js').then((m) => m.runPadTest(ctx));
+  else if (params.get('check')) {
     import('../dev/check.js').then((m) => m.runCheck({ teleport: ctx.ui.teleport, world, controls: ctx.controls, camera, THREE, getTime: () => ctx.time, only: params.get('check') }));
   }
 

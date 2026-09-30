@@ -80,6 +80,9 @@ src/
   ui/worlds.js              painel MUNDOS (modos de jogo)
   ui/settings.js            configurações (O)
   ui/controlsPanel.js       aba CONTROLES (K)
+  ui/padNav.js              menus pelo controle (REGRA: controle independente do teclado)
+  dev/padtest.js            npm run check:pad: um controle falso joga sozinho
+  preload.js                ponte mínima com o Electron (tela cheia pelo controle)
   ui/transport.js           painel de transporte (T)
   ui/journey.js             diário (os dados ficam no mundo salvo)
   ui/trailmap.js            mapa da travessia (M), com as descobertas

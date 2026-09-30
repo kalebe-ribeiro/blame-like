@@ -103,3 +103,13 @@ O usuário pediu os cinco ajustes da revisão da sessão cloud:
 - começo **sem lanterna acesa**;
 - comentário de `lang/leads.js` corrigido (as cadeias convergem para *alguma* única, não garantidamente a mesma).
 
+### REGRA ABSOLUTA — controle independente do teclado (2026-09-30)
+
+**Tudo o que se faz com teclado e mouse tem de dar para fazer só com o controle de videogame**: no jogo e em todo menu/painel (tela de entrada, mundos, configurações, transporte, controles, diário/arquivo, mapa, leitura, confirmações, tela cheia). Pedido explícito do usuário, vale para sempre.
+
+Como está feito:
+- ações em `controls/bindings.js`, cada uma com botão (menu = START, mapa = SELECT, interface = →, tela cheia = ←);
+- `ui/padNav.js` navega qualquer painel: foco espacial (direcional/analógico; ← → só na mesma linha; ↑ ↓ vão para a linha seguinte), A aperta, B volta, ← → mudam deslizantes e listas, LB/RB abas, analógico direito rola, mapa com analógicos e gatilhos;
+- um painel aberto no jogo pelo controle volta ao jogo ao fechar;
+- tela cheia pelo controle via `preload.js` (IPC; um botão do controle não é gesto para a Fullscreen API);
+- `npm run check:pad` (`dev/padtest.js`): um controle falso joga os dois modos e confere tudo.

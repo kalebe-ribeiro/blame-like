@@ -151,5 +151,7 @@ export function createReading(ctx) {
     },
     close,
     showArchived,
+    /** Rolar o texto aberto (px) — o controle (ui/padNav.js). */
+    scrollPx: (px) => panel.scrollPx(px),
   };
 }

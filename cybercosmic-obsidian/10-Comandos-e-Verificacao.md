@@ -50,3 +50,5 @@ npx electron . --capture=shot.png --pos=x,y,z,yaw,pitch --mode=fly --seed=abc --
 - Repositório público: https://github.com/kalebe-ribeiro/blame-like (branch `main`).
 - `.gitattributes` normaliza para LF (os avisos "CRLF will be replaced" são normais).
 - Mensagens de commit em inglês, terminando com `Co-Authored-By: Claude …`.
+
+- `npm run check:pad` — o controle sozinho, nos dois modos (`dev/padtest.js`): um controle falso navega a tela de entrada, configurações, aba CONTROLES (troca um botão), abas do diário, transporte, mapa, tela cheia, leitura, lanterna e MUNDOS. **Rodar sempre que mexer em interface ou teclas** (regra absoluta).

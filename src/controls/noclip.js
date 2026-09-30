@@ -140,10 +140,26 @@ export class NoclipControls {
     const rx = dz(ax[2] ?? 0);
     const ry = dz(ax[3] ?? 0);
     const any = lx || ly || rx || ry || gp.buttons.some((x) => x.pressed);
-    if (bindings.capturing) {
-      // a aba CONTROLES está esperando um botão: o jogo não reage
-      this.pad.prev = gp.buttons.map((x) => x.pressed);
+    if (bindings.capturing || bindings.uiActive) {
+      // a aba CONTROLES espera um botão, ou um menu está aberto (o controle navega
+      // nele — ui/padNav.js): o corpo não reage. Os botões segurados agora só
+      // voltam a valer depois de soltos (A que fechou o menu não vira pulo).
+      this.pad.prev = gp.buttons.map((x) => x.pressed || (x.value ?? 0) > 0.4);
+      this.pad.mute = true;
       return out;
+    }
+    if (this.pad.mute) {
+      if (gp.buttons.some((x) => x.pressed || (x.value ?? 0) > 0.4)) {
+        this.pad.prev = gp.buttons.map((x) => x.pressed || (x.value ?? 0) > 0.4);
+        // ainda dá para andar e olhar enquanto solta
+        out.f = -ly;
+        out.r = lx;
+        const rate0 = 2.6 * (this.sensitivity / 0.0021);
+        this.yaw -= rx * rate0 * dt;
+        this.pitch = THREE.MathUtils.clamp(this.pitch - ry * rate0 * 0.75 * dt * (this.invertY ? -1 : 1), -1.55, 1.55);
+        return out;
+      }
+      this.pad.mute = false;
     }
     if (any) bindings.lastDevice = 'pad';
     if (any && !this.pad.active) {
@@ -180,7 +196,7 @@ export class NoclipControls {
       this.autopilot = !this.autopilot;
       if (this.autopilot) this.setMode('fly');
     }
-    for (const id of ['use', 'lantern', 'sensor', 'photo', 'map', 'hud', 'transport', 'regenerate', 'settings', 'controls']) {
+    for (const id of ['use', 'lantern', 'sensor', 'photo', 'map', 'hud', 'transport', 'regenerate', 'settings', 'controls', 'fullscreen']) {
       if (edge(id)) this.onPadButton?.(id);
     }
     this.pad.prev = gp.buttons.map((x) => x.pressed || (x.value ?? 0) > 0.4);

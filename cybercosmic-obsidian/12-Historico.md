@@ -89,3 +89,10 @@ Por que as coisas estão como estão, em ordem.
 
 - A tela de entrada listava todas as teclas (inchada). Agora: `controls/bindings.js` guarda todos os atalhos (teclado e controle, por modo) e a aba **CONTROLES** (K) troca qualquer um, com troca automática em conflito.
 - Controle revisado: mapa no START, o resto trocável; saíram os atalhos duplicados de voo (E/Q/C). Textos que citam teclas seguem o atalho atual.
+
+## 2026-09-30 — o controle independente do teclado (regra absoluta)
+
+- Pedido do usuário, como regra para sempre: tudo que o teclado/mouse faz, o controle faz.
+- `ui/padNav.js`: menus pelo controle (foco espacial, A/B, valores, abas, rolagem, mapa). START abre a tela de entrada (mapa foi para SELECT, interface para →); tela cheia no ← via `preload.js`.
+- Painéis abertos no jogo pelo controle voltam ao jogo ao fechar (antes caíam na tela de entrada); transportar pelo controle também.
+- `npm run check:pad`: um controle falso joga os dois modos. Achou três defeitos no caminho: `offsetParent` nulo em painéis fixos, a borda do botão recém-apertado comparada com o estado já atualizado, e a navegação pulando linhas.

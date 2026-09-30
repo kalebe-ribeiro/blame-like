@@ -130,7 +130,10 @@ html, body {
 }
 button.controls-cell:hover { border-color: rgba(200, 196, 184, 0.8); }
 .controls-cell.waiting { color: #b0763e; border-color: #b0763e; }
-.controls-row.fixed .controls-cell { border-color: transparent; color: rgba(150, 146, 136, 0.7); cursor: default; }
+.controls-row.fixed .controls-cell, .controls-cell.fixed { border-color: transparent; color: rgba(150, 146, 136, 0.7); cursor: default; font-size: 10px; }
+.pad-focus { outline: 1px solid #b0763e !important; outline-offset: 2px; color: #e2ded4 !important; }
+.pad-focus-row { background: rgba(176, 118, 62, 0.08); }
+.gate-sub.pad-focus { outline-offset: 8px; }
 .controls-note { font-size: 10px; color: rgba(150, 146, 136, 0.7); margin-top: 12px; min-height: 14px; letter-spacing: 0.06em; }
 
 .settings-box {

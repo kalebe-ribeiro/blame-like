@@ -138,6 +138,15 @@ export class TrailMap {
     loop();
   }
 
+  /** Girar e aproximar pelo controle (ui/padNav.js): radianos e fator log. */
+  nudge(dyaw, dpitch, dzoom) {
+    if (!dyaw && !dpitch && !dzoom) return;
+    this.yaw += dyaw;
+    this.pitch = Math.max(-1.45, Math.min(1.45, this.pitch + dpitch));
+    this.zoom = Math.max(0.3, Math.min(40, this.zoom * Math.exp(dzoom)));
+    this._auto = false;
+  }
+
   hide() {
     this.open = false;
     this.el.classList.remove('open');

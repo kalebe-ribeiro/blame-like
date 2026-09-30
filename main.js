@@ -32,7 +32,7 @@
 //    electron . --game=pilgrimage        → modo de jogo desta sessão (free | pilgrimage)
 //    electron . --fog=0.3 --dist=1500     → sobrescreve névoa/distância nesta sessão (não salva)
 // ─────────────────────────────────────────────────────────────────────────────
-const { app, BrowserWindow, Menu, protocol, session } = require('electron');
+const { app, BrowserWindow, Menu, protocol, session, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -116,6 +116,7 @@ function createWindow() {
     title: 'CYBERCOSMIC',
     show: !capturePath || forceShow, // em modo captura a janela fica oculta
     webPreferences: {
+      preload: path.join(__dirname, 'preload.js'), // tela cheia pelo controle (preload.js)
       contextIsolation: true,
       nodeIntegration: false,
       backgroundThrottling: false,
@@ -146,19 +147,22 @@ function createWindow() {
   if (checkMode) {
     query.set('check', argValue('check') || '1'); // --check=trelica,escadaria: só esses
     query.set('seed', 'abc');
-    query.set('autostart', '1');
+    // o teste do controle começa na tela de entrada, como o jogador
+    if (argValue('check') !== 'pad') query.set('autostart', '1');
   }
   if (fogArg) query.set('fog', fogArg);
   if (distArg) query.set('dist', distArg);
   const qs = query.toString();
   win.loadURL(`app://bundle/index.html${qs ? `?${qs}` : ''}`);
 
+  // tela cheia pedida pela página (atalho 'fullscreen', teclado ou controle)
+  ipcMain.removeAllListeners('fullscreen:toggle');
+  ipcMain.on('fullscreen:toggle', () => win.setFullScreen(!win.isFullScreen()));
+
   win.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return;
-    if (input.key === 'F11') {
-      win.setFullScreen(!win.isFullScreen());
-      event.preventDefault();
-    } else if (input.key === 'F12') {
+    // F11 (tela cheia) é um atalho trocável: a página trata (controls/bindings.js → preload.js)
+    if (input.key === 'F12') {
       win.webContents.toggleDevTools();
       event.preventDefault();
     }

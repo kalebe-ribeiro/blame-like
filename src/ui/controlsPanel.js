@@ -80,7 +80,9 @@ export class ControlsPanel {
       for (const a of acts) {
         html +=
           `<div class="controls-row"><span class="settings-label">${t(`controls.action.${a.id}${a.id === 'jump' && !bindings.available('descend') ? '.walk' : ''}`)}</span>` +
-          `<button class="controls-cell" data-kind="key" data-bind="${a.id}">${keyName(bindings.key(a.id))}</button>` +
+          (a.fixedKey
+            ? `<span class="controls-cell fixed">${keyName(bindings.key(a.id))}</span>`
+            : `<button class="controls-cell" data-kind="key" data-bind="${a.id}">${keyName(bindings.key(a.id))}</button>`) +
           `<button class="controls-cell" data-kind="pad" data-bind="${a.id}">${padName(bindings.pad(a.id))}</button></div>`;
       }
     }
@@ -89,8 +91,7 @@ export class ControlsPanel {
     for (const [label, key, pad] of [
       [t('controls.fixed.look'), t('controls.fixed.mouse'), t('controls.fixed.rs')],
       [t('controls.fixed.walk'), '—', t('controls.fixed.ls')],
-      [t('controls.fixed.release'), 'ESC', '—'],
-      [t('controls.fixed.fullscreen'), 'F11', '—'],
+      [t('controls.fixed.menus'), '—', t('controls.fixed.menusPad')],
     ]) {
       html += `<div class="controls-row fixed"><span class="settings-label">${label}</span><span class="controls-cell">${key}</span><span class="controls-cell">${pad}</span></div>`;
     }
@@ -104,13 +105,18 @@ export class ControlsPanel {
     bindings.capturing = true;
     cell.textContent = t(kind === 'key' ? 'controls.pressKey' : 'controls.pressButton');
     cell.classList.add('waiting');
+    // sem resposta em 6 s, desiste (só com o controle não há ESC para cancelar)
+    this._timeout = setTimeout(() => this._cancel(), 6000);
     if (kind === 'pad') this._pollPad();
   }
 
   _cancel() {
     if (!this.waiting) return;
     this.waiting = null;
-    bindings.capturing = false;
+    clearTimeout(this._timeout);
+    requestAnimationFrame(() => {
+      bindings.capturing = false;
+    });
     cancelAnimationFrame(this._raf);
     this._render();
   }
@@ -121,6 +127,7 @@ export class ControlsPanel {
       ? t('controls.swapped', { a: t(`controls.action.${id}`), b: swapped.map((o) => t(`controls.action.${o}`)).join(', ') })
       : '';
     this.waiting = null;
+    clearTimeout(this._timeout);
     // solta a captura só no próximo quadro: a própria tecla não dispara a ação
     requestAnimationFrame(() => {
       bindings.capturing = false;

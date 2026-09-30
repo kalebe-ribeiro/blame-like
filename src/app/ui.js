@@ -11,6 +11,7 @@ import { TransportPanel } from '../ui/transport.js';
 import { WorldsPanel } from '../ui/worlds.js';
 import { ControlsPanel } from '../ui/controlsPanel.js';
 import { bindings } from '../controls/bindings.js';
+import { createPadNav } from '../ui/padNav.js';
 import { storeProfile, newSlot, storeSlot } from './saves.js';
 import { findDestination } from '../world/teleport.js';
 import { takePhoto, onWorldBuilt, resize } from './render.js';
@@ -31,12 +32,38 @@ export function createUI(ctx) {
     gateMode.textContent = ctx.choosing ? '' : `${t(`mode.${ctx.mode}`)} · ${ctx.seed.toString(36).toUpperCase()}`;
   };
   applyDom();
-  gate.addEventListener('click', () => {
+  gate.addEventListener('click', () => enter());
+  // um painel aberto no meio do jogo pelo controle, ao fechar, volta ao jogo (não à tela de entrada)
+  let fromGame = false;
+  const noteFrom = () => {
+    fromGame = gate.classList.contains('hidden') && !settings?.isOpen && !transport?.isOpen && !worlds?.isOpen && !controlsPanel?.isOpen && !trail.open;
+  };
+  function panelClosed() {
+    if (fromGame && bindings.lastDevice === 'pad') gate.classList.add('hidden');
+    else if (!controls.locked) gate.classList.remove('hidden');
+    fromGame = false;
+  }
+  /** Entrar no mundo (clique, ou A no controle sobre "clique para entrar"). */
+  function enter() {
     // primeira vez: antes de entrar, escolher o modo
     if (ctx.choosing) return openWorlds();
     audio.start();
-    controls.lock();
-  });
+    // o controle não precisa (nem consegue) travar o mouse: só some a tela de entrada
+    if (bindings.lastDevice === 'pad') gate.classList.add('hidden');
+    else controls.lock();
+  }
+  /** A tela de entrada por cima do jogo (START no controle; ESC no teclado solta o mouse e dá no mesmo). */
+  function showGate() {
+    if (controls.locked) return document.exitPointerLock?.();
+    gate.classList.remove('hidden');
+    ctx.travel.renderDiary();
+    ctx.travel.save();
+  }
+  function toggleFullscreen() {
+    if (window.cybercosmic?.toggleFullscreen) return window.cybercosmic.toggleFullscreen();
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  }
   controls.onLockChange = (locked) => {
     // com um painel aberto, a tela de entrada fica escondida atrás dele
     gate.classList.toggle('hidden', locked || settings.isOpen || transport.isOpen || worlds.isOpen || controlsPanel.isOpen || trail.open || ctx.reading?.isOpen);
@@ -92,12 +119,13 @@ export function createUI(ctx) {
 
   // ─── configurações ───
   const settings = new SettingsPanel(ctx.settings, (s, key) => applySettings(s, key));
-  settings.onClose = () => gate.classList.remove('hidden');
+  settings.onClose = () => panelClosed();
   document.getElementById('open-settings').addEventListener('click', (e) => {
     e.stopPropagation(); // não entra no mundo ao clicar no botão
     openSettings();
   });
   function openSettings() {
+    noteFrom();
     document.exitPointerLock?.();
     if (transport.isOpen) transport.close();
     if (worlds.isOpen) worlds.close();
@@ -108,15 +136,14 @@ export function createUI(ctx) {
 
   // ─── controles: todos os atalhos, trocáveis (ui/controlsPanel.js) ───
   const controlsPanel = new ControlsPanel();
-  controlsPanel.onClose = () => {
-    if (!controls.locked) gate.classList.remove('hidden');
-  };
+  controlsPanel.onClose = () => panelClosed();
   document.getElementById('open-controls').addEventListener('click', (e) => {
     e.stopPropagation();
     openControls();
   });
   function openControls() {
     if (controlsPanel.isOpen) return controlsPanel.close();
+    noteFrom();
     document.exitPointerLock?.();
     if (settings.isOpen) settings.close();
     if (transport.isOpen) transport.close();
@@ -158,14 +185,20 @@ export function createUI(ctx) {
 
   // ─── transporte ───
   const transport = new TransportPanel((kind, label) => teleport(kind, label));
+  let transported = false; // transportou pelo controle: volta direto ao jogo, sem a tela de entrada
   transport.onClose = () => {
-    if (!controls.locked) gate.classList.remove('hidden');
+    if (transported) {
+      gate.classList.add('hidden');
+      fromGame = false;
+    } else panelClosed();
+    transported = false;
   };
   document.getElementById('open-transport').addEventListener('click', (e) => {
     e.stopPropagation();
     openTransport();
   });
   function openTransport() {
+    noteFrom();
     document.exitPointerLock?.();
     if (settings.isOpen) settings.close();
     if (worlds.isOpen) worlds.close();
@@ -193,7 +226,8 @@ export function createUI(ctx) {
     hud.push(t('hud.transfer', { label: label.toUpperCase(), dist: fmtDist(dest.feet.distanceTo(g)) }));
     audio.start();
     audio.transfer(1);
-    controls.lock();
+    if (bindings.lastDevice === 'pad') transported = transport.isOpen;
+    else controls.lock();
     return dest;
   }
 
@@ -201,9 +235,10 @@ export function createUI(ctx) {
   function toggleMap() {
     if (trail.open) {
       trail.hide();
-      if (!controls.locked) gate.classList.remove('hidden');
+      panelClosed();
       return;
     }
+    noteFrom();
     document.exitPointerLock?.();
     if (settings.isOpen) settings.close();
     if (transport.isOpen) transport.close();
@@ -234,12 +269,23 @@ export function createUI(ctx) {
 
   // ─── controle de videogame ───
   controls.onPadStart = () => {
-    // o controle não precisa (nem consegue) travar o mouse: entra direto
     audio.start();
-    if (ctx.choosing) return openWorlds();
-    if (!settings.isOpen && !transport.isOpen && !worlds.isOpen) gate.classList.add('hidden');
     hud.push(t('hud.gamepad'));
   };
+  // ─── menus pelo controle (REGRA: tudo que o teclado faz, o controle faz — ui/padNav.js) ───
+  // camadas de cima para baixo: a primeira aberta recebe o controle
+  createPadNav({
+    layers: () => [
+      { el: controlsPanel.el, back: () => controlsPanel.close() },
+      { el: settings.el, back: () => settings.close() },
+      { el: transport.el, back: () => transport.close() },
+      { el: worlds.el, back: () => worlds.current && worlds.close() },
+      { el: document.getElementById('reader'), back: () => ctx.reading.close(), scroll: (px) => ctx.reading.scrollPx(px), lines: true },
+      { el: trail.el, map: trail, back: () => toggleMap() },
+      { el: gate, back: () => {}, menu: () => enter() },
+    ],
+    onMenu: () => showGate(),
+  });
   // o mesmo que as teclas: controls/noclip.js chama com o nome da ação (bindings.js)
   controls.onPadButton = (name) => {
     if (name === 'photo') photo();
@@ -252,6 +298,7 @@ export function createUI(ctx) {
     if (name === 'regenerate' && rules.regenerate && !ctx.choosing) regenerate();
     if (name === 'settings') openSettings();
     if (name === 'controls') openControls();
+    if (name === 'fullscreen') toggleFullscreen();
   };
 
   // ─── teclas globais (atalhos em controls/bindings.js; trocáveis na aba CONTROLES) ───
@@ -262,6 +309,10 @@ export function createUI(ctx) {
     if (is('hud') && rules.hud) hud.toggle();
     if (is('settings')) openSettings();
     if (is('controls')) openControls();
+    if (is('fullscreen')) {
+      e.preventDefault();
+      toggleFullscreen();
+    }
     if (is('transport') && rules.teleport) openTransport();
     if (is('photo')) photo();
     if (is('map')) toggleMap();
