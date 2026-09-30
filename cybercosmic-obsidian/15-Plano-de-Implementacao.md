@@ -186,6 +186,15 @@
 
 **Pronto quando**: encontrar alguém vivo é raro, e cada encontro muda a travessia.
 
+> **Plano detalhado (2026-09-30, o usuário disse "comece")** — escolhas por padrão marcadas *(a confirmar)*.
+> - **7.1 Vilas habitadas**: metade das vilas (a estrutura única `village`) tem gente — 4 a 7 humanos, baixos, encapuzados, sem rosto visível; andam e param entre pontos do galpão; um braseiro (luz com fonte). As outras seguem abandonadas. As rondas dos Safeguards não entram (vilas escondidas: ficam no alto das camadas, fora da rede andável).
+> - **7.2 Fala e troca**: E / (X) perto de alguém abre uma troca curta, navegável pelo controle. **Fala pouca** *(a confirmar)*: uma ou duas frases curtas, no idioma do jogo (são contemporâneos, não a língua antiga), sem árvore de diálogo. O que oferecem *(a confirmar)*: recarregar a célula (uma vez por visita); ensinar palavras da língua antiga; uma pista para outra vila; uma carga para levar.
+> - **7.3 Cargas** (saem do standby): um volume nas costas; carregando, não se corre nem se pula alto; o mapa e o aparelho mostram o destino; entregue → recompensa (palavras, carga cheia, uma pista). Os Safeguards te pegam → a carga se perde (é "o que você carregava").
+> - **7.4 Despertar com sorteio LIGADO**: queda fatal → Safeguards 55% (cemitério) · humanos 20% (a vila habitada mais perto: ficam com a sua carga, ou pedem uma entrega) · ninguém 25%.
+> - **7.5 Transumanos**: andarilhos raros entre vilas, pelo grafo, com rotas longas pelo relógio (como as rondas). Ambíguos *(a confirmar)*: metade troca (carga por palavras), metade tenta tomar a sua carga e fugir.
+> - **7.6 Vida de silício**: rara; às vezes se passa por andarilho. De perto se revela e ataca — o toque drena a sua célula *(a confirmar)*. **Terceira força**: um Safeguard que vê vida de silício caça ela, não você; ela foge dele.
+> - **7.7 Teste** `npm run check:npcs`.
+
 ---
 
 ## Contínuo (entra onde couber)
