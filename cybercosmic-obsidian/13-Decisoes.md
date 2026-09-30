@@ -142,3 +142,11 @@ Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de sh
 | acesso do jogador | existe como dado (`player.access`, 0 = nenhum); abafa o alerta proporcionalmente. Ninguém dá acesso ainda |
 | lugares reservados | vila abandonada (galpão fechado com barracos), cemitério de vítimas (pátio murado com corpos embrulhados), berço de Safeguards (bloco lacrado, portão travado). São estruturas únicas com terminal; **sem efeito** na leitura. Sorteio à parte (hash 984, ~17% das únicas): em mundos já salvos algumas únicas mudam de tipo |
 | despertar com sorteio | pronto e **desligado**: Safeguards 55% → cemitério (carga a 5%, perde o que carregava, ferramentas ficam) · NPCs 20% → vila · resto: ninguém visto (como antes) |
+
+### Fase 6 — Safeguards: decisões do usuário (2026-09-30)
+
+- **Só fuga** nesta fase (a arma de Killy fica para depois).
+- **Um toque captura** (sem dano acumulado).
+- **Sem acesso** por enquanto: `player.access` continua 0.
+- Raridade: a proposta (primeiro encontro provocado depois de ~30–60 min de Peregrinação).
+- **Pelo menos um Safeguard sempre rondando** cada território — vivo mesmo quando o jogador não sabe dele, para que dê para encontrar um de repente, ou vê-lo de longe e mudar de rota/se esconder. A mecânica do alerta continua; isto é somado. Território = setor × fatia de 480 m (o setor inteiro tem 2880 m de altura). No escuro ele é ouvido e aparece no sensor (modo movimento). Modo Livre: desligados por padrão.

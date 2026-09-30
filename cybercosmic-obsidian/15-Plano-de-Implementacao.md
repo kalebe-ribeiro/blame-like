@@ -155,17 +155,17 @@
 
 **Pronto quando**: a Cidade continua quieta e vazia quase sempre — e, quando um Safeguard aparece, é um evento que você não esquece.
 
-> **Proposta detalhada (2026-09-30) — aguardando as decisões do usuário.**
-> - **6.1 Percepção individual**: além do alerta por setor, cada Safeguard vê (cone, alcance que cresce com a luz: lanterna acesa, setor com energia) e ouve (correr, pouso pesado, alavanca, leitura). Esconder = escuro + distância + quebrar a linha de visão.
-> - **6.2 O Safeguard comum**: corpo procedural (o esqueleto da fase 5): alto, magro, pálido, sem rosto (uma fenda); anda, corre, pula de nível em nível; som próprio (passos secos, um zumbido).
-> - **6.3 Surgimento das paredes**: quando o alerta de um setor passa do limite, uma placa de parede perto (fora do alcance da mão, mas à vista) se abre e o Safeguard sai de dentro — físico, não mágico: a parede é uma fábrica da Netsfera. Níveis: 0,5 um vigia · 0,75 dois caçadores · 1,0 o setor fica "quente" por um tempo.
-> - **6.4 Comportamento**: patrulha → investiga o último ruído → caça (perseguição direta com o Walker perto; grafo de navegação longe) → perde o rastro → volta para a parede e some. Nunca mais que 2–3 ao mesmo tempo.
-> - **6.5 Captura**: o toque derruba → desmaio → `WAKE_LOTTERY` ligado (Safeguards → cemitério de vítimas, sem carga e sem o que carregava).
-> - **6.6 Defesa**: fugir e esconder (apagar a lanterna, subir escadas de marinheiro, pular num vagão, fechar distância vertical). Arma de Killy: decisão do usuário.
-> - **6.7 Acesso**: como `player.access` sobe (hoje sempre 0).
-> - **6.8 Modo Livre**: Safeguards ligáveis/desligáveis nas configurações (navegável pelo controle).
-> - **6.9 Teste**: `npm run check:safeguards` — força o alerta, confere o surgimento de uma parede, a caçada, o rastro perdido no escuro e o despertar no cemitério; nada atravessa parede.
-> Perguntas: combate × só fuga; um toque = captura ou dano acumulado; como se ganha acesso; no Livre ligado ou desligado por padrão; quão raros (primeiro encontro depois de quanto tempo de jogo).
+> **Plano revisto com o usuário (2026-09-30)** — decisões: **só fuga** (sem arma), **um toque captura**, **sem acesso** por enquanto (`player.access` = 0), raridade proposta aceita (primeiro encontro provocado depois de ~30–60 min), e **um Safeguard sempre rondando cada território**, vivo mesmo quando o jogador não sabe dele.
+>
+> - **6.1 Rondas (o que o usuário acrescentou)**: território = setor × fatia de 480 m de altura (a mesma fatia das subestações; um setor tem 900 × 900 m e 2880 m de altura — um só Safeguard nele quase nunca cruzaria o jogador). Cada território com rede andável tem **um** Safeguard numa ronda: um circuito tirado do grafo da fase 5, e a posição dele é **função do relógio do mundo** (como vagões e máquinas) — ninguém é simulado longe, e ele está onde "deveria" quando você chega. Perto (< 110 m) vira física (o `Walker`); visto de longe, anda pelo circuito. Onde não há grafo (galerias, colmeia, maciço, chão das camadas), não há ronda nesta fase.
+> - **6.2 O Safeguard**: corpo procedural (o esqueleto da fase 5): alto (~2,3 m), magro, pálido, sem rosto — uma fenda. Anda na ronda (~1,6 m/s), corre caçando (~5 m/s: mais rápido que o seu andar, mais lento que a sua corrida). Não sobe escadas de marinheiro.
+> - **6.3 Percepção**: vê num cone (de costas, metade); o alcance cresce com a luz (escuro e quieto: só muito perto; setor com energia: médio; lanterna acesa: longe) e com o alerta do setor; linha de visão por raio. Ouve correr, pousos pesados, alavancas e leituras. **De ronda percebe pouco**: o comum é você vê-lo (ou ouvi-lo) antes.
+> - **6.4 Caçada**: ronda → caça (direto, com o `Walker`) → perdeu de vista: vai ao último ponto visto e procura → desiste → volta ao circuito (retomando dali, sem saltos à vista).
+> - **6.5 Captura**: o toque derruba → desmaio → acorda no **cemitério de vítimas**, sem carga e sem o que carregava (as ferramentas ficam). Quedas continuam sem ninguém visto (o sorteio geral segue desligado até os NPCs).
+> - **6.6 Surgimento das paredes (o alerta)**: por cima das rondas — alerta do setor a 0,5 → uma placa de parede perto se abre e sai um caçador; a 0,75 → dois. Nunca mais de 3 caçando. Quem desiste volta à placa, entra, e ela fecha.
+> - **6.7 Escuro, som e sensor**: sem luz própria (seria mágica) — nos setores apagados o Safeguard é **ouvido** (passos secos com direção, um zumbido quando caça) e aparece no **sensor, modo movimento**; nos setores com energia, é visto.
+> - **6.8 Modo Livre**: Safeguards **desligados por padrão**, com a opção nas configurações (pelo controle também).
+> - **6.9 Teste** `npm run check:safeguards`: rondas existem perto; um Safeguard vê a lanterna e caça; captura → acorda no cemitério; alerta 0,75 → dois saem de paredes; no escuro e longe eles perdem o rastro e voltam; nada atravessa parede.
 
 ---
 
