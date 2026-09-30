@@ -69,6 +69,11 @@ src/
   gen/nav.js                grafo de navegação consultado no Field + A*
   gen/patrols.js            territórios e circuitos de ronda dos Safeguards
   world/safeguards.js       Safeguards: rondas, percepção, caçada, captura, paredes
+  gen/villages.js           disposição das vilas; quais são habitadas (fase 7)
+  world/npcs.js             moradores, andarilhos, vida de silício (fase 7)
+  app/people.js             conversa, trocas, cargas, despertar numa vila (fase 7)
+  ui/talk.js                o painel da conversa (navegável pelo controle)
+  dev/npctest.js            npm run check:npcs
   app/safeguards.js         Safeguards no jogo: sentidos, barulhos, alerta, sons, desmaio
   dev/sgtest.js             npm run check:safeguards
   app/alert.js              percepção: alerta por setor (fase 5)

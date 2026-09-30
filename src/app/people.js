@@ -12,6 +12,10 @@
 //    Pego pelos Safeguards: perdida (é "o que você carregava" — app/wake.js).
 //  DESPERTAR (7.4): recolhido por humanos → acorda na vila; se carregava uma
 //    carga, eles ficam com ela; se não, pedem uma entrega.
+//  ANDARILHOS (7.5): E diante de um transumano — os que trocam dão 3 palavras
+//    por um quarto da célula, ou contam onde há uma vila; os outros não têm
+//    nada a dizer (e, se você carrega uma carga, podem arrancá-la e fugir).
+//  VIDA DE SILÍCIO (7.6): tentar falar com uma a revela; o toque dela drena a célula.
 //  O que cada vila já deu fica no mundo salvo (slot.villages).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -26,6 +30,8 @@ const TEACH = 4;
 const DELIVERY_WORDS = 5;
 const CARGO_RANGE = 45000; // m: até onde se manda uma carga (as vilas são raras: uma a cada ~16 km, metade habitada)
 const GREETS = 8;
+const WANDER_GREETS = 5;
+const SWAP_COST = 0.25; // da célula, por 3 palavras (o andarilho que troca)
 const fmt = (d) => (d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(1)} km`);
 
 export function createPeople(ctx) {
@@ -83,6 +89,15 @@ export function createPeople(ctx) {
   // ── a conversa ──
 
   function options(e) {
+    if (e.npc.role === 'wanderer') {
+      const opts = [];
+      if (!e.npc.thief) {
+        if (ctx.rules.translation && ctx.player.energy.value >= SWAP_COST && !e.npc.swapped) opts.push({ id: 'swap', label: t('talk.opt.swap', { n: Math.round(SWAP_COST * 100) }) });
+        if (!e.npc.told) opts.push({ id: 'news', label: t('talk.opt.news') });
+      }
+      opts.push({ id: 'leave', label: t('talk.leave') });
+      return opts;
+    }
     const u = e.npc.village;
     const st = stateOf(u.id);
     const opts = [];
@@ -97,6 +112,19 @@ export function createPeople(ctx) {
   }
 
   function open(e) {
+    // vida de silício disfarçada: falar com ela é o bastante para ela se mostrar
+    if (e.npc.silicon && !e.npc.revealed) {
+      world.npcs.reveal(e);
+      return;
+    }
+    if (e.npc.role === 'wanderer') {
+      with_ = e;
+      document.exitPointerLock?.();
+      const k = Math.floor(hash4(world.field.seed, e.id.length, e.id.charCodeAt(4), e.id.charCodeAt(e.id.length - 1), 1722) * WANDER_GREETS);
+      panel.open(t('talk.who.wanderer'), e.npc.thief ? t(`talk.wander.cold.${k % 3}`) : t(`talk.wander.greet.${k}`), options(e));
+      ctx.audio?.deviceClick?.(true);
+      return;
+    }
     with_ = e;
     document.exitPointerLock?.();
     const k = Math.floor(hash4(world.field.seed, e.id.length, Math.floor(Date.now() / 60000), e.id.charCodeAt(e.id.length - 1), 1721) * GREETS);
@@ -115,10 +143,28 @@ export function createPeople(ctx) {
   panel.onPick = (id) => {
     const e = with_;
     if (!e) return;
+    if (id === 'leave') return close();
+    if (e.npc.role === 'wanderer') {
+      let wl = '';
+      if (id === 'swap') {
+        ctx.player.energy.value = Math.max(0, ctx.player.energy.value - SWAP_COST);
+        const w = teach(3, `wd:${e.id}`);
+        e.npc.swapped = true;
+        wl = t('talk.swap', { n: w.length });
+      } else if (id === 'news') {
+        e.npc.told = true;
+        const o = world.npcs.inhabitedNear(e.feet.x, e.feet.y, e.feet.z, CARGO_RANGE)[0];
+        if (o) {
+          reveal(o.u, { id: e.id, x: e.feet.x, y: e.feet.y, z: e.feet.z });
+          wl = t('talk.news', { dist: fmt(o.d) });
+        } else wl = t('talk.newsNone');
+      }
+      panel.show(wl, options(e));
+      return;
+    }
     const u = e.npc.village;
     const st = stateOf(u.id);
     let line = '';
-    if (id === 'leave') return close();
     if (id === 'recharge') {
       ctx.player.energy.value = ctx.player.energy.max;
       st.recharged = Date.now();
@@ -168,6 +214,26 @@ export function createPeople(ctx) {
     if (cargo()) setTimeout(() => tell(t('npc.cargoLost')), 12000);
   });
 
+  // o que os andarilhos e a vida de silício podem fazer com você (world/npcs.js)
+  const wire = () => {
+    world.npcs.player = {
+      carrying: () => !!cargo(),
+      walking: () => controls.mode === 'walk' && !ctx.wake?.active,
+      steal() {
+        const c = cargo();
+        if (c) ctx.player.carried.splice(ctx.player.carried.indexOf(c), 1);
+        tell(t('npc.stolen'));
+        controls.rumble?.(0.6, 0.3, 300);
+      },
+      drain() {
+        ctx.player.energy.value = 0;
+        tell(t('npc.drained'));
+        controls.rumble?.(0.9, 0.5, 600);
+      },
+    };
+  };
+  wire();
+
   return {
     get isOpen() {
       return panel.isOpen;
@@ -196,6 +262,7 @@ export function createPeople(ctx) {
       return { c, d: Math.hypot(c.x - p.x, c.y - p.y, c.z - p.z) };
     },
     update(dt) {
+      if (!world.npcs.player) wire(); // um mundo novo (world.build)
       // carregando: sem correr, pulo baixo
       const heavy = !!cargo();
       controls.burden = heavy;

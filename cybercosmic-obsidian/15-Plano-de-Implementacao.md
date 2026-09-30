@@ -194,6 +194,8 @@
 > - **7.5 Transumanos**: andarilhos raros entre vilas, pelo grafo, com rotas longas pelo relógio (como as rondas). Ambíguos *(a confirmar)*: metade troca (carga por palavras), metade tenta tomar a sua carga e fugir.
 > - **7.6 Vida de silício**: rara; às vezes se passa por andarilho. De perto se revela e ataca — o toque drena a sua célula *(a confirmar)*. **Terceira força**: um Safeguard que vê vida de silício caça ela, não você; ela foge dele.
 > - **7.7 Teste** `npm run check:npcs`.
+>
+> **Feita (2026-09-30).** `npm run check:npcs` passa nos 10 itens (vila · conversa · carga · entrega · despertar · andarilhos · ladrão · silício · terceira força · fiscal). Arquivos: `gen/villages.js`, `world/npcs.js`, `app/people.js`, `ui/talk.js`, corpos em `world/bodies.js`; a vida de silício como presa em `world/safeguards.js`.
 
 ---
 

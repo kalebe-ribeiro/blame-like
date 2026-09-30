@@ -23,7 +23,7 @@ import * as THREE from 'three';
 import { Walker } from '../controls/walker.js';
 import { CollisionWorld } from './collision.js';
 import { NavGraph } from '../gen/nav.js';
-import { buildTestBody, buildSafeguardBody, buildHumanBody } from './bodies.js';
+import { buildTestBody, buildSafeguardBody, buildHumanBody, buildTranshumanBody, buildSiliconBody } from './bodies.js';
 
 const NEAR = 110; // m: física completa
 const FAR = 130; // m: volta ao abstrato (histerese)
@@ -55,11 +55,7 @@ export class EntitySystem {
    * brain: quem decide para onde o corpo vai (world/safeguards.js); sem brain, o corpo segue e.path.
    */
   spawn(def) {
-    const M = this.materials;
-    const rig =
-      def.kind === 'safeguard' ? buildSafeguardBody(M.pale, M.door)
-        : def.kind === 'human' ? buildHumanBody(M.cloth, M.cloth, (this._void ??= new THREE.MeshBasicMaterial({ color: 0x030303 })))
-        : buildTestBody(M.machine);
+    const rig = this._rig(def.kind);
     this.group.add(rig.group);
     const walker = new Walker(new CollisionWorld(this.world));
     walker.canClimb = false;
@@ -99,6 +95,27 @@ export class EntitySystem {
     this.list.set(e.id, e);
     if (e.goal) this.goTo(e, e.goal);
     return e;
+  }
+
+  /** O corpo de cada tipo de ser. */
+  _rig(kind) {
+    const M = this.materials;
+    const dark = (this._void ??= new THREE.MeshBasicMaterial({ color: 0x030303 })); // o escuro sem luz (dentro do capuz)
+    if (kind === 'safeguard') return buildSafeguardBody(M.pale, M.door);
+    if (kind === 'human') return buildHumanBody(M.cloth, M.cloth, dark);
+    if (kind === 'transhuman') return buildTranshumanBody(M.cloth, M.machine, dark);
+    if (kind === 'silicon') return buildSiliconBody(M.monolith);
+    return buildTestBody(M.machine);
+  }
+
+  /** Troca o corpo (a vida de silício se revelando). */
+  replaceRig(e, kind) {
+    this.group.remove(e.rig.group);
+    e.rig.dispose();
+    e.rig = this._rig(kind);
+    this.group.add(e.rig.group);
+    e.kind = kind;
+    if (kind === 'silicon') e.walker.eye = 1.9;
   }
 
   remove(id) {

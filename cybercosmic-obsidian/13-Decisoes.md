@@ -165,3 +165,16 @@ Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de sh
 | relógio das rondas | o relógio real (`Date.now`): elas andam com o jogo fechado; ao chegar perto, o relógio espera o corpo |
 | modo Livre | desligados por padrão; opção "Safeguards no modo Livre" nas configurações |
 | no escuro | sem luz própria; passos secos audíveis até ~180 m (com direção); zumbido quando caçam; o sensor (movimento) acha um a até 600 m |
+
+### Fase 7 — escolhas feitas por padrão, **a confirmar** (2026-09-30)
+
+| pergunta | escolha |
+|---|---|
+| quanta fala os NPCs têm (a pergunta do plano) | **pouca**: uma frase curta por conversa, no idioma do jogo (são contemporâneos, não a língua antiga); você nunca escreve nem escolhe falas — escolhe uma troca |
+| quem mora nas vilas | metade das vilas; 4 a 7 humanos encapuzados, sem rosto visível; um braseiro aceso |
+| o que um morador oferece | recarregar a célula (uma vez a cada 20 min por vila, só na Peregrinação) · 4 palavras da língua antiga (uma vez por vila) · o caminho até outra vila habitada (uma pista) · uma carga |
+| cargas | para outra vila habitada a até 45 km (as vilas são raras: numa seed, a mais perto ficou a 39 km); carregando, não se corre e o pulo é 55%; entrega = célula cheia + 5 palavras; pego pelos Safeguards ou pelo ladrão = perdida |
+| despertar | sorteio **ligado**: queda fatal → Safeguards 55% (cemitério, carga a 5%, sem o que carregava) · humanos 20% (a vila mais perto: ficam com a sua carga, ou pedem uma entrega) · ninguém 25% |
+| andarilhos transumanos | em ~20% dos territórios (setor × 480 m), num circuito próprio; 1,1 m/s; param e olham quem chega. Metade troca (3 palavras por 25% da célula; onde há gente); metade não tem o que dizer e, se você carrega uma carga, arranca-a e foge |
+| vida de silício | 30% dos "andarilhos"; de perto (6 m) ou ao tentar falar, se revela (o corpo muda: escura, braços longos); caça a ~5 m/s; o toque **drena a célula** (0%) e ela foge |
+| terceira força | um Safeguard que vê vida de silício revelada (até 60 m) caça ela antes de você; se alcança, ela acaba; ela foge dele |

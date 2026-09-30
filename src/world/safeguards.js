@@ -19,6 +19,10 @@
 //    uma placa de parede perto se abre (escuro dentro) e um caçador sai; quem
 //    desiste volta à placa, entra, e ela fecha. Nunca mais de 3 caçando.
 //
+//  TERCEIRA FORÇA (fase 7): a vida de silício revelada (world/npcs.js) é caçada
+//    antes do jogador — um Safeguard que a vê vai atrás dela (S.prey) e, se a
+//    alcança, ela acaba.
+//
 //  Eventos: safeguard:spot · safeguard:step · safeguard:emerge · safeguard:lost
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -218,6 +222,25 @@ export class SafeguardSystem {
       return;
     }
     e.walker.speedScale = HUNT_SCALE;
+    // caçando vida de silício: ela é o alvo
+    if (S.prey) {
+      if (!this.world.npcs?.wanderers || ![...this.world.npcs.silicon()].includes(S.prey)) {
+        S.prey = null;
+        this._lose(e);
+        return;
+      }
+      e.walker.speedScale = HUNT_SCALE;
+      const hp = this.ents.walkToward(e, S.prey.feet, dt, origin, time);
+      if (hp < 1.2 && Math.abs(S.prey.feet.y - e.feet.y) < 1.8) {
+        this.world.npcs.destroy(S.prey);
+        S.prey = null;
+        this._lose(e);
+      } else if (!S.sees && (S.unseen += dt) > 4) {
+        S.prey = null;
+        this._lose(e);
+      }
+      return;
+    }
     const feet = _a.set(g.x, g.y - 1.7, g.z);
     if (S.unseen < 0) S.lastSeen.copy(feet); // recém-saído da parede: ainda sabe onde você está
     const target = S.sees ? feet : S.lastSeen;
@@ -266,6 +289,7 @@ export class SafeguardSystem {
     S.sees = false;
     S.unseen = 0;
     S.stuckT = 0;
+    S.prey = null;
     e.farSpeed = undefined;
   }
 
@@ -306,6 +330,24 @@ export class SafeguardSystem {
     const S = e.sg;
     S.sees = false;
     if (S.state === 'emerge' || S.state === 'enter' || e.tier !== 'near') return;
+    // a vida de silício revelada vem antes de tudo (a terceira força)
+    for (const si of this.world.npcs?.silicon() ?? []) {
+      const d2 = si.feet.distanceTo(e.feet);
+      if (d2 > 60 || (S.prey && S.prey !== si)) continue;
+      const eyeS = new THREE.Vector3(e.feet.x, e.feet.y + 2.1, e.feet.z);
+      const tgt = new THREE.Vector3(si.feet.x, si.feet.y + 1.4, si.feet.z);
+      if (!this._clear(eyeS, tgt, eyeS.distanceTo(tgt), origin)) continue;
+      if (!S.prey) {
+        this.bus?.emit('safeguard:spot', { x: e.feet.x, y: e.feet.y, z: e.feet.z, prey: true });
+        this.stats.spotted++;
+      }
+      S.prey = si;
+      S.state = 'hunt';
+      S.sees = true;
+      S.unseen = 0;
+      return;
+    }
+    if (S.prey) return;
     const sn = this.senses?.(); // null: desmaiado, voando — ninguém percebe
     if (!sn) return;
     const eye = _a.set(e.feet.x, e.feet.y + 2.1, e.feet.z);

@@ -66,6 +66,14 @@ export function createSafeguards(ctx) {
     if (made < n) world.safeguards.summon(p, n - made);
   });
 
+  // a vida de silício e os andarilhos (fase 7)
+  bus.on('silicon:reveal', (ev) => {
+    audio.siliconReveal(...ctx.placeOf(ev.x, ev.y, ev.z));
+    controls.rumble?.(0.5, 0.3, 400);
+  });
+  bus.on('silicon:drain', () => audio.powerDown(0, 2, 30));
+  bus.on('silicon:destroyed', (ev) => audio.clangAt(...ctx.placeOf(ev.x, ev.y, ev.z)));
+
   // sons
   bus.on('safeguard:step', (ev) => audio.sgStepAt(...ctx.placeOf(ev.x, ev.y, ev.z), ev.hunting));
   bus.on('safeguard:spot', (ev) => {

@@ -18,6 +18,8 @@ tags: [futuro, npcs, inimigos]
 
 > **Safeguards feitos na fase 6 (2026-09-30)**: rondas em todo território com rede andável, percepção pela luz e pelo som, caçada, captura (→ cemitério de vítimas), caçadores saindo das paredes pelo alerta. Só fuga; sem acesso ainda. Ver [[15-Plano-de-Implementacao]].
 
+> **NPCs feitos na fase 7 (2026-09-30)**: moradores das vilas (conversa curta, trocas, cargas), andarilhos transumanos (trocam ou roubam), vida de silício disfarçada (drena a célula; os Safeguards a caçam — a terceira força), despertar numa vila. Escolhas por padrão em [[13-Decisoes]].
+
 ## Como o que existe hoje prepara isso
 - **Acesso / credencial** ([[Credenciais-de-acesso]]): o análogo do gene de terminal — decide a hostilidade dos Safeguards.
 - **Energia e luz** ([[Luz-como-recurso]], [[Religar-setores]]): usar e religar pode chamar atenção.

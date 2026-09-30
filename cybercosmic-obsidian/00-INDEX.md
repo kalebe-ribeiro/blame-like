@@ -33,7 +33,7 @@
 | **o que fazer a seguir** | [[15-Plano-de-Implementacao]] (fases 0 → 7, até os NPCs) → [[Ideias/00-Ideias]] |
 | mudanças decididas e ainda não feitas | [[Ideias/Pendencias]] |
 
-> **Estado (2026-09-30): fases 0 a 6 feitas.** Nas fases 3, 4, 5 e 6, várias escolhas foram feitas por padrão e **esperam confirmação** — ver [[13-Decisoes]]. A fase 7 (NPCs) só começa quando o usuário pedir. Registrar todo o contexto novo neste cofre.
+> **Estado (2026-09-30): fases 0 a 7 feitas — o plano inteiro.** Nas fases 3 a 7, várias escolhas foram feitas por padrão e **esperam confirmação** — ver [[13-Decisoes]]. Daqui em diante, o que o usuário pedir (ideias em [[Ideias/00-Ideias]], o contínuo do plano). Registrar todo o contexto novo neste cofre.
 
 ## Mapa do cofre
 

@@ -149,8 +149,9 @@ function createWindow() {
   if (argValue('ride')) query.set('ride', argValue('ride'));
   if (argValue('mark')) query.set('mark', argValue('mark'));
   if (argValue('wakeas')) query.set('wakeas', argValue('wakeas')); // --wakeas=safeguard|npc: o sorteio do despertar forçado
+  if (process.argv.includes('--wreveal')) query.set('wreveal', '1');
   if (process.argv.includes('--sgwatch')) query.set('sgwatch', '1');
-  for (const k of ['sgnear', 'sgdist', 'sgemerge', 'sgcam', 'talk', 'talkpick']) if (argValue(k)) query.set(k, argValue(k));
+  for (const k of ['sgnear', 'sgdist', 'sgemerge', 'sgcam', 'talk', 'talkpick', 'wcam']) if (argValue(k)) query.set(k, argValue(k));
   if (argValue('gounique')) query.set('gounique', argValue('gounique'));
   if (argValue('body')) query.set('body', argValue('body')); // --body=6: um corpo de teste aos 6 s (fase 5)
   if (argValue('bodydist')) query.set('bodydist', argValue('bodydist'));
@@ -195,7 +196,7 @@ function createWindow() {
   if (checkMode) {
     win.webContents.on('render-process-gone', (_e, d) => finishCheck(`processo do renderer caiu: ${d.reason}`));
     // o teste dos corpos anda de verdade (a pé, a ~2,3 m/s): tem mais tempo
-    const limit = ['beings', 'safeguards'].includes(argValue('check')) ? 12 : 6;
+    const limit = ['beings', 'safeguards', 'npcs'].includes(argValue('check')) ? 12 : 6;
     setTimeout(() => finishCheck(`tempo esgotado (${limit} min)`), limit * 60 * 1000);
   }
 

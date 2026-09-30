@@ -74,6 +74,28 @@ export function buildHumanBody(material, cloth, dark) {
   return buildBody(material, HUMAN, null, { cloth, dark });
 }
 
+/** Um andarilho transumano (fase 7): proporções de gente, um braço de máquina mais longo, capuz. */
+export function buildTranshumanBody(cloth, machine, dark) {
+  return buildBody(cloth, TEST, null, { cloth, dark, mech: machine, short: true });
+}
+
+/** A vida de silício, revelada: magra, escura, braços longos demais, cabeça pequena e alongada. */
+const SILICON = {
+  hip: 1.1,
+  thigh: 0.56,
+  shin: 0.56,
+  torso: 0.62,
+  shoulderW: 0.16,
+  hipW: 0.09,
+  upperArm: 0.55,
+  forearm: 0.66,
+  stride: 1.8,
+};
+
+export function buildSiliconBody(dark) {
+  return buildBody(dark, SILICON, null, { silicon: true });
+}
+
 /** O Safeguard (pálido; `slit`: o material escuro da fenda no rosto). */
 export function buildSafeguardBody(material, slit) {
   return buildBody(material, SAFEGUARD, slit);
@@ -104,16 +126,18 @@ function buildBody(material, D, slitMat = null, dress = null) {
   head.scale(0.92, slitMat ? 1.55 : 1.28, 1.05);
   head.translate(0, slitMat ? 0.24 : 0.21, 0.02);
   // dentro do capuz a cabeça é só escuro (nenhum rosto)
-  add(neck, new THREE.Mesh(head, dress ? dress.dark : material));
-  if (dress) {
+  if (dress?.silicon) head.scale(0.7, 1.25, 0.85);
+  add(neck, new THREE.Mesh(head, dress?.dark ?? material));
+  if (dress?.cloth) {
     // o capuz (aberto na frente: dentro, só escuro) e o manto caindo dos ombros até os joelhos
     // aberto na frente (+z é φ = π/2 no SphereGeometry): uma abertura de ~100°
     const hood = new THREE.SphereGeometry(0.17, 12, 8, Math.PI / 2 + 0.9, Math.PI * 2 - 1.8, 0, Math.PI * 0.75);
     hood.scale(1, 1.2, 1.1);
     hood.translate(0, 0.22, -0.01);
     add(neck, new THREE.Mesh(hood, dress.cloth));
-    const cloak = new THREE.CylinderGeometry(0.2, 0.34, D.torso + 0.55, 9, 1, true);
-    cloak.translate(0, D.torso - (D.torso + 0.55) / 2 + 0.05, -0.01);
+    const drop = dress.short ? 0.2 : 0.55; // o do andarilho é mais curto (anda muito)
+    const cloak = new THREE.CylinderGeometry(0.2, 0.34, D.torso + drop, 9, 1, true);
+    cloak.translate(0, D.torso - (D.torso + drop) / 2 + 0.05, -0.01);
     add(spine, new THREE.Mesh(cloak, dress.cloth));
   }
   if (slitMat) {
@@ -126,11 +150,16 @@ function buildBody(material, D, slitMat = null, dress = null) {
   // braços
   const arms = [];
   for (const s of [-1, 1]) {
+    // o braço de máquina do transumano (o direito): mais longo, de aço
+    const mech = dress?.mech && s > 0;
+    const ua = D.upperArm * (mech ? 1.12 : 1);
+    const fa = D.forearm * (mech ? 1.3 : 1);
+    const mat = mech ? dress.mech : material;
     const sh = joint(spine, s * D.shoulderW, D.torso - 0.06, 0);
     sh.rotation.z = s * 0.06;
-    add(sh, limb(D.upperArm, 0.05, 0.042, material));
-    const el = joint(sh, 0, -D.upperArm, 0);
-    add(el, limb(D.forearm, 0.04, 0.03, material));
+    add(sh, limb(ua, mech ? 0.06 : 0.05, 0.042, mat));
+    const el = joint(sh, 0, -ua, 0);
+    add(el, limb(fa, mech ? 0.05 : 0.04, 0.03, mat));
     arms.push({ sh, el, s });
   }
 

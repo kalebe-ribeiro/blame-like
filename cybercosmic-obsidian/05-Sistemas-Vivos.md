@@ -18,6 +18,7 @@ Todos vivem em `src/world/`, são atualizados em `World.update`, implementam `re
 | **Inscrições** | `inscriptions.js` | endereços pintados em estêncil (galerias, túneis do maciço, placas de estação); estimam a luz que chega nelas; lidas de perto ensinam |
 | **Silhuetas** | `silhouettes.js` | estruturas a dezenas de km, só sombras escurecendo a névoa |
 
+| **Os raros vivos** | `npcs.js` + `gen/villages.js` | fase 7: moradores das vilas habitadas; andarilhos transumanos em circuitos (trocam, roubam); vida de silício disfarçada (drena a célula; os Safeguards a caçam) |
 | **Safeguards** | `safeguards.js` + `gen/patrols.js` | fase 6: um de ronda em cada território (setor × 480 m) com rede andável, posição pelo relógio; veem pela luz, ouvem, caçam, capturam; o alerta tira caçadores das paredes |
 | **Seres (entidades)** | `entities.js` + `bodies.js` + `gen/nav.js` | fase 5: corpos que andam pelo grafo de navegação; perto com o `Walker` do jogador, longe abstratos; hoje só o corpo de teste (`--body`, `check:beings`) |
 

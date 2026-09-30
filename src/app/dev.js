@@ -189,12 +189,55 @@ export function setupDev(ctx) {
       }, 1200);
     }, Number(params.get('talk')) * 1000);
   }
+  // --wcam=N: a câmera (voando) de frente para o andarilho mais perto (fase 7);
+  // --wreveal: ele é vida de silício e se revela
+  if (params.get('wcam')) {
+    setTimeout(() => {
+      const g0 = world.toGlobal(camera.position);
+      let near = null;
+      for (const e of world.npcs.wanderers.values()) {
+        // (na Peregrinação a câmera não voa: de perto, a vida de silício se mostraria — use o modo Livre)
+        const d = e.feet.distanceTo(g0);
+        if (!near || d < near.d) near = { e, d };
+      }
+      if (!near) return console.warn('WCAM: nenhum');
+      const e = near.e;
+      if (params.get('wreveal')) {
+        e.npc.silicon = true;
+        world.npcs.reveal(e);
+        e.npc.state = 'walk';
+      }
+      ctx.controls.setMode('fly');
+      const tick = () => {
+        if (!world.entities.list.has(e.id)) return;
+        requestAnimationFrame(tick);
+        const fx = -Math.sin(e.yaw);
+        const fz = -Math.cos(e.yaw);
+        const px = e.feet.x + fx * 3.4;
+        const pz = e.feet.z + fz * 3.4;
+        camera.position.set(px, e.feet.y + 1.4, pz).sub(world.origin);
+        ctx.controls.yaw = Math.atan2(-(e.feet.x - px), -(e.feet.z - pz));
+        ctx.controls.pitch = -0.05;
+      };
+      tick();
+      let sgd = Infinity;
+      for (const x of world.safeguards.all()) sgd = Math.min(sgd, x.feet.distanceTo(e.feet));
+      console.warn(`WCAM: ${e.id} (${e.kind}) · Safeguard mais perto a ${sgd.toFixed(1)} m`);
+      setTimeout(() => {
+        let n = 0;
+        e.rig.group.traverse((o) => o.isMesh && n++);
+        const wp = e.rig.group.getWorldPosition(new THREE.Vector3());
+        console.warn(`WCAM: corpo a ${wp.distanceTo(camera.position).toFixed(2)} m da câmera · ${n} peças · visível ${e.rig.group.visible} · tier ${e.tier} · pés ${e.feet.toArray().map((v) => v.toFixed(1))}`);
+      }, 2500);
+    }, Number(params.get('wcam')) * 1000);
+  }
   if (params.get('sgemerge')) setTimeout(() => console.warn('SGEMERGE: ' + world.safeguards.emerge(world.toGlobal(camera.position), world.origin, 1) + ' ' + JSON.stringify(world.safeguards.wallWhy) + ' @ ' + world.toGlobal(camera.position).toArray().map(Math.round)), Number(params.get('sgemerge')) * 1000);
 
   // --check: roteiro automático por todos os destinos (npm run check)
   // --check=pad: o teste do controle (um controle falso joga sozinho — dev/padtest.js)
   if (params.get('check') === 'pad') import('../dev/padtest.js').then((m) => m.runPadTest(ctx));
   else if (params.get('check') === 'beings') import('../dev/beingtest.js').then((m) => m.runBeingTest(ctx));
+  else if (params.get('check') === 'npcs') import('../dev/npctest.js').then((m) => m.runNpcTest(ctx));
   else if (params.get('check') === 'safeguards') import('../dev/sgtest.js').then((m) => m.runSafeguardTest(ctx));
   else if (params.get('check')) {
     import('../dev/check.js').then((m) => m.runCheck({ teleport: ctx.ui.teleport, world, controls: ctx.controls, camera, THREE, getTime: () => ctx.time, only: params.get('check') }));

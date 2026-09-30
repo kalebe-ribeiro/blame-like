@@ -977,6 +977,30 @@ export class AudioEngine {
     }
   }
 
+  /** A vida de silício se mostrando: um guincho metálico que desce, e estalos. */
+  siliconReveal(pan, dist) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const out = this._placed(pan, Math.min(dist, 40) * 0.4);
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(3100, t);
+    o.frequency.exponentialRampToValueAtTime(380, t + 0.9);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 1200;
+    bp.Q.value = 2;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.22, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.0);
+    o.connect(bp).connect(g).connect(out);
+    o.start(t);
+    o.stop(t + 1.05);
+    for (let i = 0; i < 5; i++) this._clang(t + 0.1 + i * rand(0.05, 0.12), out, rand(0.05, 0.12), rand(1.6, 2.6));
+  }
+
   /** Uma placa de parede se abrindo: o trinco, o arrasto pesado das folhas. */
   sgEmerge(pan, dist) {
     if (!this.ctx) return;

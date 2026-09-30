@@ -179,6 +179,8 @@ export function createCarried(ctx) {
       }
       // os Safeguards (fase 6): no escuro, o sensor é o jeito de saber que um está perto
       for (const e of world.safeguards?.all() ?? []) consider(e.feet.x, e.feet.y + 1.5, e.feet.z, RR('motion') * 0.2);
+      // os andarilhos (fase 7) também se movem
+      for (const e of world.npcs?.wanderers.values() ?? []) consider(e.feet.x, e.feet.y + 1.2, e.feet.z, RR('motion') * 0.15);
     }
     return best;
   }

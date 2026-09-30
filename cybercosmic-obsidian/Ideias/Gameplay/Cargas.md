@@ -1,12 +1,12 @@
 ---
-status: standby
+status: feita
 prioridade: futura
 tags: [gameplay, npcs]
 ---
 
 # Cargas
 
-> **Standby** (2026-09-29): entra quando houver **NPCs raros** ([[NPCs-e-Safeguards]]).
+> **Feita na fase 7 (2026-09-30)**: cargas entre vilas habitadas (`app/people.js`): pedidas por um morador, ou por quem te recolheu depois de um desmaio; nas costas, sem correr, pulo baixo; o aparelho mostra a distância; entregue = célula cheia + palavras; perdida se os Safeguards te pegam ou um andarilho a arranca.
 
 Carregar algo de um lugar a outro (uma célula, um cartucho de dados, algo pedido por um grupo humano), sem correr, pular longe ou voar enquanto carrega. Com NPCs, vira **troca e entrega entre vilas** — o motivo para atravessar com cuidado.
 

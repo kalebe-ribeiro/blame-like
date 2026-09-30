@@ -201,3 +201,11 @@ Por que as coisas estão como estão, em ordem.
 - **Cargas**: nas costas; carregando, não se corre e o pulo é baixo; o aparelho mostra CARGA → distância. Entrega = célula cheia + 5 palavras. Pego pelos Safeguards: perdida.
 - **Despertar com sorteio ligado**: queda fatal → Safeguards 55% (cemitério) · humanos 20% (a vila habitada mais perto: ficam com a carga, ou pedem uma entrega) · ninguém 25%.
 - O `check:safeguards` falhou uma vez sem relação com isto: o relógio real fazia cada rodada cair noutro ponto da ronda. Agora o teste fixa o relógio e tenta ser visto até 3 vezes; e um Safeguard parado no meio de uma ponte não achava de onde partir quando chamado (`_plan` agora usa a plataforma mais perto).
+
+## 2026-09-30 — fase 7, etapa 2: andarilhos e vida de silício (7.5–7.7)
+
+- **Andarilhos** (`world/npcs.js`): um circuito próprio por território (o de ronda com outro sal — `patrolCircuit(..., salt)`), posição pelo relógio; transumanos (corpo com braço de máquina) que param e olham quem chega; os que trocam, os que roubam cargas.
+- **Vida de silício**: disfarçada de andarilho; de perto (ou ao tentar falar) troca de corpo (`entities.replaceRig`), caça, drena a célula e foge. Safeguards a caçam primeiro (`sg.prey`) e ela foge deles.
+- Tropeço meu ao capturar: na Peregrinação a câmera não voa, então a flag de câmera deixava o jogador a pé perto de um andarilho que era vida de silício — ele se revelava e parecia "o corpo errado". Não era defeito dos corpos. (O modo Livre serve para capturas de perto.)
+- Erro meu no teste: li o cache da disposição da vila (`_memo` com uma função que devolvia null — o que também o sujaria) em vez de chamar `villageLayout`. O teste agora também termina na hora se der erro.
+- Teste `npm run check:npcs` (`dev/npctest.js`), 10 itens. Flags: `--talk=N --talkpick=…`, `--wcam=N [--wreveal]` (no modo Livre para ver de perto).

@@ -57,6 +57,8 @@ npx electron . --capture=shot.png --pos=x,y,z,yaw,pitch --mode=fly --seed=abc --
 
 - `npm run check:safeguards` — os Safeguards na Peregrinação (`dev/sgtest.js`): rondas, visto, captura (acordar no cemitério), escondido (perde o rastro), parede (saem e voltam), chamado, fiscal (nada atravessa parede nem cai). ~4 min.
 
+- `npm run check:npcs` — os raros vivos na Peregrinação (`dev/npctest.js`): vila, conversa, carga, entrega, despertar numa vila, andarilhos, ladrão, vida de silício, terceira força, fiscal. ~8 min (teleporta entre vilas a dezenas de km).
+
 ## Qual check rodar (pedido do usuário, 2026-09-30)
 
 Cada check leva minutos: rodar **só os pertinentes** à mudança.
@@ -68,6 +70,7 @@ Cada check leva minutos: rodar **só os pertinentes** à mudança.
 | teclas, bindings, interface, painéis, navegação pelo controle | `npm run check:pad` (obrigatório — regra absoluta do controle) |
 | seres: entidades, navegação, corpos, `Walker` (e mudanças na rede andável ou nas passarelas, que o grafo espelha) | `npm run check:beings` |
 | Safeguards: rondas, percepção, caçada, captura, paredes, alerta, despertar | `npm run check:safeguards` (+ `check:beings` se mexeu nas entidades) |
+| NPCs: vilas, conversa, cargas, andarilhos, vida de silício | `npm run check:npcs` (+ `check:pad` se mexeu no painel da conversa) |
 | só textos/i18n, documentação, cofre | nenhum (no máximo importar o módulo) |
 | mudança que toca tudo | os três |
 
