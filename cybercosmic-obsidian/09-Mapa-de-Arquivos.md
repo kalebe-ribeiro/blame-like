@@ -63,8 +63,7 @@ src/
   world/particles.js        gotas e vapor
   world/silhouettes.js      silhuetas a dezenas de km
   world/geometry.js         merge, cilindro entre pontos, tubo afunilado
-  world/cables.js           catenárias e fios de prumo (buildTendril: sem uso hoje)
-  world/lsystem.js          L-system 3D (sem uso hoje, depois da remoção dos tentáculos)
+  world/cables.js           catenárias e fios de prumo
 
   render/pipeline.js        ScenePass: SSAO, TAA, raios na névoa
   render/reflection.js      reflexo planar da água

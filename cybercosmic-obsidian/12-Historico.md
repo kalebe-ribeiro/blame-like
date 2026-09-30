@@ -166,3 +166,7 @@ Por que as coisas estão como estão, em ordem.
 - As costelas das pontes da rede (outro gerador, não revisado antes) tinham os pés no ar: agora pórticos com travessa, como nas passarelas.
 - Erro meu da rodada anterior: as vigas radiais sob as plataformas usavam a convenção de ângulo trocada (x = cos em vez de x = sin) e saíam pela borda. Corrigido e provado com captura de cima.
 
+
+## 2026-09-30 — código sem uso apagado
+
+- Apagados os materiais `organic` e `anomaly`, o ramo "carne" do shader de superfície (`uOrganic`, `uFleshColor`, `uVeinColor`, `uVeins`) e a respiração por vértice (`uDisplace`), `buildTendril` e `world/lsystem.js`. Nada os usava desde a remoção das formas orgânicas; o visual não muda (todos os materiais tinham `organic: 0`, `displace: 0`).

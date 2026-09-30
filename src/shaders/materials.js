@@ -11,8 +11,7 @@
 //                               Juntas de placas, escorrimentos verticais,
 //                               ferrugem, tom variando por placa, janelas
 //                               minúsculas acesas (sem geometria, no shader),
-//                               linhas técnicas fracas. Um parâmetro `organic`
-//                               mistura a antiga "carne" — para as anomalias.
+//                               linhas técnicas fracas.
 //  createSkyMaterial()       → o "infinito": névoa, luzes remotas, um disco escuro.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -74,7 +73,6 @@ const SURF_VERT = /* glsl */ `
 ${SHARED_UNIFORMS_GLSL}
 ${NOISE_GLSL}
 uniform float uNoiseScale;
-uniform float uDisplace;
 uniform float uSeed;
 
 varying vec3 vWorldPos;
@@ -96,14 +94,6 @@ void main() {
     p = (batchingMatrix * vec4(p, 1.0)).xyz;
     n = mat3(batchingMatrix) * n;
   #endif
-
-  // só as anomalias orgânicas "respiram" (uDisplace > 0)
-  if (uDisplace > 0.0) {
-    vec3 W0 = (modelMatrix * vec4(p, 1.0)).xyz + uOriginMod;
-    float nz = snoise(W0 * uNoiseScale * 0.5 + vec3(uSeed, uTime * 0.05, 0.0));
-    float wave = 0.5 + 0.5 * sin(uTime * 1.1 - W0.y * 0.04 + nz * 2.0);
-    p += n * (nz * 0.6 + wave * 0.4) * uDisplace;
-  }
 
   vec4 wp = modelMatrix * vec4(p, 1.0);
   vWorldPos = wp.xyz;
@@ -130,10 +120,6 @@ uniform vec2  uWindowSize;    // célula de janela (m)
 uniform vec3  uCircuitColor;  // linhas técnicas (emissão fraca)
 uniform float uCircuit;
 uniform float uCircuitScale;
-uniform float uOrganic;       // 0 = concreto puro, 1 = carne
-uniform vec3  uFleshColor;
-uniform vec3  uVeinColor;
-uniform float uVeins;
 uniform float uNoiseScale;
 uniform float uSeed;
 uniform float uFogAmount;     // 1 = névoa normal; < 1 = fura a névoa
@@ -158,7 +144,7 @@ void main() {
   if (dot(Ng, V) < 0.0) Ng = -Ng;
   vec3 Nd = normalize(cross(dFdx(vWorldPos), dFdy(vWorldPos)));
   if (dot(Nd, V) < 0.0) Nd = -Nd;
-  vec3 N = normalize(mix(Ng, Nd, 0.1 + 0.45 * uOrganic));
+  vec3 N = normalize(mix(Ng, Nd, 0.1));
 
   float t = uTime;
   vec3 W = vWorldPos + uOriginMod;   // posição "global" para os padrões
@@ -217,19 +203,8 @@ void main() {
   // poeira depositada clareia o que está virado para cima
   concrete *= 1.0 + 0.2 * smoothstep(0.75, 1.0, vNormalW.y);
 
-  // ── anomalia orgânica (opcional) ──
   vec3 albedo = concrete;
   vec3 emit = vec3(0.0);
-  if (uOrganic > 0.001) {
-    float flesh = fbm(P + vec3(0.0, t * 0.04, 0.0));
-    float ridge = 1.0 - abs(snoise(P * 2.2 + vec3(t * 0.015, 0.0, 0.0) + flesh * 0.6));
-    float mask = smoothstep(0.1, 0.6, snoise(P * 0.45 + 7.0));
-    float veins = pow(ridge, 26.0) * uVeins * mask;
-    float pulse = pow(0.5 + 0.5 * sin(t * 1.3 - W.y * 0.09 + flesh * 5.0), 3.0);
-    vec3 fleshAlb = mix(uFleshColor * 0.35, uFleshColor, smoothstep(-0.45, 0.7, flesh));
-    albedo = mix(concrete, fleshAlb, uOrganic);
-    emit += uVeinColor * veins * (0.05 + 0.6 * pulse) * uOrganic;
-  }
 
   // ── linhas técnicas (fracas, quase apagadas) ──
   if (uCircuit > 0.001) {
@@ -276,7 +251,7 @@ void main() {
   // luz difusa vinda de cima: o que olha para baixo mergulha no escuro
   vec3 lit = uAmbient * (0.3 + 0.7 * (N.y * 0.5 + 0.5)) * (0.8 + 0.4 * mott);
   vec3 spec = vec3(0.0);
-  float gloss = mix(mix(10.0, 60.0, uOrganic), 400.0, uWet);
+  float gloss = mix(10.0, 400.0, uWet);
   for (int i = 0; i < LIGHT_COUNT; i++) {
     vec3 Lv = uLightPos[i] - vWorldPos;
     float d2 = dot(Lv, Lv);
@@ -285,7 +260,7 @@ void main() {
     float att = exp(-uFogDensity * d) / (1.0 + d2);
     vec3 lc = uLightColor[i] * att;
     if (lc.r + lc.g + lc.b < 1e-5) continue; // não contribui: pula o especular
-    float ndl = mix(max(dot(N, L), 0.0), max((dot(N, L) + 0.35) / 1.35, 0.0), uOrganic);
+    float ndl = max(dot(N, L), 0.0);
     lit += lc * ndl;
     vec3 H = normalize(L + V);
     spec += lc * pow(max(dot(N, H), 0.0), gloss);
@@ -308,7 +283,7 @@ void main() {
   }
 
   float fres = pow(1.0 - max(dot(N, V), 0.0), 4.0);
-  vec3 c = albedo * lit + spec * (mix(0.08, 0.4, uOrganic) + 3.0 * uWet) + emit;
+  vec3 c = albedo * lit + spec * (0.08 + 3.0 * uWet) + emit;
   c += uFogColorB * fres * uWet * 3.0; // reflexo da poeira iluminada na água
   c += uFogColorB * fres * 0.5;   // borda levemente mais clara → silhueta
 
@@ -346,12 +321,7 @@ export function createSurfaceMaterial(shared, params = {}) {
     circuit: col(0.35, 0.42, 0.4),
     circuitAmount: 0.0,
     circuitScale: 0.5,
-    organic: 0,
-    flesh: col(0.09, 0.05, 0.045),
-    vein: col(0.5, 0.12, 0.05),
-    veins: 0.6,
     noiseScale: 0.08,
-    displace: 0,
     seed: 0,
     fogAmount: 1,
     fade: [1e9, 2e9],
@@ -375,12 +345,7 @@ export function createSurfaceMaterial(shared, params = {}) {
       uCircuitColor: { value: p.circuit },
       uCircuit: { value: p.circuitAmount },
       uCircuitScale: { value: p.circuitScale },
-      uOrganic: { value: p.organic },
-      uFleshColor: { value: p.flesh },
-      uVeinColor: { value: p.vein },
-      uVeins: { value: p.veins },
       uNoiseScale: { value: p.noiseScale },
-      uDisplace: { value: p.displace },
       uSeed: { value: p.seed },
       uFogAmount: { value: p.fogAmount },
       uFadeRange: { value: new THREE.Vector2(p.fade[0], p.fade[1]) },

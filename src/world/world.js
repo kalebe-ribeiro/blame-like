@@ -52,9 +52,9 @@ const LOD0_RADIUS = 420;
 const LOD1_RADIUS = 1300;
 
 // materiais que somem perto do raio dos chunks / da camada macro
-const NEAR_MATS = ['lamp', 'tower', 'bridge', 'rib', 'cable', 'duct', 'dress', 'block', 'slab', 'monolith', 'organic', 'plaza', 'tube', 'hive', 'massif',
+const NEAR_MATS = ['lamp', 'tower', 'bridge', 'rib', 'cable', 'duct', 'dress', 'block', 'slab', 'monolith', 'plaza', 'tube', 'hive', 'massif',
   'rungs', 'grate', 'door', 'sign', 'shack', 'cloth', 'screen', 'graffiti', 'water'];
-const FAR_MATS = ['lampFar', 'wall', 'floor', 'frame', 'stairway', 'macro', 'anomaly', 'conduit', 'barrier', 'beam', 'cascade', 'pool', 'flood'];
+const FAR_MATS = ['lampFar', 'wall', 'floor', 'frame', 'stairway', 'macro', 'conduit', 'barrier', 'beam', 'cascade', 'pool', 'flood'];
 /** Período do deslocamento de origem nos shaders (múltiplo de CHUNK). */
 const ORIGIN_PERIOD = CHUNK * 340; // ~65 km: o salto do padrão é raríssimo
 /** Distância da origem da cena que dispara a reindexação. */
@@ -194,7 +194,6 @@ export class World {
     const steel = { base: C(0.17, 0.175, 0.18), accent: C(0.22, 0.11, 0.06), accentAmount: 0.45, panel: 1.5, streaks: 0.4 };
     const deck = { base: C(0.22, 0.212, 0.2), panel: 2, streaks: 0.3, accentAmount: 0.15, circuitAmount: 0.25, circuitScale: 1.2 };
     const rubber = { base: C(0.035, 0.035, 0.035), panel: 100, streaks: 0, accentAmount: 0 };
-    const organic = { organic: 1, flesh: C(0.08, 0.05, 0.045), vein: C(0.45, 0.14, 0.06), veins: 0.6, noiseScale: 0.2, displace: 0.3 };
     const megaWall = {
       ...darkConcrete,
       base: C(0.2, 0.195, 0.185),
@@ -215,7 +214,6 @@ export class World {
       block: mk({ ...concrete, base: C(0.24, 0.232, 0.22), panel: 3, windows: 0.16, windowSize: [2.6, 3.2], fade: fadeNear }),
       slab: mk({ ...darkConcrete, panel: 6, fogAmount: 0.7, fade: fadeNear }),
       monolith: mk({ ...darkConcrete, base: C(0.07, 0.07, 0.07), panel: 12, fogAmount: 0.6, fade: fadeNear }),
-      organic: mk({ ...organic, fade: fadeNear }),
       plaza: mk({ ...concrete, base: C(0.28, 0.27, 0.255), panel: 3, circuitAmount: 0.2, circuitScale: 0.8, fade: fadeNear }),
       tube: mk({ ...steel, panel: 2, windows: 0.02, windowSize: [1.5, 1.2], side: THREE.DoubleSide, fade: fadeNear }),
       // ── camada macro (visível a quilômetros) ──
@@ -224,7 +222,6 @@ export class World {
       frame: mk({ ...darkConcrete, base: C(0.17, 0.168, 0.162), panel: 6, fogAmount: 0.35, fade: fadeMacro }),
       stairway: mk({ ...concrete, panel: 6, fogAmount: 0.4, fade: fadeMacro }),
       macro: mk({ ...darkConcrete, base: C(0.09, 0.09, 0.09), panel: 16, windows: 0.015, fogAmount: 0.3, fade: fadeMacro }),
-      anomaly: mk({ ...organic, displace: 1.5, noiseScale: 0.02, fogAmount: 0.4, fade: fadeMacro }),
       // ── regiões fechadas e condutos ──
       hive: mk({ ...concrete, base: C(0.22, 0.214, 0.205), panel: 3, windows: 0.015, windowSize: [2.5, 3], fade: fadeNear }),
       massif: mk({ ...megaWall, panel: 6, windows: 0.08, windowSize: [3, 4], noiseScale: 0.02, fogAmount: 0.7, fade: fadeNear }),
@@ -256,7 +253,7 @@ export class World {
     };
     // variantes para os chunks LOD: mesmas receitas, fade no fim do alcance
     this.lodMaterials = {};
-    this._recipes = { concrete, darkConcrete, steel, deck, rubber, megaWall, organic };
+    this._recipes = { concrete, darkConcrete, steel, deck, rubber, megaWall };
     for (const name of NEAR_MATS) {
       const src = this.materials[name];
       const mat = src.clone();

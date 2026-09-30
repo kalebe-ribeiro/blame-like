@@ -73,7 +73,7 @@ Regras entre estruturas: onde duas se cruzam, as paredes se abrem (`insideVoid`)
 
 Perto: `lamp tower bridge rib cable duct dress block slab monolith plaza tube hive massif rungs grate door sign shack cloth screen graffiti water machine`.
 Longe (macro): `lampFar wall floor frame stairway macro conduit barrier beam cascade pool flood colossus colossusBeam`.
-(`organic` e `anomaly` ainda existem como materiais, mas nada mais os usa.)
+(Os materiais `organic`/`anomaly`, o ramo "carne" do shader, `buildTendril` e `lsystem.js` foram apagados em 2026-09-30.)
 
 ## Como adicionar uma estrutura
 

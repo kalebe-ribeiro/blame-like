@@ -24,5 +24,4 @@ Registradas em 2026-09-29.
 
 ## Ainda pendente
 
-### Materiais sem uso
-- `organic` e `anomaly` (e `buildTendril`/`lsystem.js`) não são mais usados desde a remoção das formas orgânicas.
+(nada — os materiais sem uso `organic`/`anomaly`, `buildTendril` e `lsystem.js` foram apagados em 2026-09-30)

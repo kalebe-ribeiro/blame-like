@@ -400,8 +400,7 @@ src/
   controls/bindings.js      todos os atalhos (teclado e controle), trocáveis e salvos
   controls/walker.js        física de caminhada (chão, paredes, degraus, pulo)
   world/geometry.js         tubo afunilado, merge, cilindro entre pontos
-  world/lsystem.js          L-system estocástico 3D + tartaruga
-  world/cables.js           catenárias, tentáculos, fios de prumo
+  world/cables.js           catenárias e fios de prumo
   shaders/chunks.js         GLSL: simplex, fbm, névoa volumétrica
   shaders/materials.js      superfícies, feixes, cascatas, poeira, céu
   shaders/post.js           filme: dessaturação, grão, vinheta
@@ -435,13 +434,10 @@ Parâmetros globais (espaçamentos, probabilidades, espessuras) ficam em `MEGA` 
 
 **Densidade da rede**: ajuste `density` em `Field.node()` e as chances em `Field.edge()`. Probabilidades baixas demais quebram a rede em ilhas.
 
-**Nova "espécie" de L-system**: adicione uma gramática em `GRAMMARS` (`world/lsystem.js`). Os símbolos são: `F` avança, `+ -` yaw, `& ^` pitch, `\ /` roll, `!` afina, `[ ]` galho.
-
-**Materiais**: estão em `World._createMaterials()`, montados a partir de receitas (concreto, concreto escuro, aço, borracha, orgânico). Os parâmetros de `createSurfaceMaterial` são:
+**Materiais**: estão em `World._createMaterials()`, montados a partir de receitas (concreto, concreto escuro, aço, piso, borracha, muralha). Os parâmetros de `createSurfaceMaterial` são:
 - `base` (cor), `accent` / `accentAmount` (ferrugem), `panel` (tamanho da placa em m), `streaks` (escorrimentos);
 - `windows` (fração de janelas acesas), `windowSize`, `windowColor`;
 - `circuitAmount` (linhas técnicas fracas);
-- `organic` (0–1, mistura a "carne" das anomalias);
 - `fogAmount`: abaixo de 1, a peça fura a névoa;
 - `fade`: a distância em que a peça se dissolve.
 

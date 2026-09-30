@@ -1,16 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  Rede de "cabos orgânicos".
+//  Cabos.
 //
 //  1. Catenárias: cabos pendurados entre dois pontos (a escolha dos pares fica
-//     em gen/chunkgen.js), engrossando nas pontas e com nódulos — meio cabo de
-//     fibra, meio tendão.
-//  2. Tentáculos L-system: árvores de galhos que pendem da ponte e das torres
-//     ou sobem do abismo (tropismo invertido).
-//  3. Fios de prumo: linhas longas e finas caindo no abismo (escala vertical).
+//     em gen/chunkgen.js), engrossando nas pontas.
+//  2. Fios de prumo: linhas longas e finas caindo no abismo (escala vertical).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from '../lib/three.js';
-import { buildTaperedTube, mergeAll } from './geometry.js';
-import { GRAMMARS, expandLSystem, interpretLSystem } from './lsystem.js';
+import { buildTaperedTube } from './geometry.js';
 
 /** Cabo pendurado entre a e b. */
 export function catenaryCable(a, b, { rng, noise3, radius = 0.6, sag = 0.25, points = 18 }) {
@@ -33,33 +29,6 @@ export function catenaryCable(a, b, { rng, noise3, radius = 0.6, sag = 0.25, poi
     radii.push(radius * (1 + 0.9 * (1 - w) + bulge));
   }
   return buildTaperedTube(pts, radii, { radialSegments: 7, smooth: 3 });
-}
-
-/**
- * Planta um tentáculo L-system.
- * @param {THREE.Vector3} origin
- * @param {'down'|'up'} dir  pender (gravidade) ou subir do abismo
- * heading/tropism opcionais sobrescrevem a direção inicial e a "gravidade".
- */
-export function buildTendril(origin, { rng, dir = 'down', grammar = 'tendril', iterations = 4, scale = 1, heading, tropism }) {
-  const g = GRAMMARS[grammar];
-  const str = expandLSystem(g.axiom, g.rules, iterations, rng);
-  const down = dir === 'down';
-  const branches = interpretLSystem(str, {
-    rng,
-    origin,
-    heading: heading ?? new THREE.Vector3(rng.float(-0.4, 0.4), down ? -1 : 1, rng.float(-0.4, 0.4)),
-    step: rng.float(2.5, 4.5) * scale,
-    radius: rng.float(0.35, 0.8) * scale,
-    angle: THREE.MathUtils.degToRad(rng.float(20, 40)),
-    tropism: tropism ?? new THREE.Vector3(0, down ? -1 : 1, 0),
-    tropismStrength: rng.float(0.06, 0.2),
-    jitter: 0.3,
-  });
-  const geoms = branches.map((b) =>
-    buildTaperedTube(b.points, b.radii, { radialSegments: b.radii[0] > 0.3 ? 6 : 4, smooth: 2 }),
-  );
-  return mergeAll(geoms);
 }
 
 /** Fio de prumo: linha quase reta caindo no abismo, com leve deriva. */
