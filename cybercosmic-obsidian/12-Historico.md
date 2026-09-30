@@ -105,3 +105,7 @@ Por que as coisas estão como estão, em ordem.
 
 - **Exploit**: no terminal inicial, arrancar fragmentos repetidos ensinava o léxico inteiro (cada fragmento era uma fonte nova). Agora cada fonte conta cada palavra uma vez (`lexSeen`); o fragmento conta como o próprio terminal.
 - **Polimento**: a lanterna virou um objeto na mão esquerda — sobe ao ligar (e só então acende), desce ao desligar, aponta com o atraso da mão. O aparelho da direita ficou só com a telinha (carga e sensor).
+
+## 2026-09-30 — estudo: a arma do Killy
+
+- O usuário perguntou a dificuldade de uma arma que fura o terreno deixando buraco circular. Registrado em [[Ideias/Futuro/Arma-do-Killy]]: ~60/100 com buraco de shader (cilindros salvos + `discard` + borda pintada + colisão ignorando), ~85 com CSG. Decisão de jogo pendente para a fase 6 (camadas indestrutíveis?).

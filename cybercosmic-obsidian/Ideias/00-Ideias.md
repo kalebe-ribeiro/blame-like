@@ -60,6 +60,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | ideia | status |
 |---|---|
 | [[NPCs-e-Safeguards]] | futuro — arquitetar pensando nisso |
+| [[Arma-do-Killy]] (feixe que fura o terreno) | futuro (fase 6) — dificuldade estimada ~60 com buraco de shader |
 
 ## Técnico
 

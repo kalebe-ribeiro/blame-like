@@ -134,7 +134,7 @@
 - **Hostilidade pelo acesso**: sem o "gene", você é um residente ilegal.
 - **Dilemas**: luz × ser visto; religar setores × chamar atenção.
 - **Morte → despertar** no **cemitério de vítimas**, perdendo energia e o que carregava (ferramentas ficam).
-- **Defesa**: decidir se há a arma de Killy (o **emissor de feixe gravitacional**) ou se a Peregrinação continua sem combate (fugir, esconder, apagar a luz). Decisão para esta fase.
+- **Defesa**: decidir se há a arma de Killy (o **emissor de feixe gravitacional**) ou se a Peregrinação continua sem combate (fugir, esconder, apagar a luz). Decisão para esta fase. Estudo feito em [[Ideias/Futuro/Arma-do-Killy]]: furar o terreno com buraco circular é viável "de shader" (~60/100), com camadas e únicas indestrutíveis.
 - No **modo Livre**: Safeguards desligáveis (decidir).
 
 **Pronto quando**: a Cidade continua quieta e vazia quase sempre — e, quando um Safeguard aparece, é um evento que você não esquece.
