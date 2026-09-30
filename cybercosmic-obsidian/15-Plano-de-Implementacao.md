@@ -100,6 +100,7 @@
 
 > 4.1 ✔ religar setores (subestações, cascata, pistas para a subestação, salvo no mundo).
 > 4.2 ✔ subir nas máquinas colossais (escotilhas, escada, plataforma, horário no terminal, convés que carrega).
+> 4.3 ✔ marcas do jogador (tinta em estêncil, V / LB, no mapa e no mundo salvo).
 
 **Objetivo**: mudar a Cidade e atravessá-la de verdade.
 

@@ -63,6 +63,8 @@ export function setupDev(ctx) {
       }, 8000);
     }, Number(params.get('ride')) * 1000);
   }
+  // --mark=8: pinta uma marca onde se olha aos N s
+  if (params.get('mark')) setTimeout(() => ctx.marks.toggle(), Number(params.get('mark')) * 1000);
   // --restore=8: religa o setor da subestação em frente aos N s
   if (params.get('restore')) setTimeout(() => ctx.power.tryUse(), Number(params.get('restore')) * 1000);
   // --controls=3: abre a aba CONTROLES aos N segundos

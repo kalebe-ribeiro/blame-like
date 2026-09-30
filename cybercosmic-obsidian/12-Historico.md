@@ -120,3 +120,7 @@ Por que as coisas estão como estão, em ordem.
 
 - Escotilhas: uma placa da laje falta a cada ~1,3 km de trincheira; passarela, escada e plataforma na altura das longarinas. Terminal `hatch` (energia própria) com a próxima máquina.
 - Máquinas mais frequentes e a 4 m/s; o casco tem colisão e carrega quem está em cima (`--ride` mediu 29,8 m em 8 s, a máquina 32).
+
+## 2026-09-30 — 4.3 marcas do jogador
+
+- Seta de estêncil em spray pintada onde se olha (V / LB), apaga mirando nela; mundo salvo, mapa. Primeiro teste "não achou onde pintar": era o chão ainda não carregado para a colisão logo depois do `--pos`.

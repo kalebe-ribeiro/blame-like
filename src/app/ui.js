@@ -264,6 +264,7 @@ export function createUI(ctx) {
     world.setView({ renderDistance: ctx.settings.renderDistance, fog: ctx.settings.fog });
     ctx.travel.newWorld();
     world.field.restored.clear(); // o build leu os setores religados do mundo anterior
+    ctx.marks.reset();
     controls.setView(VIEWS.spawn);
     onWorldBuilt(ctx);
     applySettings(ctx.settings);
@@ -293,6 +294,7 @@ export function createUI(ctx) {
   // o mesmo que as teclas: controls/noclip.js chama com o nome da ação (bindings.js)
   controls.onPadButton = (name) => {
     if (name === 'photo') photo();
+    if (name === 'mark') ctx.marks.toggle();
     if (name === 'hud' && rules.hud) hud.toggle();
     if (name === 'lantern') ctx.carried.toggleLantern();
     if (name === 'sensor') ctx.carried.cycleSensor();
@@ -319,6 +321,7 @@ export function createUI(ctx) {
     }
     if (is('transport') && rules.teleport) openTransport();
     if (is('photo')) photo();
+    if (is('mark') && controls.locked) ctx.marks.toggle();
     if (is('map')) toggleMap();
     if (e.code === 'Escape' && trail.open) toggleMap();
     // usar: ler o terminal em frente (ou fechar a leitura); senão, a tomada

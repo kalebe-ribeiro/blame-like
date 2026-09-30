@@ -38,6 +38,7 @@ Padrões:
 | ler um terminal · conectar numa tomada | E | Y | |
 | lanterna | F | X | Peregrinação |
 | sensor | G | direcional ↓ | Peregrinação |
+| pintar uma marca (ou apagar a marca em que você mira) | V | LB | |
 | foto: um quadro limpo (sem interface nem grão, 16 quadros de TAA) em até 4K, em Imagens/CYBERCOSMIC | F2 | RB | |
 | menu (a tela de entrada; nela, volta ao jogo) | ESC (fixo) | START | |
 | mapa da travessia | M | SELECT | |
@@ -96,6 +97,10 @@ Não há missões. Uma pista é um endereço que você leu e decide seguir.
 - **O horário**: um terminal na borda (com energia própria) diz quando passa a próxima máquina ("PRÓXIMA MÁQUINA: 7 MIN", ou EMBARQUE quando ela está passando). As máquinas agora são mais frequentes (uma a cada ~2,6 km de trincheira, 75% das vagas) e um pouco mais rápidas (4 m/s).
 - **Embarcar**: quando a máquina passa sob a plataforma, é só descer para a longarina (a 0,4 m). As longarinas são o convés: 260 m de comprido, 12 de largo. Quem está em cima vai junto. Para descer, espere a próxima escotilha passar e pule para a plataforma dela.
 - Transporte (modo Livre): destino **Escotilha de manutenção**. Desenvolvimento: `--goto=colosso --ride=8` põe o corpo numa longarina e diz no console se ele foi junto.
+
+## Marcas deixadas por você (fase 4)
+
+**V** (LB no controle) pinta uma seta de estêncil em spray na superfície para onde você olha, até 7 m. Ela aponta na direção do olhar projetada na superfície: mire um pouco para o lado e ela aponta para o lado; olhando reto para uma parede, aponta para cima. Mirar numa marca e apertar de novo a apaga. A tinta só aparece com luz (a mesma conta das inscrições, lanterna incluída). As marcas ficam no mundo salvo (até 400), aparecem no mapa como setinhas e vão junto quando você compartilha a seed. As de outra pessoa vêm em cor de ferrugem.
 
 ## Setores de energia
 
@@ -315,6 +320,7 @@ src/
   app/player.js             estado do corpo: energia, ferramentas, o que carrega, acesso
   app/carried.js            o aparelho na mão: lanterna, célula de energia, tomadas, sensor (Peregrinação)
   app/power.js              religar um setor na subestação em frente
+  app/marks.js              marcas pintadas (V / LB): no mundo salvo, no mapa
   world/substations.js      subestações (armários) e os setores religados (luz em cascata, shaders)
   app/wake.js               queda e despertar (Peregrinação)
   app/reading.js            ler terminais (E), o leitor portátil, pegar o sensor

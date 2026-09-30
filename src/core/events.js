@@ -17,6 +17,7 @@
 //    player:photo     { }
 //    player:transfer  { kind, from, to } teletransporte (modo Livre)
 //    player:read      { id, site, learned, leads } leu um terminal (app/reading.js); leads: as rotas lidas
+//    player:mark      { x, y, z }          pintou uma marca (app/marks.js)
 //    sector:restore   { id, sector, x, y, z } religou um setor numa subestação (world/substations.js)
 //    player:learn     { words, source }   entendeu palavras numa inscrição (world/inscriptions.js)
 //    player:wake      { from, to, cause }  acordou depois de um desmaio (app/wake.js)

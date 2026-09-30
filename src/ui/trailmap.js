@@ -34,7 +34,7 @@ export class TrailMap {
     this.pitch = 0.5;
     this.zoom = 1;
     this.open = false;
-    this.found = { places: [], leads: [], sectors: [] };
+    this.found = { places: [], leads: [], sectors: [], marks: [] };
   }
 
   /**
@@ -42,6 +42,7 @@ export class TrailMap {
    *   places  [{ x, y, z, unique }]           terminais lidos (unique: estrutura única)
    *   leads   [{ x, y, z, r, open, tokens, ring? }] pistas (centro estimado e raio; ring {R,w}: anel em volta de quem citou)
    *   sectors [{ x, y, z, state }]             setores por onde passou
+   *   marks   [{ x, y, z, dx, dz, shared }]    marcas pintadas (as suas; as de quem compartilhou a seed)
    *   known(w), word(w)                        o léxico, para escrever as rotas
    */
   setFound(found) {
@@ -97,7 +98,7 @@ export class TrailMap {
       <div class="tm-legend">
         <span><i class="tm-l0"></i><b data-i18n="map.path"></b></span><span><i class="tm-l1"></i><b data-i18n="map.rails"></b></span>
         <span><i class="tm-l2"></i><b data-i18n="map.jump"></b></span><span><i class="tm-q"></i><b data-i18n="map.fall"></b></span><span><i class="tm-f"></i><b data-i18n="map.photo"></b></span>
-        <span><i class="tm-t"></i><b data-i18n="map.terminal"></b></span><span><i class="tm-u"></i><b data-i18n="map.unique"></b></span><span class="tm-lead-key"><i class="tm-p"></i><b data-i18n="map.lead"></b></span><span><i class="tm-s"></i><b data-i18n="map.sector"></b></span>
+        <span><i class="tm-t"></i><b data-i18n="map.terminal"></b></span><span><i class="tm-u"></i><b data-i18n="map.unique"></b></span><span class="tm-lead-key"><i class="tm-p"></i><b data-i18n="map.lead"></b></span><span><i class="tm-s"></i><b data-i18n="map.sector"></b></span><span><i class="tm-m"></i><b data-i18n="map.mark"></b></span>
         <span class="tm-hint" data-i18n="map.hint"></span>
       </div>`;
     document.body.appendChild(root);
@@ -300,6 +301,25 @@ export class TrailMap {
         g.lineTo(px - 4 * dpr, py);
         g.fill();
       }
+    }
+    // as marcas pintadas: uma setinha na direção da tinta (a de outra pessoa, cor de ferrugem)
+    for (const m of F.marks ?? []) {
+      const [px, py] = proj(m.x, m.y, m.z);
+      const h = Math.hypot(m.dx, m.dz);
+      g.fillStyle = m.shared ? 'rgba(170,90,55,0.9)' : 'rgba(220,214,198,0.85)';
+      if (h < 0.3) {
+        g.fillRect(px - 1.5 * dpr, py - 1.5 * dpr, 3 * dpr, 3 * dpr); // numa parede, de frente
+        continue;
+      }
+      const [qx, qy] = proj(m.x + (m.dx / h) * ext * 0.02, m.y, m.z + (m.dz / h) * ext * 0.02);
+      const a = Math.atan2(qy - py, qx - px);
+      const L = 5 * dpr;
+      g.beginPath();
+      g.moveTo(px + Math.cos(a) * L, py + Math.sin(a) * L);
+      g.lineTo(px + Math.cos(a + 2.5) * L * 0.8, py + Math.sin(a + 2.5) * L * 0.8);
+      g.lineTo(px + Math.cos(a - 2.5) * L * 0.8, py + Math.sin(a - 2.5) * L * 0.8);
+      g.closePath();
+      g.fill();
     }
     // as pistas: a área de incerteza (tracejada) e a rota ao lado
     for (const l of F.leads) {

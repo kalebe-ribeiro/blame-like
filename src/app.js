@@ -41,6 +41,7 @@ import { createCarried } from './app/carried.js';
 import { createReading } from './app/reading.js';
 import { createLeads } from './app/leads.js';
 import { createPower } from './app/power.js';
+import { createMarks } from './app/marks.js';
 import { bindings } from './controls/bindings.js';
 import { startPlace } from './lang/leads.js';
 
@@ -170,6 +171,7 @@ ctx.wake = createWake(ctx);
 ctx.carried = createCarried(ctx);
 ctx.reading = createReading(ctx);
 ctx.power = createPower(ctx);
+ctx.marks = createMarks(ctx);
 setupDev(ctx);
 
 // ─── loop ───────────────────────────────────────────────────────────────────
@@ -198,6 +200,7 @@ function frame() {
   const rebased = world.maybeRebase(camera);
   if (rebased) ctx.scenePass.shiftOrigin(rebased.delta);
   ctx.carried.update(dt, time); // a lanterna na mão (Peregrinação)
+  ctx.marks.update(dt); // as marcas pintadas perto
 
   // 3. mundo
   shared.uTime.value = time;

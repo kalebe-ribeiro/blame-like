@@ -99,7 +99,8 @@ export function createTravel(ctx) {
         })
       : [];
     const sectors = Object.values(slot.sectors ?? {});
-    return { places, leads, sectors, ...(ctx.rules.leads ? { known: (w) => ctx.lexicon.known(w), word: (w) => t(`word.${w}`) } : {}) };
+    const marks = (slot.marks ?? []).map((m) => ({ x: m.x, y: m.y, z: m.z, dx: m.dx, dz: m.dz, shared: !!m.shared }));
+    return { places, leads, sectors, marks, ...(ctx.rules.leads ? { known: (w) => ctx.lexicon.known(w), word: (w) => t(`word.${w}`) } : {}) };
   }
 
   return {
@@ -116,6 +117,7 @@ export function createTravel(ctx) {
       slot.seed = ctx.seed;
       slot.changes = {};
       slot.leads = {};
+      slot.marks = [];
       slot.sectors = {};
     },
     update(dt) {

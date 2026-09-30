@@ -42,6 +42,7 @@
 | Lanterna perto do corpo: intensidade de lâmpada estoura a tela (espalha na poeira) | intensidade baixa (2,4) — perto do corpo pouco já ilumina |
 | Setor: CPU e GPU precisam do MESMO hash | `hash4` só usa inteiros (`Math.imul`, `>>>`): em GLSL é `uint` com as mesmas constantes |
 | Inscrição com letras grandes demais: 80 m de largura, some atrás dos contrafortes | letras de ~1,4 m, ancoradas junto da abertura e seguindo ao longo da parede; o texto encolhe se não couber (traduzido é mais largo) |
+| Raio de mira logo depois de um `--pos`/transporte não acha o chão | a colisão só tem as malhas depois que o chão em volta carregou (o corpo "paira" até lá); o raio de mira usa as malhas que o walker já recolheu no quadro |
 | `offsetParent` para saber se um painel está visível | é sempre `null` em `position: fixed` (todos os painéis): use `getClientRects().length` |
 | Navegação espacial "qualquer coisa naquela direção" | ← → pulavam para o diário e o foco pulava a linha dos botões; agora: linha seguinte primeiro, ← → só na mesma linha |
 | Variável local chamada `t` esconde a função de tradução `t()` (o painel de transporte quebrou assim) | nunca chamar variável de `t` num arquivo que importa `t` de `i18n` |

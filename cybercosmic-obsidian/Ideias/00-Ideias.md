@@ -32,7 +32,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Diario-como-arquivo]] | ✔ feita (fase 2) | média |
 | [[Travessias-dificeis]] | ★ escolhida | média |
 | [[Seeds-compartilhaveis]] | ★ escolhida | baixa |
-| [[Marcas-do-jogador]] | ★ escolhida | baixa |
+| [[Marcas-do-jogador]] | ✔ feita (fase 4.3) | baixa |
 | [[Cargas]] | standby (com NPCs) | futura |
 | [[Copiar-inscricoes]] | proposta | média |
 | [[Credenciais-de-acesso]] | proposta | média |

@@ -38,6 +38,7 @@ export const ACTIONS = [
   { id: 'use', group: 'act', key: 'KeyE', pad: 3 },
   { id: 'lantern', group: 'act', key: 'KeyF', pad: 2, modes: ['pilgrimage'] },
   { id: 'sensor', group: 'act', key: 'KeyG', pad: 13, modes: ['pilgrimage'] },
+  { id: 'mark', group: 'act', key: 'KeyV', pad: 4 },
   { id: 'photo', group: 'act', key: 'F2', pad: 5 },
   { id: 'menu', group: 'ui', key: 'Escape', pad: 9, fixedKey: true },
   { id: 'map', group: 'ui', key: 'KeyM', pad: 8 },
