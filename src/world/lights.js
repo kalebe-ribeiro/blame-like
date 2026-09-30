@@ -115,6 +115,10 @@ export class LightRig {
     // uma vez aqui em vez de uma vez por pixel
     const { uLightFog, uFogDensity } = this.shared;
     for (let k = 0; k < uLightPos.value.length; k++) {
+      if (k < this.fixed.length && this.fixed[k].mode === 'carried') {
+        uLightFog.value[k].set(0, 0, 0); // a luz rebatida da lanterna não acende a névoa (o facho acende: shaders/chunks.js)
+        continue;
+      }
       const dl = uLightPos.value[k].distanceTo(camera.position);
       uLightFog.value[k].copy(uLightColor.value[k]).multiplyScalar(Math.exp(-uFogDensity.value * 0.9 * dl));
     }

@@ -96,3 +96,7 @@ Por que as coisas estão como estão, em ordem.
 - `ui/padNav.js`: menus pelo controle (foco espacial, A/B, valores, abas, rolagem, mapa). START abre a tela de entrada (mapa foi para SELECT, interface para →); tela cheia no ← via `preload.js`.
 - Painéis abertos no jogo pelo controle voltam ao jogo ao fechar (antes caíam na tela de entrada); transportar pelo controle também.
 - `npm run check:pad`: um controle falso joga os dois modos. Achou três defeitos no caminho: `offsetParent` nulo em painéis fixos, a borda do botão recém-apertado comparada com o estado já atualizado, e a navegação pulando linhas.
+
+## 2026-09-30 — a lanterna virou um facho
+
+- A primeira lanterna era uma luz pontual em volta do corpo (parecia brilho e saturação). Agora: cone de verdade nos shaders, anel do refletor, manchas da lente, poeira acesa, mira convergente, atraso da mão, sem estourar de perto. Também ilumina as inscrições (só dentro do facho).

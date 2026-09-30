@@ -55,6 +55,10 @@ export function createSharedUniforms() {
     uSilMask: { value: null },
     uSilRes: { value: new THREE.Vector2(1, 1) },
     uSilOn: { value: 0 },
+    // a lanterna na mão (app/carried.js): um facho de verdade, não uma luz em volta do corpo
+    uFlashPos: { value: new THREE.Vector3(0, -1e6, 0) }, // a lente (cena)
+    uFlashDir: { value: new THREE.Vector3(0, 0, -1) }, // para onde aponta
+    uFlashColor: { value: new THREE.Vector3() }, // cor · intensidade (0 = apagada)
   };
 }
 
@@ -282,6 +286,22 @@ void main() {
     lit += lc * ndl;
     vec3 H = normalize(L + V);
     spec += lc * pow(max(dot(N, H), 0.0), gloss);
+  }
+
+  // a lanterna: um cone com centro forte, anéis do refletor e manchas da lente
+  if (uFlashColor.r + uFlashColor.g + uFlashColor.b > 1e-4) {
+    vec3 Lv = uFlashPos - vWorldPos;
+    float d2 = dot(Lv, Lv);
+    float d = sqrt(d2);
+    vec3 L = Lv / d;
+    // campo próximo suave (a lente tem tamanho) e um teto: de perto clareia, não estoura
+    vec3 fc = uFlashColor * flashProfile(-L) * exp(-uFogDensity * 2.0 * d) / (3.0 + d2);
+    fc = min(fc, vec3(2.2));
+    if (fc.r + fc.g + fc.b > 1e-5) {
+      lit += fc * max(dot(N, L), 0.0);
+      vec3 H = normalize(L + V);
+      spec += fc * pow(max(dot(N, H), 0.0), gloss);
+    }
   }
 
   float fres = pow(1.0 - max(dot(N, V), 0.0), 4.0);

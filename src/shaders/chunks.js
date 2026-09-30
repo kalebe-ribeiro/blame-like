@@ -107,6 +107,9 @@ uniform float uTime;
 uniform vec3  uLightPos[LIGHT_COUNT];
 uniform vec3  uLightColor[LIGHT_COUNT];   // cor * intensidade
 uniform vec3  uLightFog[LIGHT_COUNT];     // cor * intensidade * atenuação até a câmera (CPU)
+uniform vec3  uFlashPos;                  // a lanterna: a lente (cena)
+uniform vec3  uFlashDir;                  //   para onde aponta
+uniform vec3  uFlashColor;                //   cor · intensidade (0 = apagada)
 uniform vec4  uOutageA[4];                // apagões: centro (cena) + frente da queda (m)
 uniform vec4  uOutageB[4];                // frente do religamento (m), raio do setor
 
@@ -202,6 +205,57 @@ float airlight(vec3 ro, vec3 rd, float t, vec3 lp) {
 // a névoa (não-físico, de propósito: a escala precisa ser vista).
 // fade (início, fim): perto do raio de carregamento dos chunks a superfície
 // se dissolve por completo na névoa — assim nada "brota" no horizonte.
+// ── a lanterna ─────────────────────────────────────────────────────────────
+//  Um facho, não um brilho em volta do corpo. Perfil pelo ângulo a partir do
+//  eixo (a ≈ √(2(1−cos)), em radianos):
+//    miolo quente (~4°) · um anel escuro fino e o anel claro do refletor ·
+//    o facho principal até ~17° · um véu fraco até ~34° · nada fora disso.
+//  Manchas fixas na lente (o padrão gira com o aparelho, não com o mundo).
+// o perfil sem as manchas (barato: é o que a poeira usa, várias vezes por pixel)
+float flashShape(float c) {
+  if (c < 0.82) return 0.0; // ~35°
+  float a = sqrt(max(2.0 * (1.0 - c), 0.0));
+  float core = exp(-pow(a / 0.07, 2.0));
+  float ring = 0.22 * exp(-pow((a - 0.13) / 0.025, 2.0)) - 0.12 * exp(-pow((a - 0.095) / 0.018, 2.0));
+  float main = 0.3 * (1.0 - smoothstep(0.22, 0.34, a));
+  float veil = 0.06 * (1.0 - smoothstep(0.34, 0.62, a));
+  return max(core + ring + main + veil, 0.0);
+}
+
+float flashProfile(vec3 dirToPoint) {
+  float c = dot(dirToPoint, uFlashDir);
+  if (c < 0.82) return 0.0;
+  // manchas: ruído no plano da lente
+  vec3 up = abs(uFlashDir.y) < 0.95 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+  vec3 ex = normalize(cross(up, uFlashDir));
+  vec3 ey = cross(uFlashDir, ex);
+  vec2 q = vec2(dot(dirToPoint, ex), dot(dirToPoint, ey)) / max(c, 0.5);
+  float smudge = 0.88 + 0.12 * snoise(vec3(q * 9.0, 1.7)) + 0.05 * snoise(vec3(q * 31.0, 4.2));
+  return flashShape(c) * smudge;
+}
+
+// O facho na poeira: poucas amostras ao longo do raio de visão (até ~26 m),
+// deslocadas por pixel (o TAA suaviza). Espalhamento para a frente: quem olha
+// ao longo do facho vê o cone de poeira acesa.
+#define FLASH_DUST 0.003
+vec3 flashScatter(vec3 ro, vec3 rd, float t) {
+  if (uFlashColor.r + uFlashColor.g + uFlashColor.b < 1e-4) return vec3(0.0);
+  float tm = min(t, 26.0);
+  const int N = 10;
+  float stepL = tm / float(N);
+  float j = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))) + uTime * 7.31);
+  float acc = 0.0;
+  for (int i = 0; i < N; i++) {
+    vec3 p = ro + rd * (stepL * (float(i) + j));
+    vec3 Lv = p - uFlashPos;
+    float d2 = dot(Lv, Lv) + 0.25;
+    vec3 L = Lv * inversesqrt(d2);
+    float ph = 0.55 + 0.45 * dot(rd, L); // para a frente
+    acc += flashShape(dot(L, uFlashDir)) * ph * exp(-uFogDensity * 2.0 * sqrt(d2)) / d2;
+  }
+  return uFlashColor * acc * stepL;
+}
+
 vec3 applyFog(vec3 col, vec3 wpos, float k, vec2 fade) {
   vec3 ro = cameraPosition;
   vec3 dv = wpos - ro;
@@ -237,6 +291,8 @@ vec3 applyFog(vec3 col, vec3 wpos, float k, vec2 fade) {
   }
   // o brilho em volta das luzes vem da poeira: sem névoa, sem halo
   scatter *= uScatter * dm * (uFogDensity / 0.0075);
+  // o facho da lanterna na poeira (a mesma poeira)
+  scatter += flashScatter(ro, rd, t) * FLASH_DUST * dm * (uFogDensity / 0.0075);
 
   return col * T + fogCol * (1.0 - T) + scatter;
 }

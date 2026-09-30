@@ -225,6 +225,15 @@ export class InscriptionSystem {
       const d2 = p.distanceToSquared(P[i]);
       l += ((C[i].x + C[i].y + C[i].z) / 3) / (1 + d2);
     }
+    // a lanterna: só dentro do facho (a mesma conta, sem o perfil fino)
+    const fc = sh.uFlashColor.value;
+    if (fc.x + fc.y + fc.z > 1e-4) {
+      _v.subVectors(p, sh.uFlashPos.value);
+      const d2 = _v.lengthSq();
+      const c = _v.normalize().dot(sh.uFlashDir.value);
+      const cone = Math.max(0, Math.min(1, (c - 0.955) / (0.99 - 0.955)));
+      l += ((fc.x + fc.y + fc.z) / 3) * cone * 0.4 / (0.35 + d2);
+    }
     return l;
   }
 

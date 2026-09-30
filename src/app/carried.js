@@ -30,7 +30,14 @@ const DRAIN = 1 / 420; // lanterna: carga cheia dura 7 min
 const SENSOR_DRAIN = 1 / 900; // sensor ligado: carga cheia dura 15 min
 const CHARGE = 1 / 25; // tomada: de vazio a cheio em 25 s
 const REACH = 2.2; // m até a tomada
-const LANTERN = 2.4; // intensidade da lanterna (perto do corpo: pouco já ilumina — e espalha na poeira)
+// A lanterna é um FACHO (uFlash* nos shaders — ver flashProfile em shaders/chunks.js):
+// cone com miolo quente, anel do refletor, alcance de ~30 m, visível na poeira.
+// Além dele, só um resto de luz rebatida perto do corpo (a luz 'carried' do LightRig).
+const FLASH = 150; // intensidade do facho
+const FLASH_COLOR = new THREE.Vector3(1.0, 0.94, 0.84); // branco quente de lâmpada velha, pouco saturado
+const SPILL = 0.35; // luz rebatida em volta (o facho batendo nas coisas perto)
+const HAND_LAG = 11; // 1/s: o facho segue o olhar com um pouco de atraso (a mão)
+const AIM = 14; // m: a mão aponta o facho para onde os olhos olham, a essa distância
 const W = 128;
 const H = 64;
 const MODES = ['terminal', 'energy', 'motion'];
@@ -77,6 +84,10 @@ export function createCarried(ctx) {
   let found = 0; // s: "SENSOR  [G]" na tela depois de pegar o sensor
   const _g = new THREE.Vector3();
   const _lens = new THREE.Vector3();
+  const _fwd = new THREE.Vector3();
+  const _aim = new THREE.Vector3();
+  const flashDir = new THREE.Vector3(0, 0, -1);
+  const sh = world.shared;
 
   /** A tomada tem energia? (setor não apagado, sem apagão, onda do instável em alta) */
   function socketPowered(s, time) {
@@ -242,6 +253,7 @@ export function createCarried(ctx) {
       device.visible = on;
       if (!on) {
         if (light) light.intensity = 0;
+        sh.uFlashColor.value.set(0, 0, 0);
         return;
       }
       const en = player.energy;
@@ -295,17 +307,27 @@ export function createCarried(ctx) {
         }
       }
 
-      // a lanterna: presa à lente; com pouca carga, falha
+      // a lanterna: um facho saindo da lente, na direção do olhar (com o atraso da mão);
+      // com pouca carga, falha
+      lens.getWorldPosition(_lens);
+      camera.getWorldDirection(_fwd);
+      // a lente fica embaixo e à direita: mira num ponto à frente dos olhos, não paralela a eles
+      _fwd.multiplyScalar(AIM).add(camera.getWorldPosition(_aim)).sub(_lens).normalize();
+      flashDir.lerp(_fwd, 1 - Math.exp(-dt * HAND_LAG)).normalize();
+      let k = lanternOn ? 1 : 0;
+      const e = en.value / en.max;
+      if (lanternOn && e < 0.15) {
+        const r = Math.sin(time * 37.1) * Math.sin(time * 13.7 + 1.3);
+        if (r > 0.6 - e * 3) k *= 0.15;
+        k *= 0.55 + e * 3; // e mais fraca
+      }
+      sh.uFlashPos.value.copy(_lens);
+      sh.uFlashDir.value.copy(flashDir);
+      sh.uFlashColor.value.copy(FLASH_COLOR).multiplyScalar(FLASH * k);
       if (light) {
-        lens.getWorldPosition(_lens);
-        light.pos.copy(_lens);
-        let k = lanternOn ? 1 : 0;
-        const e = en.value / en.max;
-        if (lanternOn && e < 0.15) {
-          const r = Math.sin(time * 37.1) * Math.sin(time * 13.7 + 1.3);
-          if (r > 0.6 - e * 3) k *= 0.15;
-        }
-        light.intensity = LANTERN * k;
+        // o resto: luz rebatida, um palmo à frente da lente
+        light.pos.copy(_lens).addScaledVector(flashDir, 1.2);
+        light.intensity = SPILL * k;
       }
 
       redraw -= dt;
