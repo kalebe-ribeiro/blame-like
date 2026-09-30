@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "13-Decisoes.md",
+                "file": "15-Plano-de-Implementacao.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "13-Decisoes"
+              "title": "15-Plano-de-Implementacao"
             }
           }
         ]
@@ -190,11 +190,11 @@
   },
   "active": "ce4c8cf8abaf8e7f",
   "lastOpenFiles": [
+    "13-Decisoes.md",
     "15-Plano-de-Implementacao.md",
     "14-Universo-Blame.md",
     "Ideias/Gameplay/Plano-de-Gameplay.md",
     "Ideias/Futuro/NPCs-e-Safeguards.md",
-    "13-Decisoes.md",
     "Ideias/Futuro/Arma-do-Killy.md",
     "sedqO7UXs",
     "04-Mundo-e-Geracao.md",

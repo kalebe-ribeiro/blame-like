@@ -150,3 +150,18 @@ Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de sh
 - **Sem acesso** por enquanto: `player.access` continua 0.
 - Raridade: a proposta (primeiro encontro provocado depois de ~30–60 min de Peregrinação).
 - **Pelo menos um Safeguard sempre rondando** cada território — vivo mesmo quando o jogador não sabe dele, para que dê para encontrar um de repente, ou vê-lo de longe e mudar de rota/se esconder. A mecânica do alerta continua; isto é somado. Território = setor × fatia de 480 m (o setor inteiro tem 2880 m de altura). No escuro ele é ouvido e aparece no sensor (modo movimento). Modo Livre: desligados por padrão.
+
+### Fase 6 — escolhas feitas por padrão, **a confirmar** (2026-09-30)
+
+| pergunta | escolha |
+|---|---|
+| velocidades | ronda 1,6 m/s · caçando ~5,2 m/s (mais que o seu andar, 4,2; menos que a sua corrida, 8,5) · chamado pelo alerta, longe, 3,5 m/s |
+| alcance de visão | (9 m + 26 m × luz do setor + 60 m com a lanterna) × 0,6 de ronda (× 1,4 caçando) × (1 + 1,5 × alerta do setor); de costas 35%; nunca além de 105 m; linha de visão por raio |
+| audição | correr: 14 m (ronda) / 22 m (caçando); queda: 20 m + 1,5 × altura (até 60); leitura de terminal 18 m; alavanca da subestação 70 m; marca 6 m. Ouvir não é ver: ele vai ao lugar do barulho e procura |
+| perder o rastro | 1,5 s sem ver → vai ao último ponto visto → procura 7 s → volta à ronda; se vê mas não chega (outro nível) por 7 s, também desiste |
+| captura | o toque (1 m na horizontal, 1,8 m na vertical) → desmaio → **cemitério de vítimas mais perto** (pode ficar longe: numa seed, ~90 km), carga a 5%, sem o que carregava. O sorteio geral das quedas continua desligado |
+| saída das paredes | alerta 0,5 → 1 caçador; 0,75 → 2; no máximo 3; parede vertical com chão rente a 14–60 m; a placa abre em 0,9 s, ele sai em 1,2 s e já sabe onde você está por uns 5 s. No aberto: vem o de ronda mais perto (≤ 500 m) |
+| territórios sem ronda | onde não há rede andável (~25% perto da teia; mais nas galerias, colmeia, maciço) |
+| relógio das rondas | o relógio real (`Date.now`): elas andam com o jogo fechado; ao chegar perto, o relógio espera o corpo |
+| modo Livre | desligados por padrão; opção "Safeguards no modo Livre" nas configurações |
+| no escuro | sem luz própria; passos secos audíveis até ~180 m (com direção); zumbido quando caçam; o sensor (movimento) acha um a até 600 m |

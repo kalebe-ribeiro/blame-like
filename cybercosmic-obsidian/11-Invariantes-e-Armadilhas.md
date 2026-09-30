@@ -22,6 +22,7 @@
 - **REGRA ABSOLUTA — controle**: tudo que o teclado/mouse faz, o controle faz sozinho. Toda tecla nova vira ação em `controls/bindings.js` com botão; todo painel novo é navegável por `ui/padNav.js` (basta usar `<button>`, `<input>`, `<select>`, `[data-tab]`, `[data-id]` ou `[data-nav]`, e pôr a camada em `createPadNav({ layers })` em `app/ui.js`). Rodar `npm run check:pad`.
 - **Navegação espelha a geração**: `gen/nav.js` refaz as contas de `gen/network.js` (bordas, hélice da espiral com o mesmo RNG, curva da ponte suspensa, conectores) e de `buildWalk` (vãos, zonas reservadas). **Mudou a rede ou as passarelas → mudar o nav junto** e rodar `npm run check:beings`.
 - **Seres**: posições GLOBAIS; perto do jogador, só o `Walker` move um corpo (nada de teleportar um corpo visível); um corpo nunca anda onde o chão não carregou (fica parado). Um corpo de teste nunca entra no salvamento (`persist: false`).
+- **Safeguards**: nada surge do nada — um Safeguard ou está na ronda (onde o relógio diz), ou saiu de uma placa de parede que se abriu, ou veio andando pelo grafo. Sem luz própria. Perto do jogador, só o `Walker` move um corpo. Os sentidos (`senses`) vêm nulos quando o jogador está desmaiado ou voando: tratar sempre o nulo.
 - **Modos**: o que um modo permite é perguntado a `ctx.rules` (`app/modes.js`); nada de `if (mode === ...)` espalhado. O modo Livre nunca pode quebrar.
 
 ## Armadilhas já pagas

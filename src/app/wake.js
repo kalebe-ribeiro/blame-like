@@ -115,8 +115,11 @@ export function createWake(ctx) {
     audio.faint(sound);
   }
 
-  /** Começa o desmaio. cause: 'impact' (queda fatal) ou 'void' (queda sem fim). */
-  function start(cause) {
+  /**
+   * Começa o desmaio. cause: 'impact' (queda fatal, ou o toque de um Safeguard) ou 'void'
+   * (queda sem fim). taker: quem arrasta, já sabido (um Safeguard que te pegou — fase 6).
+   */
+  function start(cause, taker = null) {
     if (s) return;
     const w = controls.walker;
     const feet = w.feet.clone().add(world.origin); // GLOBAL
@@ -130,6 +133,7 @@ export function createWake(ctx) {
       pitch: controls.pitch,
       eye: w.eye,
       nextBeat: 1.5,
+      forcedTaker: taker,
     };
     controls.autopilot = false;
   }
@@ -157,7 +161,7 @@ export function createWake(ctx) {
         s.phase = 'dark';
         s.darkT = t;
         // o corpo é levado: por quem arrastou (fase 5, desligado) ou a um lugar qualquer, longe
-        s.taker = drawTaker();
+        s.taker = s.forcedTaker ?? drawTaker();
         const taken = s.taker ? pickTakerPlace(s.taker, s.from) : null;
         if (!taken) s.taker = null; // não havia o lugar: ninguém foi visto
         const dest = taken ?? pickDump(s.from) ?? s.from.clone().setY(s.from.y + 2);

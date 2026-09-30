@@ -99,6 +99,7 @@ export default {
   'settings.invertY': 'invert vertical axis',
   'settings.outages': 'sector power outages',
   'settings.collapses': 'distant collapses',
+  'settings.safeguards': 'Safeguards in free mode',
   'settings.fallRescue': 'relocate after falling too long',
 
   // ── transporte ──

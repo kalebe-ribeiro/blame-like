@@ -43,7 +43,7 @@ npx electron . --capture=shot.png --pos=x,y,z,yaw,pitch --mode=fly --seed=abc --
 
 ## Outras flags
 
-`--game=free|pilgrimage` (modo de jogo da sessão), `--sensor=terminal|energy|motion` (sensor já ligado), `--map=N` (abre o mapa aos N s), `--wake=N` (desmaio aos N s), `--lantern` (lanterna acesa), `--read=N` (abre a leitura do terminal em frente), `--mark=N` (pinta uma marca onde se olha aos N s), `--ride=N` (aos N s põe o corpo numa longarina da máquina mais perto e mede se ele vai junto; use com `--goto=colosso`), `--restore=N` (religa o setor da subestação em frente aos N s; use com `--goto=subestacao`), `--lexicon=N` (entende as palavras até a classe N, só na sessão), `--archive=records|leads|lexicon` (aba do diário), `--gate` (captura com a tela de entrada aberta — para conferir textos e painéis), `--outage=4` / `--collapse=4` (força o evento aos N s), `--body=N` (um corpo de teste aos N s; `--bodydist=200`, `--bodyseed=1`, `--follow` a câmera atrás dele, `--followside` de lado na altura do joelho), `--gounique=village|graveyard|cradle|…` (a estrutura única desse tipo mais perto), `--wakeas=safeguard|npc` (força o sorteio do despertar), `--autopilot=N`, `--mode=fly`, `--seed=<base36>`, `--profile=<pasta>`, `--novsync`.
+`--game=free|pilgrimage` (modo de jogo da sessão), `--sensor=terminal|energy|motion` (sensor já ligado), `--map=N` (abre o mapa aos N s), `--wake=N` (desmaio aos N s), `--lantern` (lanterna acesa), `--read=N` (abre a leitura do terminal em frente), `--mark=N` (pinta uma marca onde se olha aos N s), `--ride=N` (aos N s põe o corpo numa longarina da máquina mais perto e mede se ele vai junto; use com `--goto=colosso`), `--restore=N` (religa o setor da subestação em frente aos N s; use com `--goto=subestacao`), `--lexicon=N` (entende as palavras até a classe N, só na sessão), `--archive=records|leads|lexicon` (aba do diário), `--gate` (captura com a tela de entrada aberta — para conferir textos e painéis), `--outage=4` / `--collapse=4` (força o evento aos N s), `--body=N` (um corpo de teste aos N s; `--bodydist=200`, `--bodyseed=1`, `--follow` a câmera atrás dele, `--followside` de lado na altura do joelho), `--gounique=village|graveyard|cradle|…` (a estrutura única desse tipo mais perto), `--wakeas=safeguard|npc` (força o sorteio do despertar), `--sgwatch` (estado dos Safeguards a cada 3 s), `--sgnear=N` (aos N s, de pé no circuito do Safeguard de ronda mais perto, `--sgdist` m à frente dele), `--sgcam=N` (a câmera, voando, acompanha o Safeguard mais perto de frente; com `--followside`, de lado), `--sgemerge=N` (força um caçador sair de uma parede), `--autopilot=N`, `--mode=fly`, `--seed=<base36>`, `--profile=<pasta>`, `--novsync`.
 
 ## Git
 
@@ -55,6 +55,8 @@ npx electron . --capture=shot.png --pos=x,y,z,yaw,pitch --mode=fly --seed=abc --
 
 - `npm run check:beings` — os seres (`dev/beingtest.js`): 4 corpos de teste em plataformas da teia andam ~200 m cada até um destino; reprova se empacam, se perdem, caem, atravessam parede ou chegam longe. Uns 7 min (andam de verdade). Rastro a cada 10 s (`BEING …`).
 
+- `npm run check:safeguards` — os Safeguards na Peregrinação (`dev/sgtest.js`): rondas, visto, captura (acordar no cemitério), escondido (perde o rastro), parede (saem e voltam), chamado, fiscal (nada atravessa parede nem cai). ~4 min.
+
 ## Qual check rodar (pedido do usuário, 2026-09-30)
 
 Cada check leva minutos: rodar **só os pertinentes** à mudança.
@@ -65,6 +67,7 @@ Cada check leva minutos: rodar **só os pertinentes** à mudança.
 | mecânica da Peregrinação (célula, lanterna, leitura, pistas, sensor, subestação, despertar) | `npm run check:pilgrimage` (+ `check` se tocou código comum) |
 | teclas, bindings, interface, painéis, navegação pelo controle | `npm run check:pad` (obrigatório — regra absoluta do controle) |
 | seres: entidades, navegação, corpos, `Walker` (e mudanças na rede andável ou nas passarelas, que o grafo espelha) | `npm run check:beings` |
+| Safeguards: rondas, percepção, caçada, captura, paredes, alerta, despertar | `npm run check:safeguards` (+ `check:beings` se mexeu nas entidades) |
 | só textos/i18n, documentação, cofre | nenhum (no máximo importar o módulo) |
 | mudança que toca tudo | os três |
 

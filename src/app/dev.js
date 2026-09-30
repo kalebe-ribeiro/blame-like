@@ -94,10 +94,82 @@ export function setupDev(ctx) {
     }, Number(params.get('body')) * 1000);
   }
 
+  // --sgwatch: o estado dos Safeguards no terminal a cada 3 s (fase 6)
+  if (params.get('sgwatch')) {
+    setInterval(() => {
+      const sg = world.safeguards;
+      const g = world.toGlobal(camera.position);
+      let near = null;
+      for (const e of sg.all()) {
+        const d = e.feet.distanceTo(g);
+        if (!near || d < near.d) near = { e, d };
+      }
+      console.warn(`SG: ${sg.enabled ? 'ligados' : 'desligados'} · ${sg.byTerritory.size} rondas · ${sg.hunters.size} caçadores · sem ronda ${sg.none.size} · fila ${sg.queue.length}` +
+        (near ? ` · mais perto ${near.d.toFixed(0)} m (${near.e.sg.state}, ${near.e.tier}) em ${[near.e.feet.x, near.e.feet.y, near.e.feet.z].map((v) => v.toFixed(0))}` : '') + ` · vistos ${sg.stats.spotted} pegos ${sg.stats.caught} perdidos ${sg.stats.lost} saídos ${sg.stats.emerged}`);
+    }, 3000);
+  }
+  // --sgnear=N: aos N s, o jogador é posto a --sgdist m (padrão 25) do Safeguard de ronda mais perto,
+  // olhando para ele; --sgemerge=N: aos N s, força a saída de 1 caçador de uma parede
+  if (params.get('sgnear')) {
+    setTimeout(() => {
+      const g = world.toGlobal(camera.position);
+      let near = null;
+      for (const e of world.safeguards.byTerritory.values()) {
+        const d = e.feet.distanceTo(g);
+        if (!near || d < near.d) near = { e, d };
+      }
+      if (!near) return console.warn('SGNEAR: nenhum');
+      const e = near.e;
+      const D = Number(params.get('sgdist') ?? 25);
+      // um ponto do próprio circuito, D m à frente dele: de frente para quem vem
+      const c = e.sg.c;
+      const { circuitAt } = world.safeguards._circ;
+      const p = circuitAt(c, e.sg.s + D);
+      ctx.controls.setMode('walk');
+      const yaw = Math.atan2(-(e.feet.x - p.x), -(e.feet.z - p.z));
+      ctx.controls.setView({ pos: new THREE.Vector3(p.x, p.y + 1.7, p.z).sub(world.origin), yaw, pitch: -0.05, scale: 1 });
+      console.warn(`SGNEAR: posto a ${D} m de ${e.id}`);
+    }, Number(params.get('sgnear')) * 1000);
+  }
+  // --sgcam=N: dos N s em diante, a câmera (voando: ninguém percebe) acompanha o Safeguard
+  // mais perto de frente, a --sgdist m (padrão 4,5), na altura do peito
+  if (params.get('sgcam')) {
+    setTimeout(() => {
+      const g0 = world.toGlobal(camera.position);
+      let near = null;
+      for (const e of world.safeguards.all()) {
+        const d = e.feet.distanceTo(g0);
+        if (!near || d < near.d) near = { e, d };
+      }
+      if (!near) return console.warn('SGCAM: nenhum');
+      const e = near.e;
+      const D = Number(params.get('sgdist') ?? 4.5);
+      ctx.controls.setMode('fly');
+      const tick = () => {
+        if (!world.entities.list.has(e.id)) return;
+        requestAnimationFrame(tick);
+        const fx = -Math.sin(e.yaw);
+        const fz = -Math.cos(e.yaw);
+        const side = params.get('followside') ? 1 : 0;
+        const px = e.feet.x + (side ? fz : fx) * D;
+        const pz = e.feet.z + (side ? -fx : fz) * D;
+        camera.position.set(px, e.feet.y + (side ? 0.6 : 1.6), pz).sub(world.origin);
+        const dx = e.feet.x - px;
+        const dz = e.feet.z - pz;
+        ctx.controls.yaw = Math.atan2(-dx, -dz);
+        ctx.controls.pitch = side ? 0.12 : 0.05;
+      };
+      tick();
+      console.warn(`SGCAM: ${e.id} (${e.sg.state})`);
+    }, Number(params.get('sgcam')) * 1000);
+  }
+  if (params.get('sgemerge')) setTimeout(() => console.warn('SGEMERGE: ' + world.safeguards.emerge(world.toGlobal(camera.position), world.origin, 1) + ' ' + JSON.stringify(world.safeguards.wallWhy) + ' @ ' + world.toGlobal(camera.position).toArray().map(Math.round)), Number(params.get('sgemerge')) * 1000);
+
   // --check: roteiro automático por todos os destinos (npm run check)
   // --check=pad: o teste do controle (um controle falso joga sozinho — dev/padtest.js)
   if (params.get('check') === 'pad') import('../dev/padtest.js').then((m) => m.runPadTest(ctx));
   else if (params.get('check') === 'beings') import('../dev/beingtest.js').then((m) => m.runBeingTest(ctx));
+  else if (params.get('check') === 'safeguards') import('../dev/sgtest.js').then((m) => m.runSafeguardTest(ctx));
   else if (params.get('check')) {
     import('../dev/check.js').then((m) => m.runCheck({ teleport: ctx.ui.teleport, world, controls: ctx.controls, camera, THREE, getTime: () => ctx.time, only: params.get('check') }));
   }

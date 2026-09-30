@@ -23,7 +23,7 @@ import * as THREE from 'three';
 import { Walker } from '../controls/walker.js';
 import { CollisionWorld } from './collision.js';
 import { NavGraph } from '../gen/nav.js';
-import { buildTestBody } from './bodies.js';
+import { buildTestBody, buildSafeguardBody } from './bodies.js';
 
 const NEAR = 110; // m: física completa
 const FAR = 130; // m: volta ao abstrato (histerese)
@@ -50,17 +50,19 @@ export class EntitySystem {
   }
 
   /**
-   * Cria um corpo em `feet` (GLOBAL). def: { id, kind: 'test', feet, persist }
-   * persist = false: não entra no salvamento (corpos de teste das sessões de desenvolvimento).
+   * Cria um corpo em `feet` (GLOBAL). def: { id, kind: 'test'|'safeguard', feet, persist, brain }
+   * persist = false: não entra no salvamento (corpos de teste; Safeguards, que são da lei do mundo).
+   * brain: quem decide para onde o corpo vai (world/safeguards.js); sem brain, o corpo segue e.path.
    */
   spawn(def) {
-    const rig = buildTestBody(this.materials.machine);
+    const rig = def.kind === 'safeguard' ? buildSafeguardBody(this.materials.pale, this.materials.door) : buildTestBody(this.materials.machine);
     this.group.add(rig.group);
     const walker = new Walker(new CollisionWorld(this.world));
     walker.canClimb = false;
     walker.bobScale = 0;
     walker.dipScale = 0;
     walker.speedScale = 0.55; // ~2,3 m/s: um passo firme, não uma corrida
+    if (def.kind === 'safeguard') walker.eye = 2.1;
     const e = {
       id: def.id,
       kind: def.kind ?? 'test',
@@ -83,6 +85,7 @@ export class EntitySystem {
       detourSide: 1,
       speed: 0,
       stats: { fell: 0, wall: 0, replans: 0, far: 0, near: 0 },
+      brain: def.brain ?? null,
     };
     // uma queda de verdade (mais que um degrau) conta — o teste reprova com ela
     walker.onLand = (_v, height) => {
@@ -138,7 +141,8 @@ export class EntitySystem {
       if (e.tier === 'far' && dist < NEAR && this.world.chunkLayer.isReadyAround(e.feet, 30)) this._toNear(e, origin);
       else if (e.tier === 'near' && dist > FAR) e.tier = 'far';
 
-      if (e.tier === 'near') this._stepNear(e, dt, origin, time);
+      if (e.brain) e.brain.think(e, dt, g, origin, time);
+      else if (e.tier === 'near') this._stepNear(e, dt, origin, time);
       else this._stepFar(e, dt);
 
       // o corpo na cena
@@ -177,7 +181,7 @@ export class EntitySystem {
       e.speed = 0;
       return;
     }
-    let left = FAR_SPEED * dt;
+    let left = (e.farSpeed ?? FAR_SPEED) * dt;
     const pts = e.path.pts;
     while (left > 0 && e.pi < pts.length) {
       const p = pts[e.pi];
@@ -197,7 +201,7 @@ export class EntitySystem {
         left = 0;
       }
     }
-    e.speed = FAR_SPEED;
+    e.speed = e.farSpeed ?? FAR_SPEED;
     if (e.pi >= pts.length) this._arrive(e);
   }
 
@@ -254,6 +258,31 @@ export class EntitySystem {
         } else if ((e.stuckT += dt) > STUCK_AFTER) this._unstick(e);
       }
     }
+    this._walk(e, dt, origin, time, yaw, f);
+  }
+
+  /**
+   * Perto: um passo do Walker na direção `target` (GLOBAL), com o desvio local.
+   * Para quem tem brain (os Safeguards). Devolve a distância horizontal que falta.
+   */
+  walkToward(e, target, dt, origin, time) {
+    if (e.tier !== 'near' || !this.world.chunkLayer.isReadyAround(e.feet, 30)) return Infinity;
+    e.walker.feet.copy(e.feet).sub(origin);
+    const hd = Math.hypot(target.x - e.feet.x, target.z - e.feet.z);
+    let yaw = Math.atan2(-(target.x - e.feet.x), -(target.z - e.feet.z));
+    let f = hd > 0.35 ? 1 : 0;
+    if (f) {
+      const s = this._steer(e, yaw, dt);
+      if (s === null) f = 0;
+      else yaw = s;
+    }
+    this._walk(e, dt, origin, time, f ? yaw : e.yaw, f);
+    return hd;
+  }
+
+  /** Um passo do Walker com rumo `yaw` e avanço f (0..1). */
+  _walk(e, dt, origin, time, yaw, f) {
+    const w = e.walker;
     // vira suave (um corpo não gira no lugar de uma vez)
     let dy = yaw - e.yaw;
     dy = Math.atan2(Math.sin(dy), Math.cos(dy));
@@ -360,6 +389,11 @@ export class EntitySystem {
     for (const d of list ?? []) {
       this.spawn({ id: d.id, kind: d.kind, feet: { x: d.feet[0], y: d.feet[1], z: d.feet[2] }, yaw: d.yaw, goal: d.goal });
     }
+  }
+
+  /** Passa para a física (para quem tem brain, quando convém). */
+  toNear(e, origin) {
+    this._toNear(e, origin);
   }
 
   rebase() {} // posições globais: nada a deslocar

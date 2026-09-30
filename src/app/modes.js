@@ -21,6 +21,7 @@ export const MODES = {
     fallRescue: 'setting', // realocar ao cair: opção nas configurações
     deathWake: false, // queda fatal → desmaio e despertar (app/wake.js)
     leads: false, // pistas: os endereços lidos viram rastros a seguir (app/leads.js)
+    safeguards: 'setting', // Safeguards (fase 6): a opção nas configurações, desligada por padrão
   },
   pilgrimage: {
     id: 'pilgrimage',
@@ -34,6 +35,7 @@ export const MODES = {
     // uma queda fatal (ou sem fim) vira desmaio: você é arrastado e acorda em outro lugar
     deathWake: true,
     leads: true,
+    safeguards: true,
   },
 };
 

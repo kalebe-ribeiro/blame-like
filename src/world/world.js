@@ -37,6 +37,7 @@ import { InscriptionSystem } from './inscriptions.js';
 import { TerminalSystem } from './terminals.js';
 import { SubstationSystem } from './substations.js';
 import { EntitySystem } from './entities.js';
+import { SafeguardSystem } from './safeguards.js';
 import { CHUNK, MACRO, Field } from '../gen/field.js';
 
 /** Raio de carregamento padrão dos chunks normais (m). A névoa esconde a borda. */
@@ -162,6 +163,11 @@ export class World {
     // os seres (fase 5): corpos que andam pela Cidade pelo grafo de navegação (gen/nav.js)
     this.entities = new EntitySystem(this.streamGroup, m, this);
     this.entities.bus = this.bus;
+    // os Safeguards (fase 6): rondas em cada território, caçadas, saídas das paredes
+    const prevSg = this.safeguards;
+    this.safeguards = new SafeguardSystem(this.streamGroup, m, this);
+    this.safeguards.bus = this.bus;
+    if (prevSg) Object.assign(this.safeguards, { enabled: prevSg.enabled, senses: prevSg.senses, onCatch: prevSg.onCatch });
     // o endereçamento pintado nas paredes (na língua antiga)
     this.inscriptions = new InscriptionSystem(this.streamGroup, this.seed);
     Object.assign(this.inscriptions, { field: this.field, world: this });
@@ -246,6 +252,8 @@ export class World {
       pool: mk({ base: C(0.05, 0.05, 0.055), panel: 100, streaks: 0, wet: 1, fade: fadeMacro }),
       // setores inundados: lâmina d'água parada de quilômetros
       flood: mk({ base: C(0.03, 0.032, 0.034), panel: 100, streaks: 0, accentAmount: 0, wet: 1, fogAmount: 0.6, fade: fadeMacro, reflect: true }),
+      // a pele dos Safeguards: pálida, lisa, sem placas (fase 6)
+      pale: mk({ base: C(0.5, 0.49, 0.46), panel: 100, streaks: 0.15, accentAmount: 0, fogAmount: 0.9 }),
       machine: mk({ ...steel, base: C(0.1, 0.1, 0.105), accentAmount: 0.6, panel: 2.5, fogAmount: 0.6 }),
       // a lente das luminárias: clara, acesa pela própria luz logo abaixo dela
       lamp: mk({ base: C(0.85, 0.82, 0.74), panel: 100, streaks: 0, accentAmount: 0, fogAmount: 0.5, fade: fadeNear }),
@@ -518,6 +526,7 @@ export class World {
     this.terminals.update(time, dt, g, this.origin);
     this.substations.update(time, dt, g, this.origin);
     this.entities.update(time, dt, g, this.origin);
+    this.safeguards.update(time, dt, g, this.origin);
     this.inscriptions.update(time, dt, g, this.origin, camera);
     this.particles.update(time, dt, g, this.origin, () => [...this.chunkLayer.allEmitters(), ...this.macroLayer.allEmitters()]);
 
@@ -545,6 +554,7 @@ export class World {
     this.colossi?.dispose();
     this.terminals?.dispose();
     this.substations?.dispose();
+    this.safeguards?.dispose();
     this.entities?.dispose();
     this.inscriptions?.dispose();
     this.builders?.dispose();

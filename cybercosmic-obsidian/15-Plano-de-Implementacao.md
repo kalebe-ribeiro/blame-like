@@ -166,6 +166,10 @@
 > - **6.7 Escuro, som e sensor**: sem luz própria (seria mágica) — nos setores apagados o Safeguard é **ouvido** (passos secos com direção, um zumbido quando caça) e aparece no **sensor, modo movimento**; nos setores com energia, é visto.
 > - **6.8 Modo Livre**: Safeguards **desligados por padrão**, com a opção nas configurações (pelo controle também).
 > - **6.9 Teste** `npm run check:safeguards`: rondas existem perto; um Safeguard vê a lanterna e caça; captura → acorda no cemitério; alerta 0,75 → dois saem de paredes; no escuro e longe eles perdem o rastro e voltam; nada atravessa parede.
+>
+> **Feita (2026-09-30).** `npm run check:safeguards` passa nos 7 itens (rondas · visto · captura → acordou a 38 m do cemitério · escondido → perdeu o rastro e voltou · parede → 2 saíram e voltaram para a placa · chamado · fiscal: 0 paredes atravessadas, 0 quedas).
+> - `gen/patrols.js` (território, circuito, posição pelo relógio), `world/safeguards.js` (rondas, percepção, caçada, captura, parede, chamado), `app/safeguards.js` (sentidos, barulhos, alerta, sons), `world/bodies.js` (o corpo do Safeguard).
+> - Acrescentado no caminho: **no aberto** (nenhuma parede a menos de 60 m) o alerta não tem de onde tirar um caçador — então vem o Safeguard de ronda mais perto (até 500 m), pelo grafo (`summon`).
 
 ---
 

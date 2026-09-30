@@ -45,6 +45,7 @@ import { createMarks } from './app/marks.js';
 import { createUniques } from './app/uniques.js';
 import { createAlert } from './app/alert.js';
 import { createBeings } from './app/beings.js';
+import { createSafeguards } from './app/safeguards.js';
 import { bindings } from './controls/bindings.js';
 import { startPlace } from './lang/leads.js';
 
@@ -178,6 +179,7 @@ ctx.marks = createMarks(ctx);
 ctx.uniques = createUniques(ctx);
 ctx.alert = createAlert(ctx); // percepção: o alerta de cada setor (fase 5)
 ctx.beings = createBeings(ctx); // os corpos dos seres no mundo salvo (fase 5)
+ctx.safeguards = createSafeguards(ctx); // rondas, caçadas, captura (fase 6)
 setupDev(ctx);
 
 // ─── loop ───────────────────────────────────────────────────────────────────
@@ -208,6 +210,7 @@ function frame() {
   ctx.carried.update(dt, time); // a lanterna na mão (Peregrinação)
   ctx.marks.update(dt); // as marcas pintadas perto
   ctx.alert.update(dt);
+  ctx.safeguards.update();
 
   // 3. mundo
   shared.uTime.value = time;

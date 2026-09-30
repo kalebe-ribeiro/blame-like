@@ -921,6 +921,117 @@ export class AudioEngine {
     return p;
   }
 
+  // ── Safeguards (fase 6) ──
+
+  /** Um passo de Safeguard: seco e duro (um estalo e um baque curto), de onde ele está. */
+  sgStepAt(pan, dist, hunting = false) {
+    if (!this.ctx || dist > 180) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime + dist / 340;
+    const out = this._placed(pan, dist);
+    const tick = ctx.createOscillator();
+    tick.type = 'square';
+    tick.frequency.setValueAtTime(rand(1400, 1900), t);
+    tick.frequency.exponentialRampToValueAtTime(rand(300, 420), t + 0.025);
+    const tg = ctx.createGain();
+    tg.gain.setValueAtTime(hunting ? 0.07 : 0.045, t);
+    tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+    tick.connect(tg).connect(out);
+    tick.start(t);
+    tick.stop(t + 0.05);
+    const src = ctx.createBufferSource();
+    src.buffer = this._stepBuf ??= this._noiseBuffer(0.12);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 520;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(hunting ? 0.32 : 0.22, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    src.connect(lp).connect(g).connect(out);
+    src.start(t);
+  }
+
+  /** O Safeguard te viu: um tom agudo e seco que corta, e some. */
+  sgSpot(pan, dist) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const out = this._placed(pan, Math.min(dist, 60) * 0.3);
+    for (const [f, d] of [[2200, 0], [1650, 0.09]]) {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f, t + d);
+      o.frequency.exponentialRampToValueAtTime(f * 0.94, t + d + 0.5);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = f;
+      bp.Q.value = 9;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t + d);
+      g.gain.exponentialRampToValueAtTime(0.16, t + d + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.6);
+      o.connect(bp).connect(g).connect(out);
+      o.start(t + d);
+      o.stop(t + d + 0.65);
+    }
+  }
+
+  /** Uma placa de parede se abrindo: o trinco, o arrasto pesado das folhas. */
+  sgEmerge(pan, dist) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime + dist / 340;
+    const out = this._placed(pan, dist);
+    this._clang(t, out, 0.5, 0.45);
+    const src = ctx.createBufferSource();
+    src.buffer = this._scrapeBuf ??= this._noiseBuffer(1.2);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(180, t);
+    bp.frequency.linearRampToValueAtTime(420, t + 0.9);
+    bp.Q.value = 3;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5, t + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+    src.connect(bp).connect(g).connect(out);
+    src.start(t + 0.05);
+  }
+
+  /** O zumbido de um Safeguard caçando (contínuo; level 0 = calado). */
+  sgHum(pan, dist, level) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    if (!this._sgHum) {
+      const o1 = ctx.createOscillator();
+      const o2 = ctx.createOscillator();
+      o1.type = 'sawtooth';
+      o2.type = 'square';
+      o1.frequency.value = 57;
+      o2.frequency.value = 114.6;
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 600;
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      const p = this._panner(0);
+      o1.connect(lp);
+      o2.connect(lp);
+      lp.connect(g).connect(p);
+      this._out(p, 0.8, 0.4);
+      o1.start();
+      o2.start();
+      this._sgHum = { g, p, lp };
+    }
+    const h = this._sgHum;
+    const t = ctx.currentTime;
+    const v = level > 0 ? (0.08 * level) / (1 + dist / 25) : 0;
+    h.g.gain.setTargetAtTime(v, t, 0.3);
+    h.lp.frequency.setTargetAtTime(Math.max(200, 1400 / (1 + dist / 30)), t, 0.3);
+    if (h.p.pan) h.p.pan.setTargetAtTime(Math.max(-1, Math.min(1, pan)), t, 0.1);
+  }
+
   /** Martelada/golpe metálico num ponto (pan −1..1, distância em m). */
   clangAt(pan, dist) {
     if (!this.ctx || dist > 2500) return;

@@ -16,6 +16,8 @@ tags: [futuro, npcs, inimigos]
 | **vida de silício** | inimigos da Autoridade — perigosos para todos |
 | **Safeguards** | o sistema de defesa: surgem das paredes quando detectam presença **sem acesso**; níveis crescentes |
 
+> **Safeguards feitos na fase 6 (2026-09-30)**: rondas em todo território com rede andável, percepção pela luz e pelo som, caçada, captura (→ cemitério de vítimas), caçadores saindo das paredes pelo alerta. Só fuga; sem acesso ainda. Ver [[15-Plano-de-Implementacao]].
+
 ## Como o que existe hoje prepara isso
 - **Acesso / credencial** ([[Credenciais-de-acesso]]): o análogo do gene de terminal — decide a hostilidade dos Safeguards.
 - **Energia e luz** ([[Luz-como-recurso]], [[Religar-setores]]): usar e religar pode chamar atenção.

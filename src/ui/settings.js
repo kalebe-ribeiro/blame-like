@@ -20,6 +20,7 @@ export const DEFAULTS = {
   fallRescue: false, // realocar ao cair por muito tempo
   outages: true, // apagões de setor
   collapses: true, // colapsos distantes
+  safeguards: false, // Safeguards no modo Livre (na Peregrinação eles sempre existem — fase 6)
   ssao: true, // oclusão de ambiente
   taa: true, // antialiasing temporal
   shafts: true, // raios de luz na névoa
@@ -47,6 +48,7 @@ const FIELDS = [
   { key: 'invertY', type: 'toggle' },
   { key: 'outages', type: 'toggle' },
   { key: 'collapses', type: 'toggle' },
+  { key: 'safeguards', type: 'toggle' },
   { key: 'fallRescue', type: 'toggle' },
 ];
 const label = (f) => t(f.key === 'lang' ? 'settings.lang' : `settings.${f.key}`);

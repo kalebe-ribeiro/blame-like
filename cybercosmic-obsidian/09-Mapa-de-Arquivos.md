@@ -67,6 +67,10 @@ src/
   world/entities.js         camada de entidades (fase 5): perto com física, longe abstrato
   world/bodies.js           corpos procedurais (o corpo de teste) e a passada
   gen/nav.js                grafo de navegação consultado no Field + A*
+  gen/patrols.js            territórios e circuitos de ronda dos Safeguards
+  world/safeguards.js       Safeguards: rondas, percepção, caçada, captura, paredes
+  app/safeguards.js         Safeguards no jogo: sentidos, barulhos, alerta, sons, desmaio
+  dev/sgtest.js             npm run check:safeguards
   app/alert.js              percepção: alerta por setor (fase 5)
   app/beings.js             os seres no mundo salvo; corpo de teste
   dev/beingtest.js          npm run check:beings: corpos de teste atravessando a teia

@@ -177,6 +177,8 @@ export function createCarried(ctx) {
         const p = car.group.position;
         consider(p.x + world.origin.x, p.y + world.origin.y, p.z + world.origin.z, RR('motion') * 0.5);
       }
+      // os Safeguards (fase 6): no escuro, o sensor é o jeito de saber que um está perto
+      for (const e of world.safeguards?.all() ?? []) consider(e.feet.x, e.feet.y + 1.5, e.feet.z, RR('motion') * 0.2);
     }
     return best;
   }

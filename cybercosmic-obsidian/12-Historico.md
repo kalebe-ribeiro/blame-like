@@ -182,3 +182,14 @@ Por que as coisas estão como estão, em ordem.
 - **Lugares reservados**: vila, cemitério de vítimas, berço de Safeguards (capturas feitas por fora e por dentro). A haste da luz de sinal da sala dos Construtores ficava 0,2 m acima do teto (teto de 1,4, haste até 1,6): corrigido junto (`ROOF` por tipo).
 - **Despertar com sorteio** pronto e desligado (`WAKE_LOTTERY`).
 - Teste novo: `npm run check:beings` (`dev/beingtest.js`). Flags: `--body=N`, `--bodydist`, `--bodyseed`, `--follow`, `--followside`, `--gounique=<tipo>`, `--wakeas=safeguard|npc`.
+
+## 2026-09-30 — fase 6: Safeguards
+
+- O usuário decidiu: só fuga, um toque captura, sem acesso por enquanto, a raridade proposta — e acrescentou **um Safeguard sempre rondando cada setor**, vivo mesmo quando o jogador não sabe dele. Avaliado: um setor tem 900 × 900 m e **2880 m de altura**; um só nele quase nunca cruzaria ninguém → território = setor × fatia de 480 m (a das subestações).
+- **Rondas** (`gen/patrols.js`): o circuito sai do grafo da fase 5 (plataformas alcançáveis sem sair do território, 3–4 paradas espalhadas); ~73% dos territórios perto da teia têm ronda (voltas de 0,4 a 5,5 km; 5–24 ms para calcular, um por quadro). Posição = relógio do mundo no circuito; perto, o corpo anda de verdade e o relógio espera por ele (sem saltos à vista).
+- **Safeguard** (`world/safeguards.js` + corpo em `world/bodies.js`): alto (~2,3 m), pálido, sem rosto — uma fenda. Percepção (visão pela luz, cone, raio de linha de visão; audição), caçada com o `Walker`, busca, volta à ronda, captura → desmaio → cemitério (o `wake.start` ganhou o captor).
+- **Paredes**: alerta 0,5/0,75 → a placa se abre e ele sai (capturado por foto na colmeia). No aberto não havia parede perto (todos os raios de 60 m erravam) → o de ronda mais perto é chamado pelo grafo.
+- **Sons**: passos secos com direção, um tom quando te vê, a placa abrindo, zumbido de caçada. **Sensor** (movimento) acha Safeguards.
+- **Modo Livre**: opção nas configurações, desligada por padrão.
+- Erro meu achado no primeiro teste: durante o desmaio os sentidos vêm nulos e a percepção lia `lantern` de null.
+- Teste novo `npm run check:safeguards` (`dev/sgtest.js`). Flags: `--sgwatch`, `--sgnear=N --sgdist=D`, `--sgcam=N`, `--sgemerge=N`.

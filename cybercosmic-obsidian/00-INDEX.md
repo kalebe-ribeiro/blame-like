@@ -33,7 +33,7 @@
 | **o que fazer a seguir** | [[15-Plano-de-Implementacao]] (fases 0 → 7, até os NPCs) → [[Ideias/00-Ideias]] |
 | mudanças decididas e ainda não feitas | [[Ideias/Pendencias]] |
 
-> **Estado (2026-09-30): fases 0 a 5 feitas.** Nas fases 3, 4 e 5, várias escolhas foram feitas por padrão e **esperam confirmação** — ver [[13-Decisoes]]. A fase 6 (Safeguards) só começa quando o usuário pedir. Registrar todo o contexto novo neste cofre.
+> **Estado (2026-09-30): fases 0 a 6 feitas.** Nas fases 3, 4, 5 e 6, várias escolhas foram feitas por padrão e **esperam confirmação** — ver [[13-Decisoes]]. A fase 7 (NPCs) só começa quando o usuário pedir. Registrar todo o contexto novo neste cofre.
 
 ## Mapa do cofre
 

@@ -1,10 +1,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  Corpos dos seres (fase 5) — feitos por código, como o resto do mundo.
 //
-//  Hoje só existe o CORPO DE TESTE: uma figura humana magra, sem rosto e sem
-//  papel (nem Safeguard, nem humano, nem transumano) — serve para provar que
-//  um corpo atravessa a Cidade sozinho. Os seres de verdade (fases 6 e 7)
-//  reusam o esqueleto e a animação daqui com outras proporções e peças.
+//  CORPO DE TESTE (fase 5): uma figura humana magra, sem rosto e sem papel —
+//  serve para provar que um corpo atravessa a Cidade sozinho.
+//  SAFEGUARD (fase 6): o mesmo esqueleto, esticado — alto (~2,3 m), magro,
+//  pálido, sem rosto: uma fenda escura onde seria o rosto. Os NPCs (fase 7)
+//  reusam o esqueleto com outras proporções e peças.
 //
 //  Esqueleto: quadril → tronco → pescoço/cabeça; ombros → braço → antebraço;
 //  quadris → coxa → canela → pé. Cada junta é um Group que gira em x.
@@ -13,7 +14,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 
-const DIMS = {
+const TEST = {
   hip: 0.95, // altura do quadril
   thigh: 0.47,
   shin: 0.45,
@@ -38,9 +39,30 @@ function joint(parent, x, y, z) {
   return j;
 }
 
+/** O Safeguard: mais alto, membros longos, passada maior. */
+const SAFEGUARD = {
+  hip: 1.2,
+  thigh: 0.6,
+  shin: 0.58,
+  torso: 0.7,
+  shoulderW: 0.22,
+  hipW: 0.1,
+  upperArm: 0.42,
+  forearm: 0.46,
+  stride: 1.9,
+};
+
 /** O corpo de teste: { group, animate(dt, speed, grounded), dispose() }. Os pés ficam em y = 0. */
 export function buildTestBody(material) {
-  const D = DIMS;
+  return buildBody(material, TEST);
+}
+
+/** O Safeguard (pálido; `slit`: o material escuro da fenda no rosto). */
+export function buildSafeguardBody(material, slit) {
+  return buildBody(material, SAFEGUARD, slit);
+}
+
+function buildBody(material, D, slitMat = null) {
   const group = new THREE.Group();
   const root = joint(group, 0, D.hip, 0); // o quadril (sobe e desce com a passada)
   const meshes = [];
@@ -62,9 +84,15 @@ export function buildTestBody(material) {
   const neck = joint(spine, 0, D.torso, 0.01);
   add(neck, limb(0.1, 0.045, 0.05, material)).position.y = 0.1;
   const head = new THREE.SphereGeometry(0.12, 10, 8);
-  head.scale(0.92, 1.28, 1.05);
-  head.translate(0, 0.21, 0.02);
+  head.scale(0.92, slitMat ? 1.55 : 1.28, 1.05);
+  head.translate(0, slitMat ? 0.24 : 0.21, 0.02);
   add(neck, new THREE.Mesh(head, material));
+  if (slitMat) {
+    // a fenda: uma placa escura rente à frente da cabeça, na vertical
+    const slit = new THREE.BoxGeometry(0.018, 0.2, 0.02);
+    slit.translate(0, 0.26, 0.143);
+    add(neck, new THREE.Mesh(slit, slitMat));
+  }
 
   // braços
   const arms = [];
