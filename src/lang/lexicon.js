@@ -4,8 +4,10 @@
 //  Vive no PERFIL (global — vale em todos os mundos; app/saves.js). Uma
 //  palavra é entendida depois de vista em fontes diferentes o bastante:
 //  comuns 2 vezes, incomuns 4, raras 7 (NEED em lang/ancient.js). Cada fonte
-//  (um registro de terminal, uma inscrição) conta uma vez só; uma inscrição
-//  no lugar que ela nomeia conta dobrado (referência cruzada).
+//  (um terminal, uma inscrição) conta cada palavra UMA vez só — ler o mesmo
+//  terminal de novo, ou arrancar outro fragmento dele com o leitor portátil,
+//  só ensina as palavras dele que você ainda não tinha visto ali. Uma
+//  inscrição no lugar que ela nomeia conta dobrado (referência cruzada).
 //
 //  Só aprende no modo Peregrinação (ctx.rules.translation) — no Livre o
 //  léxico aparece como está, mas não cresce.
@@ -23,9 +25,12 @@ export class Lexicon {
   constructor(profile, canLearn, onChange) {
     this.profile = profile;
     profile.lexicon ??= {};
-    profile.lexSources ??= [];
+    profile.lexSources ??= []; // as fontes, na ordem em que apareceram (as mais antigas saem)
+    profile.lexSeen ??= {}; // fonte → palavras já contadas dela ('a,b,c'; '*' = todas: perfis antigos)
+    for (const s of profile.lexSources) profile.lexSeen[s] ??= '*';
     this.counts = profile.lexicon;
-    this.sources = new Set(profile.lexSources);
+    this.seen = profile.lexSeen;
+    this.version = 0; // muda quando o léxico muda (quem desenha texto repinta)
     this.canLearn = canLearn;
     this.onChange = onChange;
   }
@@ -42,17 +47,27 @@ export class Lexicon {
    * @param {number} weight  2 = referência cruzada (a placa no lugar que nomeia)
    */
   see(sourceId, concepts, weight = 1) {
-    if (!this.canLearn() || this.sources.has(sourceId)) return [];
-    this.sources.add(sourceId);
-    this.profile.lexSources.push(sourceId);
-    if (this.profile.lexSources.length > MAX_SOURCES) this.sources.delete(this.profile.lexSources.shift());
+    if (!this.canLearn()) return [];
+    const prev = this.seen[sourceId];
+    if (prev === '*') return [];
+    const done = new Set(prev ? prev.split(',') : []);
     const learned = [];
-    for (const c of concepts) {
-      if (!CONCEPTS[c]) continue;
+    let counted = 0;
+    for (const c of new Set(concepts)) {
+      if (!CONCEPTS[c] || done.has(c)) continue;
+      done.add(c);
+      counted++;
       const was = this.known(c);
       this.counts[c] = (this.counts[c] ?? 0) + weight;
       if (!was && this.known(c)) learned.push(c);
     }
+    if (!counted) return [];
+    if (prev === undefined) {
+      this.profile.lexSources.push(sourceId);
+      if (this.profile.lexSources.length > MAX_SOURCES) delete this.seen[this.profile.lexSources.shift()];
+    }
+    this.seen[sourceId] = [...done].join(',');
+    this.version++;
     this.onChange?.(learned);
     return learned;
   }

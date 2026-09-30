@@ -100,3 +100,8 @@ Por que as coisas estão como estão, em ordem.
 ## 2026-09-30 — a lanterna virou um facho
 
 - A primeira lanterna era uma luz pontual em volta do corpo (parecia brilho e saturação). Agora: cone de verdade nos shaders, anel do refletor, manchas da lente, poeira acesa, mira convergente, atraso da mão, sem estourar de perto. Também ilumina as inscrições (só dentro do facho).
+
+## 2026-09-30 — teste do usuário na Peregrinação
+
+- **Exploit**: no terminal inicial, arrancar fragmentos repetidos ensinava o léxico inteiro (cada fragmento era uma fonte nova). Agora cada fonte conta cada palavra uma vez (`lexSeen`); o fragmento conta como o próprio terminal.
+- **Polimento**: a lanterna virou um objeto na mão esquerda — sobe ao ligar (e só então acende), desce ao desligar, aponta com o atraso da mão. O aparelho da direita ficou só com a telinha (carga e sensor).

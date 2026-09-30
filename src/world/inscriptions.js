@@ -255,7 +255,7 @@ export class InscriptionSystem {
     }
     // o léxico cresceu: repinta (palavras entendidas passam ao idioma do jogo)
     const lex = this.world?.lexicon;
-    const ver = lex ? lex.profile.lexSources.length : 0;
+    const ver = lex ? lex.version : 0;
     const repaint = ver !== this._lexSeen;
     this._lexSeen = ver;
     this._light -= dt;

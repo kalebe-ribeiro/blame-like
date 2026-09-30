@@ -18,7 +18,8 @@ export function setupDev(ctx) {
   if (params.get('outage')) setTimeout(() => trigger(world.outages), Number(params.get('outage')) * 1000);
   if (params.get('collapse')) setTimeout(() => trigger(world.collapses), Number(params.get('collapse')) * 1000);
   // --lantern: a lanterna já acesa (Peregrinação)
-  if (params.get('lantern')) setTimeout(() => ctx.carried.toggleLantern(), 500);
+  // --lantern (ou --lantern=N: aos N s — para ver a mão trazendo a lanterna)
+  if (params.get('lantern')) setTimeout(() => ctx.carried.toggleLantern(), params.get('lantern') === '1' ? 500 : Number(params.get('lantern')) * 1000);
   // --sensor=terminal|energy|motion: com o sensor, já ligado nesse modo (Peregrinação) — só nesta sessão
   if (params.get('sensor')) {
     if (!ctx.player.inventory.includes('sensor')) ctx.player.inventory.push('sensor');

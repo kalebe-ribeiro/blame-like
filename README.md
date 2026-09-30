@@ -54,7 +54,8 @@ Numa escada, frente e trás sobem e descem (encostado nela); esquerda e direita 
 ### O corpo na Peregrinação
 
 - **O começo**: um mundo novo da Peregrinação começa num lugar diferente em cada seed, na plataforma de uma estação num setor apagado, de frente para um **terminal morto**, com o leitor portátil, pouca carga e a lanterna apagada (acender ou poupar é decisão sua). A primeira leitura já traz a primeira pista, sempre com a distância.
-- **O aparelho na mão**: a lanterna na frente e uma telinha em cima com a carga (dez gomos). Nada de barra na tela do jogo.
+- **O aparelho na mão direita**: uma telinha em cima com a carga (dez gomos) e o sensor. Nada de barra na tela do jogo.
+- **A lanterna na mão esquerda**: guardada até você ligar. Então a mão a traz para a frente (~0,5 s), e só quando ela chega o facho acende; ao desligar, apaga e desce. Ela aponta para onde vai o facho, com o mesmo atraso de mão.
 - **A lanterna é um facho**, não um brilho em volta do corpo: um cone de ~20° com miolo quente, o anel do refletor, manchas fixas da lente e um véu fraco em volta, que alcança ~30 m, acende a poeira no caminho (o cone aparece no ar) e segue o olhar com um leve atraso da mão, mirando onde os olhos olham. Perto, clareia sem estourar. Fora do facho, só um resto de luz rebatida (`flashProfile`/`flashScatter` em `shaders/chunks.js`).
 - **A célula de energia**: a lanterna gasta (carga cheia dura 7 min) e falha quando está no fim; sem carga você ainda anda, só enxerga o que a Cidade ilumina. Um mundo novo começa com pouca carga.
 - **Tomadas**: caixinhas nos postes das passarelas, das plataformas e nos abrigos das estações. Recarregam enquanto você fica perto, se o setor tiver energia.

@@ -66,12 +66,52 @@ export function createCarried(ctx) {
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.066, 0.033), new THREE.MeshBasicMaterial({ map: tex, color: 0x8f9a90 }));
   screen.rotation.x = -Math.PI / 2;
   screen.position.set(0, 0.0205, 0.015);
-  const lens = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.026, 0.006), m.lamp);
-  lens.position.set(0, 0, -0.083);
-  device.add(body, screen, lens);
-  camera.add(device);
+  device.add(body, screen);
 
-  let lanternOn = false;
+  // ── a lanterna: um objeto à parte, na mão esquerda ──
+  //  Guardada (fora da vista, embaixo) até ser ligada: sobe para a frente, e
+  //  só então o facho acende; ao desligar, apaga e desce. Aponta para onde o
+  //  facho vai (com o mesmo atraso da mão).
+  const flashlight = new THREE.Group();
+  const tube = new THREE.CylinderGeometry(0.015, 0.016, 0.12, 12);
+  tube.rotateX(Math.PI / 2);
+  const headGeo = new THREE.CylinderGeometry(0.025, 0.017, 0.04, 14);
+  headGeo.rotateX(Math.PI / 2);
+  const bezelGeo = new THREE.TorusGeometry(0.023, 0.003, 6, 18);
+  const lensGeo = new THREE.CircleGeometry(0.021, 18);
+  const flBody = new THREE.Mesh(tube, m.machine);
+  const flHead = new THREE.Mesh(headGeo, m.machine);
+  flHead.position.z = -0.078;
+  const bezel = new THREE.Mesh(bezelGeo, m.machine);
+  bezel.position.z = -0.098;
+  const lensMat = new THREE.MeshBasicMaterial({ color: 0x0c0c0b }); // a lente: escura apagada, acesa quando o facho acende
+  const lens = new THREE.Mesh(lensGeo, lensMat);
+  lens.position.z = -0.0985;
+  lens.rotation.y = Math.PI; // a face para a frente (−z)
+  const knurl = new THREE.Mesh(new THREE.CylinderGeometry(0.0165, 0.0165, 0.035, 8), m.machine); // a empunhadura
+  knurl.rotation.x = Math.PI / 2;
+  knurl.position.z = 0.03;
+  const button = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.005, 0.012), m.machine);
+  button.position.set(0, 0.016, -0.02);
+  flashlight.add(flBody, flHead, bezel, lens, knurl, button);
+  flashlight.visible = false;
+  // guardada · na mão (em relação à câmera)
+  const FL_DOWN = new THREE.Vector3(-0.2, -0.36, -0.2);
+  const FL_UP = new THREE.Vector3(-0.13, -0.12, -0.3);
+  const FL_TILT_DOWN = new THREE.Euler(-1.1, 0.5, 0.4);
+  const _qDown = new THREE.Quaternion().setFromEuler(FL_TILT_DOWN);
+  const _qAim = new THREE.Quaternion();
+  const _qCam = new THREE.Quaternion();
+  const _m4 = new THREE.Matrix4();
+  const _zero = new THREE.Vector3();
+  const LENS_ON = new THREE.Color(1.0, 0.94, 0.84);
+  const LENS_OFF = new THREE.Color(0.045, 0.045, 0.042);
+  let raise = 0; // 0 guardada · 1 na mão
+  let lanternWant = false; // o que o jogador pediu (o facho só acende quando a mão chega)
+  camera.add(device);
+  camera.add(flashlight);
+
+  let lanternOn = false; // o facho aceso
   let plugged = null; // a tomada conectada
   let near = null; // a tomada mais próxima ao alcance
   let scan = 0;
@@ -200,10 +240,14 @@ export function createCarried(ctx) {
     tex.needsUpdate = true;
   }
 
+  /** Liga (a mão traz a lanterna e ela acende) ou desliga (apaga e a mão guarda). */
   function toggleLantern() {
     if (!active() || ctx.wake?.active) return;
-    lanternOn = !lanternOn;
-    audio.deviceClick?.(lanternOn);
+    lanternWant = !lanternWant;
+    if (!lanternWant && lanternOn) {
+      lanternOn = false;
+      audio.deviceClick?.(false);
+    }
   }
 
   /** Atalho do sensor (G): terminais → energia → movimento → desligado. */
@@ -242,7 +286,7 @@ export function createCarried(ctx) {
       sensorScan = 0;
     },
     get lanternOn() {
-      return lanternOn;
+      return lanternWant;
     },
     get sensorMode() {
       return sensor;
@@ -254,6 +298,8 @@ export function createCarried(ctx) {
       if (!on) {
         if (light) light.intensity = 0;
         sh.uFlashColor.value.set(0, 0, 0);
+        flashlight.visible = false;
+        raise = 0;
         return;
       }
       const en = player.energy;
@@ -284,6 +330,7 @@ export function createCarried(ctx) {
       if (sensor && en.value > 0) en.value = Math.max(0, en.value - SENSOR_DRAIN * dt);
       if (en.value <= 0) {
         lanternOn = false;
+        lanternWant = false;
         sensor = null;
       }
       if (found > 0) found -= dt;
@@ -307,6 +354,25 @@ export function createCarried(ctx) {
         }
       }
 
+      // a mão esquerda: sobe com a lanterna (0,45 s), acende quando chega; desce ao apagar
+      raise = lanternWant ? Math.min(1, raise + dt / 0.45) : Math.max(0, raise - dt / 0.35);
+      if (lanternWant && !lanternOn && raise >= 1 && en.value > 0) {
+        lanternOn = true;
+        audio.deviceClick?.(true);
+      }
+      flashlight.visible = raise > 0;
+      if (flashlight.visible) {
+        // subida com um leve passar do ponto (a mão para, a lanterna balança)
+        const r = raise;
+        const e = lanternWant ? 1 - Math.pow(1 - r, 3) + Math.sin(r * Math.PI) * 0.06 * r : r * r * (3 - 2 * r);
+        flashlight.position.lerpVectors(FL_DOWN, FL_UP, e);
+        // em mãos: aponta para onde vai o facho (no espaço da câmera); guardada: tombada
+        camera.getWorldQuaternion(_qCam);
+        _m4.lookAt(_zero, flashDir, camera.up); // −z do modelo (a lente) na direção do facho
+        _qAim.setFromRotationMatrix(_m4).premultiply(_qCam.invert());
+        flashlight.quaternion.slerpQuaternions(_qDown, _qAim, e);
+      }
+
       // a lanterna: um facho saindo da lente, na direção do olhar (com o atraso da mão);
       // com pouca carga, falha
       lens.getWorldPosition(_lens);
@@ -322,6 +388,7 @@ export function createCarried(ctx) {
         k *= 0.55 + e * 3; // e mais fraca
       }
       sh.uFlashPos.value.copy(_lens);
+      lensMat.color.copy(LENS_OFF).lerp(LENS_ON, Math.min(1, k));
       sh.uFlashDir.value.copy(flashDir);
       sh.uFlashColor.value.copy(FLASH_COLOR).multiplyScalar(FLASH * k);
       if (light) {

@@ -140,6 +140,7 @@ function createWindow() {
   if (argValue('lexicon')) query.set('lexicon', argValue('lexicon'));
   if (argValue('archive')) query.set('archive', argValue('archive'));
   if (process.argv.includes('--lantern')) query.set('lantern', '1');
+  if (argValue('lantern')) query.set('lantern', argValue('lantern')); // --lantern=8: liga aos 8 s
   if (argValue('sensor')) query.set('sensor', argValue('sensor'));
   if (argValue('map')) query.set('map', argValue('map'));
   if (argValue('controls')) query.set('controls', argValue('controls'));

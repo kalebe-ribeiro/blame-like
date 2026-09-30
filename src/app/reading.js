@@ -88,7 +88,7 @@ export function createReading(ctx) {
       lines.splice(1, 0, partial);
       lead = { lead: route.lead, parts: shown };
     }
-    const learned = ctx.lexicon.see(`frag:${it.site.id}:${it.fragments}`, conceptsIn(lines));
+    const learned = ctx.lexicon.see(it.site.id, conceptsIn(lines)); // a mesma fonte do terminal: cada palavra conta uma vez
     world.bus.emit('player:read', { id: it.site.id, site: it.site, learned, fragment: true, lead });
     audio.deviceClick?.(true);
     document.exitPointerLock?.();
