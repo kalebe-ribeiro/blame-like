@@ -222,6 +222,7 @@ export default {
   'device.substationWeak': 'PRECISA DE {n}% DA CÉLULA',
   'device.substationOn': 'SETOR RELIGADO',
   'hud.sectorRestored': 'SETOR RELIGADO',
+  'dest.escotilha': 'Escotilha de manutenção',
   'dest.subestacao': 'Subestação',
   'device.charging': 'CARREGANDO',
   'device.noPower': 'SEM ENERGIA AQUI',

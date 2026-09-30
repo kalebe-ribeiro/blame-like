@@ -115,3 +115,8 @@ Por que as coisas estão como estão, em ordem.
 - Subestações (armário com alavanca) nas plataformas das estações dos setores apagados, uma por faixa de 480 m (nunca na estação do começo). Terminais do setor citam a subestação (pista `substation`); pistas passaram a aceitar várias por terminal.
 - Religar: 20% da célula (Peregrinação); luz volta em frente de 40 m/s (CPU e shader); salvo no mundo, âmbar no mapa, no diário.
 - O check achou o aviso X4000 do compilador do Windows (return depois de laço no shader) — corrigido com um return só. O teste do controle precisou varrer mais linhas no painel de transporte (novo destino Subestação).
+
+## 2026-09-30 — 4.2 subir nas máquinas colossais
+
+- Escotilhas: uma placa da laje falta a cada ~1,3 km de trincheira; passarela, escada e plataforma na altura das longarinas. Terminal `hatch` (energia própria) com a próxima máquina.
+- Máquinas mais frequentes e a 4 m/s; o casco tem colisão e carrega quem está em cima (`--ride` mediu 29,8 m em 8 s, a máquina 32).

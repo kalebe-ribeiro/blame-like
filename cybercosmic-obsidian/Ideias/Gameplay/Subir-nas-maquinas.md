@@ -1,10 +1,12 @@
 ---
-status: escolhida
+status: feita (fase 4.2)
 prioridade: média
 tags: [gameplay, mundo, movimento]
 ---
 
 # Subir nas máquinas colossais
+
+> **Feita na fase 4.2** (`hatch`/`hatchAt`/`hatchesNear` em `gen/field.js`, `buildHatch` em `gen/macrogen.js`, casco com colisão e deslocamento em `world/colossi.js`, terminal `hatch` em `gen/sites.js`): escotilha = placa da laje que falta (80 m) a cada ~1,3 km de trincheira; passarela + escada de ~34 m + plataforma na altura das longarinas (`COLOSSUS.deck` = 38 m acima do fundo da camada), a 0,4 m de onde a máquina passa. Terminal na borda com o horário vivo (`ColossusSystem.nextAt`). Máquinas: espaçamento 2600, 75%, 4 m/s. As longarinas são o convés; quem está em cima vai junto (mesmo mecanismo dos vagões: `userData.dx/dz`). Testado: 29,8 m em 8 s com a máquina a 32. Não feito: "plataformas de embarque ao longo" além das escotilhas; pistas para trincheiras/horários.
 
 > Escolhida (2026-09-29).
 

@@ -12,6 +12,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { terminalSitesNear } from '../gen/sites.js';
+import { COLOSSUS } from '../gen/field.js';
 import { hash4, rngAt } from '../gen/hash.js';
 import { t as tr } from '../i18n/index.js';
 import { drawTokens } from '../lang/ancient.js';
@@ -64,8 +65,24 @@ export class TerminalSystem {
   /** O texto inteiro de um terminal para ler (com a linha viva do horário, nas estações). */
   readable(it, time) {
     const lines = it.lines.slice();
-    if (it.site.kind === 'station' && this.transit) lines.splice(2, 0, this.transit.stationStatus(it.site.line, it.site.s, time));
+    const live = this._live(it.site, time);
+    if (live) lines.splice(2, 0, live);
     return lines;
+  }
+
+  /**
+   * A linha viva de um terminal (ou null): nas estações, o próximo vagão; nas
+   * escotilhas, quando passa a próxima máquina colossal.
+   */
+  _live(site, time) {
+    if (site.kind === 'station' && this.transit) return this.transit.stationStatus(site.line, site.s, time);
+    if (site.kind === 'hatch' && this.world?.colossi) {
+      const s = this.world.colossi.nextAt(site.lane, site.hatch.t, time);
+      if (s === null) return [{ w: 'NEXT' }, { w: 'MACHINE' }, { p: ':' }, { w: 'NONE' }];
+      if (s <= COLOSSUS.len / 2 / COLOSSUS.speed) return [{ w: 'MACHINE' }, { p: ':' }, { w: 'BOARDING' }];
+      return [{ w: 'NEXT' }, { w: 'MACHINE' }, { p: ':' }, { n: `${Math.max(1, Math.round(s / 60))}` }, { p: 'MIN' }];
+    }
+    return null;
   }
 
   _create(site) {
@@ -115,13 +132,11 @@ export class TerminalSystem {
     const known = (w) => !!lex && lex.known(w);
     const word = (w) => tr(`word.${w}`);
     // linha viva nas estações: o horário do vagão
-    if (t.site.kind === 'station' && this.transit) {
-      const st = this.transit.stationStatus(t.site.line, t.site.s, time);
-      lines.splice(2, 0, st);
-    }
+    const liveLine = this._live(t.site, time);
+    if (liveLine) lines.splice(2, 0, liveLine);
     let y = 8;
     for (let i = 0; i < lines.length && y < H - 12; i++) {
-      const live = i === 2 && t.site.kind === 'station'; // o horário: a linha viva
+      const live = i === 2 && !!liveLine; // o horário: a linha viva
       drawTokens(c, lines[i], 8, y, known, word, { h: 7, font: '10px Consolas, "Courier New", monospace', color: i === 0 ? '#c9d4c8' : live ? '#d7c49a' : '#9fae9f', maxW: W - 16 });
       y += LINE_H;
     }
@@ -159,7 +174,7 @@ export class TerminalSystem {
       t.tool.visible = !!this.toolAt?.(s);
       t.group.updateMatrixWorld(true);
       this.meshes.push(t.group.children[0]);
-      const powered = s.kind === 'unique' || !this.outages || this.outages.power(s.x, s.y + 1, s.z, 1.1, time) >= 0.5;
+      const powered = s.kind === 'unique' || s.kind === 'hatch' || !this.outages || this.outages.power(s.x, s.y + 1, s.z, 1.1, time) >= 0.5;
       if (powered !== t.powered) {
         t.powered = powered;
         t.shown = powered ? 2 : 0; // religado: reescreve do começo

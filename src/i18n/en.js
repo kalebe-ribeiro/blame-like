@@ -222,6 +222,7 @@ export default {
   'device.substationWeak': 'NEEDS {n}% OF THE CELL',
   'device.substationOn': 'SECTOR RESTORED',
   'hud.sectorRestored': 'SECTOR RESTORED',
+  'dest.escotilha': 'Maintenance hatch',
   'dest.subestacao': 'Substation',
   'device.charging': 'CHARGING',
   'device.noPower': 'NO POWER HERE',

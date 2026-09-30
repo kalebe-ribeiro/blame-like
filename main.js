@@ -146,6 +146,7 @@ function createWindow() {
   if (argValue('map')) query.set('map', argValue('map'));
   if (argValue('controls')) query.set('controls', argValue('controls'));
   if (argValue('restore')) query.set('restore', argValue('restore'));
+  if (argValue('ride')) query.set('ride', argValue('ride'));
   if (argValue('collapse')) query.set('collapse', argValue('collapse'));
   if (checkMode) {
     query.set('check', argValue('check') || '1'); // --check=trelica,escadaria: só esses

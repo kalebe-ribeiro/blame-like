@@ -36,6 +36,7 @@ export class ColossusSystem {
     this.machines = new Map(); // id → { group, lane, k, pos, light }
     this.lanes = [];
     this.lights = [];
+    this.meshes = []; // o casco, para a colisão (as longarinas são o convés)
     this.bus = null; // evento colossus:clamp { x, y, z }
     this._scan = 0;
     this._geo = null;
@@ -81,6 +82,8 @@ export class ColossusSystem {
     const { hull, glow } = this._parts();
     const g = new THREE.Group();
     const mh = new THREE.Mesh(hull, this.materials.colossus);
+    mh.userData.mat = 'machine';
+    mh.userData.dx = mh.userData.dy = mh.userData.dz = 0;
     const mg = new THREE.Mesh(glow, this.materials.colossusBeam);
     mg.renderOrder = 5;
     for (const m of [mh, mg]) {
@@ -174,15 +177,25 @@ export class ColossusSystem {
     }
 
     this.lights.length = 0;
+    this.meshes.length = 0;
     for (const m of this.machines.values()) {
       const L = m.lane;
       const t = this.posT(L, m.k, time);
       const x = L.axis === 'x' ? t : L.lat;
       const z = L.axis === 'x' ? L.lat : t;
       const y = L.b.bottom - DROP;
+      // quanto andou neste quadro (em cena): quem está no convés anda junto (controls/walker.js)
+      const hull = m.group.children[0];
+      const moved = m.placed;
+      const nx = x - origin.x;
+      const nz = z - origin.z;
+      hull.userData.dx = moved ? nx - m.group.position.x : 0;
+      hull.userData.dz = moved ? nz - m.group.position.z : 0;
+      m.placed = true;
       m.pos.set(x, y, z);
-      m.group.position.set(x - origin.x, y - origin.y, z - origin.z);
+      m.group.position.set(nx, y - origin.y, nz);
       m.group.updateMatrixWorld(true);
+      if (m.pos.distanceTo(g) < 400) this.meshes.push(hull);
       m.light.x = x;
       m.light.y = y + 1; // sob a plataforma, junto das lâmpadas dela
       m.light.z = z;
@@ -196,6 +209,20 @@ export class ColossusSystem {
   /** A origem flutuante andou `delta`. */
   rebase(delta) {
     for (const m of this.machines.values()) m.group.position.sub(delta);
+  }
+
+  /** A máquina mais perto de passar pelo ponto `t` da trincheira: segundos até chegar (ou null). */
+  nextAt(lane, t, time) {
+    const { dir } = this._laneInfo(lane);
+    const base = this.posT(lane, 0, time);
+    const k0 = Math.round((t - base) / COLOSSUS.spacing);
+    let best = null;
+    for (let k = k0 - 8; k <= k0 + 8; k++) {
+      if (!this.exists(lane, k)) continue;
+      const s = ((t - this.posT(lane, k, time)) * dir) / COLOSSUS.speed; // > 0: ainda vem
+      if (s > -COLOSSUS.len / 2 / COLOSSUS.speed && (best === null || s < best)) best = s;
+    }
+    return best;
   }
 
   dispose() {

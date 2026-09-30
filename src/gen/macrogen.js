@@ -19,7 +19,7 @@
 //  Cada placa pertence à célula que contém seu centro → gerada uma única vez.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from '../lib/three.js';
-import { MACRO, MEGA, RELIEF, UNIQUE } from './field.js';
+import { MACRO, MEGA, RELIEF, UNIQUE, COLOSSUS } from './field.js';
 import { hash4, rngAt } from './hash.js';
 import { place, cylinderBetween, slabBetween } from '../world/geometry.js';
 import { ChunkBuilder } from './chunkgen.js';
@@ -42,6 +42,7 @@ export function generateMacro(F, mx, my, mz) {
   genBarriers(F, B, box, owns);
   genBarrierRelief(F, B, box);
   genUniques(F, B, box);
+  genHatches(F, B, box);
   genGalleries(F, B, box, owns);
   genShafts(F, B, box, owns);
   genStrata(F, B, box, owns);
@@ -182,6 +183,62 @@ function genBarrierRelief(F, B, box) {
       }
     }
   }
+}
+
+// ─── escotilhas de manutenção (subir nas máquinas colossais) ─────────────────
+//  Uma placa da laje falta (Field.hatchAt). Do chão da camada, uma passarela
+//  vai da borda até o meio do vão; dali uma escada desce até uma plataforma na
+//  altura das longarinas da máquina, logo ao lado de onde ela passa.
+
+function genHatches(F, B, box) {
+  const th = MEGA.barrierThick;
+  const T = MEGA.tile;
+  for (const b of F.barriersNear((box.y0 + box.y1) / 2)) {
+    const yc = b.top - th / 2;
+    if (yc < box.y0 || yc >= box.y1) continue;
+    const cx = (box.x0 + box.x1) / 2;
+    const cz = (box.z0 + box.z1) / 2;
+    for (const h of F.hatchesNear(b, cx, cz, MACRO)) {
+      if (h.x < box.x0 || h.x >= box.x1 || h.z < box.z0 || h.z >= box.z1) continue;
+      buildHatch(F, B, b, h, T);
+    }
+  }
+}
+
+function buildHatch(F, B, b, h, T) {
+  // (u de lado — a partir da linha da trincheira, no sentido de h.side —, t ao longo)
+  const P = (u, t) => (h.axis === 'x' ? [t, h.lat + h.side * u] : [h.lat + h.side * u, t]);
+  const box = (mat, u, y, t, du, dy, dt) => {
+    const [x, z] = P(u, t);
+    const [sx, sz] = h.axis === 'x' ? [dt, du] : [du, dt];
+    block(B, mat, x, y, z, sx, dy, sz);
+  };
+  const top = b.top;
+  const deck = b.bottom + COLOSSUS.deck; // topo das longarinas da máquina
+  const t = h.t;
+  const LAD = 55.3; // a escada (fora do que a máquina varre: ela vai até ±51)
+  // passarela: da borda de fora da placa até a escada, com guarda-corpo baixo
+  box('grate', (LAD + T) / 2, top - 0.15, t, T - LAD + 0.6, 0.3, 2.2);
+  for (const s of [-1, 1]) box('frame', (LAD + T) / 2, top + 0.55, t + s * 1.1, T - LAD, 0.08, 0.08);
+  // vigas que seguram a passarela nas bordas do vão (ao longo)
+  box('frame', (LAD + T) / 2, top - 0.7, t, T - LAD, 0.8, 0.5);
+  // a escada: mastro de trás e a face de degraus (virada para a passarela)
+  const H = top + 1.1 - deck;
+  box('frame', LAD - 0.35, deck + H / 2, t, 0.35, H, 0.35);
+  box('rungs', LAD, deck + H / 2, t, 0.05, H, 0.56);
+  for (const s of [-1, 1]) box('rib', LAD, deck + H / 2, t + s * 0.3, 0.07, H, 0.07);
+  for (let y = Math.ceil(deck / 6) * 6; y < top; y += 6) box('rib', LAD - 0.2, y, t, 0.36, 0.08, 0.7); // fixações
+  // a plataforma lá embaixo, rente às longarinas (a máquina passa a 0,4 m)
+  box('grate', 55.7, deck - 0.1, t, 8.6, 0.2, 4);
+  for (const s of [-1, 1]) box('frame', 58, deck + 0.5, t + s * 2, 4, 0.08, 0.08);
+  // tirantes: a plataforma pendurada do teto da trincheira
+  const ceil = b.bottom + COLOSSUS.depth;
+  for (const s of [-1, 1]) box('frame', 59.6, (deck + ceil) / 2, t + s * 1.9, 0.18, ceil - deck, 0.18);
+  // luzes com energia própria (a manutenção das máquinas não depende do setor)
+  const [lx, lz] = P(59, t + 1.8);
+  B.lamp(lx, deck + 2.6, lz, [1.0, 0.62, 0.3], 60, 'steady', { to: [lx, deck + 4, lz], size: 1.2, grid: false });
+  const [tx, tz] = P(T - 1.5, t + 1.6);
+  B.lamp(tx, top + 2.4, tz, [1.0, 0.62, 0.3], 40, 'faulty', { to: [tx, top, tz], size: 1.2, grid: false });
 }
 
 // ─── estruturas únicas ──────────────────────────────────────────────────────

@@ -43,7 +43,7 @@ npx electron . --capture=shot.png --pos=x,y,z,yaw,pitch --mode=fly --seed=abc --
 
 ## Outras flags
 
-`--game=free|pilgrimage` (modo de jogo da sessão), `--sensor=terminal|energy|motion` (sensor já ligado), `--map=N` (abre o mapa aos N s), `--wake=N` (desmaio aos N s), `--lantern` (lanterna acesa), `--read=N` (abre a leitura do terminal em frente), `--restore=N` (religa o setor da subestação em frente aos N s; use com `--goto=subestacao`), `--lexicon=N` (entende as palavras até a classe N, só na sessão), `--archive=records|leads|lexicon` (aba do diário), `--gate` (captura com a tela de entrada aberta — para conferir textos e painéis), `--outage=4` / `--collapse=4` (força o evento aos N s), `--autopilot=N`, `--mode=fly`, `--seed=<base36>`, `--profile=<pasta>`, `--novsync`.
+`--game=free|pilgrimage` (modo de jogo da sessão), `--sensor=terminal|energy|motion` (sensor já ligado), `--map=N` (abre o mapa aos N s), `--wake=N` (desmaio aos N s), `--lantern` (lanterna acesa), `--read=N` (abre a leitura do terminal em frente), `--ride=N` (aos N s põe o corpo numa longarina da máquina mais perto e mede se ele vai junto; use com `--goto=colosso`), `--restore=N` (religa o setor da subestação em frente aos N s; use com `--goto=subestacao`), `--lexicon=N` (entende as palavras até a classe N, só na sessão), `--archive=records|leads|lexicon` (aba do diário), `--gate` (captura com a tela de entrada aberta — para conferir textos e painéis), `--outage=4` / `--collapse=4` (força o evento aos N s), `--autopilot=N`, `--mode=fly`, `--seed=<base36>`, `--profile=<pasta>`, `--novsync`.
 
 ## Git
 

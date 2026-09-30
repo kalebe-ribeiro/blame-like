@@ -8,6 +8,8 @@
 //    station  na ponta da plataforma de cada estação de transportador
 //    passage  no alto das passagens das camadas, ao lado da ponte de embarque
 //    unique   o console ativo de cada estrutura única (energia própria)
+//    hatch    na borda de cada escotilha de manutenção das máquinas colossais
+//             (energia própria; mostra quando vem a próxima máquina)
 //
 //  site: { id, x, y (pés), z, yaw, kind, line?, s?, unique? } — GLOBAL
 // ─────────────────────────────────────────────────────────────────────────────
@@ -54,9 +56,23 @@ export function terminalSitesNear(F, x, y, z, R) {
         out.push({ id: `ps:${b.n}:${pi}:${pk}`, x: p.x + p.size / 2 + 5, y: b.top, z: p.z + 7, yaw: Math.PI / 2, kind: 'passage' });
       }
     }
+    for (const h of F.hatchesNear(b, x, z, R + 60)) out.push(hatchTerminal(F, b, h));
   }
   for (const u of F.uniquesNear(x, y, z, R + 80)) out.push(uniqueTerminal(F, u));
   return out.filter((s) => Math.hypot(s.x - x, s.y - y, s.z - z) < R);
+}
+
+/** O terminal na borda de uma escotilha: na laje ao lado da placa que falta, olhando para o vão. */
+export function hatchTerminal(F, b, h) {
+  const T = MEGA.tile;
+  const u = h.lat + h.side * (T + 2.2); // já na laje cheia, logo depois da borda de fora
+  const t = h.t + 3;
+  const x = h.axis === 'x' ? t : u;
+  const z = h.axis === 'x' ? u : t;
+  // a tela (+z local) olha para o vão (−side, de lado)
+  const yaw = h.axis === 'x' ? (h.side > 0 ? Math.PI : 0) : h.side > 0 ? -Math.PI / 2 : Math.PI / 2;
+  const lane = { id: `T${b.n}${h.axis}${h.c}`, b, axis: h.axis, lat: h.lat };
+  return { id: `ht:${h.id}`, x, y: b.top, z, yaw, kind: 'hatch', hatch: h, lane };
 }
 
 /** O terminal (console ativo) de uma estrutura única. */
@@ -71,6 +87,13 @@ export function siteById(F, id) {
     const [n, i, kk] = rest[0].slice(1).split(',').map(Number);
     const u = F.uniqueSite(n, i, kk);
     return u ? uniqueTerminal(F, u) : null;
+  }
+  if (k === 'ht') {
+    const m = /^h(-?\d+)([xz])(-?\d+)$/.exec(rest[0]);
+    if (!m) return null;
+    const b = F.barrier(Number(m[1]));
+    const h = b && F.hatch(Number(m[1]), m[2], Number(m[3]), Number(rest[1]));
+    return h ? hatchTerminal(F, b, h) : null;
   }
   if (k === 'ps') {
     const [n, pi, pk] = rest.map(Number);

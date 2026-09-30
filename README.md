@@ -90,6 +90,13 @@ Não há missões. Uma pista é um endereço que você leu e decide seguir.
 - **A Cidade lembra**: o setor religado fica no mundo salvo, aparece no mapa em âmbar e conta no diário (SETORES RELIGADOS).
 - Transporte (modo Livre): destino **Subestação**. Desenvolvimento: `--goto=subestacao --restore=8` religa aos 8 s.
 
+## Subir nas máquinas colossais (fase 4)
+
+- **Escotilhas de manutenção**: ao longo de cada trincheira, a cada ~1,3 km, falta uma placa da laje (um vão de 80 m). Uma passarela sai da borda até o meio do vão; dali uma escada desce ~34 m até uma plataforma pendurada na altura das longarinas da máquina.
+- **O horário**: um terminal na borda (com energia própria) diz quando passa a próxima máquina ("PRÓXIMA MÁQUINA: 7 MIN", ou EMBARQUE quando ela está passando). As máquinas agora são mais frequentes (uma a cada ~2,6 km de trincheira, 75% das vagas) e um pouco mais rápidas (4 m/s).
+- **Embarcar**: quando a máquina passa sob a plataforma, é só descer para a longarina (a 0,4 m). As longarinas são o convés: 260 m de comprido, 12 de largo. Quem está em cima vai junto. Para descer, espere a próxima escotilha passar e pule para a plataforma dela.
+- Transporte (modo Livre): destino **Escotilha de manutenção**. Desenvolvimento: `--goto=colosso --ride=8` põe o corpo numa longarina e diz no console se ele foi junto.
+
 ## Setores de energia
 
 A Cidade é dividida em setores de formas e tamanhos irregulares (só as camadas os separam na vertical). Cerca de 30% estão **permanentemente apagados**: lâmpadas, janelas, trens, elevadores e terminais sem energia. Uns 15% são **instáveis**: a luz vai e vem em ondas. O resto tem energia. A mesma conta roda na CPU (lâmpadas) e na GPU (janelas), então as duas sempre concordam.

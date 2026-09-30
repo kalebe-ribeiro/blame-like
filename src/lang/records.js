@@ -105,6 +105,10 @@ export function terminalRecords(field, site) {
     }
     lines.push([W('LEVEL'), N(levelNumber(field, Math.floor((site.y - MEGA.barrierTop0) / MEGA.barrier) + 1, site.x, site.z))]);
   }
+  if (site.kind === 'hatch') {
+    lines.push([W('MAINTENANCE'), W('ACCESS'), P('·'), W('MACHINE'), W('LINE'), N(site.hatch.c)]);
+    lines.push([W('BOARDING'), P(':'), W('LAYER'), N(levelNumber(field, Math.floor((site.y - MEGA.barrierTop0) / MEGA.barrier) + 1, site.x, site.z)), P('·'), N(`${MEGA.barrierThick} M`)]);
+  }
   if (site.kind === 'passage') {
     const band = Math.floor((site.y - MEGA.barrierTop0) / MEGA.barrier) + 1;
     lines.push([W('ELEVATOR'), W('PASSAGE'), P('·'), W('LAYER'), N(levelNumber(field, band, site.x, site.z))]);

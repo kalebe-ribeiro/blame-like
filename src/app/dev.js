@@ -42,6 +42,27 @@ export function setupDev(ctx) {
   }
   // --read=12: abre a leitura do terminal em frente aos N segundos
   if (params.get('read')) setTimeout(() => ctx.reading.tryUse(), Number(params.get('read')) * 1000);
+  // --ride=6: aos N s, põe o corpo sobre a longarina da máquina colossal mais perto e,
+  // 8 s depois, diz no console se ele foi junto (o convés carrega quem está em cima)
+  if (params.get('ride')) {
+    setTimeout(() => {
+      const g = world.toGlobal(camera.position);
+      const m = world.colossi.nearest(world.field, g, ctx.time);
+      if (!m) return console.warn('RIDE: nenhuma máquina');
+      const lat = 45; // a longarina
+      const top = m.lane.b.bottom + 38 + 1.75;
+      const x = m.lane.axis === 'x' ? m.x : m.x + lat;
+      const z = m.lane.axis === 'x' ? m.z + lat : m.z;
+      ctx.controls.setMode('walk');
+      ctx.controls.setView({ pos: new THREE.Vector3(x, top, z).sub(world.origin), yaw: 0, pitch: -0.3, scale: 1 });
+      const p0 = world.toGlobal(camera.position).clone();
+      setTimeout(() => {
+        const p1 = world.toGlobal(camera.position);
+        const along = m.lane.axis === 'x' ? p1.x - p0.x : p1.z - p0.z;
+        console.warn(`RIDE: andou ${along.toFixed(1)} m ao longo em 8 s (a máquina: ${(m.dir * 4 * 8).toFixed(1)}), altura ${(p1.y - p0.y).toFixed(1)} m`);
+      }, 8000);
+    }, Number(params.get('ride')) * 1000);
+  }
   // --restore=8: religa o setor da subestação em frente aos N s
   if (params.get('restore')) setTimeout(() => ctx.power.tryUse(), Number(params.get('restore')) * 1000);
   // --controls=3: abre a aba CONTROLES aos N segundos

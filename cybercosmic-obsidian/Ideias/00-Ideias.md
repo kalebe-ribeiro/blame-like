@@ -28,7 +28,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Luz-como-recurso]] | ✔ feita (fase 1) | média |
 | [[Religar-setores]] | ✔ feita (fase 4.1) | média |
 | [[Ferramentas]] (sensor + leitor portátil) | ✔ feita (leitor na fase 2, sensor na fase 3) | média |
-| [[Subir-nas-maquinas]] | ★ escolhida | média |
+| [[Subir-nas-maquinas]] | ✔ feita (fase 4.2) | média |
 | [[Diario-como-arquivo]] | ✔ feita (fase 2) | média |
 | [[Travessias-dificeis]] | ★ escolhida | média |
 | [[Seeds-compartilhaveis]] | ★ escolhida | baixa |

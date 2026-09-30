@@ -67,7 +67,16 @@ export const TRANSIT = { prob: 0.4, gap: 7, station: 1440, carLen: 22, carW: 5, 
  *   half: meia largura da trincheira · depth: quanto ela sobe na laje
  *   spacing: distância entre máquinas na mesma trincheira (onde houver)
  */
-export const COLOSSUS = { prob: 0.3, half: 80, depth: 56, spacing: 5200, fill: 0.55, speed: 3.2, len: 260, width: 118 };
+export const COLOSSUS = { prob: 0.3, half: 80, depth: 56, spacing: 2600, fill: 0.75, speed: 4, len: 260, width: 118, deck: 38 };
+/**
+ * Escotilhas de manutenção (fase 4.2 — subir nas máquinas): ao longo de cada
+ * trincheira, uma placa da laje (MEGA.tile) falta a cada ~1,3 km, no lado da
+ * trincheira. Uma passarela leva a uma escada que desce até uma plataforma na
+ * altura das longarinas da máquina (b.bottom + COLOSSUS.deck): ela passa por
+ * baixo, e dá para subir nela. Um terminal ao lado mostra quando vem a próxima.
+ *   every: placas entre escotilhas · prob: quantas existem
+ */
+export const HATCH = { every: 16, prob: 0.8 };
 /**
  * Relevo sobre as camadas: o topo de uma camada não é um plano liso até o
  * horizonte — tem plataformas, espinhaços de serviço, galpões e chaminés de
@@ -261,7 +270,64 @@ export class Field {
   barrierSolid(b, x, z) {
     const P = MEGA.passage;
     const p = this.passage(b.n, Math.floor(x / P), Math.floor(z / P));
-    return !(p && Math.abs(x - p.x) < p.size / 2 && Math.abs(z - p.z) < p.size / 2);
+    if (p && Math.abs(x - p.x) < p.size / 2 && Math.abs(z - p.z) < p.size / 2) return false;
+    return !this.hatchAt(b, x, z);
+  }
+
+  // ── escotilhas de manutenção (HATCH) ─────────────────────────────────────
+
+  /** A escotilha j da trincheira (camada n, eixo, linha c), ou null. */
+  hatch(n, axis, c, j) {
+    return this._memo(`H${n}${axis}${c},${j}`, () => {
+      if (!this.ceilingLane(n, axis, c)) return null;
+      if (hash4(this.seed, n, c * 2 + (axis === 'x' ? 0 : 1), j, 1320) > HATCH.prob) return null;
+      const T = MEGA.tile;
+      const ta = j * HATCH.every + 2 + Math.floor(hash4(this.seed, n, c, j, 1321) * (HATCH.every - 4));
+      const side = hash4(this.seed, n, j, c, 1322) < 0.5 ? 1 : -1;
+      const lat = c * MEGA.passage;
+      const t = (ta + 0.5) * T; // o meio da placa, ao longo da trincheira
+      const u = lat + side * T / 2; // o meio da placa, de lado
+      return {
+        id: `h${n}${axis}${c}:${j}`, n, axis, c, j, side, lat, t,
+        x: axis === 'x' ? t : u,
+        z: axis === 'x' ? u : t,
+      };
+    });
+  }
+
+  /** A escotilha cuja placa contém (x,z) no topo da camada b, ou null. */
+  hatchAt(b, x, z) {
+    const P = MEGA.passage;
+    const T = MEGA.tile;
+    for (const axis of ['x', 'z']) {
+      const along = axis === 'x' ? x : z;
+      const lat = axis === 'x' ? z : x;
+      const c = Math.round(lat / P);
+      const d = lat - c * P;
+      if (Math.abs(d) >= T || !this.ceilingLane(b.n, axis, c)) continue;
+      const h = this.hatch(b.n, axis, c, Math.floor(along / (T * HATCH.every)));
+      if (h && Math.sign(d) === h.side && Math.abs(along - h.t) < T / 2) return h;
+    }
+    return null;
+  }
+
+  /** Escotilhas da camada b a até R de (x,z). */
+  hatchesNear(b, x, z, R) {
+    const P = MEGA.passage;
+    const span = MEGA.tile * HATCH.every;
+    const out = [];
+    for (const axis of ['x', 'z']) {
+      const along = axis === 'x' ? x : z;
+      const lat = axis === 'x' ? z : x;
+      for (let c = Math.floor((lat - R) / P); c <= Math.ceil((lat + R) / P); c++) {
+        if (!this.ceilingLane(b.n, axis, c)) continue;
+        for (let j = Math.floor((along - R) / span); j <= Math.floor((along + R) / span); j++) {
+          const h = this.hatch(b.n, axis, c, j);
+          if (h && Math.hypot(h.x - x, h.z - z) < R) out.push(h);
+        }
+      }
+    }
+    return out;
   }
 
   // ── setores de energia ───────────────────────────────────────────────────
@@ -370,6 +436,7 @@ export class Field {
       if (!this.barrierSolid(b, x + dx, z + dz) || this.insideVoid(x + dx, b.top + 6, z + dz) || this.insideVoid(x + dx, b.top + 40, z + dz)) return false;
     }
     if (this.nearMegaWall(x, b.top + 20, z, half + 20)) return false;
+    if (this.hatchesNear(b, x, z, half + 140).length) return false;
     if (this.walkwayNear(x, b.top - 2, b.top + 50, z, half + 12)) return false;
     return true;
   }
@@ -465,6 +532,7 @@ export class Field {
         }
       }
       if (this.uniqueAt(b, cx, cz, 120)) return null; // o entorno de uma estrutura única fica livre
+      if (this.hatchesNear(b, cx, cz, 170).length) return null; // nem o de uma escotilha
       const r = rngAt(this.seed, ci, b.n, ck, 801);
       const roll = r.next();
       const kind = roll < 0.42 ? 'plinth' : roll < 0.68 ? 'ridge' : roll < 0.86 ? 'hall' : 'stack';

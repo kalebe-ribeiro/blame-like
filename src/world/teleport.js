@@ -40,6 +40,7 @@ export const DESTINATIONS = [
   { group: 'other', kind: 'terminal' },
   { group: 'other', kind: 'unica' },
   { group: 'other', kind: 'subestacao' },
+  { group: 'other', kind: 'escotilha' },
   { group: 'other', kind: 'inicio' },
   { group: 'other', kind: 'ponte' },
 ];
@@ -393,6 +394,23 @@ export function findDestination(F, kind, g, recent = new Set(), opts = {}) {
           }
         }
         if (cands.length) break;
+      }
+      return pick(cands, g, recent);
+    },
+
+    // ── uma escotilha de manutenção: na passarela sobre o vão, olhando para a escada ──
+    escotilha: () => {
+      const cands = [];
+      for (const b of F.barriersNear(g.y)) {
+        for (const h of F.hatchesNear(b, g.x, g.z, 9000)) {
+          const u = h.lat + h.side * 64; // na passarela, a ~9 m da escada
+          const lu = h.lat + h.side * 55.3;
+          const fx = h.axis === 'x' ? h.t : u;
+          const fz = h.axis === 'x' ? u : h.t;
+          const tx = h.axis === 'x' ? h.t : lu;
+          const tz = h.axis === 'x' ? lu : h.t;
+          cands.push({ id: h.id, feet: V(fx, b.top + 0.05, fz), yaw: yawTo(fx, fz, tx, tz), pitch: -0.45 });
+        }
       }
       return pick(cands, g, recent);
     },
