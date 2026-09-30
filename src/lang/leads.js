@@ -26,7 +26,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { hash4, rngAt } from '../gen/hash.js';
 import { MEGA } from '../gen/field.js';
-import { terminalSitesNear, uniqueTerminal, standBefore, setStartSiteFn, substationFor } from '../gen/sites.js';
+import { terminalSitesNear, uniqueTerminal, standBefore, setStartSiteFn, substationFor, hatchTerminal } from '../gen/sites.js';
 import { sectorCode, levelNumber } from './records.js';
 
 export const LEAD = {
@@ -185,6 +185,7 @@ export function startPlace(F) {
 
 function kindWords(lead) {
   if (lead.kind === 'substation') return [W('SUBSTATION')];
+  if (lead.kind === 'hatch') return [W('MACHINE'), W('ACCESS')];
   if (lead.kind === 'station') return [W('STATION'), W('TERMINAL')];
   if (lead.kind === 'passage') return [W('PASSAGE'), W('TERMINAL')];
   if (lead.uniqueKind === 'archive') return [W('ARCHIVE')];
@@ -285,4 +286,33 @@ export function substationLead(F, site) {
   const ss = substationFor(F, sec, site.y);
   if (!ss) return null;
   return { id: ss.id, x: ss.x, y: ss.y, z: ss.z, kind: 'substation', from: { id: site.id, x: site.x, y: site.y, z: site.z } };
+}
+
+/**
+ * No alto de uma camada, o terminal da passagem cita a escotilha de máquina mais
+ * perto (até 4 km); a de uma escotilha cita a próxima no sentido em que as
+ * máquinas andam — a viagem que dá para fazer pendurado (fase 4.6).
+ */
+export function hatchLead(F, site) {
+  if (site.kind !== 'passage' && site.kind !== 'hatch') return null;
+  const b = F.barriersNear(site.y).find((bb) => Math.abs(bb.top - site.y) < 2);
+  if (!b) return null;
+  let h = null;
+  if (site.kind === 'hatch') {
+    const me = site.hatch;
+    const dir = hash4(F.seed, b.n, me.lat, me.axis === 'x' ? 0 : 1, 710) < 0.5 ? 1 : -1; // o mesmo de world/colossi.js
+    for (let k = 1; k <= 4 && !h; k++) h = F.hatch(b.n, me.axis, me.c, me.j + dir * k);
+  } else {
+    let bd = 4000;
+    for (const c of F.hatchesNear(b, site.x, site.z, 4000)) {
+      const d = Math.hypot(c.x - site.x, c.z - site.z);
+      if (d < bd) {
+        bd = d;
+        h = c;
+      }
+    }
+  }
+  if (!h) return null;
+  const t = hatchTerminal(F, b, h);
+  return { id: t.id, x: t.x, y: t.y, z: t.z, kind: 'hatch', from: { id: site.id, x: site.x, y: site.y, z: site.z } };
 }

@@ -30,7 +30,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Ferramentas]] (sensor + leitor portátil) | ✔ feita (leitor na fase 2, sensor na fase 3) | média |
 | [[Subir-nas-maquinas]] | ✔ feita (fase 4.2) | média |
 | [[Diario-como-arquivo]] | ✔ feita (fase 2) | média |
-| [[Travessias-dificeis]] | ★ escolhida | média |
+| [[Travessias-dificeis]] | ✔ feita (fase 4.6) | média |
 | [[Seeds-compartilhaveis]] | ✔ feita (fase 4.4) | baixa |
 | [[Marcas-do-jogador]] | ✔ feita (fase 4.3) | baixa |
 | [[Cargas]] | standby (com NPCs) | futura |

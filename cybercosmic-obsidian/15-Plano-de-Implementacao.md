@@ -18,7 +18,7 @@
 | 1 ✔  | Corpo e risco       | a queda que acaba em despertar, a energia, o escuro                        |
 | 2 ✔  | Ler a Cidade        | a língua antiga, os endereços, os terminais, o leitor, o diário            |
 | 3 ✔  | Seguir rastros      | pistas, sensor, mapa, o começo de um mundo, as primeiras estruturas únicas |
-| 4    | Energia e travessia | religar setores, subir nas máquinas, marcas, seeds compartilháveis         |
+| 4 ✔  | Energia e travessia | religar setores, subir nas máquinas, marcas, seeds compartilháveis         |
 | 5    | Preparar os seres   | tudo o que Safeguards e NPCs vão precisar — ainda sem nenhum deles         |
 | 6    | Safeguards          | o sistema de defesa da Cidade                                              |
 | 7    | NPCs                | humanos, transumanos, vida de silício — a fase final                       |
@@ -96,13 +96,14 @@
 
 ---
 
-## Fase 4 — Energia e travessia (em andamento)
+## Fase 4 — Energia e travessia ✔ (feita em 2026-09-30)
 
 > 4.1 ✔ religar setores (subestações, cascata, pistas para a subestação, salvo no mundo).
 > 4.2 ✔ subir nas máquinas colossais (escotilhas, escada, plataforma, horário no terminal, convés que carrega).
 > 4.3 ✔ marcas do jogador (tinta em estêncil, V / LB, no mapa e no mundo salvo).
 > 4.4 ✔ seeds compartilháveis (código com seed, modo e marcas; copiar/colar no painel MUNDOS).
 > 4.5 ✔ estruturas únicas com efeito + sala de controle dos Construtores + terminal de transmissão.
+> 4.6 ✔ travessias difíceis (escada de manutenção nas passagens; pistas para as escotilhas). Escolhas feitas por padrão em [[13-Decisoes]] ("Fase 4"). Não feito: vila abandonada e berço de Safeguards (reservados para as fases 5–7).
 
 **Objetivo**: mudar a Cidade e atravessá-la de verdade.
 

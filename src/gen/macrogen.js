@@ -457,6 +457,24 @@ function passageTower(F, B, b, p) {
     const c = V(dx * (35 + len / 2), y0 - 0.6, dz * (35 + len / 2));
     B.add('floor', place(new THREE.BoxGeometry(dx ? len : 10, 1.2, dz ? len : 10), { ...toXYZ(c) }));
   }
+  // escada de manutenção (fase 4.6 — travessias difíceis): quando o setor está apagado o
+  // elevador para, e a camada só se atravessa subindo ~220 m num mastro ao lado da ponte +z,
+  // da plataforma de embarque de baixo até a ponte de cima (um patamar liga os dois)
+  {
+    const mx = 8.2; // o mastro, logo depois da borda da ponte (que vai até x = 5)
+    const mz = 34;
+    const yb = y0;
+    const yt = b.top + 1.2;
+    const h = yt - yb;
+    B.add('frame', place(new THREE.BoxGeometry(0.6, h, 0.6), { ...toXYZ(V(mx + 0.4, yb + h / 2, mz)) }));
+    B.add('rungs', place(new THREE.BoxGeometry(0.05, h, 0.56), { ...toXYZ(V(mx, yb + h / 2, mz)) }));
+    for (const s of [-1, 1]) B.add('rib', place(new THREE.BoxGeometry(0.07, h, 0.07), { ...toXYZ(V(mx, yb + h / 2, mz + s * 0.3)) }));
+    for (let y = Math.ceil(yb / 12) * 12; y < yt; y += 12) B.add('rib', place(new THREE.BoxGeometry(0.7, 0.1, 0.4), { ...toXYZ(V(mx + 0.3, y, mz)) }));
+    // o patamar de cima: da ponte até a escada
+    B.add('grate', place(new THREE.BoxGeometry(3.4, 0.3, 2.4), { ...toXYZ(V(6.4, b.top - 0.15, mz)) }));
+    // luzes pequenas ao longo da subida (a manutenção tem energia própria)
+    for (let y = yb + 30; y < yt; y += 60) B.lamp(p.x + mx + 0.9, y, p.z + mz + 0.9, SODIUM, 25, 'faulty', { to: [p.x + mx + 0.9, y + 1, p.z + mz + 0.6], size: 0.9, grid: false });
+  }
   B.lamp(p.x + hw - 4, yTop + 2, p.z + hw, SODIUM, 2500, 'steady', { to: [p.x + hw, yTop + 3.5, p.z + hw], size: 4, far: true });
   B.lamp(p.x + 60, y0 + 8, p.z + 3, FLUORO, 400, 'faulty', { to: [p.x + 60, y0, p.z + 4.5], size: 2, far: true });
   // luz caindo pela passagem, do alto até a plataforma

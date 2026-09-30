@@ -133,3 +133,9 @@ Por que as coisas estão como estão, em ordem.
 
 - Primeira leitura do console: arquivo (14 palavras), usina (religou 12 setores no teste), console (3 únicas no mapa), sala dos Construtores (nova — 22 canteiros no teste, depois de filtrar para a mesma laje: antes marcava 194), antena (nova — sensor 2,5×).
 - Na Peregrinação, o primeiro E num console único pega o sensor (se ainda não tiver) — o efeito vem na leitura seguinte.
+
+## 2026-09-30 — 4.6 travessias difíceis; fase 4 feita
+
+- Escada de manutenção em cada torre de passagem (~220 m, com patamar na ponte e lâmpadas próprias): o setor apagado deixa de ser beco sem saída.
+- Pistas para as escotilhas (passagem → escotilha; escotilha → a próxima no sentido das máquinas).
+- **Fase 4 completa**: 4.1 religar setores · 4.2 subir nas máquinas · 4.3 marcas · 4.4 seeds compartilháveis · 4.5 estruturas únicas com efeito (+ Construtores, antena) · 4.6 travessias. A fase 5 só quando o usuário pedir.

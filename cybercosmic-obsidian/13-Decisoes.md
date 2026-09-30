@@ -128,3 +128,4 @@ Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de sh
 | marcas | só tinta (seta de estêncil), sem sinalizadores; até 400; V / LB |
 | seed compartilhada leva o estado? | **não**: só o mundo cru + as marcas (em ferrugem para quem recebe) |
 | efeito das estruturas únicas | só na **primeira** leitura do console, por mundo; valores: arquivo 14 palavras, usina 2,5 km, console 3 vizinhas, Construtores 6 km (mesma laje), antena ×2,5 |
+| travessias difíceis | escada de manutenção (~220 m) em cada passagem; pistas das passagens para as escotilhas e de escotilha em escotilha |

@@ -114,6 +114,11 @@ Não há missões. Uma pista é um endereço que você leu e decide seguir.
 
 No painel **MUNDOS**, **COPIAR CÓDIGO** põe na área de transferência um código com a seed, o modo e as suas marcas. Quem recebe usa **COLAR CÓDIGO**, confere (seed, modo, quantas marcas) e começa aquele mundo, que substitui o mundo salvo daquele modo, com confirmação. Como o mundo é determinístico, é a mesma Cidade, com o mesmo começo e as suas setas pintadas em cor de ferrugem. O estado da sua travessia (setores religados, pistas, léxico) não vai junto: cada um faz a própria. Tudo por botões, então funciona pelo controle.
 
+## Travessias difíceis (fase 4)
+
+- **Escada de manutenção nas passagens**: num setor apagado o elevador colossal para, e a camada vira um beco sem saída. Ao lado da ponte +z de cada passagem há um mastro com escada (~220 m) da plataforma de embarque de baixo até o alto da camada, com lâmpadas pequenas de energia própria. A escolha passa a ser subir no escuro ou achar a subestação e religar.
+- **Pistas para as máquinas**: no alto das camadas, o terminal da passagem cita a escotilha mais perto (até 4 km), e o de uma escotilha cita a próxima no sentido em que as máquinas andam, a viagem que dá para fazer pendurado.
+
 ## Setores de energia
 
 A Cidade é dividida em setores de formas e tamanhos irregulares (só as camadas os separam na vertical). Cerca de 30% estão **permanentemente apagados**: lâmpadas, janelas, trens, elevadores e terminais sem energia. Uns 15% são **instáveis**: a luz vai e vem em ondas. O resto tem energia. A mesma conta roda na CPU (lâmpadas) e na GPU (janelas), então as duas sempre concordam.

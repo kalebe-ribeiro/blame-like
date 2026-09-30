@@ -14,7 +14,7 @@
 import { hash4, rngAt } from '../gen/hash.js';
 import { MEGA } from '../gen/field.js';
 import { SCRIPT } from './ancient.js';
-import { leadFor, leadLine, substationLead } from './leads.js';
+import { leadFor, leadLine, substationLead, hatchLead } from './leads.js';
 
 const W = (w) => ({ w });
 const N = (n) => ({ n: String(n) });
@@ -129,6 +129,9 @@ export function terminalRecords(field, site) {
   // setor apagado: onde fica a subestação que o religa (some quando o setor é religado)
   const sub = substationLead(field, site);
   if (sub) lines.splice(Math.min(lines.length, 2 + r.int(0, 2)), 0, leadLine(field, sub));
+  // no alto da camada: onde embarcar numa máquina colossal
+  const hl = hatchLead(field, site);
+  if (hl) lines.splice(Math.min(lines.length, 3 + r.int(0, 2)), 0, leadLine(field, hl));
   // um terminal em ~8 guarda um fragmento (nas únicas, sempre)
   if (site.kind === 'unique' || hash4(field.seed, Math.round(site.x), Math.round(site.z), 0, 951) < 0.12) {
     lines.push(RULE);
