@@ -16,7 +16,7 @@
 //
 //  Queda sem fim (o vazio): começa do "apagando", ainda no ar.
 //
-//  QUEM ARRASTA (fase 5 — pronto, ainda DESLIGADO: WAKE_LOTTERY.enabled):
+//  QUEM ARRASTA (pronto na fase 5, LIGADO na fase 7 — WAKE_LOTTERY):
 //    'safeguard' → acorda no cemitério de vítimas mais perto (estrutura única
 //                  'graveyard'), sem carga e sem o que carregava (as ferramentas ficam)
 //    'npc'       → acorda numa vila ('village'; hoje abandonada — os NPCs são da fase 7)
@@ -26,6 +26,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { findDestination } from '../world/teleport.js';
+import { villageInhabited } from '../gen/villages.js';
 
 // lugares com chão onde um corpo pode ser largado
 const DUMP_KINDS = ['teia', 'colmeia', 'macico', 'galeria', 'estrato', 'poco', 'conduto', 'escadaria', 'trelica', 'camada', 'deposito', 'silo', 'maquinas'];
@@ -38,7 +39,7 @@ const smooth = (a, b, x) => {
 const rand = (a, b) => a + Math.random() * (b - a);
 
 /** O sorteio de quem arrasta o corpo desmaiado (ligado quando existirem Safeguards e NPCs). */
-export const WAKE_LOTTERY = { enabled: false, safeguard: 0.55, npc: 0.2 };
+export const WAKE_LOTTERY = { enabled: true, safeguard: 0.55, npc: 0.2 }; // ligado na fase 7
 const TAKER_PLACE = { safeguard: 'graveyard', npc: 'village' };
 
 export function createWake(ctx) {
@@ -79,6 +80,7 @@ export function createWake(ctx) {
     for (const R of [20000, 40000, 80000]) {
       for (const u of world.field.uniquesNear(g.x, g.y, g.z, R)) {
         if (u.kind !== kind) continue;
+        if (kind === 'village' && !villageInhabited(world.field, u)) continue; // quem te recolheu mora lá
         const d = Math.hypot(u.x - g.x, u.y - g.y, u.z - g.z);
         if (!best || d < best.d) best = { u, d };
       }

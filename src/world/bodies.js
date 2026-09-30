@@ -57,12 +57,29 @@ export function buildTestBody(material) {
   return buildBody(material, TEST);
 }
 
+/** Um humano (fase 7): mais baixo, curvado, de capuz e manto (`cloth`); o rosto some no escuro do capuz. */
+const HUMAN = {
+  hip: 0.86,
+  thigh: 0.42,
+  shin: 0.4,
+  torso: 0.5,
+  shoulderW: 0.18,
+  hipW: 0.09,
+  upperArm: 0.27,
+  forearm: 0.28,
+  stride: 1.15,
+};
+
+export function buildHumanBody(material, cloth, dark) {
+  return buildBody(material, HUMAN, null, { cloth, dark });
+}
+
 /** O Safeguard (pálido; `slit`: o material escuro da fenda no rosto). */
 export function buildSafeguardBody(material, slit) {
   return buildBody(material, SAFEGUARD, slit);
 }
 
-function buildBody(material, D, slitMat = null) {
+function buildBody(material, D, slitMat = null, dress = null) {
   const group = new THREE.Group();
   const root = joint(group, 0, D.hip, 0); // o quadril (sobe e desce com a passada)
   const meshes = [];
@@ -86,7 +103,19 @@ function buildBody(material, D, slitMat = null) {
   const head = new THREE.SphereGeometry(0.12, 10, 8);
   head.scale(0.92, slitMat ? 1.55 : 1.28, 1.05);
   head.translate(0, slitMat ? 0.24 : 0.21, 0.02);
-  add(neck, new THREE.Mesh(head, material));
+  // dentro do capuz a cabeça é só escuro (nenhum rosto)
+  add(neck, new THREE.Mesh(head, dress ? dress.dark : material));
+  if (dress) {
+    // o capuz (aberto na frente: dentro, só escuro) e o manto caindo dos ombros até os joelhos
+    // aberto na frente (+z é φ = π/2 no SphereGeometry): uma abertura de ~100°
+    const hood = new THREE.SphereGeometry(0.17, 12, 8, Math.PI / 2 + 0.9, Math.PI * 2 - 1.8, 0, Math.PI * 0.75);
+    hood.scale(1, 1.2, 1.1);
+    hood.translate(0, 0.22, -0.01);
+    add(neck, new THREE.Mesh(hood, dress.cloth));
+    const cloak = new THREE.CylinderGeometry(0.2, 0.34, D.torso + 0.55, 9, 1, true);
+    cloak.translate(0, D.torso - (D.torso + 0.55) / 2 + 0.05, -0.01);
+    add(spine, new THREE.Mesh(cloak, dress.cloth));
+  }
   if (slitMat) {
     // a fenda: uma placa escura rente à frente da cabeça, na vertical
     const slit = new THREE.BoxGeometry(0.018, 0.2, 0.02);

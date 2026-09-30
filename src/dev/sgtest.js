@@ -32,6 +32,9 @@ export async function runSafeguardTest(ctx) {
     if (!!ctx.carried.lanternOn !== on) ctx.carried.toggleLantern();
   };
   ctx.player.energy.value = 1; // a lanterna precisa de carga
+  // o relógio das rondas começa sempre no mesmo instante (senão cada rodada cai noutro ponto)
+  const t0clock = performance.now();
+  sg.clock = () => 1.7e9 + (performance.now() - t0clock) / 1000;
   let woke = null;
   world.bus.on('player:wake', (ev) => (woke = ev));
   const fiscal = { wall: 0, fell: 0 };
@@ -72,10 +75,16 @@ export async function runSafeguardTest(ctx) {
   report({ kind: 'rondas', ok: sg.byTerritory.size > 0 && moved > 2.5, why: `${sg.byTerritory.size} rondas perto · uma andou ${moved.toFixed(1)} m em 3 s · ${sg.none.size} territórios sem rede` });
 
   // ── visto ──
-  let e = meet(22);
+  // até três tentativas (outro ponto do circuito, mais perto): uma curva ou uma escada no meio tapa a vista
+  let e = null;
+  let seen = false;
   lantern(true);
-  const spotted0 = sg.stats.spotted;
-  const seen = !!e && (await waitFor(() => sg.stats.spotted > spotted0, 20));
+  for (const D of [22, 14, 9]) {
+    e = meet(D);
+    const spotted0 = sg.stats.spotted;
+    seen = !!e && (await waitFor(() => sg.stats.spotted > spotted0, 15));
+    if (seen || !e) break;
+  }
   report({ kind: 'visto', ok: seen, why: e ? (seen ? `caçando (${e.sg.state})` : `não viu (${e.sg.state}, ${e.tier})`) : 'nenhuma ronda' });
 
   // ── captura ──
@@ -102,10 +111,14 @@ export async function runSafeguardTest(ctx) {
   ctx.ui.teleport('teia', 'teia');
   await sleep(SETTLE);
   await waitFor(() => [...sg.byTerritory.values()].some((x) => x.sg.state === 'patrol'), 10);
-  e = meet(20);
   lantern(true);
-  const s1 = sg.stats.spotted;
-  const seen2 = !!e && (await waitFor(() => sg.stats.spotted > s1, 20));
+  let seen2 = false;
+  for (const D of [20, 12, 8]) {
+    e = meet(D);
+    const s1 = sg.stats.spotted;
+    seen2 = !!e && (await waitFor(() => sg.stats.spotted > s1, 15));
+    if (seen2 || !e) break;
+  }
   let lostOk = false;
   if (seen2) {
     // apaga a lanterna e some: um ponto do grafo a ~150 m de caminho
@@ -143,10 +156,18 @@ export async function runSafeguardTest(ctx) {
   const g = here();
   const n = sg.summon(g, 1);
   const called = [...sg.byTerritory.values()].find((x) => x.sg.state === 'summon');
-  const d0 = called ? called.feet.distanceTo(g) : 0;
+  // o que falta do caminho (ele vem pelo grafo: em linha reta pode até se afastar no começo)
+  const left = (x) => {
+    if (!x.path || x.sg.state !== 'summon') return 0;
+    const P = x.path.pts;
+    let L = P[x.pi] ? x.feet.distanceTo(new THREE.Vector3(P[x.pi].x, P[x.pi].y, P[x.pi].z)) : 0;
+    for (let i = x.pi + 1; i < P.length; i++) L += Math.hypot(P[i].x - P[i - 1].x, P[i].y - P[i - 1].y, P[i].z - P[i - 1].z);
+    return L;
+  };
+  const d0 = called ? left(called) : 0;
   await sleep(8000);
-  const d1 = called ? called.feet.distanceTo(g) : 0;
-  report({ kind: 'chamado', ok: n === 1 && !!called && (d1 < d0 - 5 || called.sg.state !== 'summon'), why: called ? `vindo de ${Math.round(d0)} m → ${Math.round(d1)} m (${called.sg.state})` : 'ninguém veio' });
+  const d1 = called ? left(called) : 0;
+  report({ kind: 'chamado', ok: n === 1 && !!called && (d1 < d0 - 10 || called.sg.state !== 'summon'), why: called ? `faltavam ${Math.round(d0)} m de caminho → ${Math.round(d1)} m (${called.sg.state})` : 'ninguém veio' });
 
   clearInterval(watch);
   for (const x of sg.all()) {

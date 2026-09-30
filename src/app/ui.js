@@ -295,6 +295,7 @@ export function createUI(ctx) {
       { el: settings.el, back: () => settings.close() },
       { el: transport.el, back: () => transport.close() },
       { el: worlds.el, back: () => worlds.current && worlds.close() },
+      { el: ctx.people.el, back: () => ctx.people.close() },
       { el: document.getElementById('reader'), back: () => ctx.reading.close(), scroll: (px) => ctx.reading.scrollPx(px), lines: true },
       { el: trail.el, map: trail, back: () => toggleMap() },
       { el: gate, back: () => {}, menu: () => enter() },
@@ -308,7 +309,7 @@ export function createUI(ctx) {
     if (name === 'hud' && rules.hud) hud.toggle();
     if (name === 'lantern' || name === 'torch') ctx.carried.toggleLantern();
     if (name === 'sensor') ctx.carried.cycleSensor();
-    if (name === 'use') ctx.reading.tryUse() || ctx.power.tryUse() || ctx.carried.togglePlug();
+    if (name === 'use') ctx.people.tryUse() || ctx.reading.tryUse() || ctx.power.tryUse() || ctx.carried.togglePlug();
     if (name === 'map') toggleMap();
     if (name === 'transport' && rules.teleport) openTransport();
     if (name === 'regenerate' && rules.regenerate && !ctx.choosing) regenerate();
@@ -335,8 +336,9 @@ export function createUI(ctx) {
     if (is('map')) toggleMap();
     if (e.code === 'Escape' && trail.open) toggleMap();
     // usar: ler o terminal em frente (ou fechar a leitura); senão, a tomada
-    if (is('use') && (controls.locked || ctx.reading.isOpen)) ctx.reading.tryUse() || ctx.power.tryUse() || ctx.carried.togglePlug();
+    if (is('use') && (controls.locked || ctx.reading.isOpen || ctx.people.isOpen)) ctx.people.tryUse() || ctx.reading.tryUse() || ctx.power.tryUse() || ctx.carried.togglePlug();
     if (e.code === 'Escape' && ctx.reading.isOpen) ctx.reading.close();
+    if (e.code === 'Escape' && ctx.people.isOpen) ctx.people.close();
   });
 
   // primeira vez: o painel de mundos já aberto

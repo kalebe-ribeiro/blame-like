@@ -36,24 +36,26 @@ const inside = (F, t, v) => Math.floor(v.y / PATROL.slab) === t.slab && F.sector
  * O circuito de ronda de um território (memorizado), ou null.
  * { id, pts: [{x,y,z}], cum: [m acumulados], L, phase }
  */
-export function patrolCircuit(F, nav, t) {
+export function patrolCircuit(F, nav, t, salt = 0) {
   nav._patrols ??= new Map();
-  if (nav._patrols.has(t.id)) return nav._patrols.get(t.id);
-  const c = buildCircuit(F, nav, t);
+  const key = `${t.id}#${salt}`;
+  if (nav._patrols.has(key)) return nav._patrols.get(key);
+  const c = buildCircuit(F, nav, t, salt);
   if (nav._patrols.size > 400) nav._patrols.clear();
-  nav._patrols.set(t.id, c);
+  nav._patrols.set(key, c);
   return c;
 }
 
-function buildCircuit(F, nav, t) {
+/** salt ≠ 0: outro circuito no mesmo território (os andarilhos da fase 7 — outras paradas, outro começo). */
+function buildCircuit(F, nav, t, salt = 0) {
   const S = t.sector;
-  const r = rngAt(F.seed, S.i * 7 + t.slab, S.band, S.k, 1601);
+  const r = rngAt(F.seed, S.i * 7 + t.slab, S.band + salt * 131, S.k, 1601);
   const ymid = (t.slab + 0.5) * PATROL.slab;
   // a plataforma de partida: perto do meio do território (tenta alguns pontos em volta)
   let start = null;
   for (let q = 0; q < 9 && !start; q++) {
-    const a = q * 2.4;
-    const rr = q ? 120 + q * 40 : 0;
+    const a = q * 2.4 + salt * 1.7;
+    const rr = q || salt ? 120 + q * 40 : 0;
     const n = F.nearestNode(S.px + Math.cos(a) * rr, ymid, S.pz + Math.sin(a) * rr, { below: 5, above: 4, reach: 3 });
     if (n && F.nodeLinked(n) && inside(F, t, n)) start = nav.nodeVertex(n);
   }
@@ -101,7 +103,7 @@ function buildCircuit(F, nav, t) {
   for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y, pts[i].z - pts[i - 1].z));
   const L = cum[cum.length - 1];
   if (L < PATROL.minLength) return null;
-  return { id: t.id, territory: t, pts, cum, L, phase: hash4(F.seed, S.i, t.slab, S.k, 1602) * L };
+  return { id: salt ? `${t.id}#${salt}` : t.id, territory: t, pts, cum, L, phase: hash4(F.seed, S.i, t.slab + salt * 17, S.k, 1602) * L };
 }
 
 /** Ponto do circuito no comprimento de arco s (dá a volta): { x, y, z, yaw, i } — i: o próximo ponto. */

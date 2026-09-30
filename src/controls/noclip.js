@@ -217,7 +217,7 @@ export class NoclipControls {
     const h = (id) => (bindings.held(id, k) ? 1 : 0);
     const f = clamp1(h('forward') - h('back') + pad.f);
     const r = clamp1(h('right') - h('left') + pad.r);
-    const run = !!h('run') || pad.run;
+    const run = (!!h('run') || pad.run) && !this.burden; // carregando uma carga (fase 7) não se corre
     this._applyRotation(time);
 
     if (this.mode === 'walk' && this.walker) {

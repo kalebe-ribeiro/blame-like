@@ -202,8 +202,13 @@ export function createCarried(ctx) {
     else if (note && time < note.until) line = note.text;
     else if (nearSub) line = world.substations.isLive(nearSub.site) ? t('device.substationLive') : t('device.substation', { key: bindings.label('use') });
     else if (near) line = t('device.socket', { key: bindings.label('use') });
+    else if (ctx.people?.near) line = t('device.talk', { key: bindings.label('use') });
     else if (e <= 0) line = t('device.empty');
     else if (found > 0) line = t('device.sensorFound', { key: bindings.label('sensor') });
+    else {
+      const cg = ctx.people?.cargoInfo();
+      if (cg) line = t('device.cargo', { dist: cg.d < 1000 ? `${Math.round(cg.d)} M` : `${(cg.d / 1000).toFixed(1)} KM` });
+    }
     if (on) {
       g2.font = '10px Consolas, monospace';
       g2.fillText(t(`device.sensor.${sensor}`), 8, 14);

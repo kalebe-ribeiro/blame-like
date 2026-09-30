@@ -163,6 +163,32 @@ export function setupDev(ctx) {
       console.warn(`SGCAM: ${e.id} (${e.sg.state})`);
     }, Number(params.get('sgcam')) * 1000);
   }
+  // --talk=N: aos N s, de pé diante do morador mais perto (fase 7), e a conversa aberta;
+  // --talkpick=cargo,teach…: escolhe essas opções, uma a cada 1,5 s
+  if (params.get('talk')) {
+    setTimeout(() => {
+      const g = world.toGlobal(camera.position);
+      let near = null;
+      for (const e of world.npcs.all()) {
+        const d = e.feet.distanceTo(g);
+        if (!near || d < near.d) near = { e, d };
+      }
+      if (!near) return console.warn('TALK: ninguém');
+      const e = near.e;
+      const fx = -Math.sin(e.yaw);
+      const fz = -Math.cos(e.yaw);
+      ctx.controls.setMode('walk');
+      ctx.controls.setView({ pos: new THREE.Vector3(e.feet.x + fx * 2.3, e.feet.y + 1.7, e.feet.z + fz * 2.3).sub(world.origin), yaw: e.yaw + Math.PI, pitch: -0.12, scale: 1 });
+      setTimeout(() => {
+        console.warn('TALK: ' + ctx.people.tryUse());
+        const picks = (params.get('talkpick') ?? '').split(',').filter(Boolean);
+        picks.forEach((id, i) => setTimeout(() => {
+          document.querySelector(`#talk button[data-id="${id}"]`)?.click();
+          console.warn(`TALK ${id}: ${document.querySelector('#talk .talk-line')?.textContent} · carga ${JSON.stringify(ctx.player.carried)}`);
+        }, 1500 * (i + 1)));
+      }, 1200);
+    }, Number(params.get('talk')) * 1000);
+  }
   if (params.get('sgemerge')) setTimeout(() => console.warn('SGEMERGE: ' + world.safeguards.emerge(world.toGlobal(camera.position), world.origin, 1) + ' ' + JSON.stringify(world.safeguards.wallWhy) + ' @ ' + world.toGlobal(camera.position).toArray().map(Math.round)), Number(params.get('sgemerge')) * 1000);
 
   // --check: roteiro automático por todos os destinos (npm run check)

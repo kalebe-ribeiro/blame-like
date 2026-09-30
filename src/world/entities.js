@@ -23,7 +23,7 @@ import * as THREE from 'three';
 import { Walker } from '../controls/walker.js';
 import { CollisionWorld } from './collision.js';
 import { NavGraph } from '../gen/nav.js';
-import { buildTestBody, buildSafeguardBody } from './bodies.js';
+import { buildTestBody, buildSafeguardBody, buildHumanBody } from './bodies.js';
 
 const NEAR = 110; // m: física completa
 const FAR = 130; // m: volta ao abstrato (histerese)
@@ -55,7 +55,11 @@ export class EntitySystem {
    * brain: quem decide para onde o corpo vai (world/safeguards.js); sem brain, o corpo segue e.path.
    */
   spawn(def) {
-    const rig = def.kind === 'safeguard' ? buildSafeguardBody(this.materials.pale, this.materials.door) : buildTestBody(this.materials.machine);
+    const M = this.materials;
+    const rig =
+      def.kind === 'safeguard' ? buildSafeguardBody(M.pale, M.door)
+        : def.kind === 'human' ? buildHumanBody(M.cloth, M.cloth, (this._void ??= new THREE.MeshBasicMaterial({ color: 0x030303 })))
+        : buildTestBody(M.machine);
     this.group.add(rig.group);
     const walker = new Walker(new CollisionWorld(this.world));
     walker.canClimb = false;
@@ -63,6 +67,7 @@ export class EntitySystem {
     walker.dipScale = 0;
     walker.speedScale = 0.55; // ~2,3 m/s: um passo firme, não uma corrida
     if (def.kind === 'safeguard') walker.eye = 2.1;
+    if (def.kind === 'human') walker.eye = 1.5;
     const e = {
       id: def.id,
       kind: def.kind ?? 'test',
@@ -114,7 +119,12 @@ export class EntitySystem {
     const nav = this.nav;
     // no meio de uma ponte não há vértice: volta para o de onde a perna atual saiu
     const leg = e.path?.legs?.[e.path.ptLeg?.[e.pi] ?? -1];
-    const from = nav.vertexAt(e.feet.x, e.feet.y, e.feet.z) ?? leg?.from ?? null;
+    let from = nav.vertexAt(e.feet.x, e.feet.y, e.feet.z) ?? leg?.from ?? null;
+    // no meio de uma ponte, sem caminho anterior (um Safeguard de ronda): a plataforma mais perto
+    if (!from) {
+      const n = this.world.field.nearestNode(e.feet.x, e.feet.y, e.feet.z, { below: 1, above: 1, reach: 1 });
+      if (n && this.world.field.nodeLinked(n) && Math.hypot(n.x - e.feet.x, n.z - e.feet.z) < 80) from = nav.nodeVertex(n);
+    }
     const to = nav.vertexAt(e.goal.x, e.goal.y, e.goal.z);
     if (!from || !to) {
       e.state = 'lost';

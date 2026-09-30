@@ -121,7 +121,7 @@ export class Walker {
 
     // ── gravidade e pulo ──
     if (this.grounded && input.jump) {
-      this.vel.y = 5.4 * Math.sqrt(s);
+      this.vel.y = 5.4 * Math.sqrt(s) * (this.jumpScale ?? 1);
       this.grounded = false;
     }
     this.vel.y = Math.max(this.vel.y - 15 * s * dt, -60 * s);

@@ -193,3 +193,11 @@ Por que as coisas estão como estão, em ordem.
 - **Modo Livre**: opção nas configurações, desligada por padrão.
 - Erro meu achado no primeiro teste: durante o desmaio os sentidos vêm nulos e a percepção lia `lantern` de null.
 - Teste novo `npm run check:safeguards` (`dev/sgtest.js`). Flags: `--sgwatch`, `--sgnear=N --sgdist=D`, `--sgcam=N`, `--sgemerge=N`.
+
+## 2026-09-30 — fase 7, etapa 1: humanos (7.1–7.4)
+
+- **Vilas habitadas** (`gen/villages.js`, a disposição comum à geometria e aos moradores): metade das vilas; 4–7 moradores encapuzados (`world/npcs.js`, corpo em `world/bodies.js`: o rosto é só escuro — material sem luz, porque a lanterna fazia brilhar a cabeça); braseiro aceso (tambor + brasa + fumaça).
+- **Conversa** (`ui/talk.js` + `app/people.js`): E diante de um morador; uma frase curta; as escolhas são trocas (recarregar a célula · aprender 4 palavras · o caminho até outra vila · levar uma carga · entregar). Navegável pelo controle (camada do `padNav`).
+- **Cargas**: nas costas; carregando, não se corre e o pulo é baixo; o aparelho mostra CARGA → distância. Entrega = célula cheia + 5 palavras. Pego pelos Safeguards: perdida.
+- **Despertar com sorteio ligado**: queda fatal → Safeguards 55% (cemitério) · humanos 20% (a vila habitada mais perto: ficam com a carga, ou pedem uma entrega) · ninguém 25%.
+- O `check:safeguards` falhou uma vez sem relação com isto: o relógio real fazia cada rodada cair noutro ponto da ronda. Agora o teste fixa o relógio e tenta ser visto até 3 vezes; e um Safeguard parado no meio de uma ponte não achava de onde partir quando chamado (`_plan` agora usa a plataforma mais perto).

@@ -267,3 +267,25 @@ button.controls-cell:hover { border-color: rgba(200, 196, 184, 0.8); }
 .archive-rec { cursor: pointer; }
 .archive-rec:hover span, .archive-rec:hover b { color: #e2ded4; }
 .archive-empty { text-align: center; padding: 10px 0; color: rgba(150, 146, 136, 0.55); }
+
+/* ── Conversa (fase 7): pouca fala, uma troca ───────────────────────────── */
+#talk {
+  position: fixed;
+  left: 0; right: 0; bottom: 9vh;
+  display: none;
+  justify-content: center;
+  z-index: 22;
+  font-family: "Consolas", "Courier New", monospace;
+  color: #b2bcac;
+  pointer-events: none;
+}
+#talk.open { display: flex; }
+.talk-box { pointer-events: auto; max-width: min(560px, calc(100vw - 32px)); border: 1px solid rgba(178, 188, 172, 0.22); background: rgba(5, 7, 6, 0.92); padding: 14px 18px; box-shadow: 0 0 60px rgba(0, 0, 0, 0.8); }
+.talk-who { font-size: 10px; letter-spacing: 0.3em; color: rgba(176, 118, 62, 0.85); margin-bottom: 6px; }
+.talk-line { font-size: 14px; line-height: 1.5; margin-bottom: 12px; min-height: 1.5em; }
+.talk-opts { display: flex; flex-direction: column; gap: 4px; }
+.talk-opts button {
+  text-align: left; background: none; border: 1px solid transparent; cursor: pointer; padding: 4px 8px;
+  font: 12px "Consolas", "Courier New", monospace; letter-spacing: 0.08em; color: #b2bcac;
+}
+.talk-opts button:hover, .talk-opts button:focus, .talk-opts button.pad-focus { border-color: rgba(178, 188, 172, 0.35); outline: none; }

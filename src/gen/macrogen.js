@@ -25,6 +25,7 @@ import { place, cylinderBetween, slabBetween } from '../world/geometry.js';
 import { ChunkBuilder } from './chunkgen.js';
 import { SODIUM, FLUORO, COLD, WELD } from './colors.js';
 import { beamGeometry } from './beams.js';
+import { villageLayout } from './villages.js';
 import { genCascades } from './cascades.js';
 import { genFloods } from './floods.js';
 
@@ -404,39 +405,36 @@ function buildUnique(F, B, u) {
     const [lx, lz] = P(-2, 0);
     B.lamp(lx, y0 + u.h - 1.4, lz, FLUORO, 30, 'steady', { to: [lx, y0 + u.h, lz], size: 1.1, grid: false });
   } else if (u.kind === 'village') {
-    // a vila abandonada (reservada para os NPCs — fase 7): escondida dentro de um galpão
-    // fechado (existem Safeguards), barracos de chapa encostados, alguns de dois andares,
-    // panos esquecidos sobre os tetos. Tudo no chão do galpão ou sobre um teto.
+    // a vila (fases 5 e 7): escondida dentro de um galpão fechado (existem Safeguards),
+    // barracos de chapa encostados, alguns de dois andares, panos sobre os tetos. Metade
+    // é habitada: um braseiro aceso no corredor. A disposição é de gen/villages.js (os
+    // moradores — world/npcs.js — usam a mesma).
     off = shell(B, f, y0, u.h, T, 4, 4.5, r);
     box(B, 'macro', 0, y0 + u.h, 0, ha + 1, 1.4, hc + 1);
-    const shacks = [];
-    for (let q = 0; q < 40 && shacks.length < 16; q++) {
-      const w = r.float(1.1, 1.8);
-      const d = r.float(1.1, 1.8);
-      const h = r.float(2.4, 3.2);
-      const sa = r.float(-ha + T + w + 0.5, ha - T - w - 2);
-      const sc = r.float(-hc + T + d + 0.5, hc - T - d - 0.5);
-      if (Math.abs(sc - off) < d + 2.4) continue; // o corredor da porta (e o console)
-      if (shacks.some((s) => Math.abs(s.a - sa) < s.w + w + 0.7 && Math.abs(s.c - sc) < s.d + d + 0.7)) continue;
-      shacks.push({ a: sa, c: sc, w, d });
-      box(B, 'shack', sa, y0, sc, w, h, d);
-      box(B, 'dress', sa, y0 + h, sc, w + 0.25, 0.12, d + 0.25); // o teto de chapa, apoiado nas paredes
+    const L0 = villageLayout(F, u);
+    for (const s of L0.shacks) {
+      box(B, 'shack', s.a, y0, s.c, s.w, s.h, s.d);
+      box(B, 'dress', s.a, y0 + s.h, s.c, s.w + 0.25, 0.12, s.d + 0.25); // o teto de chapa, apoiado nas paredes
       // a porta: uma placa escura na face voltada para o corredor
-      const face = Math.sign(off - sc) || 1;
-      box(B, 'door', sa, y0, sc + face * (d + 0.02), 0.45, 1.9, 0.02);
-      if (r.chance(0.35) && h + 2.7 < u.h - 1) {
-        // um segundo andar, menor, em pé sobre o teto do de baixo
-        box(B, 'shack', sa + r.float(-0.2, 0.2) * w, y0 + h + 0.12, sc, w * 0.75, 2.4, d * 0.75);
-      } else if (r.chance(0.4)) {
-        box(B, 'cloth', sa + r.float(-0.3, 0.3) * w, y0 + h + 0.12, sc, w * 0.7, 0.04, d * 0.8); // um pano largado no teto
-      }
+      const face = Math.sign(off - s.c) || 1;
+      box(B, 'door', s.a, y0, s.c + face * (s.d + 0.02), 0.45, 1.9, 0.02);
+      // um segundo andar, menor, em pé sobre o teto do de baixo; ou um pano largado no teto
+      if (s.upper) box(B, 'shack', s.a + s.ua * s.w, y0 + s.h + 0.12, s.c, s.w * 0.75, 2.4, s.d * 0.75);
+      else if (s.cloth) box(B, 'cloth', s.a + s.ca * s.w, y0 + s.h + 0.12, s.c, s.w * 0.7, 0.04, s.d * 0.8);
     }
-    // um tanque de água no meio (em pé no chão) e a única luz, pendurada do teto
-    const tc = off + (off > 0 ? -1 : 1) * r.float(6, 10);
-    if (!shacks.some((s) => Math.abs(s.a) < s.w + 2.5 && Math.abs(s.c - tc) < s.d + 2.5)) {
-      const [tx, tz] = P(0, tc);
+    // um tanque de água (em pé no chão)
+    if (L0.tank) {
+      const [tx, tz] = P(L0.tank.a, L0.tank.c);
       const L = B.L(tx, y0 + 1.6, tz);
       B.add('machine', place(new THREE.CylinderGeometry(1.6, 1.7, 3.2, 10), { x: L.x, y: L.y, z: L.z }));
+    }
+    // habitada: o braseiro — um tambor de chapa no chão, brasa acesa dentro, fumaça
+    if (L0.brazier) {
+      const [bx, bz] = P(L0.brazier.a, L0.brazier.c);
+      const L = B.L(bx, y0 + 0.45, bz);
+      B.add('machine', place(new THREE.CylinderGeometry(0.42, 0.36, 0.9, 10, 1, true), { x: L.x, y: L.y, z: L.z }));
+      B.light(bx, y0 + 1.1, bz, SODIUM, 9, 'ember', false);
+      B.emit({ type: 'steam', x: bx, y: y0 + 1, z: bz, h: 10, rate: 0.1 });
     }
     const [lx, lz] = P(ha * 0.3, off);
     B.lamp(lx, y0 + u.h - 3.5, lz, SODIUM, 45, 'faulty', { to: [lx, y0 + u.h, lz], size: 1, grid: false });
