@@ -289,6 +289,33 @@ export function setupDev(ctx) {
   if (params.get('ambient')) world.shared.uAmbient.value.multiplyScalar(Number(params.get('ambient')));
   // --nonpcs: sem os raros vivos (para medir o custo deles)
   if (params.get('nonpcs')) world.npcs.enabled = false;
+  // --shaderprobe: compila cada material do mundo sozinho e diz qual dá aviso do compilador
+  if (params.get('shaderprobe')) {
+    setTimeout(() => {
+      const warn = console.warn;
+      const out = [];
+      for (const [name, mat] of Object.entries(world.materials)) {
+        let hit = null;
+        console.warn = (...a) => {
+          if (String(a[0]).includes('X3595') || String(a[0]).includes('Program Info Log')) hit = String(a[0]).slice(0, 80);
+        };
+        const sc = new THREE.Scene();
+        const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
+        sc.add(m);
+        try {
+          renderer.compile(sc, camera);
+        } catch (e) {
+          hit = 'erro ' + e.message;
+        }
+        console.warn = warn;
+        if (hit) out.push(name);
+      }
+      console.warn('SHADERPROBE: ' + (out.join(', ') || 'nenhum'));
+    }, 8000);
+  }
+  // --inventory=N: abre o inventário aos N s; --equip=lantern,device: equipa isso antes
+  if (params.get('equip')) setTimeout(() => params.get('equip').split(',').forEach((id) => ctx.inventory.equip(id)), 4000);
+  if (params.get('inventory')) setTimeout(() => ctx.inventory.open(), Number(params.get('inventory')) * 1000);
   if (params.get('sgemerge')) setTimeout(() => console.warn('SGEMERGE: ' + world.safeguards.emerge(world.toGlobal(camera.position), world.origin, 1) + ' ' + JSON.stringify(world.safeguards.wallWhy) + ' @ ' + world.toGlobal(camera.position).toArray().map(Math.round)), Number(params.get('sgemerge')) * 1000);
 
   // --check: roteiro automático por todos os destinos (npm run check)

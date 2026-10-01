@@ -43,6 +43,7 @@ export const ACTIONS = [
   { id: 'photo', group: 'act', key: 'F2', pad: 5 },
   { id: 'menu', group: 'ui', key: 'Escape', pad: 9, fixedKey: true },
   { id: 'map', group: 'ui', key: 'KeyM', pad: 8 },
+  { id: 'inventory', group: 'ui', key: 'KeyI', pad: 11 }, // o inventário e as mãos (app/inventory.js)
   { id: 'hud', group: 'ui', key: 'KeyH', pad: 15, modes: ['free'] },
   { id: 'transport', group: 'ui', key: 'KeyT', pad: null, modes: ['free'] },
   { id: 'regenerate', group: 'ui', key: 'KeyR', pad: null, modes: ['free'] },

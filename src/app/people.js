@@ -8,7 +8,10 @@
 //      o caminho               onde fica outra vila habitada (uma pista inteira)
 //      levar uma carga         até outra vila habitada; entregar = a recompensa
 //  CARGAS (7.3): um volume nas costas (ctx.player.carried); carregando, não se
-//    corre e o pulo é baixo; o aparelho mostra a distância até o destino.
+//    corre e o pulo é baixo; o aparelho mostra a distância até o destino, e o
+//    mapa, o lugar (◇). Cada carga tem contexto — o que é, por que vai — e uma
+//    recompensa prometida na hora (palavras · o mapa da região · uma célula
+//    maior), sempre com a célula cheia na entrega.
 //    Pego pelos Safeguards: perdida (é "o que você carregava" — app/wake.js).
 //  DESPERTAR (7.4): recolhido por humanos → acorda na vila; se carregava uma
 //    carga, eles ficam com ela; se não, pedem uma entrega.
@@ -27,11 +30,18 @@ import { hash4 } from '../gen/hash.js';
 
 const RECHARGE_EVERY = 20 * 60 * 1000; // ms
 const TEACH = 4;
-const DELIVERY_WORDS = 5;
 const CARGO_RANGE = 45000; // m: até onde se manda uma carga (as vilas são raras: uma a cada ~16 km, metade habitada)
 const GREETS = 8;
 const WANDER_GREETS = 5;
 const SWAP_COST = 0.25; // da célula, por 3 palavras (o andarilho que troca)
+const CARGO_WHAT = 6; // o que se leva (i18n: cargo.what.N)
+const CARGO_WHY = 4; // por que (cargo.why.N)
+const REWARDS = [
+  { kind: 'words', n: 7 }, // palavras da língua antiga
+  { kind: 'map', n: 4 }, // os lugares da região no mapa (estruturas únicas e vilas)
+  { kind: 'cell', n: 25 }, // a célula aguenta 25% a mais (até o dobro)
+];
+const LORE = 6; // o que os andarilhos contam (talk.wander.lore.N)
 const fmt = (d) => (d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(1)} km`);
 
 export function createPeople(ctx) {
@@ -75,15 +85,54 @@ export function createPeople(ctx) {
     return learned;
   }
 
-  /** Uma carga desta vila até outra. Devolve a outra (ou null). */
+  /** Uma carga desta vila até outra. Devolve { o, c } (ou null). */
   function giveCargo(u) {
     const o = otherVillage(u);
     if (!o) return null;
     const s = uniqueTerminal(world.field, o.u);
-    ctx.player.carried.push({ kind: 'cargo', from: u.id, to: o.u.id, x: s.x, y: s.y, z: s.z });
+    // o que é, por que, e o que eles prometem — da vila e do destino (sempre o mesmo pedido)
+    const F = world.field;
+    const hh = (k) => hash4(F.seed, Math.round(u.x), Math.round(o.u.z), k, 1740);
+    const c = {
+      kind: 'cargo', from: u.id, to: o.u.id, x: s.x, y: s.y, z: s.z,
+      what: Math.floor(hh(1) * CARGO_WHAT),
+      why: Math.floor(hh(2) * CARGO_WHY),
+      reward: REWARDS[Math.floor(hh(3) * REWARDS.length)],
+    };
+    ctx.player.carried.push(c);
     reveal(o.u, u);
     world.bus.emit('player:cargo', { from: u.id, to: o.u.id });
-    return o;
+    return { o, c };
+  }
+
+  const rewardText = (c) => t(`cargo.reward.${c.reward.kind}`, { n: c.reward.n });
+
+  /** A recompensa na entrega (além da célula cheia). Devolve o texto do que se ganhou. */
+  function payReward(c) {
+    const r = c.reward ?? REWARDS[0];
+    if (r.kind === 'words' && ctx.rules.translation) {
+      const w = teach(r.n, `cg:${c.from}>${c.to}`);
+      return t('cargo.got.words', { n: w.length });
+    }
+    if (r.kind === 'map') {
+      // os lugares da região: estruturas únicas e vilas perto do destino, como pistas inteiras
+      const F = world.field;
+      const near = F.uniquesNear(c.x, c.y, c.z, 30000)
+        .filter((o) => o.id !== c.to)
+        .map((o) => ({ o, d: Math.hypot(o.x - c.x, o.y - c.y, o.z - c.z) }))
+        .sort((a, b) => a.d - b.d)
+        .slice(0, r.n);
+      const here = { id: c.to, x: c.x, y: c.y, z: c.z };
+      for (const { o } of near) reveal(o, here);
+      return t('cargo.got.map', { n: near.length });
+    }
+    if (r.kind === 'cell') {
+      const en = ctx.player.energy;
+      en.max = Math.min(2, en.max + r.n / 100);
+      en.value = en.max;
+      return t('cargo.got.cell', { n: Math.round(en.max * 100) });
+    }
+    return '';
   }
 
   // ── a conversa ──
@@ -95,6 +144,8 @@ export function createPeople(ctx) {
         if (ctx.rules.translation && ctx.player.energy.value >= SWAP_COST && !e.npc.swapped) opts.push({ id: 'swap', label: t('talk.opt.swap', { n: Math.round(SWAP_COST * 100) }) });
         if (!e.npc.told) opts.push({ id: 'news', label: t('talk.opt.news') });
       }
+      if ((e.npc.lore ?? 0) < 2) opts.push({ id: 'lore', label: t('talk.opt.lore') });
+      if (!e.npc.thief && !e.npc.whence) opts.push({ id: 'whence', label: t('talk.opt.whence') });
       opts.push({ id: 'leave', label: t('talk.leave') });
       return opts;
     }
@@ -140,6 +191,7 @@ export function createPeople(ctx) {
     controls.lock();
   }
 
+  panel.onClose = () => close();
   panel.onPick = (id) => {
     const e = with_;
     if (!e) return;
@@ -151,6 +203,14 @@ export function createPeople(ctx) {
         const w = teach(3, `wd:${e.id}`);
         e.npc.swapped = true;
         wl = t('talk.swap', { n: w.length });
+      } else if (id === 'lore') {
+        // o que eles contam da Cidade (o ladrão responde seco)
+        e.npc.lore = (e.npc.lore ?? 0) + 1;
+        const k = Math.floor(hash4(world.field.seed, e.id.length, e.npc.lore, e.id.charCodeAt(5) || 7, 1723) * LORE);
+        wl = e.npc.thief ? t(`talk.wander.cold.${e.npc.lore % 3}`) : t(`talk.wander.lore.${k}`);
+      } else if (id === 'whence') {
+        e.npc.whence = true;
+        wl = t(`talk.wander.whence.${Math.floor(hash4(world.field.seed, e.id.length, 3, e.id.charCodeAt(6) || 3, 1724) * 4)}`);
       } else if (id === 'news') {
         e.npc.told = true;
         const o = world.npcs.inhabitedNear(e.feet.x, e.feet.y, e.feet.z, CARGO_RANGE)[0];
@@ -181,15 +241,15 @@ export function createPeople(ctx) {
         line = t('talk.way', { dist: fmt(o.d) });
       }
     } else if (id === 'cargo') {
-      const o = giveCargo(u);
-      line = o ? t('talk.cargo.give', { dist: fmt(o.d) }) : t('talk.nothing');
+      const r = giveCargo(u);
+      line = r ? t('talk.cargo.give', { what: t(`cargo.what.${r.c.what}`), why: t(`cargo.why.${r.c.why}`), dist: fmt(r.o.d), reward: rewardText(r.c) }) : t('talk.nothing');
     } else if (id === 'deliver') {
       const c = cargo();
       ctx.player.carried.splice(ctx.player.carried.indexOf(c), 1);
       ctx.player.energy.value = ctx.player.energy.max;
-      const w = ctx.rules.translation ? teach(DELIVERY_WORDS, `cg:${c.from}>${c.to}`) : [];
-      world.bus.emit('player:deliver', { from: c.from, to: c.to, words: w.length });
-      line = t('talk.cargo.thanks', { n: w.length });
+      const got = payReward(c);
+      world.bus.emit('player:deliver', { from: c.from, to: c.to, reward: c.reward?.kind });
+      line = t('talk.cargo.thanks', { what: t(`cargo.what.${c.what ?? 0}`), got });
     }
     panel.show(line, options(e));
   };
@@ -204,9 +264,9 @@ export function createPeople(ctx) {
       ctx.player.carried.splice(ctx.player.carried.indexOf(c), 1);
       setTimeout(() => tell(t('npc.keptCargo')), 800);
     } else {
-      const o = giveCargo(v.u);
-      if (o) setTimeout(() => tell(t('npc.mission', { dist: fmt(o.d) })), 800);
-      if (ctx.params.get('wakeas')) console.warn(`WAKE npc: na vila ${v.u.id} (${Math.round(v.d)} m) · entrega ${o ? `${o.u.id} a ${Math.round(o.d)} m` : 'nenhuma'}`);
+      const r = giveCargo(v.u);
+      if (r) setTimeout(() => tell(t('npc.mission', { what: t(`cargo.what.${r.c.what}`), dist: fmt(r.o.d) })), 800);
+      if (ctx.params.get('wakeas')) console.warn(`WAKE npc: na vila ${v.u.id} (${Math.round(v.d)} m) · entrega ${r ? `${r.o.u.id} a ${Math.round(r.o.d)} m` : 'nenhuma'}`);
     }
   });
   // pego pelos Safeguards: a carga se perde (app/wake.js já esvazia o que se carregava)
@@ -263,6 +323,8 @@ export function createPeople(ctx) {
     },
     update(dt) {
       if (!world.npcs.player) wire(); // um mundo novo (world.build)
+      // conversando: o corpo fica parado (as teclas são da conversa)
+      controls.frozen = panel.isOpen || !!ctx.inventory?.isOpen;
       // carregando: sem correr, pulo baixo
       const heavy = !!cargo();
       controls.burden = heavy;

@@ -102,7 +102,9 @@ export function createTravel(ctx) {
     const sectors = Object.values(slot.sectors ?? {});
     const marks = (slot.marks ?? []).map((m) => ({ x: m.x, y: m.y, z: m.z, dx: m.dx, dz: m.dz, shared: !!m.shared }));
     const builders = Object.values(slot.builderSites ?? {});
-    return { places, leads, sectors, marks, builders, ...(ctx.rules.leads ? { known: (w) => ctx.lexicon.known(w), word: (w) => t(`word.${w}`) } : {}) };
+    // as cargas: o lugar de entrega (◇)
+    const cargo = ctx.player.carried.filter((c) => c.kind === 'cargo').map((c) => ({ x: c.x, y: c.y, z: c.z, label: t('map.cargoTo', { what: t(`cargo.what.${c.what ?? 0}`) }) }));
+    return { places, leads, sectors, marks, builders, cargo, ...(ctx.rules.leads ? { known: (w) => ctx.lexicon.known(w), word: (w) => t(`word.${w}`) } : {}) };
   }
 
   return {

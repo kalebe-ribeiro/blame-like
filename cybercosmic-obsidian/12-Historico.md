@@ -226,3 +226,14 @@ Por que as coisas estão como estão, em ordem.
 - **Pela borda**: mão por mão, com o corpo balançando; os braços vão do punho ao ombro.
 - `check:climb` ganhou `corrimao` e `borda`; `--climbonly=corrimao`, `--shimmy=±1`.
 - Desempenho: cada corpo (jogador, Safeguards, moradores) refazia a cada quadro a lista de todas as malhas de colisão do mundo; agora a lista é reaproveitada enquanto o corpo não andou 1 m (até 0,3 s). O fps baixo do check na vila (≈20) era o carregamento depois de um salto de 20–40 km: parado lá, 76–88 fps (`--stats`), e igual sem os moradores (`--nonpcs`).
+
+## 2026-10-01 — inventário, mãos equipáveis, cargas com contexto, morte por queda, conversa pelo teclado
+
+- **Vida de silício atravessando corrimão** (foto): as alturas dos raios de parede tinham sido feitas proporcionais aos olhos; a vida de silício tem 1,9 m de olhos e os raios passavam por cima e por baixo de um corrimão a 1,0 m. Agora em metros do mundo; o desvio local dos seres olha também a 1,0 m. Erro meu no caminho: `_slide`/`_pushOut` usavam uma variável `s` que não existe nelas (quebrava o movimento) — achado pelo teste do controle.
+- **Morte**: `entities.damage/kill`, `e.hp`; queda > 5 m machuca, > 12 m mata; o corpo fica deitado onde caiu e sai de cena longe; `being:die`. A vida de silício pega por um Safeguard também morre assim (fica o corpo). Preparado para a arma de Killy.
+- **Inventário e mãos**: [[Ideias/Gameplay/Inventario-e-maos]].
+- **Cargas**: o que é (6 tipos), por que vai (4), e uma recompensa prometida na hora (palavras · os lugares da região no mapa · célula maior); a célula cheia sempre; o destino no mapa (◇ e uma linha desde você).
+- **Andarilhos**: perguntar sobre a Cidade (6 falas), de onde vem (4).
+- **Conversa**: o menu não abre mais por trás; W/S escolhem, E confirma, 1–9 direto, Esc sai; o corpo fica parado enquanto se conversa; a tecla que abre não escolhe a primeira resposta.
+- **Aviso de shader X3595** que passou a reprovar o `check:pad` (também no código do commit anterior — não era destas mudanças): a oclusão de ambiente (`render/pipeline.js`) lia a profundidade com derivada implícita dentro de laços. Agora `textureLod(…, 0.0)` nos passes de tela inteira. Achado por uma sonda que registra o último programa compilado no instante do aviso.
+- O `| head` num teste fechou a saída do Electron e o processo principal mostrou um erro EPIPE na tela do usuário: `main.js` agora ignora erro de escrita na saída; e nunca mais `| head` na saída de um teste.

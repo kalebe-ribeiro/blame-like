@@ -18,6 +18,7 @@ export function createPlayerState(saved) {
     inventory: [],
     carried: [],
     access: 0,
+    hands: { right: null, left: null }, // as mãos começam vazias (app/inventory.js)
   };
   if (!saved) return base;
   return { ...base, ...saved, energy: { ...base.energy, ...(saved.energy ?? {}) } };

@@ -38,8 +38,11 @@ uniform float uStrength;
 uniform float uFogDensity;
 varying vec2 vUv;
 
+// (leitura com nível 0 explícito: com derivada implícita dentro de laços o compilador
+//  do Windows/ANGLE avisa — X3595 — e o teste reprova; estes passes não têm mipmaps)
+vec4 tex0(sampler2D s, vec2 uv) { return textureLod(s, uv, 0.0); }
 vec3 viewPos(vec2 uv) {
-  float d = texture2D(tDepth, uv).x;
+  float d = tex0(tDepth, uv).x;
   vec4 v = uInvProj * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);
   return v.xyz / v.w;
 }
@@ -47,7 +50,7 @@ vec3 viewPos(vec2 uv) {
 float ign(vec2 p) { return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
 
 void main() {
-  float d = texture2D(tDepth, vUv).x;
+  float d = tex0(tDepth, vUv).x;
   if (d >= 0.99999) { gl_FragColor = vec4(1.0); return; }
   vec3 p = viewPos(vUv);
   float z = -p.z;
@@ -91,17 +94,20 @@ uniform vec2 uRes;
 uniform float uNear;
 uniform float uFar;
 varying vec2 vUv;
+// (leitura com nível 0 explícito: com derivada implícita dentro de laços o compilador
+//  do Windows/ANGLE avisa — X3595 — e o teste reprova; estes passes não têm mipmaps)
+vec4 tex0(sampler2D s, vec2 uv) { return textureLod(s, uv, 0.0); }
 float lin(float d) { float z = d * 2.0 - 1.0; return 2.0 * uNear * uFar / (uFar + uNear - z * (uFar - uNear)); }
 void main() {
   vec2 px = 1.0 / uRes;
-  float z0 = lin(texture2D(tDepth, vUv).x);
+  float z0 = lin(tex0(tDepth, vUv).x);
   float sum = 0.0, wsum = 0.0;
   for (int x = -2; x <= 1; x++) {
     for (int y = -2; y <= 1; y++) {
       vec2 uv = vUv + (vec2(float(x), float(y)) + 0.5) * px;
-      float z = lin(texture2D(tDepth, uv).x);
+      float z = lin(tex0(tDepth, uv).x);
       float w = max(0.0, 1.0 - abs(z - z0) / (0.05 * z0 + 0.1));
-      sum += texture2D(tAO, uv).r * w;
+      sum += tex0(tAO, uv).r * w;
       wsum += w;
     }
   }
@@ -120,6 +126,9 @@ uniform float uNear;
 uniform float uFar;
 uniform float uFrame;
 varying vec2 vUv;
+// (leitura com nível 0 explícito: com derivada implícita dentro de laços o compilador
+//  do Windows/ANGLE avisa — X3595 — e o teste reprova; estes passes não têm mipmaps)
+vec4 tex0(sampler2D s, vec2 uv) { return textureLod(s, uv, 0.0); }
 float lin(float d) { float z = d * 2.0 - 1.0; return 2.0 * uNear * uFar / (uFar + uNear - z * (uFar - uNear)); }
 float ign(vec2 p) { return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
 void main() {
@@ -139,7 +148,7 @@ void main() {
       vec2 q = (uv - uLightUV[l]) * vec2(uAspect, 1.0);
       float src = exp(-dot(q, q) / (uLightR[l] * uLightR[l]));
       // ...visível só onde nada mais perto que a luz está na frente
-      float behind = step(uLightZ[l] - 1.5, lin(texture2D(tDepth, uv).x));
+      float behind = step(uLightZ[l] - 1.5, lin(tex0(tDepth, uv).x));
       lit += src * behind;
       all += src;
     }
@@ -171,14 +180,17 @@ uniform sampler2D tShafts;
 uniform float uShafts;       // intensidade dos raios (0 = desligado)
 varying vec2 vUv;
 
+// (leitura com nível 0 explícito: com derivada implícita dentro de laços o compilador
+//  do Windows/ANGLE avisa — X3595 — e o teste reprova; estes passes não têm mipmaps)
+vec4 tex0(sampler2D s, vec2 uv) { return textureLod(s, uv, 0.0); }
 vec3 toYCoCg(vec3 c) { return vec3(dot(c, vec3(0.25, 0.5, 0.25)), dot(c, vec3(0.5, 0.0, -0.5)), dot(c, vec3(-0.25, 0.5, -0.25))); }
 vec3 fromYCoCg(vec3 c) { return vec3(c.x + c.y - c.z, c.x + c.z, c.x - c.y - c.z); }
 
 vec3 fetch(vec2 uv) {
-  vec3 c = texture2D(tColor, uv).rgb;
-  float ao = mix(1.0, texture2D(tAO, uv).r, uAOOn);
+  vec3 c = tex0(tColor, uv).rgb;
+  float ao = mix(1.0, tex0(tAO, uv).r, uAOOn);
   c *= ao;
-  vec4 sh = texture2D(tShafts, uv);
+  vec4 sh = tex0(tShafts, uv);
   c = c * (1.0 - sh.a * uShafts) + sh.rgb * uShafts;
   return c / (1.0 + dot(c, vec3(0.299, 0.587, 0.114))); // peso de Karis: brilhos não dominam
 }
@@ -196,11 +208,11 @@ vec3 history(vec2 uv) {
   vec2 t0 = (c - 1.0) / uRes;
   vec2 t3 = (c + 2.0) / uRes;
   vec2 t12 = (c + w2 / w12) / uRes;
-  vec3 r = texture2D(tHistory, vec2(t12.x, t0.y)).rgb * (w12.x * w0.y)
-         + texture2D(tHistory, vec2(t0.x, t12.y)).rgb * (w0.x * w12.y)
-         + texture2D(tHistory, t12).rgb * (w12.x * w12.y)
-         + texture2D(tHistory, vec2(t3.x, t12.y)).rgb * (w3.x * w12.y)
-         + texture2D(tHistory, vec2(t12.x, t3.y)).rgb * (w12.x * w3.y);
+  vec3 r = tex0(tHistory, vec2(t12.x, t0.y)).rgb * (w12.x * w0.y)
+         + tex0(tHistory, vec2(t0.x, t12.y)).rgb * (w0.x * w12.y)
+         + tex0(tHistory, t12).rgb * (w12.x * w12.y)
+         + tex0(tHistory, vec2(t3.x, t12.y)).rgb * (w3.x * w12.y)
+         + tex0(tHistory, vec2(t12.x, t3.y)).rgb * (w12.x * w3.y);
   float wsum = w12.x * w0.y + w0.x * w12.y + w12.x * w12.y + w3.x * w12.y + w12.x * w3.y;
   return max(r / wsum, 0.0);
 }
@@ -221,7 +233,7 @@ void main() {
   vec3 sigma = sqrt(max(m2 / 9.0 - m1 * m1, 0.0));
 
   // reprojeção pela profundidade
-  float d = texture2D(tDepth, vUv).x;
+  float d = tex0(tDepth, vUv).x;
   vec4 w = uInvViewProj * vec4(vUv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);
   w /= w.w;
   vec4 pc = uPrevViewProj * w;
@@ -251,11 +263,14 @@ uniform sampler2D tSrc;
 uniform vec2 uRes;
 uniform float uSharpen;
 varying vec2 vUv;
+// (leitura com nível 0 explícito: com derivada implícita dentro de laços o compilador
+//  do Windows/ANGLE avisa — X3595 — e o teste reprova; estes passes não têm mipmaps)
+vec4 tex0(sampler2D s, vec2 uv) { return textureLod(s, uv, 0.0); }
 void main() {
   vec2 px = 1.0 / uRes;
-  vec3 c = texture2D(tSrc, vUv).rgb;
-  vec3 n = texture2D(tSrc, vUv + vec2(px.x, 0.0)).rgb + texture2D(tSrc, vUv - vec2(px.x, 0.0)).rgb
-         + texture2D(tSrc, vUv + vec2(0.0, px.y)).rgb + texture2D(tSrc, vUv - vec2(0.0, px.y)).rgb;
+  vec3 c = tex0(tSrc, vUv).rgb;
+  vec3 n = tex0(tSrc, vUv + vec2(px.x, 0.0)).rgb + tex0(tSrc, vUv - vec2(px.x, 0.0)).rgb
+         + tex0(tSrc, vUv + vec2(0.0, px.y)).rgb + tex0(tSrc, vUv - vec2(0.0, px.y)).rgb;
   c = max(c + (c - n * 0.25) * uSharpen, 0.0);
   gl_FragColor = vec4(c / max(1.0 - dot(c, vec3(0.299, 0.587, 0.114)), 1e-3), 1.0);
 }

@@ -58,6 +58,7 @@ export function createReading(ctx) {
   function readFragment(it) {
     const p = ctx.player;
     if (!ctx.rules.resources || !p.inventory.includes('reader')) return false;
+    ctx.inventory?.ensure('device'); // o leitor portátil é o aparelho: ele vem para a mão
     if (p.energy.value < FRAGMENT_COST) {
       audio.deviceClick?.(false);
       return true; // sem carga: o aparelho só estala

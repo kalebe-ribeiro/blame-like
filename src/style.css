@@ -289,3 +289,26 @@ button.controls-cell:hover { border-color: rgba(200, 196, 184, 0.8); }
   font: 12px "Consolas", "Courier New", monospace; letter-spacing: 0.08em; color: #b2bcac;
 }
 .talk-opts button:hover, .talk-opts button:focus, .talk-opts button.pad-focus { border-color: rgba(178, 188, 172, 0.35); outline: none; }
+
+.talk-opts button.kb-sel { border-color: rgba(176, 118, 62, 0.6); color: #e2d6c2; }
+.talk-n { display: inline-block; width: 1.6em; color: rgba(176, 118, 62, 0.75); }
+.talk-hint { margin-top: 10px; font-size: 10px; letter-spacing: 0.12em; color: rgba(150, 146, 136, 0.65); }
+
+/* ── Inventário ────────────────────────────────────────────────────────── */
+#inventory {
+  position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.45); z-index: 22;
+  font-family: "Consolas", "Courier New", monospace; color: #b2bcac;
+}
+#inventory.open { display: flex; }
+.inv-box { width: min(560px, calc(100vw - 32px)); max-height: 80vh; overflow-y: auto; border: 1px solid rgba(178, 188, 172, 0.22); background: rgba(5, 7, 6, 0.94); padding: 16px 18px; }
+.inv-title { font-size: 11px; letter-spacing: 0.35em; color: rgba(176, 118, 62, 0.85); margin-bottom: 8px; }
+.inv-hands { font-size: 12px; margin-bottom: 12px; color: #cfc6b4; }
+.inv-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 6px 0; border-top: 1px solid rgba(178, 188, 172, 0.1); }
+.inv-name { font-size: 13px; }
+.inv-where { font-size: 10px; letter-spacing: 0.1em; color: rgba(176, 118, 62, 0.8); }
+.inv-desc { grid-column: 1; font-size: 11px; color: rgba(178, 188, 172, 0.65); line-height: 1.4; }
+.inv-row button { grid-column: 2; grid-row: 1 / span 2; align-self: center; background: none; border: 1px solid rgba(178, 188, 172, 0.25); color: #b2bcac; padding: 4px 10px; cursor: pointer; font: 11px "Consolas", "Courier New", monospace; letter-spacing: 0.08em; }
+.inv-row button.kb-sel, .inv-row button.pad-focus, .inv-row button:hover { border-color: rgba(176, 118, 62, 0.7); color: #e2d6c2; }
+
+.tm-c { display: inline-block; width: 7px; height: 7px; border: 1.5px solid rgba(200,214,180,0.9); transform: rotate(45deg); margin-right: 5px; }

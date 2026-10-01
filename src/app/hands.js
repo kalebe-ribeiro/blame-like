@@ -87,21 +87,31 @@ export function buildHand(mat, side, { arm = false } = {}) {
 export function createHands(ctx, { device, flashlight }) {
   const { camera, controls, world } = ctx;
   const glove = world.materials.cloth; // luvas de tecido grosso, gastas
-  // a direita segura o aparelho por baixo, de palma para cima (os dedos para a frente,
-  // dobrando um pouco para cima na ponta; o polegar ao lado da tela)
-  const right = buildHand(glove, -1); // (de palma para cima, o lado se inverte)
-  right.group.position.set(0.006, -0.034, 0.05);
-  right.group.rotation.set(0, 0, Math.PI);
-  right.pose(0.32, 0.7);
-  device.add(right.group);
-  // a esquerda fecha em volta do tubo da lanterna: a palma do lado do tubo, os dedos por cima dele
-  const left = buildHand(glove, -1);
-  left.group.position.set(-0.034, -0.03, 0.03);
-  left.group.quaternion
-    .setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2)
-    .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2));
-  left.pose(1.05, 1);
-  flashlight.add(left.group);
+  // o aparelho, seguro por baixo, de palma para cima (os dedos para a frente, dobrando um
+  // pouco na ponta; o polegar ao lado da tela) — uma mão para cada lado (side: 1 direita, −1 esquerda)
+  const holdDevice = {};
+  for (const side of [1, -1]) {
+    const h = buildHand(glove, -side); // (de palma para cima, o lado se inverte)
+    h.group.position.set(0.006 * side, -0.034, 0.05);
+    h.group.rotation.set(0, 0, Math.PI);
+    h.pose(0.32, 0.7);
+    h.group.visible = false;
+    device.add(h.group);
+    holdDevice[side] = h;
+  }
+  // a lanterna: a mão fecha em volta do tubo, a palma do lado de dentro, os dedos por cima
+  const holdLantern = {};
+  for (const side of [1, -1]) {
+    const h = buildHand(glove, side);
+    h.group.position.set(0.034 * side, -0.03, 0.03);
+    h.group.quaternion
+      .setFromAxisAngle(new THREE.Vector3(0, 1, 0), (side * Math.PI) / 2)
+      .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2));
+    h.pose(1.05, 1);
+    h.group.visible = false;
+    flashlight.add(h.group);
+    holdLantern[side] = h;
+  }
   // as que agarram (filhas da câmera; no lugar certo do mundo a cada quadro)
   const grip = [buildHand(glove, -1, { arm: true }), buildHand(glove, 1, { arm: true })];
   // os braços: do punho até o ombro (abaixo e ao lado dos olhos), esticando conforme a mão vai
@@ -137,6 +147,13 @@ export function createHands(ctx, { device, flashlight }) {
   const _now = new THREE.Vector3();
 
   return {
+    /** Qual mão segura cada coisa (1 direita · −1 esquerda · 0 nenhuma — app/inventory.js). */
+    setHolding(deviceSide, lanternSide) {
+      for (const s of [1, -1]) {
+        holdDevice[s].group.visible = deviceSide === s;
+        holdLantern[s].group.visible = lanternSide === s;
+      }
+    },
     /** Pendurado ou subindo (o aparelho e a lanterna saem das mãos). */
     get busy() {
       return !!(controls.mode === 'walk' && controls.walker?.ledgeState);

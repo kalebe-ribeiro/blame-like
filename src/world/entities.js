@@ -18,6 +18,12 @@
 //  Posições sempre GLOBAIS (e.feet); a cena é recalculada a cada quadro com a
 //  origem flutuante, então rebase não precisa mexer em nada.
 //  Estado salvo no mundo: serialize() / load() (slot.entities — app/beings.js).
+//
+//  DANO E MORTE: cada corpo tem e.hp (1 = inteiro). damage(e, quanto, causa) e
+//  kill(e, causa) — hoje a causa é a queda (mais de 5 m machuca; mais de 12 m
+//  mata); a arma de Killy (ver o cofre) vai usar o mesmo. Morto, o corpo fica
+//  deitado onde caiu (sem cérebro, sem colisão) e sai de cena quando o jogador
+//  se afasta. Evento: being:die { id, kind, cause, x, y, z }.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { Walker } from '../controls/walker.js';
@@ -31,6 +37,9 @@ const VISIBLE = 420; // m: além disso o corpo nem é desenhado (a névoa já o 
 const FAR_SPEED = 1.3; // m/s ao longe (abstrato e lento)
 const ARRIVE = 0.9; // m (horizontal) para dar um ponto do caminho por alcançado
 const STUCK_AFTER = 3; // s sem se aproximar do próximo ponto
+const FALL_HURT = 5; // m: uma queda maior que isso machuca
+const FALL_KILL = 12; // m: e maior que isso mata
+const CORPSE_FAR = 400; // m: longe assim, o corpo morto sai de cena
 const MAX_REPLANS = 4;
 const DOWN = new THREE.Vector3(0, -1, 0);
 
@@ -88,14 +97,37 @@ export class EntitySystem {
       speed: 0,
       stats: { fell: 0, wall: 0, replans: 0, far: 0, near: 0 },
       brain: def.brain ?? null,
+      hp: 1,
+      dead: false,
     };
-    // uma queda de verdade (mais que um degrau) conta — o teste reprova com ela
+    // uma queda de verdade (mais que um degrau) conta — o teste reprova com ela; e machuca
     walker.onLand = (_v, height) => {
       if (height > 4) e.stats.fell++;
+      if (height > FALL_KILL) this.kill(e, 'fall');
+      else if (height > FALL_HURT) this.damage(e, (height - FALL_HURT) / (FALL_KILL - FALL_HURT), 'fall');
     };
     this.list.set(e.id, e);
     if (e.goal) this.goTo(e, e.goal);
     return e;
+  }
+
+  /** Machuca um corpo (quanto: 0..1 da vida). Sem vida, ele morre. */
+  damage(e, amount, cause = 'unknown') {
+    if (e.dead) return;
+    e.hp -= amount;
+    this.bus?.emit('being:hurt', { id: e.id, kind: e.kind, cause, hp: e.hp });
+    if (e.hp <= 0) this.kill(e, cause);
+  }
+
+  /** Mata um corpo: ele fica deitado onde está; ninguém mais o move. */
+  kill(e, cause = 'unknown') {
+    if (e.dead) return;
+    e.dead = true;
+    e.hp = 0;
+    e.cause = cause;
+    e.speed = 0;
+    e.state = 'dead';
+    this.bus?.emit('being:die', { id: e.id, kind: e.kind, cause, x: e.feet.x, y: e.feet.y, z: e.feet.z });
   }
 
   /** O corpo de cada tipo de ser. */
@@ -164,8 +196,20 @@ export class EntitySystem {
   }
 
   update(time, dt, g, origin) {
-    for (const e of this.list.values()) {
+    for (const e of [...this.list.values()]) {
       const dist = e.feet.distanceTo(g);
+      if (e.dead) {
+        // o corpo morto: deitado de costas no chão onde caiu; longe, sai de cena
+        if (dist > CORPSE_FAR) {
+          this.remove(e.id);
+          continue;
+        }
+        const r = e.rig.group;
+        r.visible = dist < VISIBLE;
+        r.position.set(e.feet.x - origin.x, e.feet.y - origin.y + 0.16, e.feet.z - origin.z);
+        r.rotation.set(-Math.PI / 2, e.yaw + Math.PI, 0, 'YXZ');
+        continue;
+      }
       if (e.tier === 'far' && dist < NEAR && this.world.chunkLayer.isReadyAround(e.feet, 30)) this._toNear(e, origin);
       else if (e.tier === 'near' && dist > FAR) e.tier = 'far';
 
@@ -351,7 +395,7 @@ export class EntitySystem {
       _d.set(-Math.sin(a), 0, -Math.cos(a));
       // algo na frente (joelho e peito)?
       let blocked = false;
-      for (const h of [0.6, 1.3]) {
+      for (const h of [0.6, 1.0, 1.3]) { // (joelho, corrimão, peito)
         _o.copy(w.feet).y += h;
         const hit = col.ray(_o, _d, 1.1);
         if (hit && hit.face && Math.abs(hit.face.normal.y) < 0.55) blocked = true;

@@ -51,6 +51,12 @@ async function run(ctx) {
     stand(e.feet.x + fx * D, e.feet.y, e.feet.z + fz * D, e.yaw + Math.PI);
   };
   ctx.player.energy.value = 0.5;
+  // os relógios das rondas e dos andarilhos começam sempre no mesmo instante (senão cada
+  // rodada cai noutro ponto dos circuitos e o teste fica instável)
+  const t0clock = performance.now();
+  const clock = () => 1.7e9 + (performance.now() - t0clock) / 1000;
+  world.safeguards.clock = clock;
+  world.npcs.clock = clock;
   const fiscal = { wall: 0, fell: 0 };
   const watch = setInterval(() => {
     for (const e of world.entities.list.values()) {
@@ -92,10 +98,12 @@ async function run(ctx) {
   await sleep(300);
 
   // ── carga ──
-  report({ kind: 'carga', ok: !!controls.burden && controls.walker.jumpScale < 1, why: `sem correr ${!!controls.burden} · pulo ×${controls.walker.jumpScale}` });
+  const onMap = (ctx.travel.found().cargo ?? []).length;
+  report({ kind: 'carga', ok: !!controls.burden && controls.walker.jumpScale < 1 && onMap === 1 && !!cargo?.reward, why: `sem correr ${!!controls.burden} · pulo ×${controls.walker.jumpScale} · no mapa ${onMap} · promessa ${cargo?.reward?.kind ?? '—'} · “${cargo ? l1.slice(0, 0) : ''}${document.querySelector('#talk .talk-line')?.textContent?.slice(0, 60) ?? ''}”` });
 
   // ── entrega ──
   let delivered = false;
+  let rewardWhy = '';
   if (cargo) {
     const dv = world.npcs.inhabitedNear(cargo.x, cargo.y, cargo.z, 200)[0];
     const F2 = villageFrame(dv.u);
@@ -109,15 +117,21 @@ async function run(ctx) {
       facing(w2);
       await sleep(1500);
       ctx.player.energy.value = 0.3;
+      const max0 = ctx.player.energy.max;
+      const words0 = ctx.lexicon.progress().known;
+      const leads0 = ctx.leads.list().length;
       ctx.people.tryUse();
       await sleep(400);
       click('deliver');
       await sleep(400);
-      delivered = !ctx.player.carried.some((c) => c.kind === 'cargo') && ctx.player.energy.value > 0.95;
+      const k = cargo.reward.kind;
+      const paid = k === 'cell' ? ctx.player.energy.max > max0 : k === 'words' ? ctx.lexicon.progress().known > words0 : ctx.leads.list().length > leads0;
+      rewardWhy = `recompensa ${k}: ${paid ? 'paga' : 'NÃO paga'} · “${lineNow().slice(0, 70)}”`;
+      delivered = paid && !ctx.player.carried.some((c) => c.kind === 'cargo') && ctx.player.energy.value >= ctx.player.energy.max - 0.01;
       ctx.people.close();
     }
   }
-  report({ kind: 'entrega', ok: delivered, why: delivered ? 'entregue · célula cheia' : 'não entregou' });
+  report({ kind: 'entrega', ok: delivered, why: `${delivered ? 'entregue · célula cheia' : 'não entregou'} · ${rewardWhy}` });
 
   // ── despertar ──
   let woke = null;

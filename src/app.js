@@ -47,6 +47,7 @@ import { createAlert } from './app/alert.js';
 import { createBeings } from './app/beings.js';
 import { createSafeguards } from './app/safeguards.js';
 import { createPeople } from './app/people.js';
+import { createInventory } from './app/inventory.js';
 import { bindings } from './controls/bindings.js';
 import { startPlace } from './lang/leads.js';
 
@@ -171,6 +172,7 @@ ctx.body = createBody(ctx);
 ctx.sound = createWorldSound(ctx);
 ctx.ui = createUI(ctx);
 ctx.wake = createWake(ctx);
+ctx.inventory = createInventory(ctx); // o inventário e as mãos (antes do que se carrega)
 ctx.carried = createCarried(ctx);
 ctx.reading = createReading(ctx);
 ctx.power = createPower(ctx);

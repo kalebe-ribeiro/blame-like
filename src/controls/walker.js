@@ -483,7 +483,9 @@ export class Walker {
       _d.copy(move).divideScalar(len);
       let best = null;
       // (os corrimãos são finos e ficam a 1,0–1,2 m: uma altura deles não pode faltar)
-      for (const h of [stepH + 0.05, 0.8 * (eye / 1.7), 1.0 * (eye / 1.7), 1.15 * (eye / 1.7), eye * 0.95]) {
+      // (alturas em metros do mundo — um corrimão não muda de altura conforme quem passa)
+      const s = radius / 0.38; // a escala do corpo (o raio é 0,38 m × escala)
+      for (const h of [stepH + 0.05, 0.8 * s, 1.0 * s, 1.15 * s, eye * 0.95]) {
         _o.copy(this.feet).y += h;
         const hit = this.col.ray(_o, _d, len + radius);
         if (hit && hit.face && Math.abs(hit.face.normal.y) < WALKABLE_NY && (!best || hit.distance < best.distance)) best = hit;
@@ -512,7 +514,8 @@ export class Walker {
 
   /** Se algo invadiu o raio do corpo (paredes em movimento, quinas), empurra para fora. */
   _pushOut(radius, stepH, eye) {
-    for (const h of [stepH + 0.05, 1.05 * (eye / 1.7), 1.15 * (eye / 1.7), eye * 0.8]) {
+    const s = radius / 0.38;
+    for (const h of [stepH + 0.05, 1.05 * s, 1.15 * s, eye * 0.8]) {
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2;
         _d.set(Math.cos(a), 0, Math.sin(a));

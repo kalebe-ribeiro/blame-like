@@ -102,5 +102,39 @@ export async function runBeingTest(ctx) {
     world.entities.remove(e.id);
     await sleep(300);
   }
+
+  // ── queda: um corpo que cai de mais de 12 m morre (e fica deitado onde caiu) ──
+  {
+    const DOWN = new THREE.Vector3(0, -1, 0);
+    let spot = null;
+    for (let k = 0; k < 4 && !spot; k++) {
+      ctx.ui.teleport('teia', 'teia');
+      await sleep(SETTLE);
+      const n = world.field.nearestNode(...world.toGlobal(camera.position).toArray(), { below: 2, above: 1, reach: 2 });
+      if (!n) continue;
+      const col = world.entities.nav && ctx.controls.walker.col;
+      const c = new THREE.Vector3(n.x, n.y, n.z).sub(world.origin);
+      col.buildsPerFrame = 600;
+      col.refresh(c, 40);
+      col.buildsPerFrame = 2;
+      for (let q = 0; q < 24 && !spot; q++) {
+        const a = (q / 24) * Math.PI * 2;
+        const p = c.clone().add(new THREE.Vector3(Math.sin(a) * (n.r + 1.5), 0, Math.cos(a) * (n.r + 1.5)));
+        const hit = col.ray(p.clone().setY(p.y + 0.3), DOWN, 60);
+        if (hit && hit.face && hit.face.normal.y > 0.7 && hit.distance > 14) spot = p.add(world.origin);
+      }
+    }
+    if (!spot) report({ kind: 'queda', ok: false, why: 'nenhuma beirada com chão 14–60 m abaixo' });
+    else {
+      let died = null;
+      const off = world.bus.on('being:die', (ev) => (died = ev));
+      const e = world.entities.spawn({ id: 'fall-test', kind: 'test', feet: spot, persist: false });
+      followBody(ctx, e);
+      await sleep(8000);
+      off();
+      report({ kind: 'queda', ok: !!e.dead && died?.cause === 'fall', why: e.dead ? `morreu na queda (${died?.cause})` : `vivo (hp ${e.hp.toFixed(2)}, ${e.tier}, no chão ${e.walker.grounded})` });
+      world.entities.remove(e.id);
+    }
+  }
   console.warn('CHECK:DONE');
 }

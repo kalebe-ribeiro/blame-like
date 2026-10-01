@@ -170,6 +170,19 @@ export async function runPadTest(ctx) {
     await press(bindings.pad('lantern'));
     report('pad:lanterna', on1 !== on0 && ctx.carried.lanternOn === on0, 'X não trocou a lanterna');
   }
+  // 11b. o inventário: R3 abre, A equipa/guarda a ferramenta em foco, B fecha (e volta ao jogo)
+  {
+    const hands0 = JSON.stringify(ctx.player.hands);
+    await press(bindings.pad('inventory'));
+    await sleep(300);
+    report('pad:inventario-abre', shown('#inventory'), `R3 não abriu o inventário (botão ${bindings.pad('inventory')})`);
+    await press(0);
+    await sleep(200);
+    report('pad:inventario-equipa', JSON.stringify(ctx.player.hands) !== hands0, `A não mudou as mãos (${JSON.stringify(ctx.player.hands)})`);
+    await press(1);
+    await sleep(300);
+    report('pad:inventario-fecha', !shown('#inventory') && gate.classList.contains('hidden'), 'B não fechou o inventário / não voltou ao jogo');
+  }
   // 12. painel MUNDOS pela tela de entrada: abre e B fecha
   await press(bindings.pad('menu'));
   report('pad:foco-mundos', await focusOn('#open-worlds'), 'não chegou ao botão MUNDOS');

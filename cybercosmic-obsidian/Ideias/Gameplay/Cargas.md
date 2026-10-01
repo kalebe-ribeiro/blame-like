@@ -6,7 +6,7 @@ tags: [gameplay, npcs]
 
 # Cargas
 
-> **Feita na fase 7 (2026-09-30)**: cargas entre vilas habitadas (`app/people.js`): pedidas por um morador, ou por quem te recolheu depois de um desmaio; nas costas, sem correr, pulo baixo; o aparelho mostra a distância; entregue = célula cheia + palavras; perdida se os Safeguards te pegam ou um andarilho a arranca.
+> **Feita na fase 7 (2026-09-30)**: cargas entre vilas habitadas (`app/people.js`): pedidas por um morador, ou por quem te recolheu depois de um desmaio; nas costas, sem correr, pulo baixo; o aparelho mostra a distância; entregue = célula cheia + a recompensa prometida (palavras · os lugares da região no mapa · célula maior); cada carga tem contexto (o que é, por que vai) e o destino aparece no mapa (◇); perdida se os Safeguards te pegam ou um andarilho a arranca.
 
 Carregar algo de um lugar a outro (uma célula, um cartucho de dados, algo pedido por um grupo humano), sem correr, pular longe ou voar enquanto carrega. Com NPCs, vira **troca e entrega entre vilas** — o motivo para atravessar com cuidado.
 

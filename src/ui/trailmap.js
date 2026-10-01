@@ -34,7 +34,7 @@ export class TrailMap {
     this.pitch = 0.5;
     this.zoom = 1;
     this.open = false;
-    this.found = { places: [], leads: [], sectors: [], marks: [], builders: [] };
+    this.found = { places: [], leads: [], sectors: [], marks: [], builders: [], cargo: [] };
   }
 
   /**
@@ -99,7 +99,7 @@ export class TrailMap {
       <div class="tm-legend">
         <span><i class="tm-l0"></i><b data-i18n="map.path"></b></span><span><i class="tm-l1"></i><b data-i18n="map.rails"></b></span>
         <span><i class="tm-l2"></i><b data-i18n="map.jump"></b></span><span><i class="tm-q"></i><b data-i18n="map.fall"></b></span><span><i class="tm-f"></i><b data-i18n="map.photo"></b></span>
-        <span><i class="tm-t"></i><b data-i18n="map.terminal"></b></span><span><i class="tm-u"></i><b data-i18n="map.unique"></b></span><span class="tm-lead-key"><i class="tm-p"></i><b data-i18n="map.lead"></b></span><span><i class="tm-s"></i><b data-i18n="map.sector"></b></span><span><i class="tm-m"></i><b data-i18n="map.mark"></b></span><span><i class="tm-b"></i><b data-i18n="map.builders"></b></span>
+        <span><i class="tm-t"></i><b data-i18n="map.terminal"></b></span><span><i class="tm-u"></i><b data-i18n="map.unique"></b></span><span class="tm-lead-key"><i class="tm-p"></i><b data-i18n="map.lead"></b></span><span><i class="tm-s"></i><b data-i18n="map.sector"></b></span><span><i class="tm-m"></i><b data-i18n="map.mark"></b></span><span><i class="tm-b"></i><b data-i18n="map.builders"></b></span><span><i class="tm-c"></i><b data-i18n="map.cargo"></b></span>
         <span class="tm-hint" data-i18n="map.hint"></span>
       </div>`;
     document.body.appendChild(root);
@@ -184,8 +184,9 @@ export class TrailMap {
       if (z + r > z1) z1 = z + r;
     };
     for (const p of pts) grow(p[0], p[1], p[2]);
-    // as pistas abertas entram na moldura: o mapa mostra para onde elas apontam
+    // as pistas abertas entram na moldura: o mapa mostra para onde elas apontam (e as entregas)
     for (const l of F.leads) if (l.open) grow(l.x, l.y, l.z, l.r);
+    for (const c of F.cargo ?? []) grow(c.x, c.y, c.z, 50);
     const cx = (x0 + x1) / 2;
     const cy = (y0 + y1) / 2;
     const cz = (z0 + z1) / 2;
@@ -356,6 +357,34 @@ export class TrailMap {
       g.fillStyle = 'rgba(215,160,90,0.8)';
       g.fillRect(px - 1.5 * dpr, py - 1.5 * dpr, 3 * dpr, 3 * dpr);
       if (F.known) drawTokens(g, l.tokens, px + 8 * dpr, py - 5 * dpr, F.known, F.word, { h: 7 * dpr, font: `${9 * dpr}px Consolas, monospace`, color: 'rgba(215,196,154,0.75)', maxW: 520 * dpr });
+    }
+    // as cargas: o lugar da entrega — um losango aberto, uma linha tracejada desde você, o nome
+    for (const c of F.cargo ?? []) {
+      const [px, py] = proj(c.x, c.y, c.z);
+      if (cur) {
+        const [qx, qy] = proj(cur.x, cur.y, cur.z);
+        g.setLineDash([2 * dpr, 6 * dpr]);
+        g.strokeStyle = 'rgba(190,200,170,0.35)';
+        g.lineWidth = 1 * dpr;
+        g.beginPath();
+        g.moveTo(qx, qy);
+        g.lineTo(px, py);
+        g.stroke();
+        g.setLineDash([]);
+      }
+      const R = 6 * dpr;
+      g.strokeStyle = 'rgba(200,214,180,0.9)';
+      g.lineWidth = 1.5 * dpr;
+      g.beginPath();
+      g.moveTo(px, py - R);
+      g.lineTo(px + R, py);
+      g.lineTo(px, py + R);
+      g.lineTo(px - R, py);
+      g.closePath();
+      g.stroke();
+      g.fillStyle = 'rgba(200,214,180,0.85)';
+      g.font = `${10 * dpr}px Consolas, monospace`;
+      g.fillText(c.label, px + R + 4 * dpr, py + 3 * dpr);
     }
     // início e onde você está
     const [sx, sy] = proj(pts[0][0], pts[0][1], pts[0][2]);

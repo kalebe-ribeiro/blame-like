@@ -24,7 +24,9 @@
 - **Seres**: posições GLOBAIS; perto do jogador, só o `Walker` move um corpo (nada de teleportar um corpo visível); um corpo nunca anda onde o chão não carregou (fica parado). Um corpo de teste nunca entra no salvamento (`persist: false`).
 - **Safeguards**: nada surge do nada — um Safeguard ou está na ronda (onde o relógio diz), ou saiu de uma placa de parede que se abriu, ou veio andando pelo grafo. Sem luz própria. Perto do jogador, só o `Walker` move um corpo. Os sentidos (`senses`) vêm nulos quando o jogador está desmaiado ou voando: tratar sempre o nulo.
 - **Chão em todo o espaço ocupado**: o que tem área (um assentamento, entulho) confere o chão no centro e em volta, não em 2 pontos — os estratos são placas de 80 m que podem faltar.
-- **Colisão de coisas finas**: o corpo testa paredes por raios em alturas fixas; uma peça fina (corrimão) entre duas alturas é atravessada. Se surgir uma peça fina numa altura nova, conferir as alturas de `_slide`/`_pushOut` em `controls/walker.js`.
+- **Shaders no Windows, 2**: ler textura com derivada implícita (`texture2D`) dentro de um laço também dá X3595 — use `textureLod(…, 0.0)` (passes de tela inteira não têm mipmap).
+- **Testes**: nunca `| head` na saída do Electron (fecha o canal e o processo principal mostra um erro na tela do usuário); gravar num arquivo e filtrar depois.
+- **Colisão de coisas finas**: as alturas dos raios são em metros do mundo (× escala), não proporcionais aos olhos de quem anda. o corpo testa paredes por raios em alturas fixas; uma peça fina (corrimão) entre duas alturas é atravessada. Se surgir uma peça fina numa altura nova, conferir as alturas de `_slide`/`_pushOut` em `controls/walker.js`.
 - **Modos**: o que um modo permite é perguntado a `ctx.rules` (`app/modes.js`); nada de `if (mode === ...)` espalhado. O modo Livre nunca pode quebrar.
 
 ## Armadilhas já pagas

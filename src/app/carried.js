@@ -96,11 +96,13 @@ export function createCarried(ctx) {
   button.position.set(0, 0.016, -0.02);
   flashlight.add(flBody, flHead, bezel, lens, knurl, button);
   flashlight.visible = false;
-  // guardada · na mão (em relação à câmera)
-  const FL_DOWN = new THREE.Vector3(-0.2, -0.36, -0.2);
-  const FL_UP = new THREE.Vector3(-0.13, -0.12, -0.3);
-  const FL_TILT_DOWN = new THREE.Euler(-1.1, 0.5, 0.4);
-  const _qDown = new THREE.Quaternion().setFromEuler(FL_TILT_DOWN);
+  // guardada · na mão (em relação à câmera); x vira de lado conforme a mão (−1 esquerda, 1 direita)
+  const FL_DOWN = new THREE.Vector3(0.2, -0.36, -0.2);
+  const FL_UP = new THREE.Vector3(0.13, -0.12, -0.3);
+  const _flDown = new THREE.Vector3();
+  const _flUp = new THREE.Vector3();
+  const _qDowns = { 1: new THREE.Quaternion().setFromEuler(new THREE.Euler(-1.1, -0.5, -0.4)), [-1]: new THREE.Quaternion().setFromEuler(new THREE.Euler(-1.1, 0.5, 0.4)) };
+  let flSide = -1; // a mão da lanterna (a última em que esteve, para ela descer pelo mesmo lado)
   const _qAim = new THREE.Quaternion();
   const _qCam = new THREE.Quaternion();
   const _m4 = new THREE.Matrix4();
@@ -263,6 +265,8 @@ export function createCarried(ctx) {
   /** Liga (a mão traz a lanterna e ela acende) ou desliga (apaga e a mão guarda). */
   function toggleLantern() {
     if (ctx.wake?.active) return; // (no modo Livre também: sem célula, sem gasto)
+    // fora da mão: a mão a pega antes (app/inventory.js — a regra das mãos)
+    if (!lanternWant) ctx.inventory?.ensure('lantern');
     lanternWant = !lanternWant;
     if (!lanternWant && lanternOn) {
       lanternOn = false;
@@ -273,6 +277,7 @@ export function createCarried(ctx) {
   /** Atalho do sensor (G): terminais → energia → movimento → desligado. */
   function cycleSensor() {
     if (!active() || ctx.wake?.active || !hasSensor()) return;
+    ctx.inventory?.ensure('device'); // o sensor é do aparelho: ele vem para a mão
     sensor = sensor === null ? MODES[0] : MODES[MODES.indexOf(sensor) + 1] ?? null;
     signal = null;
     sensorScan = 0;
@@ -283,8 +288,10 @@ export function createCarried(ctx) {
   function togglePlug() {
     if (!active() || ctx.wake?.active) return;
     if (plugged) plugged = null;
-    else if (near) plugged = near;
-    else return;
+    else if (near) {
+      ctx.inventory?.ensure('device'); // conectar é com o aparelho na mão
+      plugged = near;
+    } else return;
     audio.deviceClick?.(!!plugged);
   }
 
@@ -325,8 +332,20 @@ export function createCarried(ctx) {
       hands.update(dt);
       const busy = hands.busy;
       stow = busy ? Math.min(1, stow + dt / 0.18) : Math.max(0, stow - dt / 0.4);
-      device.visible = on && stow < 1;
-      device.position.set(0.12, -0.11 - 0.32 * stow * stow, -0.28);
+      // em que mão está cada coisa (app/inventory.js); fora das mãos, não aparece nem funciona
+      const inv = ctx.inventory;
+      const dSide = on ? inv?.sideOf('device') ?? 1 : 0;
+      const lSide = inv?.sideOf('lantern') ?? -1;
+      if (lSide) flSide = lSide;
+      hands.setHolding(dSide, lSide);
+      device.visible = !!dSide && stow < 1;
+      device.position.set(0.12 * (dSide || 1), -0.11 - 0.32 * stow * stow, -0.28);
+      device.rotation.set(0.75, -0.15 * (dSide || 1), 0);
+      if (!lSide && lanternWant) {
+        // a lanterna foi guardada: apaga
+        lanternWant = false;
+        lanternOn = false;
+      }
       if (!awake) {
         if (light) light.intensity = 0;
         sh.uFlashColor.value.set(0, 0, 0);
@@ -403,12 +422,14 @@ export function createCarried(ctx) {
         // subida com um leve passar do ponto (a mão para, a lanterna balança)
         const r = raise;
         const e = lanternWant ? 1 - Math.pow(1 - r, 3) + Math.sin(r * Math.PI) * 0.06 * r : r * r * (3 - 2 * r);
-        flashlight.position.lerpVectors(FL_DOWN, FL_UP, e);
+        _flDown.copy(FL_DOWN).setX(FL_DOWN.x * flSide);
+        _flUp.copy(FL_UP).setX(FL_UP.x * flSide);
+        flashlight.position.lerpVectors(_flDown, _flUp, e);
         // em mãos: aponta para onde vai o facho (no espaço da câmera); guardada: tombada
         camera.getWorldQuaternion(_qCam);
         _m4.lookAt(_zero, flashDir, camera.up); // −z do modelo (a lente) na direção do facho
         _qAim.setFromRotationMatrix(_m4).premultiply(_qCam.invert());
-        flashlight.quaternion.slerpQuaternions(_qDown, _qAim, e);
+        flashlight.quaternion.slerpQuaternions(_qDowns[flSide], _qAim, e);
       }
 
       // a lanterna: um facho saindo da lente, na direção do olhar (com o atraso da mão);

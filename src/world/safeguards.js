@@ -77,8 +77,8 @@ export class SafeguardSystem {
 
   /** Todos os Safeguards em cena (para o sensor e os sons). */
   *all() {
-    for (const e of this.byTerritory.values()) yield e;
-    yield* this.hunters;
+    for (const e of this.byTerritory.values()) if (!e.dead) yield e;
+    for (const e of this.hunters) if (!e.dead) yield e;
   }
 
   /** O jogador fez barulho (app/safeguards.js): quem estiver a menos de r m ouve. */

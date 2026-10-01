@@ -196,7 +196,7 @@ export class NoclipControls {
       this.autopilot = !this.autopilot;
       if (this.autopilot) this.setMode('fly');
     }
-    for (const id of ['use', 'lantern', 'torch', 'sensor', 'mark', 'photo', 'map', 'hud', 'transport', 'regenerate', 'settings', 'controls', 'fullscreen']) {
+    for (const id of ['use', 'lantern', 'torch', 'sensor', 'mark', 'photo', 'map', 'inventory', 'hud', 'transport', 'regenerate', 'settings', 'controls', 'fullscreen']) {
       if (edge(id)) this.onPadButton?.(id);
     }
     this.pad.prev = gp.buttons.map((x) => x.pressed || (x.value ?? 0) > 0.4);
@@ -214,7 +214,8 @@ export class NoclipControls {
     const k = this.keys;
     const pad = this._readPad(dt);
     const clamp1 = (v) => Math.max(-1, Math.min(1, v));
-    const h = (id) => (bindings.held(id, k) ? 1 : 0);
+    // (uma conversa ou o inventário abertos: o corpo fica parado — as teclas são deles)
+    const h = (id) => (!this.frozen && bindings.held(id, k) ? 1 : 0);
     const f = clamp1(h('forward') - h('back') + pad.f);
     const r = clamp1(h('right') - h('left') + pad.r);
     const run = (!!h('run') || pad.run) && !this.burden; // carregando uma carga (fase 7) não se corre

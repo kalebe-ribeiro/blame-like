@@ -51,9 +51,11 @@ export const SignalShader = {
         for (int i = 0; i < 12; i++) {
           float a = float(i) * 2.39996;
           float d = sqrt((float(i) + 0.5) / 12.0);
-          acc += texture2D(tDiffuse, vUv + vec2(cos(a), sin(a)) * d * r * vec2(uRes.y / uRes.x, 1.0)).rgb;
+          // (nível 0 explícito: amostrar com derivada implícita dentro de um laço faz o
+          //  compilador do Windows/ANGLE avisar — X3595 — e o teste reprova)
+          acc += textureLod(tDiffuse, vUv + vec2(cos(a), sin(a)) * d * r * vec2(uRes.y / uRes.x, 1.0), 0.0).rgb;
         }
-        acc += texture2D(tDiffuse, vUv + vec2(uBlur * 0.012, 0.0)).rgb * 2.0;
+        acc += textureLod(tDiffuse, vUv + vec2(uBlur * 0.012, 0.0), 0.0).rgb * 2.0;
         col = acc / 15.0;
       }
 

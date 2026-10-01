@@ -54,7 +54,7 @@ export class NpcSystem {
 
   /** A vida de silício já revelada (os Safeguards a caçam). */
   *silicon() {
-    for (const e of this.wanderers.values()) if (e.npc.revealed) yield e;
+    for (const e of this.wanderers.values()) if (e.npc.revealed && !e.dead) yield e;
   }
 
   /** As vilas habitadas perto de (x,y,z) (GLOBAL), da mais perto à mais longe. */
@@ -141,16 +141,12 @@ export class NpcSystem {
     this.bus?.emit('silicon:reveal', { x: e.feet.x, y: e.feet.y, z: e.feet.z });
   }
 
-  /** Um Safeguard pegou a vida de silício: acabou. */
+  /** Um Safeguard pegou a vida de silício: acabou (o corpo fica onde caiu). */
   destroy(e) {
-    for (const [id, w] of this.wanderers) {
-      if (w !== e) continue;
-      this.stats.destroyed++;
-      this.bus?.emit('silicon:destroyed', { x: e.feet.x, y: e.feet.y, z: e.feet.z });
-      this.ents.remove(e.id);
-      this.wanderers.delete(id);
-      this.noWander.add(id); // não volta nesta sessão
-    }
+    if (e.dead) return;
+    this.stats.destroyed++;
+    this.bus?.emit('silicon:destroyed', { x: e.feet.x, y: e.feet.y, z: e.feet.z });
+    this.ents.kill(e, 'safeguard');
   }
 
   _populate(u) {
@@ -318,7 +314,7 @@ export class NpcSystem {
   talkable(g, fwd) {
     let best = null;
     for (const e of this.all()) {
-      if (e.npc?.revealed || (e.npc?.role === 'wanderer' && e.npc.state !== 'walk')) continue;
+      if (e.dead || e.npc?.revealed || (e.npc?.role === 'wanderer' && e.npc.state !== 'walk')) continue;
       const dx = e.feet.x - g.x;
       const dz = e.feet.z - g.z;
       const d = Math.hypot(dx, dz);
