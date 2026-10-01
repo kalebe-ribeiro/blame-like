@@ -54,8 +54,6 @@ import { startPlace } from './lang/leads.js';
 const FOG_ABOVE_EYE = 40;
 /** Tempo em queda livre até o sistema "realocar" o observador (s). */
 const FALL_RESCUE_AFTER = 5.5;
-/** Peregrinação: caindo no vazio há tanto tempo, a vista escurece ainda no ar (s). */
-const VOID_FAINT_AFTER = 6;
 
 const params = new URLSearchParams(location.search);
 // só o `npm start` normal (sem nenhuma flag) lê e grava a travessia — sessões de
@@ -229,8 +227,7 @@ function frame() {
   ctx.sound.update(dt);
 
   // caiu no abismo por tempo demais: realoca (só se ligado nas configurações)
-  // Peregrinação: a queda sem fim também acaba em desmaio (app/wake.js)
-  if (ctx.rules.deathWake && !ctx.wake.active && controls.mode === 'walk' && controls.walker.airTime > VOID_FAINT_AFTER) ctx.wake.start('void');
+  // (Peregrinação: não há desmaio no ar — só quando o corpo chega ao chão ou bate em algo, app/body.js)
   const rescue = ctx.rules.fallRescue === 'always' || (ctx.rules.fallRescue === 'setting' && ctx.settings.fallRescue);
   if (rescue && controls.mode === 'walk' && controls.walker.airTime > FALL_RESCUE_AFTER) {
     const landing = world.findLanding(camera.position);

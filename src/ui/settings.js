@@ -64,7 +64,7 @@ export function loadSettings() {
   return { ...DEFAULTS };
 }
 
-function saveSettings(s) {
+export function saveSettings(s) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
   } catch {

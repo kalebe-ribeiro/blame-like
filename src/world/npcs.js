@@ -19,16 +19,14 @@
 import * as THREE from 'three';
 import { hash4 } from '../gen/hash.js';
 import { villageLayout, villageFrame, villageInhabited } from '../gen/villages.js';
-import { territoryAt, patrolCircuit, circuitAt, circuitNearest, PATROL } from '../gen/patrols.js';
+import { territoryAt, patrolCircuit, circuitAt, circuitNearest, PATROL, WANDER, wandererOf } from '../gen/patrols.js';
 
 const KEEP = 600; // m: vilas mantidas em volta do jogador
 const DROP = 800;
 const WALK = 4.2;
-const WANDER_P = 0.2; // territórios com um andarilho
-const SILICON_P = 0.3; // dos andarilhos, os que são vida de silício
-const THIEF_P = 0.5; // dos transumanos, os que roubam cargas
-const WANDER_SPEED = 1.1;
-const SALT = 7; // o circuito do andarilho (outro que o da ronda)
+const WANDER_SPEED = WANDER.speed;
+const SALT = WANDER.salt; // o circuito do andarilho (outro que o da ronda)
+// (quem é andarilho, vida de silício ou ladrão: gen/patrols.js — wandererOf)
 
 export class NpcSystem {
   constructor(world) {
@@ -100,7 +98,7 @@ export class NpcSystem {
     }
     for (const [id, t] of ids) {
       if (this.wanderers.has(id) || this.noWander.has(id) || this.wqueue.some((w) => w.id === id)) continue;
-      if (hash4(F.seed, t.sector.i, t.slab, t.sector.k, 1730) > WANDER_P) {
+      if (!wandererOf(F, t)) {
         this.noWander.add(id);
         continue;
       }
@@ -122,9 +120,7 @@ export class NpcSystem {
       this.noWander.add(t.id);
       return;
     }
-    const S = t.sector;
-    const silicon = hash4(F.seed, S.i, t.slab, S.k, 1731) < SILICON_P;
-    const thief = !silicon && hash4(F.seed, S.i, t.slab, S.k, 1732) < THIEF_P;
+    const { silicon, thief } = wandererOf(F, t);
     const s0 = c.phase + this.clock() * WANDER_SPEED;
     const p = circuitAt(c, s0);
     const e = this.ents.spawn({ id: `wd:${t.id}`, kind: 'transhuman', feet: new THREE.Vector3(p.x, p.y, p.z), yaw: p.yaw, persist: false, brain: this });

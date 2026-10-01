@@ -23,6 +23,17 @@ export const PATROL = {
   minLength: 60, // m: uma volta menor que isso não é ronda
 };
 
+/** Os andarilhos da fase 7 (world/npcs.js): em ~1 de cada 5 territórios, num circuito próprio. */
+export const WANDER = { p: 0.2, silicon: 0.3, thief: 0.5, speed: 1.1, salt: 7 };
+
+/** O andarilho do território (puro), ou null: { silicon, thief }. */
+export function wandererOf(F, t) {
+  const S = t.sector;
+  if (hash4(F.seed, S.i, t.slab, S.k, 1730) > WANDER.p) return null;
+  const silicon = hash4(F.seed, S.i, t.slab, S.k, 1731) < WANDER.silicon;
+  return { silicon, thief: !silicon && hash4(F.seed, S.i, t.slab, S.k, 1732) < WANDER.thief };
+}
+
 /** O território de um ponto GLOBAL: { id, sector, slab }. */
 export function territoryAt(F, x, y, z) {
   const sector = F.sectorAt(x, y, z, true);

@@ -14,6 +14,8 @@ import * as THREE from 'three';
 import { MEGA, HIVE, TRANSIT, MACRO } from '../gen/field.js';
 import { startPlace } from '../lang/leads.js';
 import { substationsNear } from '../gen/sites.js';
+import { villageInhabited } from '../gen/villages.js';
+import { territoryAt, patrolCircuit, circuitAt, wandererOf, WANDER, PATROL } from '../gen/patrols.js';
 
 /** Tipos de destino (os nomes na tela vêm de i18n: 'dest.<kind>', 'dest.group.<group>'). */
 export const DESTINATIONS = [
@@ -43,6 +45,11 @@ export const DESTINATIONS = [
   { group: 'other', kind: 'escotilha' },
   { group: 'other', kind: 'inicio' },
   { group: 'other', kind: 'ponte' },
+  // os seres (fases 6 e 7): a vila habitada, um andarilho, a vida de silício, um Safeguard de ronda
+  { group: 'beings', kind: 'vila' },
+  { group: 'beings', kind: 'andarilho' },
+  { group: 'beings', kind: 'silicio' },
+  { group: 'beings', kind: 'safeguard' },
 ];
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -81,7 +88,61 @@ function floorAt(F, x, y, z) {
 }
 
 export function findDestination(F, kind, g, recent = new Set(), opts = {}) {
+  /**
+   * Um ser num circuito (gen/patrols.js), em volta: os territórios em anéis até 6 km, na
+   * altura e nas fatias de cima e de baixo. pick(t) diz se o território serve; o salto
+   * deixa o jogador D m à frente dele no circuito, olhando para ele (ele vem vindo).
+   */
+  const onCircuit = (pick, salt, speed, D) => {
+    const nav = opts.nav;
+    if (!nav) return null;
+    const seen = new Set();
+    let built = 0;
+    const cands = [];
+    for (let R = 0; R <= 6000 && built < 60 && cands.length < 4; R += 450) {
+      const n = R ? Math.max(8, Math.round((2 * Math.PI * R) / 450)) : 1;
+      for (let i = 0; i < n && built < 60; i++) {
+        const a = (i / n) * Math.PI * 2;
+        for (const dy of [0, -PATROL.slab, PATROL.slab, -2 * PATROL.slab, 2 * PATROL.slab]) {
+          const t = territoryAt(F, g.x + Math.cos(a) * R, g.y + dy, g.z + Math.sin(a) * R);
+          if (seen.has(t.id)) continue;
+          seen.add(t.id);
+          if (!pick(t) || recent.has(t.id)) continue;
+          built++;
+          const c = patrolCircuit(F, nav, t, salt);
+          if (!c) continue;
+          const s = c.phase + (Date.now() / 1000) * speed;
+          const at = circuitAt(c, s);
+          const p = circuitAt(c, s + D);
+          cands.push({ id: t.id, feet: V(p.x, p.y + 0.05, p.z), yaw: yawTo(p.x, p.z, at.x, at.z), pitch: 0 });
+        }
+      }
+    }
+    return pick2(cands);
+  };
+  const pick2 = (cands) => (cands.length ? pick(cands, g, recent) : null);
+
   const finders = {
+    // ── os seres ──
+    vila: () => {
+      const cands = [];
+      for (const R of [20000, 40000, 80000]) {
+        for (const u of F.uniquesNear(g.x, g.y, g.z, R)) {
+          if (u.kind !== 'village' || !villageInhabited(F, u)) continue;
+          // dentro do galpão, junto do console (onde se acorda quando eles te recolhem)
+          const c = F.uniqueConsole(u);
+          const x = c.x - Math.sin(c.yaw) * 1.6;
+          const z = c.z - Math.cos(c.yaw) * 1.6;
+          cands.push({ id: u.id, feet: V(x, u.y + 1.25, z), yaw: c.yaw + Math.PI, pitch: -0.05 });
+        }
+        if (cands.length) break;
+      }
+      return pick2(cands);
+    },
+    andarilho: () => onCircuit((t) => wandererOf(F, t)?.silicon === false, WANDER.salt, WANDER.speed, 14),
+    silicio: () => onCircuit((t) => wandererOf(F, t)?.silicon === true, WANDER.salt, WANDER.speed, 16),
+    safeguard: () => onCircuit(() => true, 0, PATROL.speed, 30),
+
     // ── à frente de uma máquina colossal, flutuando sob a trincheira: ela passa por cima ──
     colosso: () => {
       // o ponto de vista precisa estar no aberto (teia ou vazio), longe de paredes

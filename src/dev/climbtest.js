@@ -101,6 +101,8 @@ async function run(ctx) {
   };
 
   await sleep(SETTLE);
+  const only = ctx.params.get('climbonly'); // (--climbonly=corrimao: só esse caso)
+  if (!only) {
   // em cada lugar: a primeira quina baixa e a primeira alta que aparecerem, subidas de verdade
   let nv = 0;
   let nh = 0;
@@ -251,5 +253,63 @@ async function run(ctx) {
       const onTop = Math.abs(w.feet.y - deckY) < 0.35 && w.grounded;
       report({ kind: 'ponte', ok: caught && onTop, why: `pegou o piso da ponte ${caught}${why0} · ${onTop ? 'subiu, em cima' : `parou ${(w.feet.y - deckY).toFixed(2)} m do piso`}` });
     }
+  }
+
+  }
+  // ── corrimão: andando contra o corrimão da ponte inicial (1,1 m, fino), o corpo não passa ──
+  ctx.ui.teleport('ponte', 'ponte');
+  controls.setMode('walk');
+  await sleep(SETTLE);
+  {
+    const g0 = world.toGlobal(camera.position);
+    // a ponte inicial corre ao longo de z em x = 0, 6 m de largura: corrimãos em x = ±2,8
+    standAt(new THREE.Vector3(0.5, g0.y - 1.7, g0.z).sub(new THREE.Vector3(world.origin.x, world.origin.y, world.origin.z)).setY(camera.position.y - 1.7), -Math.PI / 2);
+    await sleep(500);
+    controls.forceInput = { f: 1, r: 0, jump: false, run: true };
+    await sleep(3000);
+    controls.forceInput = null;
+    const x = world.toGlobal(camera.position).x;
+    report({ kind: 'corrimao', ok: x < 2.8, why: `andando 3 s contra o corrimão: parou em x = ${x.toFixed(2)} m (o corrimão está em 2,8)` });
+  }
+
+  // ── pela borda: pendurado, andar de lado ──
+  if (!only) {
+    let ok = false;
+    let why = 'nenhuma quina alta perto';
+    for (const place of ['silo', 'colmeia', 'macico', 'escadaria']) {
+      ctx.ui.teleport(place, place);
+      controls.setMode('walk');
+      await sleep(SETTLE);
+      const c = scanLedges(ctx).hang;
+      if (!c) continue;
+      standAt(c.feet, c.yaw);
+      await sleep(600);
+      controls.forceInput = { f: 0, r: 0, jump: true };
+      await sleep(150);
+      controls.forceInput = { f: 0, r: 0, jump: false };
+      const hung = await waitFor(() => !!w.ledge, 1.5);
+      if (!hung) {
+        why = `${place}: não agarrou`;
+        continue;
+      }
+      await sleep(400);
+      const p0 = w.feet.clone();
+      // tenta um lado; se a borda acaba logo, o outro
+      let moved = 0;
+      for (const r of [1, -1]) {
+        controls.forceInput = { f: 0, r, jump: false };
+        await sleep(2000);
+        moved = Math.hypot(w.feet.x - p0.x, w.feet.z - p0.z);
+        if (moved > 0.8) break;
+      }
+      controls.forceInput = { f: 0, r: 0, jump: false };
+      await sleep(300);
+      const still = !!w.ledge;
+      controls.forceInput = null;
+      ok = still && moved > 0.8;
+      why = `${place}: andou ${moved.toFixed(2)} m pela borda em 2 s · ${still ? 'ainda pendurado' : 'caiu'}`;
+      break;
+    }
+    report({ kind: 'borda', ok, why });
   }
 }

@@ -150,9 +150,10 @@ function createWindow() {
   if (argValue('mark')) query.set('mark', argValue('mark'));
   if (argValue('wakeas')) query.set('wakeas', argValue('wakeas')); // --wakeas=safeguard|npc: o sorteio do despertar forçado
   if (process.argv.includes('--climbup')) query.set('climbup', '1');
+  if (process.argv.includes('--nonpcs')) query.set('nonpcs', '1');
   if (process.argv.includes('--wreveal')) query.set('wreveal', '1');
   if (process.argv.includes('--sgwatch')) query.set('sgwatch', '1');
-  for (const k of ['sgnear', 'sgdist', 'sgemerge', 'sgcam', 'talk', 'talkpick', 'wcam', 'hang', 'ledgestats', 'ambient']) if (argValue(k)) query.set(k, argValue(k));
+  for (const k of ['sgnear', 'sgdist', 'sgemerge', 'sgcam', 'talk', 'talkpick', 'wcam', 'hang', 'ledgestats', 'ambient', 'climbonly', 'shimmy']) if (argValue(k)) query.set(k, argValue(k));
   if (argValue('gounique')) query.set('gounique', argValue('gounique'));
   if (argValue('body')) query.set('body', argValue('body')); // --body=6: um corpo de teste aos 6 s (fase 5)
   if (argValue('bodydist')) query.set('bodydist', argValue('bodydist'));

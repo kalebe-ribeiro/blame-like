@@ -245,6 +245,7 @@ export function setupDev(ctx) {
         ctx.controls.forceInput = { f: 0, r: 0, jump: true };
         setTimeout(() => (ctx.controls.forceInput = { f: 0, r: 0, jump: false }), 150);
         if (params.get('climbup')) setTimeout(() => (ctx.controls.forceInput = { f: 1, r: 0, jump: false }), 1500);
+        if (params.get('shimmy')) setTimeout(() => (ctx.controls.forceInput = { f: 0, r: Number(params.get('shimmy')), jump: false }), 1500);
         console.warn(`HANG: quina de ${c.l.h.toFixed(2)} m`);
       }, 700);
     }, Number(params.get('hang')) * 1000);
@@ -286,6 +287,8 @@ export function setupDev(ctx) {
   }
   // --ambient=8: a luz ambiente ×N (só para capturas — ver de perto o que está no escuro)
   if (params.get('ambient')) world.shared.uAmbient.value.multiplyScalar(Number(params.get('ambient')));
+  // --nonpcs: sem os raros vivos (para medir o custo deles)
+  if (params.get('nonpcs')) world.npcs.enabled = false;
   if (params.get('sgemerge')) setTimeout(() => console.warn('SGEMERGE: ' + world.safeguards.emerge(world.toGlobal(camera.position), world.origin, 1) + ' ' + JSON.stringify(world.safeguards.wallWhy) + ' @ ' + world.toGlobal(camera.position).toArray().map(Math.round)), Number(params.get('sgemerge')) * 1000);
 
   // --check: roteiro automático por todos os destinos (npm run check)

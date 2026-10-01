@@ -31,6 +31,14 @@ export class CollisionWorld {
    * `ready` fica falso se algo por perto ainda não chegou dos workers.
    */
   refresh(scenePos, radius) {
+    // a lista ainda serve (o corpo mal saiu do lugar, há pouco): não varre o mundo de novo.
+    // Cada corpo (jogador, Safeguards, moradores…) chama isto a cada quadro — varrer todas
+    // as malhas de todos os chunks para cada um custava caro com vários seres por perto
+    const now = performance.now();
+    if (this.ready && this._at && this._at.distanceToSquared(scenePos) < 1 && radius <= this._r && now - this._t < 300) return;
+    (this._at ??= new THREE.Vector3()).copy(scenePos);
+    this._r = radius;
+    this._t = now;
     const w = this.world;
     this.meshes.length = 0;
     let budget = this.buildsPerFrame;

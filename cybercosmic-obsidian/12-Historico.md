@@ -216,3 +216,13 @@ Por que as coisas estão como estão, em ordem.
 - Achados no teste: a lateral dos discos das plataformas pende para baixo (o disco é mais estreito embaixo) e a regra de "parede" só aceitava faces verticais → aceita também faces pendentes; o rebordo das plataformas (um cano baixo junto da borda) fazia a busca do topo bater na lateral dele → o topo é procurado em 3 pontos, e o pé pousa no chão depois do rebordo (`landY`).
 - Mãos: a luva preta quase não aparecia; as mangas das mãos que seguram tapavam a vista (só as que agarram têm antebraço); os olhos pendurados ficavam 12 cm abaixo da borda e as mãos sumiam atrás dela (agora rente).
 - Teste novo `npm run check:climb`.
+
+## 2026-09-30 — vila no ar, desmaio, corrimãos, destinos dos seres, mão por mão
+
+- **Vilinha flutuando** (foto do usuário): era um *assentamento* de `gen/human.js` (o anel de 9 blocos da fogueira), não a vila da fase 7. A checagem de chão olhava 2 pontos na diagonal a 25 m; os estratos são placas de 80 m que podem faltar → o centro podia cair num furo. Agora: chão no centro e em 8 pontos a 21 m (e o mesmo para o entulho). Na seed da foto (6lcfi8), 47 de 1.254 assentamentos de estrato eram assim. (Verificado no código e na contagem; a captura de antes/depois saiu escura e não mostrou nada.)
+- **Desmaio no vazio retirado**: só quando o corpo chega ao chão ou bate em algo.
+- **Corrimãos sem colisão**: os raios de parede do corpo saíam a 0,6 / 0,94 / 1,6 m e os de empurrar a 0,6 / 1,36 m; um corrimão fino a 1,1 m passava entre eles. Agora há raios a 0,8 / 1,0 / 1,15 m. Provado: com o código antigo o teste atravessou o corrimão e caiu da ponte (x = 25 m); com o novo parou em 2,33 m.
+- **Transporte (Livre)**: grupo "seres" — vila com moradores, andarilho, vida de silício, Safeguard (quem é andarilho saiu de `world/npcs.js` para `gen/patrols.js`, `wandererOf`, para o teleporte usar a mesma regra).
+- **Pela borda**: mão por mão, com o corpo balançando; os braços vão do punho ao ombro.
+- `check:climb` ganhou `corrimao` e `borda`; `--climbonly=corrimao`, `--shimmy=±1`.
+- Desempenho: cada corpo (jogador, Safeguards, moradores) refazia a cada quadro a lista de todas as malhas de colisão do mundo; agora a lista é reaproveitada enquanto o corpo não andou 1 m (até 0,3 s). O fps baixo do check na vila (≈20) era o carregamento depois de um salto de 20–40 km: parado lá, 76–88 fps (`--stats`), e igual sem os moradores (`--nonpcs`).

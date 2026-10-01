@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { VIEWS } from '../world/world.js';
 import { t, setLang, applyDom, fmtDist } from '../i18n/index.js';
-import { SettingsPanel } from '../ui/settings.js';
+import { SettingsPanel, saveSettings } from '../ui/settings.js';
 import { TransportPanel } from '../ui/transport.js';
 import { WorldsPanel } from '../ui/worlds.js';
 import { ControlsPanel } from '../ui/controlsPanel.js';
@@ -222,12 +222,20 @@ export function createUI(ctx) {
   function teleport(kind, label, extra = {}) {
     const g = world.toGlobal(camera.position, new THREE.Vector3());
     const recent = visited.get(kind) ?? new Set();
-    const dest = findDestination(world.field, kind, g, recent, { ...extra, colossus: (accept) => world.colossi.nearest(world.field, g, ctx.time, accept) });
+    const dest = findDestination(world.field, kind, g, recent, { ...extra, nav: world.entities.nav, colossus: (accept) => world.colossi.nearest(world.field, g, ctx.time, accept) });
     if (!dest) return false;
     recent.add(dest.id);
     if (recent.size > 8) recent.delete(recent.values().next().value);
     visited.set(kind, recent);
     controls.autopilot = false;
+    // ir ver um Safeguard no modo Livre: eles precisam existir (a opção, desligada por padrão, liga)
+    if (kind === 'safeguard' && rules.safeguards === 'setting' && !ctx.settings.safeguards) {
+      ctx.settings.safeguards = true;
+      if (ctx.persist) saveSettings(ctx.settings);
+      hud.push(t('hud.safeguardsOn'));
+    }
+    // os seres andam no chão: chega-se a pé
+    if (['vila', 'andarilho', 'silicio', 'safeguard'].includes(kind)) controls.setMode('walk');
     if (dest.fly) controls.setMode('fly');
     const eye = dest.feet.clone().sub(world.origin);
     eye.y += 1.7;

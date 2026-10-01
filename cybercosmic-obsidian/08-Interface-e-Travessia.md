@@ -40,7 +40,7 @@ Inglês padrão, português opção (primeira linha das configurações; os pain
 
 ## Transporte (T — `ui/transport.js`, `world/teleport.js`)
 
-24 destinos em grupos: regiões, interiores do maciço, estruturas, outros (Construtores, cemitério, cascata, transportador, máquina colossal, terminal, estrutura única, início da Peregrinação, ponte). Vai ao exemplar **mais próximo**; repetir leva a outro (os últimos 8 são pulados). Busca só no Field; o corpo paira até a geometria chegar. Destinos com `fly: true` chegam voando.
+30 destinos em grupos: regiões, interiores do maciço, estruturas, outros (Construtores, cemitério, cascata, transportador, máquina colossal, terminal, estrutura única, subestação, escotilha, início da Peregrinação, ponte) e **seres** (vila com moradores, andarilho transumano, vida de silício, Safeguard de ronda — chega-se a pé, alguns metros à frente dele no circuito, olhando para ele; ir ver um Safeguard no Livre liga a opção dos Safeguards). Vai ao exemplar **mais próximo**; repetir leva a outro (os últimos 8 são pulados). Busca só no Field; o corpo paira até a geometria chegar. Destinos com `fly: true` chegam voando.
 
 ## Configurações (O — `ui/settings.js`)
 

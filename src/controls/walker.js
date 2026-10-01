@@ -78,6 +78,7 @@ export class Walker {
     this.ledge = null; // pendurado: { topY, edge, nrm, h }
     this.climb = null; // subindo: { t, dur, from, mid, to, h }
     this.hangT = 0;
+    this.shimmyT = 0;
     this.grabCooldown = 0;
     this.turnTo = null; // yaw para onde o corpo se vira ao agarrar (controls/noclip.js aplica)
     this.onGrab = null; // () — as mãos pegaram a quina
@@ -415,6 +416,9 @@ export class Walker {
         this.ledge = l2;
         this.feet.copy(l2.edge).addScaledVector(l2.nrm, 0.34 * s);
         this.feet.y = l2.topY - eye - LEDGE.hangBelow * s;
+        // mão por mão: o corpo balança um pouco a cada troca (as mãos — app/hands.js)
+        this.shimmyT += dt;
+        this.bob = -Math.abs(Math.sin(this.shimmyT * 5.2)) * 0.035 * s;
       } else this.feet.copy(was); // acabou a borda
     }
     this._apply(camera, eye);
@@ -478,7 +482,8 @@ export class Walker {
       if (len < 1e-6) return;
       _d.copy(move).divideScalar(len);
       let best = null;
-      for (const h of [stepH + 0.05, eye * 0.55, eye * 0.95]) {
+      // (os corrimãos são finos e ficam a 1,0–1,2 m: uma altura deles não pode faltar)
+      for (const h of [stepH + 0.05, 0.8 * (eye / 1.7), 1.0 * (eye / 1.7), 1.15 * (eye / 1.7), eye * 0.95]) {
         _o.copy(this.feet).y += h;
         const hit = this.col.ray(_o, _d, len + radius);
         if (hit && hit.face && Math.abs(hit.face.normal.y) < WALKABLE_NY && (!best || hit.distance < best.distance)) best = hit;
@@ -507,7 +512,7 @@ export class Walker {
 
   /** Se algo invadiu o raio do corpo (paredes em movimento, quinas), empurra para fora. */
   _pushOut(radius, stepH, eye) {
-    for (const h of [stepH + 0.05, eye * 0.8]) {
+    for (const h of [stepH + 0.05, 1.05 * (eye / 1.7), 1.15 * (eye / 1.7), eye * 0.8]) {
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2;
         _d.set(Math.cos(a), 0, Math.sin(a));

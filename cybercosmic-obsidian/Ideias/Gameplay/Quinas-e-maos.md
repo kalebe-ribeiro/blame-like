@@ -17,7 +17,7 @@ Uma **quina** é: uma parede (ou uma face que pende para baixo — a lateral de 
 | pular de frente para uma quina de até **1,3 m** | passa por cima direto (vault, ~0,6 s) |
 | pular de frente para uma quina de **1,3 a 2,25 m** | agarra; segurando frente, sobe (~1 s) |
 | no ar, subindo devagar ou caindo (até 14 m/s), com a borda passando pelas mãos | agarra — de frente sempre; **atrás e dos lados** só se embaixo não houver chão por 5 m (caiu da ponte: segura o piso dela; descer de propósito uma mureta não vira agarrão) |
-| pendurado | frente/pulo **sobe** · trás (ou descer) **solta** · lados **andam pela borda** (0,9 m/s) |
+| pendurado | frente/pulo **sobe** · trás (ou descer) **solta** · lados **andam pela borda** (0,9 m/s), **mão por mão**: a mão de trás solta, sobe um pouco e pega adiante; a outra só vai depois; o corpo balança a cada troca |
 | carregando uma carga | só o vault |
 
 Ao agarrar, o corpo se vira de frente para a parede. Os seres (Safeguards, moradores…) não agarram quinas — andam pelo grafo.
@@ -27,7 +27,7 @@ Ao agarrar, o corpo se vira de frente para a parede. Os seres (Safeguards, morad
 Luvas de tecido grosso, feitas por código: palma, quatro dedos de duas falanges, polegar; cada junta dobra.
 
 - **Segurando**: a direita segura o aparelho por baixo, de palma para cima; a esquerda fecha em volta do tubo da lanterna.
-- **Agarrando**: as duas mãos ficam **na quina, no mundo** (a palma em cima, os dedos para dentro do topo), com os antebraços descendo para o corpo; os olhos ficam rente à borda. O aparelho e a lanterna saem das mãos (a lanterna apaga) — não dá para se pendurar segurando nada; depois de subir, voltam (a lanterna acesa, se estava).
+- **Agarrando**: as duas mãos ficam **na quina, no mundo** (a palma em cima, os dedos para dentro do topo), com os braços indo de cada punho até um ombro fixo abaixo e ao lado dos olhos (esticam conforme a mão vai — nenhum braço cruza a frente da vista); os olhos ficam rente à borda. O aparelho e a lanterna saem das mãos (a lanterna apaga) — não dá para se pendurar segurando nada; depois de subir, voltam (a lanterna acesa, se estava).
 - **Subindo**: as mãos continuam na quina enquanto o corpo sobe (empurram) e, passando por cima, descem para fora da vista.
 
 Sons: dois tapas de luva ao agarrar; o tecido raspando na borda ao subir, e o pé apoiando em cima.

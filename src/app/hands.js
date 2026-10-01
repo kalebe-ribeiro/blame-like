@@ -8,6 +8,9 @@
 //                NA quina (no mundo): a palma em cima, os dedos fechados por
 //                cima da borda; o aparelho e a lanterna somem (não dá para se
 //                pendurar segurando nada)
+//    pela borda  pendurado andando de lado, uma mão de cada vez: a que fica para
+//                trás solta, sobe um pouco e pega mais adiante; a outra só vai
+//                depois que a primeira firmou
 //    subindo     as mãos continuam na quina enquanto o corpo sobe (empurram)
 //                e, passando por cima, descem para fora da vista
 //
@@ -36,17 +39,9 @@ export function buildHand(mat, side, { arm = false } = {}) {
   cuff.position.z = PALM.d / 2 + 0.035;
   cuff.scale.set(1.1, 1, 0.7);
   group.add(cuff);
-  // o antebraço (a manga), descendo do punho para o corpo — só nas mãos que agarram
-  // (as que seguram ficam perto da câmera: a manga taparia a vista)
-  if (arm) {
-    const g = new THREE.CylinderGeometry(0.04, 0.046, 0.34, 8);
-    g.translate(0, 0.17, 0);
-    const armMesh = new THREE.Mesh(g, mat);
-    armMesh.rotation.x = Math.PI / 2 + 0.45; // para trás (+z) e para baixo
-    armMesh.position.z = PALM.d / 2 + 0.06;
-    armMesh.scale.set(1.05, 1, 0.8);
-    group.add(armMesh);
-  } else cuff.visible = false;
+  // (o punho da manga só nas mãos que agarram; o braço até o ombro é desenhado à parte —
+  // createHands —, porque depende de onde a mão está em relação ao corpo)
+  if (!arm) cuff.visible = false;
   const fingers = [];
   for (let i = 0; i < 4; i++) {
     const base = new THREE.Group();
@@ -109,6 +104,19 @@ export function createHands(ctx, { device, flashlight }) {
   flashlight.add(left.group);
   // as que agarram (filhas da câmera; no lugar certo do mundo a cada quadro)
   const grip = [buildHand(glove, -1, { arm: true }), buildHand(glove, 1, { arm: true })];
+  // os braços: do punho até o ombro (abaixo e ao lado dos olhos), esticando conforme a mão vai
+  const armGeo = new THREE.CylinderGeometry(0.036, 0.042, 1, 8);
+  armGeo.translate(0, 0.5, 0); // a base no punho, crescendo para +y (até o ombro)
+  const arms = grip.map(() => {
+    const m = new THREE.Mesh(armGeo, glove);
+    m.visible = false;
+    camera.add(m);
+    return m;
+  });
+  const SHOULDER = [new THREE.Vector3(-0.2, -0.42, 0.08), new THREE.Vector3(0.2, -0.42, 0.08)];
+  const _wr = new THREE.Vector3();
+  const _dir = new THREE.Vector3();
+  const _up = new THREE.Vector3(0, 1, 0);
   for (const h of grip) {
     h.group.visible = false;
     camera.add(h.group);
@@ -120,6 +128,13 @@ export function createHands(ctx, { device, flashlight }) {
   const _m = new THREE.Matrix4();
   let held = null; // { edge, nrm } da quina (a última; as mãos descem dela depois da subida)
   let out = 0; // 0 nas quinas · 1 recolhidas
+  // onde cada mão está presa (cena) e, se está trocando de lugar, de onde saiu
+  const plant = [null, null];
+  const move = [null, null]; // { from, t }
+  const STEP = 0.3; // m: a mão fica até a distância do lugar dela passar disso
+  const SWAP = 0.2; // s para uma mão trocar de lugar
+  const _ideal = new THREE.Vector3();
+  const _now = new THREE.Vector3();
 
   return {
     /** Pendurado ou subindo (o aparelho e a lanterna saem das mãos). */
@@ -129,6 +144,7 @@ export function createHands(ctx, { device, flashlight }) {
     update(dt) {
       const st = controls.mode === 'walk' ? controls.walker?.ledgeState : null;
       if (st?.edge) held = { edge: st.edge.clone(), nrm: st.nrm.clone() };
+      if (!st) plant[0] = plant[1] = move[0] = move[1] = null;
       // subindo: as mãos continuam na quina até o corpo passar por cima; depois somem para baixo
       const pushing = st?.kind === 'climb' && st.k < (st.vault ? 0.5 : 0.7);
       const on = !!held && (st?.kind === 'hang' || pushing);
@@ -137,12 +153,29 @@ export function createHands(ctx, { device, flashlight }) {
       for (let i = 0; i < 2; i++) {
         const h = grip[i];
         h.group.visible = !!held && out < 1;
+        arms[i].visible = h.group.visible;
         if (!h.group.visible) continue;
-        // ao longo da quina, uma de cada lado (a tangente da parede)
+        // o lugar dela: ao longo da quina, uma de cada lado (a tangente da parede)
         const n = held.nrm;
         _t.set(-n.z, 0, n.x).multiplyScalar(i ? 0.21 : -0.21);
-        _w.copy(held.edge).add(_t).addScaledVector(n, -0.05);
-        _w.y += 0.012 - out * 0.35;
+        _ideal.copy(held.edge).add(_t).addScaledVector(n, -0.05);
+        _ideal.y += 0.012;
+        // presa onde estava; quando fica longe do lugar dela (andando de lado), troca —
+        // uma de cada vez
+        if (!plant[i]) plant[i] = _ideal.clone();
+        if (!move[i] && !move[1 - i] && plant[i].distanceTo(_ideal) > STEP && st?.kind === 'hang') move[i] = { from: plant[i].clone(), t: 0 };
+        if (move[i]) {
+          move[i].t += dt / SWAP;
+          const k = Math.min(1, move[i].t);
+          _now.lerpVectors(move[i].from, _ideal, k * k * (3 - 2 * k));
+          _now.y += Math.sin(k * Math.PI) * 0.07; // solta e sobe um pouco
+          if (k >= 1) {
+            plant[i].copy(_ideal);
+            move[i] = null;
+          }
+        } else _now.copy(plant[i]);
+        _w.copy(_now);
+        _w.y -= out * 0.35;
         camera.worldToLocal(_w);
         h.group.position.copy(_w);
         // a palma em cima da quina, os dedos apontando para dentro do topo (−n)
@@ -150,7 +183,15 @@ export function createHands(ctx, { device, flashlight }) {
         _q.setFromRotationMatrix(_m);
         camera.getWorldQuaternion(_qc);
         h.group.quaternion.copy(_qc.invert().multiply(_q));
-        h.pose(st?.kind === 'climb' ? 0.35 : 0.6, 0.5); // empurrando, a mão abre
+        h.pose(move[i] ? 0.15 : st?.kind === 'climb' ? 0.35 : 0.6, 0.5); // trocando de lugar ou empurrando, a mão abre
+        // o braço: do punho (atrás da palma, no espaço da câmera) até o ombro
+        h.group.updateMatrix();
+        _wr.set(0, 0, 0.09).applyMatrix4(h.group.matrix);
+        _dir.copy(SHOULDER[i]).sub(_wr);
+        const len = _dir.length();
+        arms[i].position.copy(_wr);
+        arms[i].quaternion.setFromUnitVectors(_up, _dir.divideScalar(len || 1));
+        arms[i].scale.set(1, len, 1);
       }
     },
   };

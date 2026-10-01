@@ -6,7 +6,7 @@ tags: [gameplay, morte, animacao]
 
 # Queda e despertar (morte no modo Peregrinação)
 
-> **Feita na fase 1** (`app/wake.js`): impacto > 38 m/s ou 6 s no vazio → a sequência inteira; largado a 1,5–6 km num lugar com chão **e com luz** (setor não apagado — no escuro total não se veria o chão passando); ~25 s no total. `--wake=N` dispara para testar.
+> **Feita na fase 1** (`app/wake.js`): impacto > 38 m/s → a sequência inteira (~~ou 6 s no vazio~~ — **retirado em 2026-09-30, pedido do usuário: o desmaio só acontece quando o corpo chega ao chão ou bate em algo**); largado a 1,5–6 km num lugar com chão **e com luz** (setor não apagado — no escuro total não se veria o chão passando); ~25 s no total. `--wake=N` dispara para testar.
 
 > Decidido (2026-09-29). **A animação da queda longa deve ser preparada já** (quando o código for liberado), mesmo antes de existirem Safeguards.
 
@@ -33,7 +33,7 @@ Quando você "morre" — hoje, numa **queda longa**; no futuro, também pelos **
 
 ## Quando dispara
 - **Queda longa**: a partir de uma velocidade/altura de impacto que hoje seria fatal (quedas curtas continuam como agora: impacto, tremor, zumbido).
-- **Queda sem fim** (o vazio): depois de alguns segundos caindo, a tela escurece ainda no ar e a sequência começa do passo 3.
+- ~~**Queda sem fim** (o vazio): depois de alguns segundos caindo, a tela escurece ainda no ar~~ — retirado (2026-09-30): cai-se até chegar a alguma coisa.
 - **Futuro**: morte por Safeguards.
 - **Só no modo Peregrinação.** No Livre continua como hoje (queda para sempre, realocação opcional).
 

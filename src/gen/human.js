@@ -353,13 +353,18 @@ function genSurfaces(F, B, box) {
     surfaces.push({
       y: g.floor,
       kind: 'gallery',
-      ok: (x, z) => Math.abs((g.axis === 'x' ? z : x) - g.c) < g.w / 2 - 12 && !F.insideVoid(x, g.floor - 3, z, g.id),
+      ok: (x, z) => Math.abs((g.axis === 'x' ? z : x) - g.c) < g.w / 2 - 4 && !F.insideVoid(x, g.floor - 3, z, g.id),
       ceiling: g.roof ? g.top : null,
       prob: 0.16,
     });
   }
-  for (const st of F.strataNear(cy)) surfaces.push({ y: st.top, kind: 'stratum', ok: (x, z) => F.strataSolid(st, x - 25, z - 25) && F.strataSolid(st, x + 25, z + 25), prob: 0.08, under: st.bottom });
-  for (const b of F.barriersNear(cy)) surfaces.push({ y: b.top, kind: 'barrier', ok: (x, z) => !F.reliefAt(b, x, z, 12) && !F.uniqueAt(b, x, z, 30) && F.barrierSolid(b, x - 40, z - 40) && F.barrierSolid(b, x + 40, z + 40), prob: 0.07, under: b.bottom });
+  for (const st of F.strataNear(cy)) surfaces.push({ y: st.top, kind: 'stratum', ok: (x, z) => F.strataSolid(st, x, z), prob: 0.08, under: st.bottom });
+  for (const b of F.barriersNear(cy)) surfaces.push({ y: b.top, kind: 'barrier', ok: (x, z) => !F.reliefAt(b, x, z, 12) && !F.uniqueAt(b, x, z, 30) && F.barrierSolid(b, x, z) && !F.insideVoid(x, b.top + 3, z), prob: 0.07, under: b.bottom });
+  // um assentamento (barracos até ~20 m do centro) só onde há chão em TODO ele: o centro e
+  // 8 pontos em volta — antes eram 2 pontos na diagonal, e o centro podia cair num furo
+  // do estrato (placas de 80 m que faltam) ou num poço: a vila ficava no ar
+  const RING = [[0, 0], ...Array.from({ length: 8 }, (_, q) => [Math.cos((q / 8) * Math.PI * 2) * 21, Math.sin((q / 8) * Math.PI * 2) * 21])];
+  const solid = (s, x, z) => RING.every(([dx, dz]) => s.ok(x + dx, z + dz));
 
   for (const s of surfaces) {
     // topo da superfície dentro do chunk
@@ -372,8 +377,9 @@ function genSurfaces(F, B, box) {
           const z = (k + r.float(0.2, 0.8)) * C;
           if (!s.ok(x, z) || F.walkwayNear(x, s.y - 5, s.y + 10, z, 25)) continue;
           const roll = r.next();
-          if (roll < s.prob) settlement(F, B, x, s.y, z, r);
-          else if (roll < s.prob + 0.1) rubble(B, [x, s.y, z], r, r.float(4, 12));
+          if (roll < s.prob) {
+            if (solid(s, x, z)) settlement(F, B, x, s.y, z, r);
+          } else if (roll < s.prob + 0.1 && solid(s, x, z)) rubble(B, [x, s.y, z], r, r.float(4, 12));
         }
       }
       // gotas caindo do teto das galerias até o piso, com poça embaixo
