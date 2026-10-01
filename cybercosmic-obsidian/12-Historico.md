@@ -209,3 +209,10 @@ Por que as coisas estão como estão, em ordem.
 - Tropeço meu ao capturar: na Peregrinação a câmera não voa, então a flag de câmera deixava o jogador a pé perto de um andarilho que era vida de silício — ele se revelava e parecia "o corpo errado". Não era defeito dos corpos. (O modo Livre serve para capturas de perto.)
 - Erro meu no teste: li o cache da disposição da vila (`_memo` com uma função que devolvia null — o que também o sujaria) em vez de chamar `villageLayout`. O teste agora também termina na hora se der erro.
 - Teste `npm run check:npcs` (`dev/npctest.js`), 10 itens. Flags: `--talk=N --talkpick=…`, `--wcam=N [--wreveal]` (no modo Livre para ver de perto).
+
+## 2026-09-30 — quinas e mãos
+
+- Pedido a partir de uma foto (uma mureta baixa demais para ser parede, alta demais para pular): agarrar quinas e subir, em todos os casos realistas para um corpo humano; e mãos (animações e segurando itens). Detalhes em [[Ideias/Gameplay/Quinas-e-maos]].
+- Achados no teste: a lateral dos discos das plataformas pende para baixo (o disco é mais estreito embaixo) e a regra de "parede" só aceitava faces verticais → aceita também faces pendentes; o rebordo das plataformas (um cano baixo junto da borda) fazia a busca do topo bater na lateral dele → o topo é procurado em 3 pontos, e o pé pousa no chão depois do rebordo (`landY`).
+- Mãos: a luva preta quase não aparecia; as mangas das mãos que seguram tapavam a vista (só as que agarram têm antebraço); os olhos pendurados ficavam 12 cm abaixo da borda e as mãos sumiam atrás dela (agora rente).
+- Teste novo `npm run check:climb`.

@@ -208,7 +208,10 @@ function frame() {
 
   // 2. origem flutuante
   const rebased = world.maybeRebase(camera);
-  if (rebased) ctx.scenePass.shiftOrigin(rebased.delta);
+  if (rebased) {
+    ctx.scenePass.shiftOrigin(rebased.delta);
+    controls.walker.shift(rebased.delta); // pendurado numa quina, ou subindo
+  }
   ctx.carried.update(dt, time); // a lanterna na mão (Peregrinação)
   ctx.marks.update(dt); // as marcas pintadas perto
   ctx.alert.update(dt);

@@ -56,4 +56,4 @@ Distância (240–2400 m), névoa (0–200%), FOV, sensibilidade, resolução, S
 
 ## Modo andar (`controls/walker.js`, `world/collision.js`)
 
-Colisão BVH sob demanda; sobe degraus/rampas até ~55°; escadas (W/S); elevadores e vagões carregam o corpo; queda com peso (FOV, tremor, riscos de poeira, pouso proporcional); cair é para sempre (realocação opcional).
+Colisão BVH sob demanda; sobe degraus/rampas até ~55°; escadas (W/S); **quinas** — pular de frente: até 1,3 m passa por cima, até 2,25 m agarra e sobe; no ar as mãos pegam bordas, inclusive o piso de uma ponte de onde se caiu ([[Ideias/Gameplay/Quinas-e-maos]]); elevadores e vagões carregam o corpo; queda com peso (FOV, tremor, riscos de poeira, pouso proporcional); cair é para sempre (realocação opcional).

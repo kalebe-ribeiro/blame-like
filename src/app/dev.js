@@ -231,12 +231,68 @@ export function setupDev(ctx) {
       }, 2500);
     }, Number(params.get('wcam')) * 1000);
   }
+  // --hang=N: aos N s, de frente para a quina alta mais perto (fase de movimento: quinas),
+  // pula e fica pendurado; --hang=N --climbup: e sobe em seguida (1,5 s depois)
+  if (params.get('hang')) {
+    setTimeout(async () => {
+      const { scanLedges } = await import('../dev/climbtest.js');
+      const f = scanLedges(ctx);
+      const c = params.get('vault') ? f.vault : f.hang;
+      if (!c) return console.warn('HANG: nenhuma quina por perto');
+      ctx.controls.setMode('walk');
+      ctx.controls.setView({ pos: c.feet.clone().setY(c.feet.y + 1.7), yaw: c.yaw, pitch: 0.05, scale: 1 });
+      setTimeout(() => {
+        ctx.controls.forceInput = { f: 0, r: 0, jump: true };
+        setTimeout(() => (ctx.controls.forceInput = { f: 0, r: 0, jump: false }), 150);
+        if (params.get('climbup')) setTimeout(() => (ctx.controls.forceInput = { f: 1, r: 0, jump: false }), 1500);
+        console.warn(`HANG: quina de ${c.l.h.toFixed(2)} m`);
+      }, 700);
+    }, Number(params.get('hang')) * 1000);
+  }
+  // --ledgestats=N: aos N s, por que as paredes em volta (22 m) não são quinas (histograma dos motivos)
+  if (params.get('ledgestats')) {
+    setTimeout(() => {
+      const w = ctx.controls.walker;
+      const col = w.col;
+      const g = camera.position.clone();
+      col.buildsPerFrame = 600;
+      col.refresh(g, 40);
+      col.buildsPerFrame = 2;
+      const hist = {};
+      const hs = [];
+      const save = w.feet.clone();
+      for (let r = 1.5; r <= 22; r += 1.5) {
+        for (let a = 0; a < 24; a++) {
+          const ang = (a / 24) * Math.PI * 2 + r;
+          const p = new THREE.Vector3(g.x + Math.cos(ang) * r, g.y + 2, g.z + Math.sin(ang) * r);
+          const fl = col.ray(p, new THREE.Vector3(0, -1, 0), 8);
+          if (!fl || !fl.face || fl.face.normal.y < 0.7) continue;
+          w.feet.copy(fl.point);
+          for (let q = 0; q < 8; q++) {
+            const yaw = (q / 8) * Math.PI * 2;
+            const dir = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+            w.ledgeWhy = null;
+            const l = w._findLedge(dir, 1, 0.62, 2.25);
+            const k = l ? (l.h <= 1.3 ? 'VAULT' : 'AGARRA') : (w.ledgeWhy ?? '?').replace(/altura [-\d.]+/, 'altura');
+            if (k === 'parede') continue;
+            hist[k] = (hist[k] ?? 0) + 1;
+            if (k === 'altura' || k === 'topo') hs.push(w.ledgeWhy);
+          }
+        }
+      }
+      w.feet.copy(save);
+      console.warn('LEDGES: ' + JSON.stringify(hist) + ' alturas: ' + hs.filter((x) => x?.startsWith('altura')).slice(0, 12).join(' '));
+    }, Number(params.get('ledgestats')) * 1000);
+  }
+  // --ambient=8: a luz ambiente ×N (só para capturas — ver de perto o que está no escuro)
+  if (params.get('ambient')) world.shared.uAmbient.value.multiplyScalar(Number(params.get('ambient')));
   if (params.get('sgemerge')) setTimeout(() => console.warn('SGEMERGE: ' + world.safeguards.emerge(world.toGlobal(camera.position), world.origin, 1) + ' ' + JSON.stringify(world.safeguards.wallWhy) + ' @ ' + world.toGlobal(camera.position).toArray().map(Math.round)), Number(params.get('sgemerge')) * 1000);
 
   // --check: roteiro automático por todos os destinos (npm run check)
   // --check=pad: o teste do controle (um controle falso joga sozinho — dev/padtest.js)
   if (params.get('check') === 'pad') import('../dev/padtest.js').then((m) => m.runPadTest(ctx));
   else if (params.get('check') === 'beings') import('../dev/beingtest.js').then((m) => m.runBeingTest(ctx));
+  else if (params.get('check') === 'climb') import('../dev/climbtest.js').then((m) => m.runClimbTest(ctx));
   else if (params.get('check') === 'npcs') import('../dev/npctest.js').then((m) => m.runNpcTest(ctx));
   else if (params.get('check') === 'safeguards') import('../dev/sgtest.js').then((m) => m.runSafeguardTest(ctx));
   else if (params.get('check')) {

@@ -59,6 +59,7 @@ export class EntitySystem {
     this.group.add(rig.group);
     const walker = new Walker(new CollisionWorld(this.world));
     walker.canClimb = false;
+    walker.canGrab = false; // (os seres andam pelo grafo; agarrar quinas é do jogador)
     walker.bobScale = 0;
     walker.dipScale = 0;
     walker.speedScale = 0.55; // ~2,3 m/s: um passo firme, não uma corrida

@@ -11,7 +11,8 @@
     "check:pad": "electron . --check=pad && electron . --check=pad --game=pilgrimage",
     "check:beings": "electron . --check=beings",
     "check:safeguards": "electron . --check=safeguards --game=pilgrimage",
-    "check:npcs": "electron . --check=npcs --game=pilgrimage"
+    "check:npcs": "electron . --check=npcs --game=pilgrimage",
+    "check:climb": "electron . --check=climb --game=pilgrimage"
   },
   "dependencies": {
     "three": "^0.170.0",

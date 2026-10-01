@@ -59,6 +59,8 @@ npx electron . --capture=shot.png --pos=x,y,z,yaw,pitch --mode=fly --seed=abc --
 
 - `npm run check:npcs` — os raros vivos na Peregrinação (`dev/npctest.js`): vila, conversa, carga, entrega, despertar numa vila, andarilhos, ladrão, vida de silício, terceira força, fiscal. ~8 min (teleporta entre vilas a dezenas de km).
 
+- `npm run check:climb` — as quinas (`dev/climbtest.js`): vault e agarrar em quinas de verdade em vários destinos, pegar a borda de uma plataforma e o piso de uma ponte suspensa caindo. ~6 min.
+
 ## Qual check rodar (pedido do usuário, 2026-09-30)
 
 Cada check leva minutos: rodar **só os pertinentes** à mudança.
@@ -71,6 +73,7 @@ Cada check leva minutos: rodar **só os pertinentes** à mudança.
 | seres: entidades, navegação, corpos, `Walker` (e mudanças na rede andável ou nas passarelas, que o grafo espelha) | `npm run check:beings` |
 | Safeguards: rondas, percepção, caçada, captura, paredes, alerta, despertar | `npm run check:safeguards` (+ `check:beings` se mexeu nas entidades) |
 | NPCs: vilas, conversa, cargas, andarilhos, vida de silício | `npm run check:npcs` (+ `check:pad` se mexeu no painel da conversa) |
+| movimento do corpo: quinas, `Walker` | `npm run check:climb` (+ `check:beings` — os seres usam o mesmo `Walker`) |
 | só textos/i18n, documentação, cofre | nenhum (no máximo importar o módulo) |
 | mudança que toca tudo | os três |
 

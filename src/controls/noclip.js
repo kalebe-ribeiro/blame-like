@@ -221,7 +221,17 @@ export class NoclipControls {
     this._applyRotation(time);
 
     if (this.mode === 'walk' && this.walker) {
-      this.walker.step(dt, this.camera, { f, r, run, jump: !!h('jump') || pad.jump }, this.yaw, this.scale, time);
+      const input = { f, r, run, jump: !!h('jump') || pad.jump, burden: !!this.burden, descend: !!h('descend') || pad.u < -0.5 };
+      if (this.forceInput) Object.assign(input, this.forceInput); // (os testes automáticos dirigem o corpo — dev/climbtest.js)
+      this.walker.step(dt, this.camera, input, this.yaw, this.scale, time);
+      // agarrou uma quina de costas ou de lado: o corpo se vira para a parede
+      const tt = this.walker.turnTo;
+      if (tt !== null) {
+        let d = tt - this.yaw;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        this.yaw += d * Math.min(1, dt * 9);
+        if (Math.abs(d) < 0.03) this.walker.turnTo = null;
+      }
       return;
     }
 

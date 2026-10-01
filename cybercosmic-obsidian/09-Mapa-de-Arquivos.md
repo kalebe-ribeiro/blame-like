@@ -74,6 +74,8 @@ src/
   app/people.js             conversa, trocas, cargas, despertar numa vila (fase 7)
   ui/talk.js                o painel da conversa (navegável pelo controle)
   dev/npctest.js            npm run check:npcs
+  app/hands.js              as mãos: segurando o aparelho e a lanterna, agarrando quinas
+  dev/climbtest.js          npm run check:climb (quinas)
   app/safeguards.js         Safeguards no jogo: sentidos, barulhos, alerta, sons, desmaio
   dev/sgtest.js             npm run check:safeguards
   app/alert.js              percepção: alerta por setor (fase 5)

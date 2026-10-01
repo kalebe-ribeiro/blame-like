@@ -60,6 +60,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | ideia | status |
 |---|---|
 | [[NPCs-e-Safeguards]] | futuro — arquitetar pensando nisso |
+| [[Quinas-e-maos]] (agarrar quinas, subir; mãos) | feita (2026-09-30) |
 | [[Arma-do-Killy]] (feixe que fura o terreno) | futuro (fase 6) — método decidido: buraco de shader (~60/100) |
 
 ## Técnico

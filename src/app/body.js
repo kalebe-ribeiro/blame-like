@@ -38,6 +38,13 @@ export function createBody(ctx) {
 
   w.onStep = (k) => audio.footstep(k, wading ? 'water' : STEP_SURFACE[w.groundObj?.userData.mat] ?? 'concrete');
   w.onClimbStep = () => audio.rung();
+  // quinas: as mãos batem na borda; subindo, o corpo raspa por cima dela
+  w.onGrab = () => {
+    audio.grab();
+    ctx.controls.rumble?.(0.25, 0.15, 120);
+    world.bus.emit('player:grab', {});
+  };
+  w.onMantle = (h) => audio.mantle(h);
   w.onLand = (impact, height) => {
     audio.land(Math.min(1, impact / 30));
     audio.impact(impact);

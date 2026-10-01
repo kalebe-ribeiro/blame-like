@@ -13,6 +13,14 @@
 //    • elevadores e vagões: o que você pisa pode se mover (userData.dx/dy/dz) e
 //      te leva junto; ao pular de um vagão, o corpo conserva a velocidade dele
 //    • pouso pesado: a câmera afunda (dip) proporcionalmente ao impacto
+//    • QUINAS: uma parede à frente com um topo plano e largo logo acima, e
+//      espaço para ficar de pé lá em cima. Pulando de frente para ela: até
+//      ~1,3 m o corpo passa por cima (vault); mais alto, até onde o braço
+//      alcança (~2,25 m), agarra e sobe. No ar (pulando ou caindo), as mãos
+//      pegam uma borda que passe por elas — também atrás e dos lados (caiu da
+//      ponte: segura o piso dela). Pendurado: frente/pulo sobe, trás solta,
+//      lados andam pela borda. Carregando uma carga: só o vault.
+//      Corrimãos e quinas finas não contam (o topo tem de continuar 0,6 m).
 //
 //  Tudo escala com a escala do observador (portais de tamanhos diferentes).
 //  O mesmo controlador move os corpos dos seres (world/entities.js): a mesma física.
@@ -23,10 +31,25 @@ import * as THREE from 'three';
 const DOWN = new THREE.Vector3(0, -1, 0);
 const UP = new THREE.Vector3(0, 1, 0);
 const WALKABLE_NY = 0.55; // normal.y mínima de um chão (≈ 57°)
+const LEDGE = {
+  vault: 1.3, // m: até aqui passa por cima direto
+  reach: 2.25, // m: o mais alto que as mãos alcançam de pé
+  hangBelow: 0.02, // m: os olhos ficam rente à quina, pendurado (o queixo na borda)
+  shimmy: 0.9, // m/s pela borda
+  maxFall: 14, // m/s: caindo mais rápido que isso, as mãos não seguram
+};
+const ease = (k) => k * k * (3 - 2 * k);
 
 const _o = new THREE.Vector3();
 const _d = new THREE.Vector3();
 const _move = new THREE.Vector3();
+const _n = new THREE.Vector3();
+const _p = new THREE.Vector3();
+const _q = new THREE.Vector3();
+const _f = new THREE.Vector3();
+const _b1 = new THREE.Vector3();
+const _b2 = new THREE.Vector3();
+const _b3 = new THREE.Vector3();
 
 export class Walker {
   constructor(collision) {
@@ -51,6 +74,14 @@ export class Walker {
     this.dipScale = 1; // 0 = sem afundamento no pouso
     this.carrier = new THREE.Vector3(); // velocidade herdada do chão móvel (vagão) ao sair dele
     this.canClimb = true; // escadas de marinheiro (os corpos dos seres de teste não sobem)
+    this.canGrab = true; // agarrar quinas (os seres não: world/entities.js)
+    this.ledge = null; // pendurado: { topY, edge, nrm, h }
+    this.climb = null; // subindo: { t, dur, from, mid, to, h }
+    this.hangT = 0;
+    this.grabCooldown = 0;
+    this.turnTo = null; // yaw para onde o corpo se vira ao agarrar (controls/noclip.js aplica)
+    this.onGrab = null; // () — as mãos pegaram a quina
+    this.onMantle = null; // (altura) — começou a subir
   }
 
   /** Posiciona o corpo a partir da câmera (ao entrar no modo andar). */
@@ -96,6 +127,15 @@ export class Walker {
     // ── intenção de movimento (no plano) ──
     const sin = Math.sin(yaw);
     const cos = Math.cos(yaw);
+
+    // ── quinas: subindo, pendurado, ou pegando uma agora ──
+    this.grabCooldown = Math.max(0, this.grabCooldown - dt);
+    if (this.climb) return this._mantleStep(dt, camera, eye);
+    if (this.ledge) return this._hangStep(dt, camera, input, sin, cos, s, eye);
+    if (this.canGrab && this._tryLedge(input, sin, cos, s, eye)) {
+      this._apply(camera, eye);
+      return true;
+    }
 
     // ── escada à frente? ──
     _d.set(-sin, 0, -cos);
@@ -232,6 +272,198 @@ export class Walker {
     this.bob *= Math.exp(-8 * dt);
     this._apply(camera, eye);
     return true;
+  }
+
+  // ── quinas ──────────────────────────────────────────────────────────────
+
+  /**
+   * Uma quina na direção `dir` (horizontal, unitária), com o topo entre minH e maxH
+   * acima dos pés: { topY, edge (ponto da face na altura do topo), nrm (para fora da
+   * parede, horizontal), h } — ou null. Tudo em coordenadas de cena.
+   */
+  _findLedge(dir, s, minH, maxH) {
+    const col = this.col;
+    let wall = null;
+    for (let h = Math.max(0.3 * s, minH - 0.7 * s); h <= maxH - 0.05 * s; h += 0.18 * s) {
+      _o.copy(this.feet).y += h;
+      const hit = col.ray(_o, dir, 0.85 * s);
+      // uma parede, ou uma face que pende para baixo (a lateral de uma laje, de um disco mais
+      // estreito embaixo): também é quina. Um chão (normal para cima) não é.
+      if (hit && hit.face && hit.face.normal.y < WALKABLE_NY && hit.face.normal.y > -0.9 && (!wall || hit.distance < wall.distance)) wall = hit;
+    }
+    if (!wall) return this._no('parede');
+    const n = _n.copy(wall.face.normal).transformDirection(wall.object.matrixWorld);
+    n.y = 0;
+    if (n.lengthSq() < 0.09) return this._no('face deitada');
+    n.normalize();
+    if (n.x * dir.x + n.z * dir.z > 0) n.negate();
+    // o topo: de cima para baixo, um pouco além da face (em mais de um ponto: um rebordo,
+    // um cano baixo correndo junto da borda, também é onde a mão pega)
+    let top = null;
+    for (const back of [0.3, 0.12, 0.7]) {
+      _p.copy(wall.point).addScaledVector(n, -back * s);
+      _p.y = this.feet.y + maxH + 0.4 * s;
+      const t = col.ray(_p, DOWN, maxH + 0.4 * s - minH + 0.05 * s);
+      if (t && t.face && t.face.normal.y >= 0.7) {
+        top = t;
+        break;
+      }
+    }
+    if (!top) return this._no('topo');
+    const topY = top.point.y;
+    const h = topY - this.feet.y;
+    if (h < minH || h > maxH) return this._no(`altura ${h.toFixed(2)}`);
+    // largo o bastante para ficar de pé (não um corrimão, não uma quina fina)
+    _p.copy(wall.point).addScaledVector(n, -0.9 * s);
+    _p.y = topY + 0.5 * s;
+    const top2 = col.ray(_p, DOWN, 0.9 * s);
+    if (!top2 || !top2.face || top2.face.normal.y < WALKABLE_NY || Math.abs(top2.point.y - topY) > 0.35 * s) return this._no('estreito');
+    // espaço para ficar de pé lá em cima, e nada no caminho do corpo passando pela quina
+    _o.copy(top.point).y += 0.05 * s;
+    if (col.ray(_o, UP, 1.8 * s)) return this._no('sem altura em cima');
+    _o.copy(wall.point).addScaledVector(n, 0.3 * s);
+    _o.y = topY + 0.9 * s;
+    _q.copy(n).negate();
+    if (col.ray(_o, _q, 1.1 * s)) return this._no('bloqueado em cima');
+    // a quina: onde a face está na altura do topo (a face pode não ser vertical)
+    _o.copy(this.feet);
+    _o.y = topY - 0.08 * s;
+    const face = col.ray(_o, dir, 1.4 * s);
+    const edge = (face ? face.point : wall.point).clone();
+    edge.y = topY;
+    // onde o pé pousa: o chão logo depois da quina (um rebordo pode ser mais alto que ele)
+    return { topY, landY: top2.point.y, edge, nrm: n.clone(), h };
+  }
+
+  _no(why) {
+    this.ledgeWhy = why; // (para os testes: por que não houve quina)
+    return null;
+  }
+
+  /** Pegar uma quina agora? (pulando de frente para ela, ou no ar) */
+  _tryLedge(input, sin, cos, s, eye) {
+    if (this.grabCooldown > 0) return false;
+    const fwd = _f.set(-sin, 0, -cos);
+    // de pé: pular de frente para uma quina
+    if (this.grounded && input.jump && input.f >= 0) {
+      const l = this._findLedge(fwd, s, 0.62 * s, (input.burden ? LEDGE.vault : LEDGE.reach) * s);
+      if (!l) return false;
+      if (l.h <= LEDGE.vault * s) this._startMantle(l, s, eye, true);
+      else this._startHang(l, s, eye, input.f > 0);
+      this.turnTo = Math.atan2(l.nrm.x, l.nrm.z); // de frente para a parede
+      return true;
+    }
+    // no ar: as mãos pegam o que passar por elas (subindo devagar ou caindo, não rápido demais)
+    if (this.grounded || input.burden || this.airTime < 0.12 || this.vel.y > 2.5 || this.vel.y < -LEDGE.maxFall * s) return false;
+    const lo = eye - 0.45 * s;
+    const hi = eye + 0.55 * s;
+    // de frente sempre; caindo, também atrás e dos lados (caiu da beirada: segura nela)
+    const dirs = this.vel.y < -1 ? [fwd, _b1.set(sin, 0, cos), _b2.set(cos, 0, -sin), _b3.set(-cos, 0, sin)] : input.f > 0 || input.jump ? [fwd] : [];
+    // atrás e dos lados só se a queda for séria (nada embaixo por 5 m): descer de propósito
+    // uma mureta não pode virar um agarrão na quina de onde se pulou
+    _o.copy(this.feet).y += 0.2 * s;
+    const deep = !this.col.ray(_o, DOWN, 5 * s);
+    for (const d of dirs) {
+      if (d !== fwd && !deep) continue;
+      const l = this._findLedge(d, s, lo, hi);
+      if (l) {
+        this._startHang(l, s, eye, false);
+        // o corpo se vira para a parede
+        this.turnTo = Math.atan2(l.nrm.x, l.nrm.z);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  _startHang(l, s, eye, climbNow) {
+    this.ledge = l;
+    this.vel.set(0, 0, 0);
+    this.carrier.set(0, 0, 0);
+    this.grounded = false;
+    this.airTime = 0;
+    this.fallStartY = l.topY;
+    this.hangT = climbNow ? 0.3 : 0;
+    this.feet.copy(l.edge).addScaledVector(l.nrm, 0.34 * s);
+    this.feet.y = l.topY - eye - LEDGE.hangBelow * s;
+    this.onGrab?.();
+  }
+
+  _hangStep(dt, camera, input, sin, cos, s, eye) {
+    const l = this.ledge;
+    this.hangT += dt;
+    this.bob *= Math.exp(-8 * dt);
+    if ((input.jump || input.f > 0) && this.hangT > 0.3) {
+      this._startMantle(l, s, eye, false);
+    } else if (input.f < 0 || input.descend) {
+      // solta: cai rente à parede (as mãos só voltam a pegar depois de um instante)
+      this.ledge = null;
+      this.grabCooldown = 0.7;
+      this.vel.set(l.nrm.x * 0.6, 0, l.nrm.z * 0.6);
+      this.fallStartY = this.feet.y;
+    } else if (input.r) {
+      // pela borda: o lado da câmera, ao longo da parede
+      const tx = cos - l.nrm.x * (cos * l.nrm.x - sin * l.nrm.z);
+      const tz = -sin - l.nrm.z * (cos * l.nrm.x - sin * l.nrm.z);
+      const tl = Math.hypot(tx, tz) || 1;
+      const was = _p.copy(this.feet);
+      this.feet.x += (tx / tl) * input.r * LEDGE.shimmy * s * dt;
+      this.feet.z += (tz / tl) * input.r * LEDGE.shimmy * s * dt;
+      const into = _q.copy(l.nrm).negate();
+      const l2 = this._findLedge(into, s, l.topY - this.feet.y - 0.3 * s, l.topY - this.feet.y + 0.3 * s);
+      if (l2) {
+        this.ledge = l2;
+        this.feet.copy(l2.edge).addScaledVector(l2.nrm, 0.34 * s);
+        this.feet.y = l2.topY - eye - LEDGE.hangBelow * s;
+      } else this.feet.copy(was); // acabou a borda
+    }
+    this._apply(camera, eye);
+    return true;
+  }
+
+  /** Subir: primeiro o corpo sobe rente à parede, depois passa por cima da quina. */
+  _startMantle(l, s, eye, vault) {
+    const from = this.feet.clone();
+    const to = l.edge.clone().addScaledVector(l.nrm, -0.55 * s);
+    to.y = Math.max(l.landY ?? l.topY, l.topY - 0.35 * s) + 0.02 * s; // (se é um rebordo, o pé desce ao chão depois)
+    const mid = from.clone();
+    mid.y = l.topY + 0.05 * s;
+    const h = l.topY - from.y;
+    this.climb = { t: 0, dur: vault ? 0.35 + 0.25 * h / s : 1.05, from, mid, to, h, vault, edge: l.edge.clone(), nrm: l.nrm.clone() };
+    this.ledge = null;
+    this.vel.set(0, 0, 0);
+    this.onMantle?.(h / s);
+  }
+
+  _mantleStep(dt, camera, eye) {
+    const c = this.climb;
+    c.t += dt;
+    const k = Math.min(1, c.t / c.dur);
+    const split = c.vault ? 0.45 : 0.62;
+    if (k < split) this.feet.lerpVectors(c.from, c.mid, ease(k / split));
+    else this.feet.lerpVectors(c.mid, c.to, ease((k - split) / (1 - split)));
+    this.bob *= Math.exp(-8 * dt);
+    if (k >= 1) {
+      this.climb = null;
+      this.grounded = true;
+      this.airTime = 0;
+      this.fallStartY = this.feet.y;
+      this.dip = Math.max(this.dip, 0.12 * this.dipScale); // os joelhos acomodam
+    }
+    this._apply(camera, eye);
+    return true;
+  }
+
+  /** A origem flutuante andou (world.maybeRebase): a quina e a subida andam junto. */
+  shift(delta) {
+    for (const v of [this.ledge?.edge, this.climb?.from, this.climb?.mid, this.climb?.to, this.climb?.edge]) v?.sub(delta);
+  }
+
+  /** Para as mãos (app/hands.js): 'hang' · 'climb' · null, e o quanto da subida já foi. */
+  get ledgeState() {
+    if (this.climb) return { kind: 'climb', k: Math.min(1, this.climb.t / this.climb.dur), vault: this.climb.vault, edge: this.climb.edge, nrm: this.climb.nrm };
+    if (this.ledge) return { kind: 'hang', k: 0, edge: this.ledge.edge, nrm: this.ledge.nrm };
+    return null;
   }
 
   _apply(camera, eye) {

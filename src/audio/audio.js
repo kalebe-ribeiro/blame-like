@@ -977,6 +977,37 @@ export class AudioEngine {
     }
   }
 
+  /** As mãos pegando uma quina: dois tapas secos de luva, quase juntos. */
+  grab() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    for (const [d, f] of [[0, 900], [0.045, 760]]) this._thump(t + d, this._panner(0), 0.22, f);
+  }
+
+  /** Subindo uma quina: o tecido e as botas raspando na borda (mais longo para quinas altas). */
+  mantle(h = 1.5) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const dur = 0.35 + Math.min(1, h / 2.2) * 0.5;
+    const src = ctx.createBufferSource();
+    src.buffer = this._scrapeBuf ??= this._noiseBuffer(1.2);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(700, t);
+    bp.frequency.linearRampToValueAtTime(380, t + dur);
+    bp.Q.value = 1.4;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.14, t + 0.06);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    const pan = this._panner(0);
+    src.connect(bp).connect(g).connect(pan);
+    this._out(pan, 0.9, 0.3);
+    src.start(t);
+    this._thump(t + dur * 0.9, pan, 0.25, 520); // o pé apoiando em cima
+  }
+
   /** A vida de silício se mostrando: um guincho metálico que desce, e estalos. */
   siliconReveal(pan, dist) {
     if (!this.ctx) return;

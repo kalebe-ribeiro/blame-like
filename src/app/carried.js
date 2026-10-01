@@ -25,6 +25,7 @@ import * as THREE from 'three';
 import { t } from '../i18n/index.js';
 import { bindings } from '../controls/bindings.js';
 import { terminalSitesNear, uniqueTerminal } from '../gen/sites.js';
+import { createHands } from './hands.js';
 
 const DRAIN = 1 / 420; // lanterna: carga cheia dura 7 min
 const SENSOR_DRAIN = 1 / 900; // sensor ligado: carga cheia dura 15 min
@@ -110,6 +111,9 @@ export function createCarried(ctx) {
   let lanternWant = false; // o que o jogador pediu (o facho só acende quando a mão chega)
   camera.add(device);
   camera.add(flashlight);
+  // as mãos: seguram o aparelho e a lanterna; agarram as quinas (app/hands.js)
+  const hands = createHands(ctx, { device, flashlight });
+  let stow = 0; // 0 nas mãos · 1 guardados (pendurado numa quina, subindo)
 
   let lanternOn = false; // o facho aceso
   let plugged = null; // a tomada conectada
@@ -317,7 +321,12 @@ export function createCarried(ctx) {
       const awake = !ctx.wake?.active;
       // o aparelho (célula, tomadas, sensor) é da Peregrinação; a lanterna, dos dois modos
       const on = active() && awake;
-      device.visible = on;
+      // pendurado ou subindo: as duas mãos estão na quina — o aparelho e a lanterna saem
+      hands.update(dt);
+      const busy = hands.busy;
+      stow = busy ? Math.min(1, stow + dt / 0.18) : Math.max(0, stow - dt / 0.4);
+      device.visible = on && stow < 1;
+      device.position.set(0.12, -0.11 - 0.32 * stow * stow, -0.28);
       if (!awake) {
         if (light) light.intensity = 0;
         sh.uFlashColor.value.set(0, 0, 0);
@@ -382,8 +391,10 @@ export function createCarried(ctx) {
       } // (fim do que é só do aparelho)
 
       // a mão esquerda: sobe com a lanterna (0,45 s), acende quando chega; desce ao apagar
-      raise = lanternWant ? Math.min(1, raise + dt / 0.45) : Math.max(0, raise - dt / 0.35);
-      if (lanternWant && !lanternOn && raise >= 1 && en.value > 0) {
+      // (pendurado, a lanterna desce e apaga; depois de subir, volta acesa)
+      if (busy && lanternOn) lanternOn = false;
+      raise = lanternWant && !busy ? Math.min(1, raise + dt / 0.45) : Math.max(0, raise - dt / (busy ? 0.18 : 0.35));
+      if (lanternWant && !busy && !lanternOn && raise >= 1 && en.value > 0) {
         lanternOn = true;
         audio.deviceClick?.(true);
       }
