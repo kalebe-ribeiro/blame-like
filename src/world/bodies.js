@@ -202,6 +202,7 @@ function buildBody(material, D, slitMat = null, dress = null) {
       for (const A of arms) {
         const p = phase + (A.s > 0 ? 0 : Math.PI);
         A.sh.rotation.x = -Math.sin(p) * 0.32 * a;
+        A.sh.rotation.z = A.s * 0.06;
         A.el.rotation.x = -0.25 - Math.max(0, -Math.sin(p)) * 0.3 * a;
       }
       // o quadril fica na altura em que o pé mais baixo encosta no chão (nada de pés no ar)
@@ -212,6 +213,17 @@ function buildBody(material, D, slitMat = null, dress = null) {
       }
       root.position.y = 0.04 + reach;
       spine.rotation.x = 0.08 + 0.06 * a;
+      neck.rotation.x = 0;
+    },
+    /** Agarrando (k 0..1): os dois braços erguidos para a frente, o tronco e a cabeça inclinados para quem é pego. */
+    grab(k) {
+      for (const A of arms) {
+        A.sh.rotation.x = -1.45 * k + A.sh.rotation.x * (1 - k);
+        A.sh.rotation.z = A.s * (0.06 - 0.22 * k); // as mãos se fecham na frente
+        A.el.rotation.x = -0.35 * k + A.el.rotation.x * (1 - k);
+      }
+      spine.rotation.x += 0.3 * k;
+      neck.rotation.x = 0.25 * k;
     },
     dispose() {
       for (const m of meshes) m.geometry.dispose();

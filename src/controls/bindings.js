@@ -37,7 +37,9 @@ export const ACTIONS = [
   { id: 'autopilot', group: 'move', key: 'KeyP', pad: 12, modes: ['free'] },
   { id: 'use', group: 'act', key: 'KeyE', pad: 3 },
   { id: 'lantern', group: 'act', key: 'KeyF', pad: 2, modes: ['pilgrimage'] },
-  { id: 'torch', group: 'act', key: 'KeyL', pad: 7, modes: ['free'] }, // a lanterna no Livre (F é voar)
+  { id: 'torch', group: 'act', key: 'KeyL', pad: 13, modes: ['free'] }, // a lanterna no Livre (F é voar)
+  { id: 'fire', group: 'act', key: 'KeyQ', pad: 7 }, // o emissor de feixe (app/beam.js) — também o clique esquerdo
+  { id: 'power', group: 'act', key: 'KeyB', pad: 10 }, // a potência do emissor (1–5) — também a roda do mouse
   { id: 'sensor', group: 'act', key: 'KeyG', pad: 13, modes: ['pilgrimage'] },
   { id: 'mark', group: 'act', key: 'KeyV', pad: 4 },
   { id: 'photo', group: 'act', key: 'F2', pad: 5 },

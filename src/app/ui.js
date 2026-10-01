@@ -321,6 +321,8 @@ export function createUI(ctx) {
     if (name === 'use') ctx.people.tryUse() || ctx.reading.tryUse() || ctx.power.tryUse() || ctx.carried.togglePlug();
     if (name === 'map') toggleMap();
     if (name === 'inventory') ctx.inventory.toggle();
+    if (name === 'fire') ctx.beam?.fire();
+    if (name === 'power') ctx.beam?.setPower(ctx.beam.power + 1);
     if (name === 'transport' && rules.teleport) openTransport();
     if (name === 'regenerate' && rules.regenerate && !ctx.choosing) regenerate();
     if (name === 'settings') openSettings();

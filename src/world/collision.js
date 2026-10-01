@@ -14,6 +14,7 @@ import { MeshBVH, acceleratedRaycast } from 'three-mesh-bvh';
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 const _c = new THREE.Vector3();
+const _ro = new THREE.Vector3();
 const _g = new THREE.Vector3();
 
 export class CollisionWorld {
@@ -81,12 +82,26 @@ export class CollisionWorld {
     this.ready = ready;
   }
 
-  /** Primeiro impacto do raio (ou null). */
+  /** Primeiro impacto do raio (ou null). O que está dentro de um buraco do feixe não conta. */
   ray(origin, dir, far) {
     if (!this.meshes.length) return null;
-    this.raycaster.set(origin, dir);
-    this.raycaster.far = far;
-    const hits = this.raycaster.intersectObjects(this.meshes, false);
-    return hits.length ? hits[0] : null;
+    const holes = this.world.holes;
+    const o = _ro.copy(origin);
+    let gone = 0;
+    for (let k = 0; k < 6; k++) {
+      this.raycaster.set(o, dir);
+      this.raycaster.far = far - gone;
+      const hits = this.raycaster.intersectObjects(this.meshes, false);
+      const hit = hits[0];
+      if (!hit) return null;
+      if (!holes?.near.length || !holes.insideScene(hit.point, this.world.origin)) {
+        if (gone) hit.distance += gone;
+        return hit;
+      }
+      // dentro de um buraco: segue além dele
+      gone += hit.distance + 0.02;
+      o.copy(origin).addScaledVector(dir, gone);
+    }
+    return null;
   }
 }

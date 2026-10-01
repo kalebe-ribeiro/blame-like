@@ -36,10 +36,11 @@ export function createSafeguards(ctx) {
         alertAt: (x, y, z) => ctx.alert?.level(x, y, z) ?? 0,
       };
     };
-    sg.onCatch = () => {
+    sg.onCatch = (e) => {
       bus.emit('player:caught', {});
-      controls.rumble?.(0.9, 0.6, 500);
-      ctx.wake.start('impact', 'safeguard');
+      // ele segura: parado, os braços em volta de você (app/wake.js — a animação de ser pego)
+      if (e?.sg) e.sg.state = 'grab';
+      ctx.wake.start('caught', 'safeguard', { by: e });
     };
   }
   wire();

@@ -61,6 +61,11 @@ export function createSharedUniforms() {
     // setores religados perto (world/substations.js): (i, faixa, k, ativo) e (subestação x, z em cena, frente da luz, y)
     uRestoredId: { value: Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 0, 0)) },
     uRestoredFront: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
+    // buracos do feixe gravitacional (world/holes.js): a (cena) + raio · b (cena) + ativo
+    uHoleA: { value: Array.from({ length: 12 }, () => new THREE.Vector4()) },
+    uHoleB: { value: Array.from({ length: 12 }, () => new THREE.Vector4()) },
+    uKeepMin: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) },
+    uKeepMax: { value: Array.from({ length: 6 }, () => new THREE.Vector3()) },
   };
 }
 
@@ -138,6 +143,10 @@ varying vec3 vNormalW;
 
 void main() {
   #include <clipping_planes_fragment>
+
+  // os buracos do feixe: dentro, nada; na borda, metal fundido escurecido
+  float holeE = holeEdge(vWorldPos);
+  if (holeE < 0.0) discard;
 
   vec3 V = normalize(cameraPosition - vWorldPos);
   vec3 Ng = normalize(vNormalW);
@@ -284,6 +293,7 @@ void main() {
 
   float fres = pow(1.0 - max(dot(N, V), 0.0), 4.0);
   vec3 c = albedo * lit + spec * (0.08 + 3.0 * uWet) + emit;
+  c *= 1.0 - 0.8 * holeE; // a borda do buraco: fundida, escura
   c += uFogColorB * fres * uWet * 3.0; // reflexo da poeira iluminada na água
   c += uFogColorB * fres * 0.5;   // borda levemente mais clara → silhueta
 

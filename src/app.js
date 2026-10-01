@@ -48,6 +48,7 @@ import { createBeings } from './app/beings.js';
 import { createSafeguards } from './app/safeguards.js';
 import { createPeople } from './app/people.js';
 import { createInventory } from './app/inventory.js';
+import { createBeam } from './app/beam.js';
 import { bindings } from './controls/bindings.js';
 import { startPlace } from './lang/leads.js';
 
@@ -88,9 +89,9 @@ const ctx = {
   /** Grava a travessia? (só no npm start normal, com um mundo escolhido) */
   saving: persist && !choosing,
   worldState: new WorldState(slot),
-  // um mundo novo da Peregrinação começa com pouca carga (ver o cofre, Inicio-do-mundo)
+  // um mundo novo da Peregrinação começa com a carga cheia (decisão do usuário, 2026-10-01 — ver o cofre, Inicio-do-mundo)
   // e com o leitor portátil (a primeira ferramenta)
-  player: createPlayerState(slot.player ?? (mode === 'pilgrimage' ? { energy: { value: 0.35 }, inventory: ['reader'] } : null)),
+  player: createPlayerState(slot.player ?? (mode === 'pilgrimage' ? { energy: { value: 1 }, inventory: ['reader'] } : null)),
   autostart: params.get('autostart') === '1',
   resumed: !!slot.pos,
   seed: params.get('seed') ? parseInt(params.get('seed'), 36) : slot.seed,
@@ -174,6 +175,7 @@ ctx.ui = createUI(ctx);
 ctx.wake = createWake(ctx);
 ctx.inventory = createInventory(ctx); // o inventário e as mãos (antes do que se carrega)
 ctx.carried = createCarried(ctx);
+ctx.beam = createBeam(ctx); // o emissor de feixe gravitacional (a arma de Killy)
 ctx.reading = createReading(ctx);
 ctx.power = createPower(ctx);
 ctx.marks = createMarks(ctx);
@@ -214,6 +216,7 @@ function frame() {
   }
   ctx.carried.update(dt, time); // a lanterna na mão (Peregrinação)
   ctx.marks.update(dt); // as marcas pintadas perto
+  ctx.beam.update(dt);
   ctx.alert.update(dt);
   ctx.safeguards.update();
   ctx.people.update(dt);

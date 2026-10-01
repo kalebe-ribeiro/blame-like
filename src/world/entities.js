@@ -225,6 +225,7 @@ export class EntitySystem {
         // o Walker olha para (−sen yaw, −cos yaw); o corpo foi montado olhando para +z
         e.rig.group.rotation.y = e.yaw + Math.PI;
         e.rig.animate(dt, e.speed, e.tier === 'far' || e.walker.grounded);
+        if (e.grabPose) e.rig.grab?.(e.grabPose); // agarrando alguém (app/wake.js)
       }
     }
   }

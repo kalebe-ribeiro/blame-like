@@ -12,6 +12,7 @@
     "check:beings": "electron . --check=beings",
     "check:safeguards": "electron . --check=safeguards --game=pilgrimage",
     "check:npcs": "electron . --check=npcs --game=pilgrimage",
+    "check:beam": "electron . --check=beam --game=pilgrimage",
     "check:climb": "electron . --check=climb --game=pilgrimage"
   },
   "dependencies": {

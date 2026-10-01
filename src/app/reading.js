@@ -21,7 +21,7 @@ import { terminalRecords } from '../lang/records.js';
 import { bindings } from '../controls/bindings.js';
 import { leadLine, leadFor, startSite, PARTS } from '../lang/leads.js';
 
-const FRAGMENT_COST = 0.08; // da célula (1 = cheia)
+const FRAGMENT_COST = 0.08 / 3; // da célula (1 = cheia) — a célula rende o triplo (2026-10-01)
 
 export function createReading(ctx) {
   const { world, controls, camera, audio } = ctx;

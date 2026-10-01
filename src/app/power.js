@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { t } from '../i18n/index.js';
 
-const COST = 0.2; // da célula (1 = cheia)
+const COST = 0.2 / 3; // da célula (1 = cheia) — a célula rende o triplo (2026-10-01)
 
 export function createPower(ctx) {
   const { world, camera, audio } = ctx;

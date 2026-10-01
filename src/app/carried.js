@@ -27,8 +27,9 @@ import { bindings } from '../controls/bindings.js';
 import { terminalSitesNear, uniqueTerminal } from '../gen/sites.js';
 import { createHands } from './hands.js';
 
-const DRAIN = 1 / 420; // lanterna: carga cheia dura 7 min
-const SENSOR_DRAIN = 1 / 900; // sensor ligado: carga cheia dura 15 min
+// (a célula rende o triplo do que rendia — pedido do usuário, 2026-10-01: "a bateria acaba muito rápido")
+const DRAIN = 1 / 1260; // lanterna: carga cheia dura 21 min
+const SENSOR_DRAIN = 1 / 2700; // sensor ligado: carga cheia dura 45 min
 const CHARGE = 1 / 25; // tomada: de vazio a cheio em 25 s
 const REACH = 2.2; // m até a tomada
 // A lanterna é um FACHO (uFlash* nos shaders — ver flashProfile em shaders/chunks.js):

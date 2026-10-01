@@ -160,6 +160,9 @@ export class SafeguardSystem {
       case 'return':
         this._return(e, dt, g, origin, time);
         break;
+      case 'grab':
+        e.speed = 0; // segurando quem pegou (app/wake.js solta)
+        break;
       case 'summon':
         // chamado pelo alerta: vem pelo grafo; perto, procura onde foi
         if (e.tier === 'far') {

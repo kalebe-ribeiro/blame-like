@@ -16,6 +16,11 @@
 //
 //  Queda sem fim (o vazio): começa do "apagando", ainda no ar.
 //
+//  PEGO (cause 'caught', o toque de um Safeguard — by: o corpo dele):
+//    agarrado  a vista é virada à força para a fenda do rosto dele; os braços
+//              dele se erguem e fecham; você é puxado e erguido um pouco, a vista
+//              treme; um baque — e daí o "apagando" de sempre (sem o tombo no chão)
+//
 //  QUEM ARRASTA (pronto na fase 5, LIGADO na fase 7 — WAKE_LOTTERY):
 //    'safeguard' → acorda no cemitério de vítimas mais perto (estrutura única
 //                  'graveyard'), sem carga e sem o que carregava (as ferramentas ficam)
@@ -121,14 +126,15 @@ export function createWake(ctx) {
    * Começa o desmaio. cause: 'impact' (queda fatal, ou o toque de um Safeguard) ou 'void'
    * (queda sem fim). taker: quem arrasta, já sabido (um Safeguard que te pegou — fase 6).
    */
-  function start(cause, taker = null) {
+  function start(cause, taker = null, opts = {}) {
     if (s) return;
     const w = controls.walker;
     const feet = w.feet.clone().add(world.origin); // GLOBAL
     s = {
       cause,
       t: cause === 'void' ? 0.7 : 0, // no vazio pula o impacto
-      phase: 'impact',
+      phase: cause === 'caught' ? 'grabbed' : 'impact',
+      by: opts.by ?? null,
       from: feet.clone(),
       feet,
       yaw: controls.yaw,
@@ -144,6 +150,46 @@ export function createWake(ctx) {
     if (!s) return;
     s.t += dt;
     const t = s.t;
+
+    // ── 0. agarrado (um Safeguard te pegou) ──
+    if (s.phase === 'grabbed') {
+      // (--grabfreeze=0.9: para a animação nesse instante — só para capturas)
+      const fz = Number(ctx.params?.get('grabfreeze') ?? 0);
+      if (fz && s.t > fz) s.t = fz;
+      const e = s.by;
+      const k = smooth(0, 0.45, t);
+      const pull = smooth(0.45, 1.05, t);
+      // a fenda do rosto dele: para lá a vista é virada
+      _v.set(e.feet.x, e.feet.y + 2.2, e.feet.z);
+      const ex = s.feet.x;
+      const ez = s.feet.z;
+      const ey = s.feet.y + s.eye;
+      const dx = _v.x - ex;
+      const dz = _v.z - ez;
+      const tyaw = Math.atan2(-dx, -dz);
+      const tpitch = Math.atan2(_v.y - ey, Math.hypot(dx, dz));
+      let dyaw = tyaw - s.yaw;
+      dyaw = Math.atan2(Math.sin(dyaw), Math.cos(dyaw));
+      const yaw = s.yaw + dyaw * k;
+      const pitch = s.pitch + (tpitch - s.pitch) * k;
+      // puxado para ele e erguido um pouco; a vista treme
+      const shake = pull * 0.012;
+      const h = Math.hypot(dx, dz) || 1;
+      _o.set(s.feet.x + (dx / h) * 0.35 * pull + (Math.random() - 0.5) * shake, s.feet.y + 0.18 * pull + (Math.random() - 0.5) * shake, s.feet.z + (dz / h) * 0.35 * pull);
+      place(_o, s.eye, yaw, pitch, Math.sin(t * 9) * 0.03 * pull);
+      e.grabPose = smooth(0.1, 0.7, t);
+      if (t > 0.15 && !s.spoke) {
+        s.spoke = true;
+        audio.sgSpot?.(0, 1);
+      }
+      if (t >= 1.2) {
+        audio.impact?.(26);
+        controls.rumble?.(1, 0.8, 400);
+        s.phase = 'fade';
+        s.t = 0.7; // daqui o "apagando" de sempre (sem o tombo)
+      }
+      return;
+    }
 
     // ── 1. impacto: a câmera desaba até o chão, com um giro ──
     if (s.phase === 'impact') {
@@ -162,6 +208,11 @@ export function createWake(ctx) {
       if (t >= 0.7 + dur) {
         s.phase = 'dark';
         s.darkT = t;
+        // quem te pegou solta (e volta para a ronda dele)
+        if (s.by) {
+          s.by.grabPose = 0;
+          if (s.by.sg) s.by.sg.state = 'return';
+        }
         // o corpo é levado: por quem arrastou (fase 5, desligado) ou a um lugar qualquer, longe
         s.taker = s.forcedTaker ?? drawTaker();
         const taken = s.taker ? pickTakerPlace(s.taker, s.from) : null;

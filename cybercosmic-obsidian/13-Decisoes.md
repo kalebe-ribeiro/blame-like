@@ -178,3 +178,14 @@ Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de sh
 | andarilhos transumanos | em ~20% dos territórios (setor × 480 m), num circuito próprio; 1,1 m/s; param e olham quem chega. Metade troca (3 palavras por 25% da célula; onde há gente); metade não tem o que dizer e, se você carrega uma carga, arranca-a e foge |
 | vida de silício | 30% dos "andarilhos"; de perto (6 m) ou ao tentar falar, se revela (o corpo muda: escura, braços longos); caça a ~5 m/s; o toque **drena a célula** (0%) e ela foge |
 | terceira força | um Safeguard que vê vida de silício revelada (até 60 m) caça ela antes de você; se alcança, ela acaba; ela foge dele |
+
+### Respostas às escolhas por padrão das fases 3–7 (2026-10-01)
+
+O usuário respondeu item a item (na ordem deste arquivo):
+- **Fase 3:** mantém tudo, **exceto a energia inicial da Peregrinação: 100%** (era menos).
+- **Fase 4:** mantém tudo.
+- **Fase 5:** mantém tudo, **exceto: os seres devem andar também em escadas de marinheiro, elevadores e vagões — toda movimentação que o jogador consegue fazer, os NPCs também devem poder.**
+- **Fase 6:** mantém tudo, **exceto: uma animação ao ser capturado pelo Safeguard** (feita: a câmera vira para o rosto dele, ele puxa e levanta, os braços fecham em volta — `app/wake.js` fase 'grabbed', `bodies.js grab(k)`).
+- **Fase 7:** mantém tudo.
+- **Bateria ×3** ("a bateria acaba muito rápido"): todos os gastos da célula divididos por 3 (lanterna 21 min, sensor 45 min, religar setor, ler fragmento).
+- **Arma do Killy:** não atravessa camadas nem únicas; potência ajustável (alcance, raio, gasto); ≥ 5 tiros com carga máxima → [[Ideias/Futuro/Arma-do-Killy]].

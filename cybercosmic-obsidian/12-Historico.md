@@ -237,3 +237,11 @@ Por que as coisas estão como estão, em ordem.
 - **Conversa**: o menu não abre mais por trás; W/S escolhem, E confirma, 1–9 direto, Esc sai; o corpo fica parado enquanto se conversa; a tecla que abre não escolhe a primeira resposta.
 - **Aviso de shader X3595** que passou a reprovar o `check:pad` (também no código do commit anterior — não era destas mudanças): a oclusão de ambiente (`render/pipeline.js`) lia a profundidade com derivada implícita dentro de laços. Agora `textureLod(…, 0.0)` nos passes de tela inteira. Achado por uma sonda que registra o último programa compilado no instante do aviso.
 - O `| head` num teste fechou a saída do Electron e o processo principal mostrou um erro EPIPE na tela do usuário: `main.js` agora ignora erro de escrita na saída; e nunca mais `| head` na saída de um teste.
+
+## 2026-10-01 — decisões confirmadas, captura, bateria ×3, arma de Killy
+
+- Respostas do usuário às escolhas por padrão das fases 3–7: [[13-Decisoes]] (energia inicial 100%; seres em escadas/elevadores/vagões; animação de captura).
+- **Captura pelo Safeguard:** fase 'grabbed' do despertar (1,2 s): a câmera vira para a cabeça dele, ele puxa 0,35 m e levanta 0,18 m, com tremor; o corpo dele fecha os braços (`grab(k)`); depois o impacto e o escuro. `--grabtest=N --grabfreeze=s`.
+- **Bateria ×3.**
+- **Arma de Killy** implementada: [[Ideias/Futuro/Arma-do-Killy]]. Erros achados no teste: o feixe parava a 0 m dentro das vilas (a caixa da estrutura única com margem); e um feixe largo rente a uma camada abria o piso dela (agora o shader e a colisão guardam as camadas e as únicas).
+- Os 8 checks passaram (`check`, `check:pilgrimage`, `check:pad`, `check:safeguards`, `check:beings`, `check:npcs`, `check:climb`, `check:beam`). As falhas `ladrao`/`terceira` do `check:npcs` de uma rodada anterior não se repetiram.
