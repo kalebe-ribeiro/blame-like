@@ -23,7 +23,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Terminais-com-conteudo]] | ✔ feita (fase 2) | alta |
 | [[Traducao-como-progresso]] | ✔ feita (fase 2) | alta |
 | [[Pistas]] (antes "peregrinação") | ✔ feita (fase 3) | alta |
-| [[Estruturas-unicas]] | em andamento (5 tipos com efeito na fase 4.5; vila e berço reservados) | alta |
+| [[Estruturas-unicas]] | feita (5 tipos com efeito; vila, cemitério de vítimas e berço na fase 5; vilas habitadas na 7) | — |
 | [[Mapa-de-descobertas]] | ✔ feita (fase 3) | média |
 | [[Luz-como-recurso]] | ✔ feita (fase 1) | média |
 | [[Religar-setores]] | ✔ feita (fase 4.1) | média |
@@ -33,7 +33,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Travessias-dificeis]] | ✔ feita (fase 4.6) | média |
 | [[Seeds-compartilhaveis]] | ✔ feita (fase 4.4) | baixa |
 | [[Marcas-do-jogador]] | ✔ feita (fase 4.3) | baixa |
-| [[Cargas]] | standby (com NPCs) | futura |
+| [[Cargas]] | feita (fase 7; contexto e recompensa em 2026-10-01) | — |
 | [[Copiar-inscricoes]] | proposta | média |
 | [[Credenciais-de-acesso]] | proposta | média |
 | [[Elevadores-e-trens-como-quebra-cabeca]] | proposta | baixa |
@@ -61,7 +61,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 |---|---|
 | [[NPCs-e-Safeguards]] | futuro — arquitetar pensando nisso |
 | [[Quinas-e-maos]] (agarrar quinas, subir; mãos) | feita (2026-09-30) |
-| [[Arma-do-Killy]] (feixe que fura o terreno) | futuro (fase 6) — método decidido: buraco de shader (~60/100) |
+| [[Arma-do-Killy]] (feixe que fura o terreno) | futuro — método decidido (buraco de shader, ~60/100); a fase 6 ficou só fuga; os seres já têm vida e morte (2026-10-01) |
 
 ## Técnico
 

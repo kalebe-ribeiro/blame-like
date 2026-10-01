@@ -190,8 +190,12 @@
   },
   "active": "ce4c8cf8abaf8e7f",
   "lastOpenFiles": [
-    "13-Decisoes.md",
+    "12-Historico.md",
+    "Ideias/Gameplay/Inventario-e-maos.md",
+    "11-Invariantes-e-Armadilhas.md",
+    "09-Mapa-de-Arquivos.md",
     "15-Plano-de-Implementacao.md",
+    "13-Decisoes.md",
     "14-Universo-Blame.md",
     "Ideias/Gameplay/Plano-de-Gameplay.md",
     "Ideias/Futuro/NPCs-e-Safeguards.md",
@@ -215,10 +219,6 @@
     "Ideias/Gameplay/Marcas-do-jogador.md",
     "Ideias/Gameplay/Seeds-compartilhaveis.md",
     "Ideias/Gameplay/Modo-expedicao.md",
-    "Ideias/Gameplay/Cargas.md",
-    "Ideias/Gameplay/Travessias-dificeis.md",
-    "Ideias/Gameplay/Elevadores-e-trens-como-quebra-cabeca.md",
-    "Ideias/Gameplay/Diario-como-arquivo.md",
-    "Ideias/Gameplay/Subir-nas-maquinas.md"
+    "Ideias/Gameplay/Cargas.md"
   ]
 }
