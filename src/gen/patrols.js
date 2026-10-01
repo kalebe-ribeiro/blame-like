@@ -76,7 +76,7 @@ function buildCircuit(F, nav, t, salt = 0) {
   const queue = [start];
   while (queue.length && seen.size < PATROL.expand) {
     const v = queue.shift();
-    for (const nb of nav.neighbors(v)) {
+    for (const nb of nav.neighbors(v, null, false)) { // (as rondas andam: sem vagão — o relógio as leva, não embarcam)
       if (seen.has(nb.v.id) || !inside(F, t, nb.v)) continue;
       seen.set(nb.v.id, nb.v);
       queue.push(nb.v);
@@ -106,7 +106,7 @@ function buildCircuit(F, nav, t, salt = 0) {
   for (let i = 0; i < stops.length; i++) {
     const a = stops[i];
     const b = stops[(i + 1) % stops.length];
-    const p = nav.findPath(a, b, { maxExpand: 1500 });
+    const p = nav.findPath(a, b, { maxExpand: 1500, ride: false });
     if (!p) return null;
     for (const q of i ? p.pts.slice(1) : p.pts) pts.push(q);
   }

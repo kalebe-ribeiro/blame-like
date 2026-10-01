@@ -141,7 +141,15 @@ export class Walker {
     // ── escada à frente? ──
     _d.set(-sin, 0, -cos);
     _o.copy(this.feet).y += eye * 0.6;
-    const ladder = col.ray(_o, _d, 0.95 * s);
+    let ladder = col.ray(_o, _d, 0.95 * s);
+    // já na escada, o raio pode bater numa fixação (a cada 6–12 m, um pouco à frente dos degraus):
+    // confere um palmo abaixo antes de soltar
+    if (this.climbing && ladder && ladder.object.userData.mat !== 'rungs') {
+      _o.y -= 0.35 * s;
+      const below = col.ray(_o, _d, 0.95 * s);
+      if (below?.object.userData.mat === 'rungs') ladder = below;
+      _o.y += 0.35 * s;
+    }
     const onLadder = this.canClimb && !!ladder && ladder.object.userData.mat === 'rungs';
     if (onLadder && (input.f !== 0 || this.climbing) && !(this.grounded && input.f < 0)) {
       if (!this.climbing) this.climbing = true;
@@ -190,7 +198,16 @@ export class Walker {
     // ── chão ──
     const snap = this.grounded ? 0.45 * s : 0.05 * s;
     _o.copy(this.feet).y += stepH;
-    const hit = col.ray(_o, DOWN, stepH + snap + Math.max(0, -dy));
+    let hit = col.ray(_o, DOWN, stepH + snap + Math.max(0, -dy));
+    // o raio do centro passou por uma fenda (uma junta do tabuleiro, uma grade): o corpo
+    // tem largura — procura o chão em volta, dentro dele
+    if (!hit || !hit.face || hit.face.normal.y <= WALKABLE_NY) {
+      for (const [ox, oz] of [[0.22, 0], [-0.22, 0], [0, 0.22], [0, -0.22]]) {
+        _o.set(this.feet.x + ox * s, this.feet.y + stepH, this.feet.z + oz * s);
+        const h = col.ray(_o, DOWN, stepH + snap + Math.max(0, -dy));
+        if (h && h.face && h.face.normal.y > WALKABLE_NY && (!hit || !hit.face || hit.face.normal.y <= WALKABLE_NY || h.point.y > hit.point.y)) hit = h;
+      }
+    }
     const wasGrounded = this.grounded;
     if (hit && hit.face && hit.face.normal.y > WALKABLE_NY && this.vel.y <= 0.01) {
       const impact = this.vel.y;
@@ -270,6 +287,7 @@ export class Walker {
       this.onClimbStep?.();
     }
     this.airTime = 0;
+    this.fallStartY = this.feet.y; // na escada não se cai: ao pisar embaixo, a "queda" é zero
     this.bob *= Math.exp(-8 * dt);
     this._apply(camera, eye);
     return true;

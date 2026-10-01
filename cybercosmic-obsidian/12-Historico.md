@@ -245,3 +245,10 @@ Por que as coisas estão como estão, em ordem.
 - **Bateria ×3.**
 - **Arma de Killy** implementada: [[Ideias/Futuro/Arma-do-Killy]]. Erros achados no teste: o feixe parava a 0 m dentro das vilas (a caixa da estrutura única com margem); e um feixe largo rente a uma camada abria o piso dela (agora o shader e a colisão guardam as camadas e as únicas).
 - Os 8 checks passaram (`check`, `check:pilgrimage`, `check:pad`, `check:safeguards`, `check:beings`, `check:npcs`, `check:climb`, `check:beam`). As falhas `ladrao`/`terceira` do `check:npcs` de uma rodada anterior não se repetiram.
+
+## 2026-10-01 — os seres se movem como o jogador
+
+- Escadas de marinheiro, elevadores, vagões, quinas e vãos: [[Ideias/Gameplay/Seres-como-o-jogador]]. O grafo de navegação ganhou as pernas de vagão (`ride`).
+- Cinco defeitos achados subindo e descendo de verdade (valiam para o jogador): duto atravessando a escada de manutenção; patamar de cima sem saída; fixações soltando quem sobe; raio de chão caindo pela junta de duas peças; descer uma escada longa contava como queda de 240 m.
+- Checks com o código final: `moves` (5/5), `safeguards`, `npcs`, `beings`, `climb`; antes das duas últimas correções (só na escada e nas rondas) também `pad`, `check`, `pilgrimage`, `beam`.
+- Erros meus no caminho: o desvio local sem rumo ainda avançava devagar (o corpo caiu no poço do elevador); o ponto de montar na escada para descer supunha um telhado atrás dos degraus; uma linha de depuração quebrou a sintaxe e custou 12 min de teste; dois Electron escreveram no mesmo log.

@@ -71,3 +71,5 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Resolucao-dinamica]] | proposta | alta |
 | [[Instalador-e-releases]] | proposta | média |
 | [[Modo-foto-avancado]] | proposta | baixa |
+
+- [[Ideias/Gameplay/Seres-como-o-jogador]] — escadas, elevadores, vagões, quinas (implementado)

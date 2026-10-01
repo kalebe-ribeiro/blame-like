@@ -15,6 +15,15 @@
 //  localmente: não pisa onde não há chão (beirada), contorna o que bloqueia à
 //  frente e, se empacar, pede outro caminho sem a aresta onde empacou.
 //
+//  TUDO O QUE O JOGADOR FAZ, OS SERES FAZEM (o mesmo Walker):
+//    vagão     uma perna 'ride' do caminho (gen/nav.js): espera na estação, entra
+//              quando o vagão para, fica dentro, desce na estação de destino
+//    elevador  um alvo noutro nível (walkToward — quem caça, quem foge): espera o
+//              carro na ponta em que está, entra, sai na outra ponta
+//    escada    o mesmo, por uma escada de marinheiro: sobe (ou monta nela por cima
+//              e desce) e sai pelo lado num patamar
+//    quina     parado diante de uma quina (até 2,25 m) com o alvo mais alto: pula, agarra, sobe
+//
 //  Posições sempre GLOBAIS (e.feet); a cena é recalculada a cada quadro com a
 //  origem flutuante, então rebase não precisa mexer em nada.
 //  Estado salvo no mundo: serialize() / load() (slot.entities — app/beings.js).
@@ -29,6 +38,7 @@ import * as THREE from 'three';
 import { Walker } from '../controls/walker.js';
 import { CollisionWorld } from './collision.js';
 import { NavGraph } from '../gen/nav.js';
+import { ElevatorSystem } from './elevators.js';
 import { buildTestBody, buildSafeguardBody, buildHumanBody, buildTranshumanBody, buildSiliconBody } from './bodies.js';
 
 const NEAR = 110; // m: física completa
@@ -41,6 +51,10 @@ const FALL_HURT = 5; // m: uma queda maior que isso machuca
 const FALL_KILL = 12; // m: e maior que isso mata
 const CORPSE_FAR = 400; // m: longe assim, o corpo morto sai de cena
 const MAX_REPLANS = 4;
+const LEVEL = 3.5; // m: um alvo mais alto/baixo que isso está noutro nível
+const LIFT_REACH = 60; // m: elevadores que um corpo considera para mudar de nível
+const LADDER_REACH = 14; // m: idem, escadas de marinheiro
+const VERT_GIVEUP = 150; // s: desiste de um elevador/escada (e o evita por um tempo)
 const DOWN = new THREE.Vector3(0, -1, 0);
 
 const _o = new THREE.Vector3();
@@ -67,8 +81,8 @@ export class EntitySystem {
     const rig = this._rig(def.kind);
     this.group.add(rig.group);
     const walker = new Walker(new CollisionWorld(this.world));
-    walker.canClimb = false;
-    walker.canGrab = false; // (os seres andam pelo grafo; agarrar quinas é do jogador)
+    walker.canClimb = false; // (ligado só quando o corpo decide usar uma escada — senão um rumo de lado a pegaria)
+    walker.canGrab = false; // (idem: ligado quando ele decide pular para uma quina)
     walker.bobScale = 0;
     walker.dipScale = 0;
     walker.speedScale = 0.55; // ~2,3 m/s: um passo firme, não uma corrida
@@ -97,6 +111,10 @@ export class EntitySystem {
       speed: 0,
       stats: { fell: 0, wall: 0, replans: 0, far: 0, near: 0 },
       brain: def.brain ?? null,
+      ride: null, // no vagão: { leg, phase: wait · board · ride · off }
+      vert: null, // mudando de nível: { kind: 'lift'|'ladder', … }
+      vertBan: new Map(), // id do elevador/escada → até quando evitar
+      leap: 0, // s pulando para uma quina
       hp: 1,
       dead: false,
     };
@@ -254,8 +272,13 @@ export class EntitySystem {
       e.speed = 0;
       return;
     }
-    let left = (e.farSpeed ?? FAR_SPEED) * dt;
+    e.ride = null;
+    e.vert = null;
     const pts = e.path.pts;
+    // dentro do vagão (do centro do vagão numa estação ao da outra, numa perna 'ride'): na velocidade dele
+    const leg = e.path.legs?.[e.path.ptLeg?.[e.pi] ?? -1];
+    let left = (e.farSpeed ?? FAR_SPEED) * dt;
+    if (leg?.kind === 'ride' && pts[e.pi].x === leg.pts[2].x && pts[e.pi].z === leg.pts[2].z) left = 15 * dt;
     while (left > 0 && e.pi < pts.length) {
       const p = pts[e.pi];
       const dx = p.x - e.feet.x;
@@ -293,6 +316,8 @@ export class EntitySystem {
     w.feet.copy(e.feet).sub(origin); // (a origem flutuante pode ter mudado)
     let f = 0;
     let yaw = e.yaw;
+    const legNow = e.state === 'walk' && e.path ? e.path.legs?.[e.path.ptLeg?.[e.pi] ?? -1] : null;
+    if (legNow?.kind === 'ride' || e.ride) return this._rideStep(e, legNow, dt, origin, time);
     if (e.state === 'walk' && e.path) {
       const pts = e.path.pts;
       // pula os pontos já alcançados
@@ -329,8 +354,11 @@ export class EntitySystem {
           e.best = hd;
           e.stuckT = 0;
         } else if ((e.stuckT += dt) > STUCK_AFTER) this._unstick(e);
+        // o próximo ponto mais alto, logo ali, atrás de uma quina: pula e agarra
+        if (p.y > e.feet.y + 0.5 && Math.hypot(p.x - e.feet.x, p.z - e.feet.z) < 6) this._leapStart(e, Math.atan2(-(p.x - e.feet.x), -(p.z - e.feet.z)));
       }
     }
+    if (this._leapStep(e, dt, origin, time)) return;
     this._walk(e, dt, origin, time, yaw, f);
   }
 
@@ -342,7 +370,12 @@ export class EntitySystem {
     if (e.tier !== 'near' || !this.world.chunkLayer.isReadyAround(e.feet, 30)) return Infinity;
     e.walker.feet.copy(e.feet).sub(origin);
     const hd = Math.hypot(target.x - e.feet.x, target.z - e.feet.z);
+    // noutro nível: um elevador ou uma escada perto leva até lá
+    if (this._vertical(e, target, dt, origin, time)) return Math.max(hd, Math.abs(target.y - e.feet.y));
+    if (this._leapStep(e, dt, origin, time)) return hd;
     let yaw = Math.atan2(-(target.x - e.feet.x), -(target.z - e.feet.z));
+    // o alvo mais alto, logo ali, atrás de uma quina que dá para subir: pula e agarra
+    if (hd < 6 && target.y > e.feet.y + 0.5 && this._leapStart(e, yaw)) return hd;
     let f = hd > 0.35 ? 1 : 0;
     if (f) {
       const s = this._steer(e, yaw, dt);
@@ -353,20 +386,430 @@ export class EntitySystem {
     return hd;
   }
 
+  // ── vagões ──────────────────────────────────────────────────────────────
+
+  /** Uma perna 'ride': esperar na estação, embarcar, viajar, descer. */
+  _rideStep(e, leg, dt, origin, time) {
+    const T = this.world.transit;
+    if (!e.ride) {
+      if (!leg) return this._walk(e, dt, origin, time, e.yaw, 0);
+      e.ride = { leg, phase: 'wait', t: 0 };
+    }
+    const R = e.ride;
+    const L = R.leg;
+    const [W0, C0, C1, W1] = L.pts;
+    R.t += dt;
+    const go = (p, tol = ARRIVE, steer = true) => {
+      const hd = Math.hypot(p.x - e.feet.x, p.z - e.feet.z);
+      if (hd < tol) {
+        this._walk(e, dt, origin, time, e.yaw, 0);
+        return true;
+      }
+      const yaw = Math.atan2(-(p.x - e.feet.x), -(p.z - e.feet.z));
+      if (!steer) {
+        // reto (para dentro/fora do vagão): um vão no caminho se pula; sem outro lado, para
+        this._walkInput(e, dt, origin, time, yaw, this._gapJump(e, yaw) ?? { f: 1 });
+        return false;
+      }
+      const st = this._steer(e, yaw, dt);
+      this._walk(e, dt, origin, time, st ?? e.yaw, st === null ? 0 : 1); // (sem rumo com chão: parado)
+      return false;
+    };
+    const car = (ts, minLeft) => T?.dockedAt(L.ride.line, ts, minLeft) ?? null;
+    // a linha sem energia (o relógio dela parado): o vagão não vem; vai a pé (outro caminho)
+    const clock = T?.clocks.get(L.ride.line);
+    if (R.phase !== 'ride' && clock && clock.rate < 0.1 && (R.dark = (R.dark ?? 0) + dt) > 10) return this._rideFail(e);
+    if (clock && clock.rate >= 0.1) R.dark = 0;
+    if (R.phase === 'wait') {
+      // na passarela, diante da estação, até um vagão parar com tempo para entrar
+      const there = go(W0, 1.2);
+      if (there && car(L.ride.from, 6)) R.phase = 'board';
+      if (R.t > 400) return this._rideFail(e);
+    } else if (R.phase === 'board') {
+      go(C0, 1.4, false);
+      const on = !!e.walker.groundObj?.userData.transit;
+      if (on && Math.hypot(C0.x - e.feet.x, C0.z - e.feet.z) < 3) {
+        R.phase = 'ride';
+        R.t = 0;
+        this.bus?.emit('being:board', { id: e.id, line: L.ride.line, at: L.ride.from });
+      } else if (!car(L.ride.from, 0)) R.phase = 'wait'; // partiu sem ele: o próximo
+    } else if (R.phase === 'ride') {
+      // dentro: parado (o vagão leva — o Walker lê o quanto o piso andou)
+      this._walk(e, dt, origin, time, e.yaw, 0);
+      if (car(L.ride.to, 2) && Math.hypot(C1.x - e.feet.x, C1.z - e.feet.z) < 8) R.phase = 'off';
+      else if (!e.walker.groundObj?.userData.transit && e.walker.grounded && R.t > 2) return this._rideFail(e); // ficou para trás
+    } else if (R.phase === 'off') {
+      if (go(W1, ARRIVE, Math.hypot(C1.x - e.feet.x, C1.z - e.feet.z) > 4)) {
+        // desceu: o caminho segue depois desta perna
+        const li = e.path.legs.indexOf(L);
+        while (e.pi < e.path.pts.length && (e.path.ptLeg[e.pi] ?? -1) <= li) e.pi++;
+        e.ride = null;
+        e.best = Infinity;
+        e.stuckT = 0;
+        this.bus?.emit('being:ride', { id: e.id, from: L.ride.from, to: L.ride.to });
+        if (e.pi >= e.path.pts.length) this._arrive(e);
+      }
+    }
+  }
+
+  _rideFail(e) {
+    e.ride = null;
+    this._replan(e);
+  }
+
+  // ── mudar de nível: elevadores e escadas ────────────────────────────────
+
+  /** O alvo está noutro nível: usa (ou procura) um elevador ou uma escada. true = no controle. */
+  _vertical(e, target, dt, origin, time) {
+    if (e.vert) return this._vertStep(e, target, dt, origin, time);
+    const dy = target.y - e.feet.y;
+    if (Math.abs(dy) < LEVEL || !e.walker.grounded) return false;
+    if ((e.vertScan = (e.vertScan ?? 0) - dt) > 0) return false;
+    e.vertScan = 1.5;
+    const v = this._findLift(e, target, time) ?? this._findLadder(e, target, origin, time);
+    if (!v) return false;
+    e.vert = { ...v, t: 0, y0: e.feet.y };
+    this.bus?.emit('being:level', { id: e.id, kind: v.kind, dy });
+    return this._vertStep(e, target, dt, origin, time);
+  }
+
+  _banned(e, id, time) {
+    const until = e.vertBan.get(id);
+    return until !== undefined && until > time;
+  }
+
+  /** Um elevador perto cuja ponta está no meu nível e a outra mais perto do nível do alvo. */
+  _findLift(e, target, time) {
+    const E = this.world.elevators;
+    if (!E) return null;
+    let best = null;
+    for (const [id, car] of E.cars) {
+      if (this._banned(e, id, time)) continue;
+      const d = car.def;
+      const hd = Math.hypot(d.x - e.feet.x, d.z - e.feet.z);
+      if (hd > LIFT_REACH + d.w / 2) continue;
+      for (const [from, to] of [[d.y0, d.y1], [d.y1, d.y0]]) {
+        if (Math.abs(from - e.feet.y) > 1.5) continue;
+        if (Math.abs(to - target.y) > Math.abs(target.y - e.feet.y) - LEVEL) continue;
+        const score = hd + Math.abs(to - target.y);
+        if (!best || score < best.score) best = { kind: 'lift', id, car, from, to, score, phase: 'wait' };
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Uma escada de marinheiro perto que leva para o lado do alvo: para subir, os degraus
+   * à vista em volta; para descer, a beirada com degraus logo abaixo.
+   */
+  _findLadder(e, target, origin, time) {
+    const w = e.walker;
+    const col = w.col;
+    const up = target.y > e.feet.y;
+    let best = null;
+    for (let q = 0; q < 24; q++) {
+      const a = (q / 24) * Math.PI * 2;
+      _d.set(-Math.sin(a), 0, -Math.cos(a));
+      if (up) {
+        _o.copy(w.feet).y += 1.0;
+        const hit = col.ray(_o, _d, LADDER_REACH);
+        if (!hit || hit.object.userData.mat !== 'rungs' || !hit.face) continue;
+        // a escada continua para cima (ao menos uns metros)
+        _s.copy(hit.point).addScaledVector(_d, -0.4).y += 4;
+        const more = col.ray(_s, _d, 1.2);
+        if (!more || more.object.userData.mat !== 'rungs') continue;
+        if (!best || hit.distance < best.d) best = { d: hit.distance, yaw: a, at: hit.point.clone().add(origin) };
+      } else {
+        // descer: degraus logo abaixo da beirada, vistos de fora
+        // (um ponto no ar logo depois da beirada, 2 m abaixo dela: degraus em alguma direção dali)
+        for (const r of [1.0, 1.5, 3, 5, 8, 11]) {
+          _o.copy(w.feet).addScaledVector(_d, r);
+          _o.y += 1.0;
+          if (col.ray(_o, DOWN, 3)) continue; // ainda há chão aqui
+          _o.y -= 3.2;
+          let hit = null;
+          let hb = 0;
+          for (let k = 0; k < 8 && !hit; k++) {
+            const b = (k / 8) * Math.PI * 2;
+            _s.set(-Math.sin(b), 0, -Math.cos(b));
+            const h = col.ray(_o, _s, 2.0);
+            if (h && h.object.userData.mat === 'rungs' && h.face) {
+              hit = h;
+              hb = b;
+            }
+          }
+          if (!hit) continue;
+          if (!best || r < best.d) best = { d: r, yaw: hb, at: hit.point.clone().add(origin), down: true };
+          break;
+        }
+      }
+    }
+    if (!best) return null;
+    const id = `lad${Math.round(best.at.x)},${Math.round(best.at.z)}`;
+    if (this._banned(e, id, time)) return null;
+    return { kind: 'ladder', id, yaw: best.yaw, at: best.at, down: !!best.down, phase: best.down ? 'edge' : 'approach' };
+  }
+
+  /**
+   * Andando reto no rumo yaw: um vão logo à frente (sem chão a 0,9 m) com chão do outro lado
+   * (até ~3 m, no mesmo nível ou pouco abaixo) → { f, run, jump } para pular correndo; senão null.
+   */
+  _gapJump(e, yaw) {
+    const w = e.walker;
+    if (!w.grounded) return { f: 1, run: true };
+    _d.set(-Math.sin(yaw), 0, -Math.cos(yaw));
+    // (três raios lado a lado: um só, exatamente sobre a junta de duas peças, pode não ver nenhuma)
+    const floorAt = (r, far) => {
+      for (const side of [0, 0.2, -0.2]) {
+        _o.copy(w.feet).addScaledVector(_d, r);
+        _o.x += _d.z * side;
+        _o.z -= _d.x * side;
+        _o.y += 0.8;
+        const h = w.col.ray(_o, DOWN, far);
+        if (h) return h;
+      }
+      return null;
+    };
+    if (floorAt(0.9, 2.2)) return null; // há chão: anda
+    for (const r of [1.8, 2.4, 3.0]) {
+      const fl = floorAt(r, 2.0);
+      if (fl && fl.face && fl.face.normal.y > 0.7) return { f: 1, run: true, jump: true };
+    }
+    return { f: 0 }; // um vão sem outro lado: não vai
+  }
+
+  _vertDone(e, ok, time) {
+    if (!ok && e.vert) e.vertBan.set(e.vert.id, time + 60);
+    e.vert = null;
+    e.walker.canClimb = false;
+    e.walker.climbing = false;
+    e.vertScan = ok ? 0 : 2;
+  }
+
+  _vertStep(e, target, dt, origin, time) {
+    const V = e.vert;
+    const w = e.walker;
+    V.t += dt;
+    if (V.t > VERT_GIVEUP) {
+      this._vertDone(e, false, time);
+      return false;
+    }
+    const go = (x, z, tol, steer = true) => {
+      const hd = Math.hypot(x - e.feet.x, z - e.feet.z);
+      if (hd < tol) {
+        this._walk(e, dt, origin, time, e.yaw, 0);
+        return true;
+      }
+      const yaw = Math.atan2(-(x - e.feet.x), -(z - e.feet.z));
+      if (!steer) {
+        // em linha reta (para dentro/fora do carro); um vão estreito no caminho se pula, correndo
+        this._walkInput(e, dt, origin, time, yaw, this._gapJump(e, yaw) ?? { f: 1 });
+        return false;
+      }
+      const st = this._steer(e, yaw, dt);
+      this._walk(e, dt, origin, time, st ?? e.yaw, st === null ? 0 : 1); // (sem rumo com chão: parado)
+      return false;
+    };
+    if (V.kind === 'lift') {
+      const car = V.car;
+      const d = car.def;
+      if (this.world.elevators.cars.get(V.id) !== car) {
+        this._vertDone(e, false, time);
+        return false;
+      }
+      const still = (y) => Math.abs(car.y - y) < 0.05 && car.rate > 0.5 && Math.abs(ElevatorSystem.heightAt(d, car.clock + 0.2) - y) < 0.01;
+      // sem energia (o setor apagado — o motor parado): não vai andar; desiste dele (a escada…)
+      if (V.phase !== 'ride' && car.rate < 0.1 && (V.dark = (V.dark ?? 0) + dt) > 8) {
+        this._vertDone(e, false, time);
+        return false;
+      }
+      if (car.rate >= 0.1) V.dark = 0;
+      // embarque pelos lados sem guarda-corpo (±x): o lado de onde se vem
+      V.sx ??= Math.sign(e.feet.x - d.x) || 1;
+      if (V.phase === 'wait') {
+        // ao lado do carro, no lado aberto; vindo do lado do guarda-corpo, pela quina (não pelo vão)
+        const wx = d.x + V.sx * (d.w / 2 + 2.5);
+        const side = e.feet.z - d.z;
+        if (Math.abs(side) > d.d / 2 + 1 && Math.abs(e.feet.x - wx) > 1.5) go(wx, d.z + Math.sign(side) * (d.d / 2 + 3), 1.0);
+        else go(wx, d.z, 1.0);
+        // parado na minha ponta, e ainda vai ficar uns segundos
+        if (still(V.from) && Math.abs(ElevatorSystem.heightAt(d, car.clock + 5) - V.from) < 0.01) V.phase = 'board';
+      } else if (V.phase === 'board') {
+        go(d.x + V.sx * d.w * 0.15, d.z, 0.8, false);
+        if (w.groundObj?.userData.elevator && Math.abs(e.feet.x - d.x) < d.w / 2 - 0.6 && Math.abs(e.feet.z - d.z) < d.d / 2 - 0.6) {
+          V.phase = 'ride';
+          this.bus?.emit('being:board', { id: e.id, lift: V.id });
+        } else if (!still(V.from)) V.phase = 'wait';
+      } else if (V.phase === 'ride') {
+        this._walk(e, dt, origin, time, e.yaw, 0);
+        if (still(V.to) && Math.abs(e.feet.y - V.to) < 1) {
+          // sai pelo lado aberto que dá para o alvo (com chão lá fora)
+          const pref = Math.sign(target.x - d.x) || 1;
+          V.ox = pref;
+          for (const sx of [pref, -pref]) {
+            _o.set(d.x + sx * (d.w / 2 + 3) - origin.x, V.to + 1.5 - origin.y, d.z - origin.z);
+            if (w.col.ray(_o, DOWN, 3)) {
+              V.ox = sx;
+              break;
+            }
+          }
+          V.phase = 'off';
+        }
+      } else if (V.phase === 'off') {
+        const out = go(d.x + V.ox * (d.w / 2 + 3.5), d.z, 1.0, false);
+        if (out || (!w.groundObj?.userData.elevator && Math.abs(e.feet.x - d.x) > d.w / 2 + 1 && w.grounded)) {
+          this.bus?.emit('being:lift', { id: e.id, from: V.from, to: V.to });
+          this._vertDone(e, true, time);
+        }
+      }
+      return true;
+    }
+    // ── escada ──
+    const ax = V.at.x;
+    const az = V.at.z;
+    const fx = -Math.sin(V.yaw);
+    const fz = -Math.cos(V.yaw);
+    if (V.phase === 'approach') {
+      // até o pé da escada, de frente para ela
+      if (go(ax - fx * 0.9, az - fz * 0.9, 0.5)) {
+        V.phase = 'climb';
+        V.ct = 0;
+      }
+      return true;
+    }
+    if (V.phase === 'edge') {
+      // descer: até um chão junto do alto da escada — atrás dos degraus (o telhado, numa
+      // fachada) ou ao lado deles (um patamar) —; depois monta nela, de frente para os degraus
+      if (!V.stand) {
+        const sx = -fz;
+        const sz = fx;
+        for (const [u, v] of [[1.0, 0], [-0.5, 1.6], [-0.5, -1.6], [0.6, 1.4], [0.6, -1.4], [-1.6, 0]]) {
+          const x = ax + fx * u + sx * v;
+          const z = az + fz * u + sz * v;
+          _o.set(x - origin.x, e.feet.y + 1.2 - origin.y, z - origin.z);
+          const fl = w.col.ray(_o, DOWN, 2.4);
+          if (fl && fl.face && fl.face.normal.y > 0.7 && Math.abs(fl.point.y + origin.y - e.feet.y) < 0.6) {
+            V.stand = { x, z };
+            break;
+          }
+        }
+        if (!V.stand) {
+          this._vertDone(e, false, time);
+          return false;
+        }
+      }
+      if (go(V.stand.x, V.stand.z, 0.5)) {
+        V.phase = 'mount';
+        V.m = 0;
+        V.p0 = e.feet.clone();
+      }
+      return true;
+    }
+    if (V.phase === 'mount') {
+      V.m = Math.min(1, V.m + dt / 0.6);
+      const k = V.m * V.m * (3 - 2 * V.m);
+      // passa a perna por cima da beirada: do chão até pendurado nos degraus, 0,9 m abaixo
+      e.feet.set(V.p0.x + (ax - fx * 0.55 - V.p0.x) * k, V.p0.y - 0.9 * k, V.p0.z + (az - fz * 0.55 - V.p0.z) * k);
+      let dy = V.yaw - e.yaw;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      e.yaw += dy * Math.min(1, dt * 10);
+      w.feet.copy(e.feet).sub(origin);
+      w.vel.set(0, 0, 0);
+      w.grounded = false;
+      e.speed = 0;
+      if (V.m >= 1) {
+        e.yaw = V.yaw;
+        V.phase = 'climb';
+        V.ct = 0;
+        w.climbing = true;
+      }
+      return true;
+    }
+    // subindo/descendo (o Walker na escada)
+    w.canClimb = true;
+    V.ct += dt;
+    const dir = V.down ? -1 : 1;
+    // no nível do alvo: sai pelo lado (onde houver patamar)
+    const near = Math.abs(e.feet.y - target.y) < 1.4;
+    V.side ??= 1;
+    if (near && (V.sideT = (V.sideT ?? 0) + dt) > 0.6) {
+      V.side = -V.side;
+      V.sideT = 0;
+    }
+    const yb = e.feet.y;
+    if (w.climbing) V.air = 0;
+    this._walkInput(e, dt, origin, time, V.yaw, { f: near ? 0 : dir, r: near ? V.side : 0 });
+    // terminou: em pé (subiu por cima, desceu no chão, ou saiu de lado num patamar)
+    if (V.ct > 0.8 && !w.climbing && w.grounded) {
+      this.bus?.emit('being:ladder', { id: e.id, dy: e.feet.y - V.y0 });
+      this._vertDone(e, true, time);
+    } else if (V.ct > 0.8 && !w.climbing && !w.grounded && (V.air = (V.air ?? 0) + dt) > 0.6) {
+      // soltou-se no ar (o fim da escada sem saída): deixa cair, desiste desta
+      this._vertDone(e, false, time);
+    } else if (!near && Math.abs(e.feet.y - yb) < 1e-4) {
+      if ((V.stall = (V.stall ?? 0) + dt) > 3) this._vertDone(e, false, time); // travado (teto)
+    } else V.stall = 0;
+    return true;
+  }
+
+  // ── quinas ─────────────────────────────────────────────────────────────
+
+  /** Uma quina à frente (rumo yaw) que dá para subir: começa o pulo (o Walker agarra e sobe). */
+  _leapStart(e, yaw) {
+    if ((e.leapCool ?? 0) > 0) return false;
+    const w = e.walker;
+    if (!w.grounded) return false;
+    _d.set(-Math.sin(yaw), 0, -Math.cos(yaw));
+    const l = w._findLedge(_d, 1, 0.62, 2.25);
+    if (!l) {
+      e.leapCool = 1.5;
+      return false;
+    }
+    e.leap = 3;
+    e.leapYaw = yaw;
+    e.leapJump = true;
+    w.canGrab = true;
+    return true;
+  }
+
+  /** Durante o pulo para a quina: para a frente até estar em pé lá em cima. true = no controle. */
+  _leapStep(e, dt, origin, time) {
+    e.leapCool = Math.max(0, (e.leapCool ?? 0) - dt);
+    if (!(e.leap > 0)) return false;
+    const w = e.walker;
+    e.leap -= dt;
+    this._walkInput(e, dt, origin, time, e.leapYaw, { f: 1, jump: e.leapJump });
+    e.leapJump = false;
+    const busy = !!(w.ledge || w.climb);
+    if ((e.leap < 2.6 && w.grounded && !busy) || (e.leap <= 0 && !busy)) {
+      e.leap = 0;
+      e.leapCool = 2;
+      w.canGrab = false;
+      this.bus?.emit('being:leap', { id: e.id, y: e.feet.y });
+    }
+    return true;
+  }
+
   /** Um passo do Walker com rumo `yaw` e avanço f (0..1). */
   _walk(e, dt, origin, time, yaw, f) {
+    this._walkInput(e, dt, origin, time, yaw, { f });
+  }
+
+  /** Um passo do Walker com a entrada inteira { f, r, jump } (escadas, quinas). */
+  _walkInput(e, dt, origin, time, yaw, input) {
     const w = e.walker;
+    let f = input.f ?? 0;
     // vira suave (um corpo não gira no lugar de uma vez)
     let dy = yaw - e.yaw;
     dy = Math.atan2(Math.sin(dy), Math.cos(dy));
     e.yaw += dy * Math.min(1, dt * 7);
-    if (Math.abs(dy) > 1.2) f *= 0.3; // curva fechada: desacelera
+    if (Math.abs(dy) > 1.2 && !w.climbing) f *= 0.3; // curva fechada: desacelera
 
     e.proxy.position.set(e.feet.x - origin.x, e.feet.y - origin.y + w.eye + w.bob - w.dip, e.feet.z - origin.z);
     const bx = w.feet.x;
     const by = w.feet.y;
     const bz = w.feet.z;
-    w.step(dt, e.proxy, { f, r: 0, jump: false, run: false }, e.yaw, 1, time);
+    w.step(dt, e.proxy, { f, r: input.r ?? 0, jump: !!input.jump, run: !!input.run }, e.yaw, 1, time);
     // fiscal: o peito passou através de alguma coisa neste quadro? (não deveria nunca)
     _d.set(w.feet.x - bx, 0, w.feet.z - bz);
     const mv = _d.length();

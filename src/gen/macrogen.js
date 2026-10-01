@@ -557,8 +557,10 @@ function passageTower(F, B, b, p) {
     B.add('rungs', place(new THREE.BoxGeometry(0.05, h, 0.56), { ...toXYZ(V(mx, yb + h / 2, mz)) }));
     for (const s of [-1, 1]) B.add('rib', place(new THREE.BoxGeometry(0.07, h, 0.07), { ...toXYZ(V(mx, yb + h / 2, mz + s * 0.3)) }));
     for (let y = Math.ceil(yb / 12) * 12; y < yt; y += 12) B.add('rib', place(new THREE.BoxGeometry(0.7, 0.1, 0.4), { ...toXYZ(V(mx + 0.3, y, mz)) }));
-    // o patamar de cima: da ponte até a escada
-    B.add('grate', place(new THREE.BoxGeometry(3.4, 0.3, 2.4), { ...toXYZ(V(6.4, b.top - 0.15, mz)) }));
+    // o patamar de cima: da ponte até a escada, com uma abertura onde o corpo sobe (rente aos
+    // degraus) e piso dos dois lados dela — de cima da escada se sai para o lado
+    B.add('grate', place(new THREE.BoxGeometry(2.2, 0.3, 4.6), { ...toXYZ(V(5.8, b.top - 0.15, mz)) }));
+    for (const s of [-1, 1]) B.add('grate', place(new THREE.BoxGeometry(1.4, 0.3, 1.5), { ...toXYZ(V(7.6, b.top - 0.15, mz + s * 1.55)) }));
     // luzes pequenas ao longo da subida (a manutenção tem energia própria)
     for (let y = yb + 30; y < yt; y += 60) B.lamp(p.x + mx + 0.9, y, p.z + mz + 0.9, SODIUM, 25, 'faulty', { to: [p.x + mx + 0.4, y + 1, p.z + mz], size: 0.9, grid: false }); // presa ao mastro
   }

@@ -59,6 +59,7 @@ npx electron . --capture=shot.png --pos=x,y,z,yaw,pitch --mode=fly --seed=abc --
 
 - `npm run check:npcs` — os raros vivos na Peregrinação (`dev/npctest.js`): vila, conversa, carga, entrega, despertar numa vila, andarilhos, ladrão, vida de silício, terceira força, fiscal. ~8 min (teleporta entre vilas a dezenas de km).
 
+- `npm run check:moves` — os seres fazendo o que o jogador faz (`dev/movetest.js`): quina, escada (sobe e desce 240 m), elevador, vagão. ~15 min.
 - `npm run check:beam` — o emissor de feixe (`dev/beamtest.js`): potência, camada, única, buraco atravessável, morte, 5 tiros. ~3 min.
 - `npm run check:climb` — as quinas (`dev/climbtest.js`): vault e agarrar em quinas de verdade em vários destinos, pegar a borda de uma plataforma e o piso de uma ponte suspensa caindo. ~6 min.
 
@@ -75,7 +76,8 @@ Cada check leva minutos: rodar **só os pertinentes** à mudança.
 | Safeguards: rondas, percepção, caçada, captura, paredes, alerta, despertar | `npm run check:safeguards` (+ `check:beings` se mexeu nas entidades) |
 | NPCs: vilas, conversa, cargas, andarilhos, vida de silício | `npm run check:npcs` (+ `check:pad` se mexeu no painel da conversa) |
 | arma: `app/beam.js`, `world/holes.js`, buracos nos shaders | `npm run check:beam` (+ `check` pelos shaders) |
-| movimento do corpo: quinas, `Walker` | `npm run check:climb` (+ `check:beings` — os seres usam o mesmo `Walker`) |
+| movimento do corpo: quinas, `Walker` | `npm run check:climb` (+ `check:beings` e `check:moves` — os seres usam o mesmo `Walker`) |
+| seres em escadas/elevadores/vagões (`entities.js`, `nav.js` ride) | `npm run check:moves` |
 | só textos/i18n, documentação, cofre | nenhum (no máximo importar o módulo) |
 | mudança que toca tudo | os três |
 

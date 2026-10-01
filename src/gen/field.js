@@ -274,6 +274,27 @@ export class Field {
     });
   }
 
+  /**
+   * A caixa encosta na coluna de uma passagem — a torre do elevador grande, o anel de
+   * embarque de baixo e a escada de manutenção (gen/macrogen.js passageTower), da
+   * plataforma de baixo até o cabeçote? (Os dutos não a atravessam.)
+   */
+  passageColumnHit(minX, minY, minZ, maxX, maxY, maxZ) {
+    const P = MEGA.passage;
+    const R = 50;
+    for (const b of this.barriersNear((minY + maxY) / 2)) {
+      const y0 = Math.floor((b.bottom - 150) / 48) * 48 - 6;
+      if (maxY < y0 || minY > b.top + 90) continue;
+      for (let pi = Math.floor((minX - R) / P); pi <= Math.floor((maxX + R) / P); pi++) {
+        for (let pk = Math.floor((minZ - R) / P); pk <= Math.floor((maxZ + R) / P); pk++) {
+          const p = this.passage(b.n, pi, pk);
+          if (p && maxX > p.x - R && minX < p.x + R && maxZ > p.z - R && minZ < p.z + R) return p;
+        }
+      }
+    }
+    return null;
+  }
+
   /** A laje da camada existe neste ponto? (só as passagens a perfuram) */
   barrierSolid(b, x, z) {
     const P = MEGA.passage;

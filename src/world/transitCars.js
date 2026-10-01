@@ -28,6 +28,7 @@ const ACC = 0.9; // m/s² — pico de ~36 m/s (130 km/h) no meio do trecho
 const T_MOVE = 2 * Math.sqrt(S / ACC); // s em movimento entre duas estações
 const DWELL = 14; // s parado na estação
 const PERIOD = T_MOVE + DWELL;
+export const RIDE_TIME = PERIOD; // s de uma estação à seguinte (com a espera)
 const NEAR_STATIONS = 2; // vagões a até ±2 estações do observador
 
 /** Distância percorrida desde a partida, após `t` segundos em movimento. */
@@ -210,6 +211,21 @@ export class TransitCars {
   /** A origem flutuante andou `delta`: desloca junto (não conta como movimento). */
   rebase(delta) {
     for (const car of this.cars.values()) car.group.position.sub(delta);
+  }
+
+  /**
+   * O vagão parado na estação ts da linha (id 't' + chave da passarela), com pelo menos
+   * `minLeft` s de espera pela frente — ou null. (Os seres embarcam por aqui: world/entities.js.)
+   */
+  dockedAt(lineId, ts, minLeft = 0) {
+    for (const car of this.cars.values()) {
+      if (car.line.id !== lineId || car.t === null || Math.abs(car.t - ts) > 0.5) continue;
+      const k = this.clocks.get(lineId);
+      if (!k || k.rate < 0.5) return null;
+      const tau = ((k.c % PERIOD) + PERIOD) % PERIOD;
+      return tau < DWELL - minLeft ? car : null;
+    }
+    return null;
   }
 
   _rider(car) {

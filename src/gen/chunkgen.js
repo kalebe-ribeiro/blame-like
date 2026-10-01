@@ -534,6 +534,8 @@ function buildDuct(F, B, axis, fa, fb, t0, t1, d) {
     const [ax, ay, az] = G(ts, -R - 2, -R - 2);
     const [bx, by, bz] = G(ts + piece, R + 2, R + 2);
     if (F.reservedHit(Math.min(ax, bx), Math.min(ay, by), Math.min(az, bz), Math.max(ax, bx), Math.max(ay, by), Math.max(az, bz))) continue;
+    // nem através da torre de um elevador grande (fechava a escada de manutenção)
+    if (F.passageColumnHit(Math.min(ax, bx), Math.min(ay, by), Math.min(az, bz), Math.max(ax, bx), Math.max(ay, by), Math.max(az, bz))) continue;
 
     if (B.lod) {
       B.add('duct', cylinderBetween(P(ts), P(ts + piece), R, R, 6, { heightSegments: 1 }));

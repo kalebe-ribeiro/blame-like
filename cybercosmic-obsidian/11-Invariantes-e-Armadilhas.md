@@ -57,6 +57,9 @@
 | Cadeias de pistas "para a única mais próxima" fazem ciclo entre duas únicas vizinhas | de única em única, seguir a correnteza (direção por seed); elos só entre terminais que citam alguém |
 | Render por software (sem GPU) a ~1 fps | o check inteiro estoura 6 min; rodar em partes; timers de flags atrasam em relação à captura |
 | Trocar de mundo com o salvamento automático ligado grava o mundo velho por cima do novo (`beforeunload`) | desligar `ctx.saving` antes de recarregar |
+| Um raio exatamente sobre a junta de duas peças (pontos do grafo em múltiplos de 12 m) erra as duas — o corpo caía pelo chão | o Walker procura o chão em 5 pontos; o "pulo do vão" dos seres em 3 |
+| Geometria gerada atravessando caminhos verticais (duto na escada de manutenção; patamar em cima de quem sobe) | ao gerar algo perto de escada/elevador, testar SUBINDO de verdade (`check:moves`) |
+| Dois Electron escrevendo no mesmo log (no Windows não há `pkill`) | `taskkill //F //IM electron.exe` antes de outro teste em segundo plano |
 
 ## Checklist antes de commitar
 

@@ -10,7 +10,10 @@
 //    arestas    pontes, rampas, escadas, tubos, pontes suspensas e torres em
 //               espiral (Field.edge); conectores plataforma → passarela; e o
 //               tabuleiro da passarela entre dois conectores, se não houver vão
-//               no meio (Field.walkGap, zonas reservadas)
+//               no meio (Field.walkGap, zonas reservadas); e o VAGÃO: nas
+//               passarelas com trilho, de uma estação a outra mais adiante no
+//               sentido da linha ('ride' — o corpo espera, embarca, desce:
+//               world/entities.js)
 //
 //  Cada aresta leva a sua polilinha (pontos GLOBAIS, sobre o piso) — por onde um
 //  corpo anda de fato. Atravessar uma plataforma desvia do que há em cima dela
@@ -19,12 +22,16 @@
 //
 //  Tudo aqui é puro (só o Field): roda no jogo, num worker ou no node.
 // ─────────────────────────────────────────────────────────────────────────────
-import { NODE, WALK, EDGE_DIRS } from './field.js';
+import { NODE, WALK, EDGE_DIRS, TRANSIT } from './field.js';
 
 const MOD = WALK.module;
 const RUN_MAX = 250; // módulos para cada lado (3 km) ao procurar o fim de um trecho sem vão
 const tMid = (t) => Math.floor(t / MOD) * MOD + MOD / 2;
 const r2 = (v) => Math.round(v * 100) / 100;
+const ST = TRANSIT.station;
+const stationT = (i) => i * ST + ST / 2; // (como gen/transit.js)
+const RIDE_COST = 260; // "metros" de uma viagem de vagão entre duas estações (~95 s; a pé seriam 1440 m)
+const RIDE_MAX = 3; // estações de uma vez sem descer
 
 /** Distância do centro de uma plataforma à borda do piso na direção (ux, uz) — como em network.js. */
 export function edgeDist(n, ux, uz) {
@@ -257,6 +264,20 @@ export class NavGraph {
     return null;
   }
 
+  /** As estações do trilho ao longo da passarela, entre t0 e t1 (posições t). */
+  _stations(wk, t0, t1) {
+    const out = [];
+    if (!wk.w.track) return out;
+    for (let i = Math.ceil((t0 - ST / 2) / ST); stationT(i) <= t1; i++) out.push(stationT(i));
+    return out;
+  }
+
+  /** O ponto GLOBAL do centro do vagão parado na estação ts (o piso dele fica no nível da passarela). */
+  carPoint(wk, ts) {
+    const lat = wk.u + wk.w.track.off;
+    return wk.axis === 'z' ? { x: lat, y: wk.y, z: ts } : { x: ts, y: wk.y, z: lat };
+  }
+
   /** Conexões (plataformas) ao longo da passarela, entre t0 e t1: [{ t, n }]. */
   _connections(wk, t0, t1) {
     const F = this.F;
@@ -384,7 +405,7 @@ export class NavGraph {
    * (sem a travessia das plataformas, que depende de por onde se chega e se sai).
    * `goal` (opcional): um vértice de passarela entra como vizinho direto se estiver no mesmo trecho.
    */
-  neighbors(v, goal = null) {
+  neighbors(v, goal = null, ride = true) {
     const F = this.F;
     const out = [];
     const len = (pts) => {
@@ -420,12 +441,24 @@ export class NavGraph {
     const run = this.run(v.wk, v.t);
     if (!run) return out;
     const conns = this._connections(v.wk, run[0], run[1]);
-    const before = conns.filter((c) => c.t < v.t - 0.01).pop();
-    const after = conns.find((c) => c.t > v.t + 0.01);
-    for (const c of [before, after]) {
-      if (!c) continue;
-      const w = this.walkVertex(v.wk, c.t);
-      out.push({ v: w, cost: Math.abs(c.t - v.t), pts: [{ x: v.x, y: v.y, z: v.z }, { x: w.x, y: w.y, z: w.z }], kind: 'walk' });
+    // paradas: as conexões e as estações do trilho (as de mais longe, passando por estas)
+    const stops = [...conns.map((c) => c.t), ...this._stations(v.wk, run[0], run[1])].sort((p, q) => p - q);
+    const before = stops.filter((t) => t < v.t - 0.01).pop();
+    const after = stops.find((t) => t > v.t + 0.01);
+    for (const t of [before, after]) {
+      if (t === undefined) continue;
+      const w = this.walkVertex(v.wk, t);
+      out.push({ v: w, cost: Math.abs(t - v.t), pts: [{ x: v.x, y: v.y, z: v.z }, { x: w.x, y: w.y, z: w.z }], kind: 'walk' });
+    }
+    // numa estação: o vagão, até 1–3 estações adiante no sentido da linha
+    const tr = v.wk.w.track;
+    if (ride && tr && Math.abs(stationT(Math.round((v.t - ST / 2) / ST)) - v.t) < 0.01) {
+      for (let k = 1; k <= RIDE_MAX; k++) {
+        const td = v.t + tr.dir * k * ST;
+        if (!this.run(v.wk, td)) continue;
+        const w = this.walkVertex(v.wk, td);
+        out.push({ v: w, cost: RIDE_COST * k, pts: [{ x: v.x, y: v.y, z: v.z }, this.carPoint(v.wk, v.t), this.carPoint(v.wk, td), { x: w.x, y: w.y, z: w.z }], kind: 'ride', ride: { line: 't' + v.wk.key, from: v.t, to: td } });
+      }
     }
     // no próprio ponto de conexão: a plataforma
     for (const c of conns) {
@@ -445,7 +478,7 @@ export class NavGraph {
    * — pts é a polilinha inteira no piso, já com a travessia das plataformas — ou null.
    * `avoid`: Set de ids de arestas 'idA>idB' a evitar (um corpo que empacou pede outro caminho).
    */
-  findPath(start, goal, { maxExpand = 6000, avoid = null } = {}) {
+  findPath(start, goal, { maxExpand = 6000, avoid = null, ride = true } = {}) {
     const h = (v) => Math.hypot(v.x - goal.x, v.y - goal.y, v.z - goal.z);
     const open = new Heap();
     const best = new Map([[start.id, 0]]);
@@ -457,12 +490,12 @@ export class NavGraph {
       if (cur.g > (best.get(cur.v.id) ?? Infinity)) continue;
       if (cur.v.id === goal.id) return this._assemble(start, cur.v, came, expanded);
       if (++expanded > maxExpand) return null;
-      for (const nb of this.neighbors(cur.v, goal)) {
+      for (const nb of this.neighbors(cur.v, goal, ride)) {
         if (avoid && avoid.has(`${cur.v.id}>${nb.v.id}`)) continue;
         const g = cur.g + nb.cost;
         if (g >= (best.get(nb.v.id) ?? Infinity)) continue;
         best.set(nb.v.id, g);
-        came.set(nb.v.id, { prev: cur.v, pts: nb.pts, kind: nb.kind });
+        came.set(nb.v.id, { prev: cur.v, pts: nb.pts, kind: nb.kind, ride: nb.ride });
         open.push({ v: nb.v, g, f: g + h(nb.v) });
       }
     }
@@ -474,7 +507,7 @@ export class NavGraph {
     let v = end;
     while (v.id !== start.id) {
       const c = came.get(v.id);
-      legs.push({ from: c.prev, to: v, pts: c.pts, kind: c.kind });
+      legs.push({ from: c.prev, to: v, pts: c.pts, kind: c.kind, ride: c.ride });
       v = c.prev;
     }
     legs.reverse();
