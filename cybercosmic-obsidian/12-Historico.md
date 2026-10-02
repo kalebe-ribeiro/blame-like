@@ -264,3 +264,9 @@ Por que as coisas estão como estão, em ordem.
 - Fotos do usuário: pelos furos via-se o oco das peças (cascas); e perto de um cilindro o próprio jogador ficava invisível.
 - Oco: as faces de trás entram no desenho com buracos por perto e só aparecem vistas por um furo, pintadas como o corte (prova: captura com o corte em vermelho — a espessura da parede e o fundo do rasgo; depois as cores reais).
 - Invisível: o descarte estava no shader comum, que o corpo e as mãos também usam. Agora só nas malhas do mundo (lotes). Prova: captura de dentro do túnel, no eixo — mãos, arma e lanterna visíveis.
+
+## 2026-10-02 — a arma de Killy retirada
+
+- O usuário não gostou do resultado ("muito bugado"; difícil de ficar convincente pelo método de shader; entidades erradas no tiro) e pediu para deixar o jogo como se a arma nunca tivesse sido feita.
+- Retirado: `app/beam.js`, `world/holes.js`, `dev/beamtest.js` (`check:beam`), os buracos nos shaders e na colisão, a ferramenta `emitter`, os atalhos `fire`/`power` (a lanterna do Livre voltou ao botão 7 do controle), o som, os textos e as flags de captura. Ficaram: a animação de captura, a célula inicial em 100%, a bateria ×3 e tudo dos seres.
+- A nota [[Ideias/Futuro/Arma-do-Killy]] voltou a ser só ideia; os requisitos do usuário e o método recomendado se ela voltar estão em [[13-Decisoes]].

@@ -188,4 +188,4 @@ O usuário respondeu item a item (na ordem deste arquivo):
 - **Fase 6:** mantém tudo, **exceto: uma animação ao ser capturado pelo Safeguard** (feita: a câmera vira para o rosto dele, ele puxa e levanta, os braços fecham em volta — `app/wake.js` fase 'grabbed', `bodies.js grab(k)`).
 - **Fase 7:** mantém tudo.
 - **Bateria ×3** ("a bateria acaba muito rápido"): todos os gastos da célula divididos por 3 (lanterna 21 min, sensor 45 min, religar setor, ler fragmento).
-- **Arma do Killy:** não atravessa camadas nem únicas; potência ajustável (alcance, raio, gasto); ≥ 5 tiros com carga máxima → [[Ideias/Futuro/Arma-do-Killy]].
+- **Arma do Killy — requisitos para quando for feita** (não está no jogo): não atravessa camadas nem únicas; potência ajustável (alcance, raio, gasto); ≥ 5 tiros com carga máxima → [[Ideias/Futuro/Arma-do-Killy]]. Uma primeira versão (buracos por shader) foi feita e **retirada a pedido do usuário em 2026-10-02**: não convencia (peças ocas pelo furo, o próprio corpo sumindo perto do cilindro, entidades erradas no tiro). Se voltar: o corte de verdade (CSG peça por peça em `ChunkBuilder.add`, refazendo os chunks atingidos), não o shader.

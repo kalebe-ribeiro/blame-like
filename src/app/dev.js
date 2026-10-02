@@ -316,43 +316,6 @@ export function setupDev(ctx) {
   // --inventory=N: abre o inventário aos N s; --equip=lantern,device: equipa isso antes
   if (params.get('equip')) setTimeout(() => params.get('equip').split(',').forEach((id) => ctx.inventory.equip(id)), 4000);
   if (params.get('inventory')) setTimeout(() => ctx.inventory.open(), Number(params.get('inventory')) * 1000);
-  // --beamshot=N: aos N s, procura uma parede a 6–25 m em volta, atira nela (potência --beampower, 4)
-  // e fica olhando o buraco de um passo para o lado (para as capturas do emissor — app/beam.js)
-  if (params.get('beamhold')) ctx.beamHold = true;
-  if (params.get('beamshot')) {
-    setTimeout(() => {
-      const col = ctx.controls.walker.col;
-      const eye = camera.position.clone();
-      col.buildsPerFrame = 600;
-      col.refresh(eye, 40);
-      col.buildsPerFrame = 2;
-      let best = null;
-      for (let q = 0; q < 32; q++) {
-        const yaw = (q / 32) * Math.PI * 2;
-        const dir = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-        const h = col.ray(eye, dir, 25);
-        if (h && h.distance > 6 && h.face && Math.abs(h.face.normal.y) < 0.3 && (!best || Math.abs(h.distance - 12) < Math.abs(best.d - 12))) best = { yaw, dir, d: h.distance };
-      }
-      if (!best) return console.warn('BEAMSHOT: nenhuma parede');
-      ctx.controls.setMode('fly');
-      ctx.controls.setView({ pos: eye, yaw: best.yaw, pitch: 0, scale: 1 });
-      ctx.beam.setPower(Number(params.get('beampower') || 4));
-      ctx.inventory.equip('emitter');
-      setTimeout(() => {
-        ctx.beam.fire();
-        console.warn('BEAMSHOT: parede a ' + best.d.toFixed(1) + ' m');
-        // depois do tiro: um passo para o lado, olhando a boca do buraco de viés
-        ctx.controls.setMode('fly'); // (o furo pode pegar o chão da frente: a câmera fica onde está)
-        setTimeout(() => {
-          const side = new THREE.Vector3(-best.dir.z, 0, best.dir.x);
-          const at = eye.clone().addScaledVector(side, Number(params.get('beamside') ?? 3.5)).addScaledVector(best.dir, best.d * 0.35); // (--beamside=0: dentro do furo, no eixo)
-          const tgt = eye.clone().addScaledVector(best.dir, best.d);
-          const v = tgt.sub(at);
-          ctx.controls.setView({ pos: at, yaw: Math.atan2(-v.x, -v.z), pitch: -0.05, scale: 1 });
-        }, Number(params.get('beamlook') || 1200));
-      }, 300);
-    }, Number(params.get('beamshot')) * 1000);
-  }
   // --grabtest=N: aos N s, o Safeguard de ronda mais perto fica 1,5 m atrás de você e te pega
   // (para ver a animação de ser pego — app/wake.js)
   if (params.get('grabtest')) {
@@ -383,7 +346,6 @@ export function setupDev(ctx) {
   else if (params.get('check') === 'climb') import('../dev/climbtest.js').then((m) => m.runClimbTest(ctx));
   else if (params.get('check') === 'npcs') import('../dev/npctest.js').then((m) => m.runNpcTest(ctx));
   else if (params.get('check') === 'moves') import('../dev/movetest.js').then((m) => m.runMoveTest(ctx));
-  else if (params.get('check') === 'beam') import('../dev/beamtest.js').then((m) => m.runBeamTest(ctx));
   else if (params.get('check') === 'safeguards') import('../dev/sgtest.js').then((m) => m.runSafeguardTest(ctx));
   else if (params.get('check')) {
     import('../dev/check.js').then((m) => m.runCheck({ teleport: ctx.ui.teleport, world, controls: ctx.controls, camera, THREE, getTime: () => ctx.time, only: params.get('check') }));

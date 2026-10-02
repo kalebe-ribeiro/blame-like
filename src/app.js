@@ -48,7 +48,6 @@ import { createBeings } from './app/beings.js';
 import { createSafeguards } from './app/safeguards.js';
 import { createPeople } from './app/people.js';
 import { createInventory } from './app/inventory.js';
-import { createBeam } from './app/beam.js';
 import { bindings } from './controls/bindings.js';
 import { startPlace } from './lang/leads.js';
 
@@ -175,7 +174,6 @@ ctx.ui = createUI(ctx);
 ctx.wake = createWake(ctx);
 ctx.inventory = createInventory(ctx); // o inventário e as mãos (antes do que se carrega)
 ctx.carried = createCarried(ctx);
-ctx.beam = createBeam(ctx); // o emissor de feixe gravitacional (a arma de Killy)
 ctx.reading = createReading(ctx);
 ctx.power = createPower(ctx);
 ctx.marks = createMarks(ctx);
@@ -216,7 +214,6 @@ function frame() {
   }
   ctx.carried.update(dt, time); // a lanterna na mão (Peregrinação)
   ctx.marks.update(dt); // as marcas pintadas perto
-  ctx.beam.update(dt);
   ctx.alert.update(dt);
   ctx.safeguards.update();
   ctx.people.update(dt);

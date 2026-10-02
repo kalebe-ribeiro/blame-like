@@ -1008,38 +1008,6 @@ export class AudioEngine {
     this._thump(t + dur * 0.9, pan, 0.25, 520); // o pé apoiando em cima
   }
 
-  /** O emissor de feixe: um baque grave que suga o ar, um estalo seco e o chiado do metal se desfazendo. */
-  beamShot(power = 3) {
-    if (!this.ctx) return;
-    const ctx = this.ctx;
-    const t = ctx.currentTime;
-    const out = this._placed(0, 0);
-    const k = power / 5;
-    const o = ctx.createOscillator();
-    o.type = 'sine';
-    o.frequency.setValueAtTime(140 - 60 * k, t);
-    o.frequency.exponentialRampToValueAtTime(28, t + 0.6 + 0.4 * k);
-    const og = ctx.createGain();
-    og.gain.setValueAtTime(0.0001, t);
-    og.gain.exponentialRampToValueAtTime(0.5 + 0.4 * k, t + 0.02);
-    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.8 + 0.5 * k);
-    o.connect(og).connect(out);
-    o.start(t);
-    o.stop(t + 1.4);
-    this._clang(t + 0.01, out, 0.25 + 0.2 * k, 0.35);
-    const src = ctx.createBufferSource();
-    src.buffer = this._scrapeBuf ??= this._noiseBuffer(1.2);
-    const hp = ctx.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.value = 2200;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t + 0.05);
-    g.gain.exponentialRampToValueAtTime(0.12 + 0.1 * k, t + 0.1);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7 + 0.5 * k);
-    src.connect(hp).connect(g).connect(out);
-    src.start(t + 0.05);
-  }
-
   /** A vida de silício se mostrando: um guincho metálico que desce, e estalos. */
   siliconReveal(pan, dist) {
     if (!this.ctx) return;

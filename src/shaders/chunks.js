@@ -114,55 +114,6 @@ uniform vec4  uRestoredId[8];             // setores religados: (i, faixa, k, 1 
 uniform vec4  uRestoredFront[8];          //   (subestação x, z em cena, frente da luz em m, y em cena)
 uniform vec4  uOutageA[4];                // apagões: centro (cena) + frente da queda (m)
 uniform vec4  uOutageB[4];                // frente do religamento (m), raio do setor
-uniform vec4  uHoleA[12];                 // buracos do feixe (world/holes.js): a (cena) + raio
-uniform vec4  uHoleB[12];                 //   b (cena) + ativo
-uniform vec4  uKeepMin[6];                // o que o feixe não fura (camadas, únicas): caixa (cena) + ativo
-uniform vec3  uKeepMax[6];
-// −1 dentro de um buraco (descartar); 0..1 perto da borda (o anel fundido); 0 longe.
-// (sem derivadas no laço — o compilador do Windows reclama: X3595)
-float holeEdge(vec3 p) {
-  float edge = 0.0;
-  for (int i = 0; i < 6; i++) {
-    if (uKeepMin[i].w > 0.5 && all(greaterThan(p, uKeepMin[i].xyz)) && all(lessThan(p, uKeepMax[i]))) return 0.0;
-  }
-  for (int i = 0; i < 12; i++) {
-    if (uHoleB[i].w < 0.5) continue;
-    vec3 a = uHoleA[i].xyz;
-    vec3 ab = uHoleB[i].xyz - a;
-    float t = dot(p - a, ab) / max(dot(ab, ab), 1e-4);
-    if (t < 0.0 || t > 1.0) continue;
-    float d = length(p - (a + ab * t));
-    float r = uHoleA[i].w;
-    if (d < r) return -1.0;
-    edge = max(edge, 1.0 - smoothstep(r, r + 0.35, d));
-  }
-  return edge;
-}
-// O raio do olho até p passa por dentro de algum buraco? (distância entre os dois segmentos
-// — o do olhar e o eixo do buraco — menor que o raio). Uma face de trás só aparece assim:
-// é o lado de dentro da peça, visto pelo furo — pintado como o corte do metal.
-bool holeSeen(vec3 cam, vec3 p) {
-  vec3 d1 = p - cam;
-  float a = dot(d1, d1);
-  for (int i = 0; i < 12; i++) {
-    if (uHoleB[i].w < 0.5) continue;
-    vec3 o2 = uHoleA[i].xyz;
-    vec3 d2 = uHoleB[i].xyz - o2;
-    vec3 r = cam - o2;
-    float e = dot(d2, d2);
-    float f = dot(d2, r);
-    float b = dot(d1, d2);
-    float c = dot(d1, r);
-    float den = a * e - b * b;
-    float s = den > 1e-6 ? clamp((b * f - c * e) / den, 0.0, 1.0) : 0.0;
-    float t = clamp((b * s + f) / max(e, 1e-6), 0.0, 1.0);
-    s = clamp((b * t - c) / max(a, 1e-6), 0.0, 1.0);
-    vec3 q1 = cam + d1 * s;
-    vec3 q2 = o2 + d2 * t;
-    if (length(q1 - q2) < uHoleA[i].w) return true;
-  }
-  return false;
-}
 
 // Energia da rede (0..1) num ponto — mesma lógica de world/outages.js.
 // j (0..1) desloca a frente um pouco, para as janelas não apagarem em bloco.

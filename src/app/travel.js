@@ -37,7 +37,6 @@ export function createTravel(ctx) {
       trail: trail.toJSON(),
       player: ctx.player,
       entities: ctx.beings?.serialize() ?? [],
-      holes: world.holes?.serialize() ?? [],
     });
     storeSlot(slot);
   }
@@ -128,8 +127,6 @@ export function createTravel(ctx) {
       slot.boosts = {};
       slot.sectors = {};
       slot.entities = [];
-      slot.holes = [];
-      world.holes?.load([]);
       ctx.alert?.reset();
     },
     update(dt) {

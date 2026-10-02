@@ -17,7 +17,7 @@
 import { t } from '../i18n/index.js';
 import { bindings } from '../controls/bindings.js';
 
-export const TOOLS = ['lantern', 'device', 'emitter'];
+export const TOOLS = ['lantern', 'device'];
 
 export function createInventory(ctx) {
   const { controls, world } = ctx;
@@ -25,8 +25,7 @@ export function createInventory(ctx) {
   player.hands ??= { right: null, left: null };
 
   /** As ferramentas que você tem. */
-  // (o emissor — a arma de Killy, app/beam.js — está com você desde o começo, nos dois modos)
-  const tools = () => TOOLS.filter((id) => id === 'lantern' || id === 'emitter' || (id === 'device' && ctx.rules.resources && player.inventory.includes('reader')));
+  const tools = () => TOOLS.filter((id) => id === 'lantern' || (id === 'device' && ctx.rules.resources && player.inventory.includes('reader')));
   const has = (id) => tools().includes(id);
   /** Em que mão está: 1 direita · −1 esquerda · 0 em nenhuma. */
   const sideOf = (id) => (player.hands.right === id ? 1 : player.hands.left === id ? -1 : 0);

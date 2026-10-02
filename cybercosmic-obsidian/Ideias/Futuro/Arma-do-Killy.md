@@ -1,32 +1,10 @@
 ---
-status: implementado (2026-10-01)
-prioridade: feita
+status: futuro (fase 6) — método decidido
+prioridade: futura
 tags: [futuro, arma, safeguards, terreno]
 ---
 
-# A arma do Killy — emissor de feixe gravitacional
-
-> **Implementado (2026-10-01)** — `app/beam.js`, `world/holes.js`, `shaders/chunks.js` (`holeEdge`), `world/collision.js`. Pedido do usuário: **não atravessa camada intransponível nem estrutura única**; **potência ajustável** (alcance, raio do feixe, gasto por tiro); **pelo menos 5 tiros com a célula cheia**.
->
-> | potência | alcance | raio | gasto |
-> |---|---|---|---|
-> | 1 | 30 m | 0,5 m | 4% |
-> | 2 | 60 m | 0,9 m | 7% |
-> | 3 | 120 m | 1,4 m | 11% |
-> | 4 | 220 m | 2,0 m | 15% |
-> | 5 | 400 m | 2,8 m | 19% (5 tiros com a célula cheia) |
->
-> - Uma ferramenta do inventário (`emitter`), nos dois modos (no Livre não gasta). Vai para a mão pela regra das mãos; o primeiro aperto a põe na mão, o seguinte atira.
-> - **Atirar:** Q · clique esquerdo · RT (botão 7). **Potência:** B · roda do mouse (com o emissor na mão) · R3 (botão 10). A lanterna do Livre foi do botão 7 para o 13 (↓ do direcional).
-> - **Camadas:** o feixe acaba ao entrar na faixa da laje onde ela é maciça (`beamReach`, analítico pelo Field). **Únicas:** de fora acaba na caixa delas (+1 m); de dentro (dá para entrar), na face de dentro das paredes (3 m de espessura).
-> - **Caixas guardadas:** o shader e a colisão **nunca** furam dentro da faixa de uma camada nem da caixa de uma única (até 6 perto, `uKeepMin/uKeepMax`). Sem isso, um feixe de 2,8 m de raio rente ao piso de uma camada abria o piso dela.
-> - O que o feixe atravessa morre (`kill(e, 'beam')`). Atirar sobe o alerta do setor e os Safeguards perto ouvem. Até 200 buracos ficam salvos no mundo (`slot.holes`); 12 mais perto vão ao shader.
-> - Teste `npm run check:beam` (8 itens: potência, rente à camada, camada, única de dentro e de fora, buraco atravessável a pé, morte, 5 tiros). Capturas: `--beamshot=N --beampower=P --beamlook=ms --beamhold`.
-> - **O corte maciço (2026-10-01):** as peças são cascas; com buracos por perto, os materiais de face única passam a desenhar as faces de trás, e o shader só as deixa aparecer quando o olhar passa por dentro de um buraco (`holeSeen`: distância entre o segmento do olhar e o eixo do buraco < raio). Pintadas como metal fosco escuro, sem janelas: pelo furo a peça parece cheia (a espessura da parede, o fundo do rasgo no chão).
-> - **Só o mundo leva buracos:** o descarte vale só para as malhas em lote (`USE_BATCHING` → `vHoleOn`). Corpo, mãos, arma, lanterna, seres, elevadores e vagões usam os mesmos materiais mas não são furados (antes, perto do cilindro, o próprio jogador sumia).
-> - Captura: `--beamshot=N --beampower=P --beamside=m` (0 = dentro do furo, no eixo). Com a janela da captura em segundo plano o jogo desenha poucos quadros e o feixe demora a apagar: capturar ~30 s depois do tiro.
-> - Achado no teste: a primeira versão parava o feixe a 0 m dentro de uma vila (as vilas são estruturas únicas e a caixa com 8 m de margem englobava quem estava dentro).
-
+# A arma do Killy — emissor de feixe gravitacional (fase 6)
 
 > **Decidido (2026-09-30):** quando a arma for implementada, o buraco será feito pelo **método "de shader"** descrito abaixo (cilindros salvos + `discard` + borda pintada + colisão ignorando). Nada de CSG. Continua em aberto: se a arma existe mesmo (combate × só fuga), o que ela não fura, alcance, custo.
 

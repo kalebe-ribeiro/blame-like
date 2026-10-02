@@ -59,7 +59,6 @@
 | Trocar de mundo com o salvamento automático ligado grava o mundo velho por cima do novo (`beforeunload`) | desligar `ctx.saving` antes de recarregar |
 | Um raio exatamente sobre a junta de duas peças (pontos do grafo em múltiplos de 12 m) erra as duas — o corpo caía pelo chão | o Walker procura o chão em 5 pontos; o "pulo do vão" dos seres em 3 |
 | Geometria gerada atravessando caminhos verticais (duto na escada de manutenção; patamar em cima de quem sobe) | ao gerar algo perto de escada/elevador, testar SUBINDO de verdade (`check:moves`) |
-| Vetor temporário de módulo passado como argumento a uma função que usa o mesmo temporário por dentro (`holes.js`: a distância saía 0 e a colisão furava tudo em volta do feixe) | nunca passar `_v` para quem também escreve em `_v`; testar também o lado de FORA (o que não deve mudar) |
 | Dois Electron escrevendo no mesmo log (no Windows não há `pkill`) | `taskkill //F //IM electron.exe` antes de outro teste em segundo plano |
 
 ## Checklist antes de commitar
