@@ -188,6 +188,10 @@ async function run(ctx) {
   // ── tiros: célula cheia, potência máxima
   if (ctx.rules.resources) {
     ctx.beam.setPower(5);
+    // em voo, mirando para o alto: o furo (2,8 m de raio) não abre o chão sob os pés — cair e
+    // desmaiar no meio da conta bloquearia o tiro seguinte
+    controls.setMode('fly');
+    controls.setView({ pos: camera.position.clone(), yaw: 0, pitch: 1.2, scale: 1 });
     ctx.player.energy.value = 1;
     let n = 0;
     for (let i = 0; i < 8; i++) {

@@ -138,6 +138,31 @@ float holeEdge(vec3 p) {
   }
   return edge;
 }
+// O raio do olho até p passa por dentro de algum buraco? (distância entre os dois segmentos
+// — o do olhar e o eixo do buraco — menor que o raio). Uma face de trás só aparece assim:
+// é o lado de dentro da peça, visto pelo furo — pintado como o corte do metal.
+bool holeSeen(vec3 cam, vec3 p) {
+  vec3 d1 = p - cam;
+  float a = dot(d1, d1);
+  for (int i = 0; i < 12; i++) {
+    if (uHoleB[i].w < 0.5) continue;
+    vec3 o2 = uHoleA[i].xyz;
+    vec3 d2 = uHoleB[i].xyz - o2;
+    vec3 r = cam - o2;
+    float e = dot(d2, d2);
+    float f = dot(d2, r);
+    float b = dot(d1, d2);
+    float c = dot(d1, r);
+    float den = a * e - b * b;
+    float s = den > 1e-6 ? clamp((b * f - c * e) / den, 0.0, 1.0) : 0.0;
+    float t = clamp((b * s + f) / max(e, 1e-6), 0.0, 1.0);
+    s = clamp((b * t - c) / max(a, 1e-6), 0.0, 1.0);
+    vec3 q1 = cam + d1 * s;
+    vec3 q2 = o2 + d2 * t;
+    if (length(q1 - q2) < uHoleA[i].w) return true;
+  }
+  return false;
+}
 
 // Energia da rede (0..1) num ponto — mesma lógica de world/outages.js.
 // j (0..1) desloca a frente um pouco, para as janelas não apagarem em bloco.

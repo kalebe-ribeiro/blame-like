@@ -258,3 +258,9 @@ Por que as coisas estão como estão, em ordem.
 - Relato do usuário: ao atirar, toda uma área em volta ficava atravessável, não só o cilindro.
 - Causa (erro meu): em `world/holes.js`, `insideScene` passava o ponto no vetor temporário `_v`, e `HoleSystem.dist` usa o mesmo `_v` para o ponto mais perto do eixo → a distância saía sempre 0. Todo ponto dentro do comprimento do feixe, a qualquer distância de lado, contava como "dentro do buraco" para a colisão (o desenho estava certo). O teste não pegou porque só olhava pontos dentro do raio e o piso das camadas (protegido pelas caixas guardadas).
 - Correção: um vetor próprio para o ponto consultado. Caso novo `cilindro` no `check:beam` (3 m fora do raio = sólido; 0,2 m dentro = furado): reprova com o código antigo, passa com o novo.
+
+## 2026-10-01 — arma: corte maciço e o jogador não some mais
+
+- Fotos do usuário: pelos furos via-se o oco das peças (cascas); e perto de um cilindro o próprio jogador ficava invisível.
+- Oco: as faces de trás entram no desenho com buracos por perto e só aparecem vistas por um furo, pintadas como o corte (prova: captura com o corte em vermelho — a espessura da parede e o fundo do rasgo; depois as cores reais).
+- Invisível: o descarte estava no shader comum, que o corpo e as mãos também usam. Agora só nas malhas do mundo (lotes). Prova: captura de dentro do túnel, no eixo — mãos, arma e lanterna visíveis.

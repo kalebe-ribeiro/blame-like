@@ -82,6 +82,7 @@ uniform float uSeed;
 
 varying vec3 vWorldPos;
 varying vec3 vNormalW;
+varying float vHoleOn; // 1 nas malhas do mundo (lotes): só elas levam os buracos do feixe
 
 #include <clipping_planes_pars_vertex>
 #include <batching_pars_vertex>
@@ -95,9 +96,11 @@ void main() {
   #endif
   // lotes (BatchedMesh): cada chunk tem sua matriz numa textura
   #include <batching_vertex>
+  vHoleOn = 0.0;
   #ifdef USE_BATCHING
     p = (batchingMatrix * vec4(p, 1.0)).xyz;
     n = mat3(batchingMatrix) * n;
+    vHoleOn = 1.0;
   #endif
 
   vec4 wp = modelMatrix * vec4(p, 1.0);
@@ -131,6 +134,7 @@ uniform float uFogAmount;     // 1 = névoa normal; < 1 = fura a névoa
 uniform vec2  uFadeRange;     // distância (início, fim) em que se dissolve na névoa
 uniform float uCutout;        // recorte: 0 nada · 1 degraus de escada · 2 grade vazada · 3 pichação
 uniform float uWet;           // 0..1 superfície molhada (poças)
+uniform float uFrontOnly;     // 1: material de face única (as de trás só aparecem pelos furos do feixe)
 #ifdef USE_REFLECTION
 uniform sampler2D uReflTex;   // reflexo planar (render/reflection.js)
 uniform float uReflOn;
@@ -138,15 +142,26 @@ uniform float uReflOn;
 
 varying vec3 vWorldPos;
 varying vec3 vNormalW;
+varying float vHoleOn;
 
 #include <clipping_planes_pars_fragment>
 
 void main() {
   #include <clipping_planes_fragment>
 
-  // os buracos do feixe: dentro, nada; na borda, metal fundido escurecido
-  float holeE = holeEdge(vWorldPos);
-  if (holeE < 0.0) discard;
+  // os buracos do feixe (só nas malhas do mundo — o corpo, as mãos e a arma não):
+  // dentro, nada; na borda, metal fundido escurecido. As peças são cascas: pelo furo
+  // aparece o lado de dentro delas (as faces de trás), pintado como o corte maciço.
+  float holeE = 0.0;
+  bool cap = false;
+  if (vHoleOn > 0.5) {
+    holeE = holeEdge(vWorldPos);
+    if (holeE < 0.0) discard;
+    if (!gl_FrontFacing && uFrontOnly > 0.5) {
+      if (!holeSeen(cameraPosition, vWorldPos)) discard;
+      cap = true;
+    }
+  } else if (!gl_FrontFacing && uFrontOnly > 0.5) discard;
 
   vec3 V = normalize(cameraPosition - vWorldPos);
   vec3 Ng = normalize(vNormalW);
@@ -256,6 +271,12 @@ void main() {
     N = normalize(N + vec3(snoise(W * 2.5 + t * 0.6), 0.0, snoise(W * 2.5 - t * 0.5)) * 0.04 * uWet);
   }
 
+  // o corte (o lado de dentro da peça, visto pelo furo): metal maciço, fosco, sem janelas
+  if (cap) {
+    albedo = uBaseColor * (0.5 + 0.25 * mott);
+    emit = vec3(0.0);
+  }
+
   // ── iluminação ──
   // luz difusa vinda de cima: o que olha para baixo mergulha no escuro
   vec3 lit = uAmbient * (0.3 + 0.7 * (N.y * 0.5 + 0.5)) * (0.8 + 0.4 * mott);
@@ -294,6 +315,7 @@ void main() {
   float fres = pow(1.0 - max(dot(N, V), 0.0), 4.0);
   vec3 c = albedo * lit + spec * (0.08 + 3.0 * uWet) + emit;
   c *= 1.0 - 0.8 * holeE; // a borda do buraco: fundida, escura
+  if (cap) c *= 0.6;
   c += uFogColorB * fres * uWet * 3.0; // reflexo da poeira iluminada na água
   c += uFogColorB * fres * 0.5;   // borda levemente mais clara → silhueta
 
@@ -340,7 +362,7 @@ export function createSurfaceMaterial(shared, params = {}) {
     side: THREE.FrontSide,
     ...params,
   };
-  return new THREE.ShaderMaterial({
+  const m = new THREE.ShaderMaterial({
     defines: { LIGHT_COUNT, ...(p.cutout ? { USE_CUTOUT: 1 } : {}), ...(p.reflect ? { USE_REFLECTION: 1 } : {}) },
     uniforms: {
       ...shared,
@@ -361,6 +383,7 @@ export function createSurfaceMaterial(shared, params = {}) {
       uFadeRange: { value: new THREE.Vector2(p.fade[0], p.fade[1]) },
       uCutout: { value: p.cutout },
       uWet: { value: p.wet },
+      uFrontOnly: { value: p.side === THREE.FrontSide ? 1 : 0 },
       uReflTex: { value: null },
       uReflOn: { value: 0 },
     },
@@ -369,6 +392,10 @@ export function createSurfaceMaterial(shared, params = {}) {
     side: p.side,
     clipping: true,
   });
+  // (face única: com buracos do feixe por perto, World passa a desenhar as de trás — o shader só
+  // as deixa aparecer vistas por um furo, como o corte maciço)
+  m.userData.frontOnly = p.side === THREE.FrontSide;
+  return m;
 }
 
 // ─── Feixes de luz volumétricos ─────────────────────────────────────────────

@@ -334,6 +334,7 @@ export function setupDev(ctx) {
         if (h && h.distance > 6 && h.face && Math.abs(h.face.normal.y) < 0.3 && (!best || Math.abs(h.distance - 12) < Math.abs(best.d - 12))) best = { yaw, dir, d: h.distance };
       }
       if (!best) return console.warn('BEAMSHOT: nenhuma parede');
+      ctx.controls.setMode('fly');
       ctx.controls.setView({ pos: eye, yaw: best.yaw, pitch: 0, scale: 1 });
       ctx.beam.setPower(Number(params.get('beampower') || 4));
       ctx.inventory.equip('emitter');
@@ -341,9 +342,10 @@ export function setupDev(ctx) {
         ctx.beam.fire();
         console.warn('BEAMSHOT: parede a ' + best.d.toFixed(1) + ' m');
         // depois do tiro: um passo para o lado, olhando a boca do buraco de viés
+        ctx.controls.setMode('fly'); // (o furo pode pegar o chão da frente: a câmera fica onde está)
         setTimeout(() => {
           const side = new THREE.Vector3(-best.dir.z, 0, best.dir.x);
-          const at = eye.clone().addScaledVector(side, 3.5).addScaledVector(best.dir, best.d * 0.35);
+          const at = eye.clone().addScaledVector(side, Number(params.get('beamside') ?? 3.5)).addScaledVector(best.dir, best.d * 0.35); // (--beamside=0: dentro do furo, no eixo)
           const tgt = eye.clone().addScaledVector(best.dir, best.d);
           const v = tgt.sub(at);
           ctx.controls.setView({ pos: at, yaw: Math.atan2(-v.x, -v.z), pitch: -0.05, scale: 1 });

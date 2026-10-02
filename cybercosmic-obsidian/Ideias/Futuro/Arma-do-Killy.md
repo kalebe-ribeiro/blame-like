@@ -22,6 +22,9 @@ tags: [futuro, arma, safeguards, terreno]
 > - **Caixas guardadas:** o shader e a colisão **nunca** furam dentro da faixa de uma camada nem da caixa de uma única (até 6 perto, `uKeepMin/uKeepMax`). Sem isso, um feixe de 2,8 m de raio rente ao piso de uma camada abria o piso dela.
 > - O que o feixe atravessa morre (`kill(e, 'beam')`). Atirar sobe o alerta do setor e os Safeguards perto ouvem. Até 200 buracos ficam salvos no mundo (`slot.holes`); 12 mais perto vão ao shader.
 > - Teste `npm run check:beam` (8 itens: potência, rente à camada, camada, única de dentro e de fora, buraco atravessável a pé, morte, 5 tiros). Capturas: `--beamshot=N --beampower=P --beamlook=ms --beamhold`.
+> - **O corte maciço (2026-10-01):** as peças são cascas; com buracos por perto, os materiais de face única passam a desenhar as faces de trás, e o shader só as deixa aparecer quando o olhar passa por dentro de um buraco (`holeSeen`: distância entre o segmento do olhar e o eixo do buraco < raio). Pintadas como metal fosco escuro, sem janelas: pelo furo a peça parece cheia (a espessura da parede, o fundo do rasgo no chão).
+> - **Só o mundo leva buracos:** o descarte vale só para as malhas em lote (`USE_BATCHING` → `vHoleOn`). Corpo, mãos, arma, lanterna, seres, elevadores e vagões usam os mesmos materiais mas não são furados (antes, perto do cilindro, o próprio jogador sumia).
+> - Captura: `--beamshot=N --beampower=P --beamside=m` (0 = dentro do furo, no eixo). Com a janela da captura em segundo plano o jogo desenha poucos quadros e o feixe demora a apagar: capturar ~30 s depois do tiro.
 > - Achado no teste: a primeira versão parava o feixe a 0 m dentro de uma vila (as vilas são estruturas únicas e a caixa com 8 m de margem englobava quem estava dentro).
 
 

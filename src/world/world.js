@@ -536,6 +536,14 @@ export class World {
     this.safeguards.update(time, dt, g, this.origin);
     this.npcs.update(time, dt, g, this.origin);
     this.holes.update(g, this.origin, this.field);
+    // buracos por perto: as faces de trás das peças entram no desenho (o corte visto pelo furo)
+    const caps = this.holes.near.length > 0;
+    if (caps !== this._caps) {
+      this._caps = caps;
+      for (const set of [this.materials, this.lodMaterials]) {
+        for (const mat of Object.values(set ?? {})) if (mat.userData?.frontOnly) mat.side = caps ? THREE.DoubleSide : THREE.FrontSide;
+      }
+    }
     this.inscriptions.update(time, dt, g, this.origin, camera);
     this.particles.update(time, dt, g, this.origin, () => [...this.chunkLayer.allEmitters(), ...this.macroLayer.allEmitters()]);
 
