@@ -278,3 +278,8 @@ Por que as coisas estão como estão, em ordem.
 - **Travadas de chegada**: os circuitos de ronda (Safeguards, andarilhos) passaram para os workers de geração (`world.circuitAsync`; o Field é determinístico — o mesmo circuito); as obras dos Construtores e os terminais são montados um por quadro; a subida de chunks tem teto de 4 ms por quadro. Comparando lado a lado: Safeguards/NPCs 25–148 ms → fora dos picos; Construtores 34–68 → ≤ 5. Sobram picos de ~20–30 ms (primeiro terminal — compilação do material —, colisão dos corpos montando BVH).
 - **TypeScript sem build** (`npm run typecheck`, `tsconfig.json` com `checkJs`): 339 erros na primeira passada, nenhum bug real — campos criados fora do construtor (agora declarados nele), a interface DOM, JSDoc desatualizado. Zero erros.
 - Rapier ficou de fora: a física não é o gargalo (1,3 ms).
+
+## 2026-10-02 — Safeguard sobe atrás de você
+
+- Dois defeitos achados ao escrever o teste: caçando, se a distância não diminuía em 7 s ele desistia — esperando o elevador ela não diminui; procurando, parado contava como "procurou e não achou" — parado esperando o carro também. Com um elevador/escada em andamento (`e.vert`), nenhum dos dois conta.
+- Casos novos no `check:safeguards`: `subir:elevador` e `subir:escada` — procurando você 240 m acima (a ponte de cima de uma passagem), ele chega de elevador; sem elevador, pela escada de manutenção. (No teste a câmera voa atrás dele — a Peregrinação não deixa voar: liberado só nesse caso.)

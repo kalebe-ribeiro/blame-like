@@ -8,6 +8,8 @@
 //    parede     alerta: dois saem de uma parede (colmeia), caçam; escondido, eles voltam
 //               para a placa e somem
 //    chamado    no aberto: o de ronda mais perto vem pelo grafo
+//    subir      procurando você 240 m acima (a ponte de cima de uma passagem): ele
+//               pega o elevador grande e chega lá; e, sem elevador, sobe pela escada
 //    fiscal     nenhum corpo atravessou parede nem caiu
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -169,6 +171,59 @@ export async function runSafeguardTest(ctx) {
   await sleep(8000);
   const d1 = called ? left(called) : 0;
   report({ kind: 'chamado', ok: n === 1 && !!called && (d1 < d0 - 10 || called.sg.state !== 'summon'), why: called ? `faltavam ${Math.round(d0)} m de caminho → ${Math.round(d1)} m (${called.sg.state})` : 'ninguém veio' });
+
+  // ── subir: atrás de você, noutro nível ──
+  for (const how of ['elevador', 'escada']) {
+    let res = null;
+    if (ctx.ui.teleport('camada', 'camada')) {
+      controls.setMode('walk');
+      await sleep(SETTLE);
+      const g = here();
+      let car = null;
+      for (const c of world.elevators.cars.values()) if (c.def.kind === 'grand' && (!car || Math.hypot(c.def.x - g.x, c.def.z - g.z) < Math.hypot(car.def.x - g.x, car.def.z - g.z))) car = c;
+      const x = [...sg.byTerritory.values()][0];
+      if (car && x) {
+        const d = car.def;
+        const outages = world.elevators.outages;
+        world.elevators.outages = null; // (o setor pode estar apagado: aqui o elevador anda)
+        const from = how === 'elevador' ? new THREE.Vector3(d.x + 34, d.y0, d.z) : new THREE.Vector3(d.x + 6.5, d.y0, d.z + 34);
+        const top = new THREE.Vector3(d.x + 30, d.y1, d.z + 2);
+        // a câmera vai lá embaixo antes (o chão carrega) e depois segue o Safeguard voando —
+        // voando ninguém te percebe: ele só tem o último lugar onde te viu, lá em cima
+        // (a Peregrinação não deixa voar: só durante este caso)
+        const couldFly = controls.canFly;
+        controls.canFly = true;
+        controls.setMode('fly');
+        controls.setView({ pos: from.clone().sub(world.origin).setY(from.y - world.origin.y + 3), yaw: 0, pitch: -0.3, scale: 1 });
+        await waitFor(() => world.chunkLayer.isReadyAround(from, 40), 20);
+        await sleep(2500);
+        x.feet.copy(from);
+        world.entities.toNear(x, world.origin);
+        if (how === 'escada') for (const id of world.elevators.cars.keys()) x.vertBan.set(id, Infinity);
+        Object.assign(x.sg, { state: 'search', lastSeen: top.clone(), searchT: 0, sees: false, unseen: 0, prey: null });
+        const { followBody } = await import('../app/dev.js');
+        const stop = followBody(ctx, x);
+        let maxY = x.feet.y;
+        let tr = 0;
+        const ok = await waitFor(() => {
+          if (ctx.params.get('sgtrace') && performance.now() - tr > 1000) {
+            tr = performance.now();
+            console.warn(`BEING sg ${x.sg.state} t${x.tier} chão ${x.walker.grounded} busca ${x.sg.searchT?.toFixed(1)} vel ${x.speed.toFixed(2)} dy ${(top.y - x.feet.y).toFixed(1)} ${x.vert ? x.vert.kind + ':' + x.vert.phase : '-'} câmera a ${x.feet.distanceTo(here()).toFixed(0)} m ${controls.mode} ${ctx.wake.active ? 'DESMAIO' : ''}`);
+          }
+          maxY = Math.max(maxY, x.feet.y);
+          return Math.abs(x.feet.y - top.y) < 2 && x.walker.grounded;
+        }, 220);
+        stop();
+        controls.setMode('walk');
+        controls.canFly = couldFly;
+        world.elevators.outages = outages;
+        res = { ok, up: maxY - from.y, H: top.y - from.y, state: x.sg.state, vert: x.vert ? `${x.vert.kind} ${x.vert.phase}` : '-' };
+        x.vertBan.clear();
+        sg._lose?.(x);
+      }
+    }
+    report({ kind: `subir:${how}`, ok: !!res?.ok, why: res ? `subiu ${res.up.toFixed(0)} de ${res.H.toFixed(0)} m · ${res.state} · ${res.vert}` : 'sem elevador grande ou sem ronda' });
+  }
 
   clearInterval(watch);
   for (const x of sg.all()) {

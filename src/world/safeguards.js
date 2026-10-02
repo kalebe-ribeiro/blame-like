@@ -253,8 +253,10 @@ export class SafeguardSystem {
     if (S.unseen < 0) S.lastSeen.copy(feet); // recém-saído da parede: ainda sabe onde você está
     const target = S.sees ? feet : S.lastSeen;
     const hd = this.ents.walkToward(e, target, dt, origin, time);
-    // vê, mas não chega (outro nível, uma beirada no meio): desiste depois de um tempo
-    if (hd < S.bestD - 0.5) {
+    // vê, mas não chega (outro nível, uma beirada no meio): desiste depois de um tempo —
+    // menos esperando/andando num elevador ou subindo uma escada atrás de você (world/entities.js)
+    if (e.vert) S.stuckT = 0;
+    else if (hd < S.bestD - 0.5) {
       S.bestD = hd;
       S.stuckT = 0;
     } else if ((S.stuckT += dt) > 7) {
@@ -279,7 +281,8 @@ export class SafeguardSystem {
     if (e.tier === 'far') return this._lose(e);
     e.walker.speedScale = PATROL_SCALE * 1.6;
     const hd = this.ents.walkToward(e, S.lastSeen, dt, origin, time);
-    if (hd < 1.5 || e.speed < 0.2) {
+    // (esperando o elevador, ou na escada, não está "parado procurando")
+    if (!e.vert && (hd < 1.5 || e.speed < 0.2)) {
       // chegou (ou não passa): olha em volta
       S.searchT += dt;
       e.yaw += dt * 1.3 * Math.sin(S.searchT * 0.9);
