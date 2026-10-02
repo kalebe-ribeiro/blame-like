@@ -11,14 +11,10 @@
             "id": "ce4c8cf8abaf8e7f",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "13-Decisoes.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "13-Decisoes"
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Visualização em gráfico"
             }
           }
         ]
@@ -190,6 +186,10 @@
   },
   "active": "ce4c8cf8abaf8e7f",
   "lastOpenFiles": [
+    "04-Mundo-e-Geracao.md",
+    "Ideias/Gameplay/Ferramentas.md",
+    "Ideias/Futuro/Arma-do-Killy-revisao.md",
+    "13-Decisoes.md",
     "Ideias/Gameplay/Seres-como-o-jogador.md",
     "Copiar-glifos.md",
     "15-Plano-de-Implementacao.md",
@@ -197,13 +197,11 @@
     "11-Invariantes-e-Armadilhas.md",
     "12-Historico.md",
     "Ideias/Gameplay/Inventario-e-maos.md",
-    "13-Decisoes.md",
     "14-Universo-Blame.md",
     "Ideias/Gameplay/Plano-de-Gameplay.md",
     "Ideias/Futuro/NPCs-e-Safeguards.md",
     "Ideias/Futuro/Arma-do-Killy.md",
     "sedqO7UXs",
-    "04-Mundo-e-Geracao.md",
     "Ideias/Mundo/Enderecamento-da-Cidade.md",
     "Ideias/Gameplay/Copiar-inscricoes.md",
     "Ideias/00-Ideias.md",
@@ -217,8 +215,6 @@
     "Ideias/Gameplay/Modos-de-jogo.md",
     "12-Historico.md.tmp.14844.a138121caf75",
     "Ideias/Futuro",
-    "Ideias/Gameplay/Marcas-do-jogador.md",
-    "Ideias/Gameplay/Seeds-compartilhaveis.md",
-    "Ideias/Gameplay/Modo-expedicao.md"
+    "Ideias/Gameplay/Marcas-do-jogador.md"
   ]
 }

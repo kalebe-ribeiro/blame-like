@@ -1,101 +1,172 @@
 ---
-status: futuro — pronto para retomar (corte de verdade; potência pela carga; efeitos gravitacionais)
-prioridade: futura
+status: futuro — plano v3 (2026-10-02), revisado; aguardando 4 confirmações do usuário
+prioridade: próxima
 tags: [futuro, arma, safeguards, terreno]
 ---
 
-# A arma do Killy — emissor de feixe gravitacional (fase 6)
+# A arma do Killy — emissor de feixe gravitacional (plano v3)
 
-> ## Preparado para retomar (2026-10-02) — o corte de verdade (CSG)
->
-> A primeira versão (buracos por shader) foi retirada a pedido do usuário: não convencia. Os requisitos dele continuam: **não atravessa camada intransponível nem estrutura única**; **potência pelo tempo segurando o gatilho** — sem níveis (alcance, raio do feixe e gasto crescem juntos com a carga); **≥ 5 tiros carregados ao máximo com a célula cheia**; **efeitos visuais dramáticos**, coerentes com um feixe *gravitacional*. Retomando, o furo é **geometria de verdade**.
->
-> **Viabilidade medida** (`node tools/csg-spike.mjs [raio] [chunks]`, `three-bvh-csg` 0.0.17 — a 0.0.18 exige three ≥ 0.179): chunks reais do mundo, um cilindro atravessando, cada peça que ele cruza recortada (peça − cilindro).
-> - 11 chunks, raio 1,4 m: 226 peças perto do feixe, 97 cortadas, **0 falhas**; ~70–100 ms por chunk com a máquina livre (pior ~250 ms; com outros testes rodando na máquina, até 2 s — medir de novo antes de fechar números). Tudo no worker de geração: o quadro não trava.
-> - Conferência: **nenhum triângulo dentro do cilindro** fora das lajes das camadas (`barrier`) — que a arma não corta.
-> - As peças cortadas ganham triângulos (8,3 mil → 22 mil nas cortadas): aceitável.
->
-> **Como fica (o plano):**
-> 1. Da versão retirada (`git show 458d019:src/app/beam.js`) voltam: o emissor no inventário e nas mãos, atirar em Q/clique/RT, a morte do que está no caminho, o alerta, o "não atravessa camada nem única" (`beamReach`). **Saem**: os níveis de potência (B/roda/R3 e a tabela) e tudo o que era buraco de shader. A potência é a **carga** (abaixo).
-> 2. Os cortes ficam no mundo salvo: cilindros GLOBAIS (a, b, r), como antes.
-> 3. A geração: o pedido de cada chunk leva os cilindros que tocam a caixa dele; em `ChunkBuilder.add` cada peça que um cilindro cruza sai recortada (CSG) — **nunca** as lajes das camadas, as peças das estruturas únicas, nem dentro das "caixas guardadas" (a faixa das camadas, a caixa das únicas). A `three-bvh-csg` vai para o worker como a `three-mesh-bvh` (`tools/vendor-bvh.mjs` → um vendor para ela também).
-> 4. O tiro: os chunks cruzados (perto, macro; os LOD podem ficar sem o furo de longe) são pedidos de novo; a malha velha fica até a nova chegar (sem piscar).
-> 5. A colisão vem da malha nova (com a árvore já montada no worker) — sem truque nenhum: corpo, mãos, seres e vagões nunca somem.
-> 6. Teste `check:beam` de volta, conferindo a geometria: o raio de colisão passa pelo furo, a parede do corte existe (um raio de dentro do furo, para o lado, bate a ~r do eixo), as camadas e únicas ficam inteiras, 5 tiros com carga máxima; a carga (segurar X s → potência esperada), soltar cedo, cancelar.
->
-> ### A potência é a carga (decidido pelo usuário, 2026-10-02)
->
-> Sem níveis: **segurar o gatilho carrega; soltar atira.** A potência `k` (0..1) cresce com o tempo segurando e tudo varia junto, contínuo:
->
-> | | toque (k ≈ 0) | carga cheia (k = 1) |
-> |---|---|---|
-> | alcance | ~25 m | 400 m |
-> | raio do feixe | 0,4 m | 2,8 m |
-> | gasto da célula | ~3% | 19% (5 tiros com a célula cheia) |
-> | coice / tremor / alerta | pequenos | fortes |
->
-> - **Curva**: cresce rápido no começo e devagar no fim (ex.: `k = 1 − (1 − t/T)²`, `T ≈ 2,5 s` até a carga cheia) — um toque ainda é um tiro útil; a carga cheia pede compromisso.
-> - **Segurar além do cheio** mantém a carga (o emissor "zumbe" no limite, a mão treme); não gasta mais por segurar.
-> - **O gasto** é descontado no disparo, pela carga real; se a célula não tem o bastante, a carga **para** onde a célula alcança (o emissor engasga, aviso na telinha do aparelho) — atira com o que há.
-> - **Cancelar** a carga sem atirar: o outro botão da mão / Esc / B do controle (definir na hora — o padrão do controle precisa de uma tecla para isso).
-> - **Controle**: RT é analógico, mas a carga é pelo tempo segurando (não pela pressão do gatilho) — igual ao teclado e ao mouse (REGRA do controle: o mesmo jogo com qualquer um).
-> - Carregando, o corpo anda devagar (como com uma carga pesada) e não corre nem pula.
->
-> ### Os efeitos — um feixe GRAVITACIONAL (decidido pelo usuário, 2026-10-02: "mais dramáticos")
->
-> A ideia que guia tudo: o emissor **dobra o espaço**. Carregar puxa o mundo para a boca da arma; o tiro é um colapso em linha reta; depois, o que sobra é calor e poeira. Dentro da direção de arte ([[02-Direcao-de-Arte]]): nada de neon, nada mágico — luz branca e quente, distorção, poeira, metal fundido; a luz sai da própria arma e do metal em brasa (há sempre uma fonte).
->
-> **Carregando** (cresce com `k`):
-> - **Lente gravitacional na boca do emissor**: um pós-processamento de distorção radial em volta do ponto da boca na tela — o mundo atrás "escorre" para dentro, cada vez mais forte; um anel escuro fino no centro.
-> - **O ar sendo puxado**: a poeira em volta (as partículas que já existem) corre para a boca; pequenos detritos, pingos, faíscas soltas vêm junto; cabos e panos perto inclinam para lá (se der sem custo).
-> - **A arma**: as bobinas acendem do fundo para a frente, uma de cada vez, em branco-quente; a mão treme; leve tremor da câmera e vibração do controle subindo.
-> - **Som**: um zumbido grave que sobe de altura, o ar "sugando", estalos de carga estática.
->
-> **O disparo**:
-> - **O feixe**: um núcleo branco quase cegante com um halo largo e quente, que some em ~0,4 s (mais grosso e mais longo com a carga). Ao longo dele, **a distorção de espaço** (a mesma lente, agora em linha): o mundo em volta do feixe ondula e se fecha por um instante.
-> - **A luz do tiro** ilumina o caminho: várias luzes ao longo do feixe por uma fração de segundo — as paredes do corredor aparecem.
-> - **O colapso**: onde o feixe corta, um instante de "sucção" (a poeira e a névoa entram no furo) e então a **onda de choque** — um anel de poeira e ar que se expande a partir da linha cortada, empurrando a névoa (um anel de partículas e uma ondulação na névoa).
-> - **Coice**: a câmera é empurrada para trás e para cima, proporcional à carga; na carga cheia, um passo para trás de verdade (o corpo recua).
-> - **Som com atraso pela distância**: o estalo seco na hora; o estrondo do colapso chega depois, conforme a distância de cada ponto cortado (a 340 m/s); rangidos de metal depois.
->
-> **Depois**:
-> - **As bordas do corte em brasa**: as faces novas da geometria (o CSG marca quais são — o grupo do cilindro) nascem laranja-incandescentes e esfriam até o metal escuro em ~10–20 s (emissão por vértice/atributo, decaindo com o tempo do tiro). Elas mesmas iluminam um pouco (uma luz fraca enquanto quentes).
-> - **Pedaços**: detritos caem das bordas (partículas sólidas com física simples, que somem no chão); faíscas pingando das bordas quentes.
-> - **Poeira assentando** dentro do túnel por vários segundos.
->
-> **Viabilidade dos efeitos**: a distorção é um passe de pós (o `render/pipeline.js` já tem passes de tela); a poeira e os detritos usam o sistema de partículas que existe; as bordas em brasa saem do próprio CSG (grupos) + um atributo de tempo por tiro no material; as luzes temporárias usam o sistema de luzes. Medir no `npm run profile` (o tiro não pode derrubar o fps por mais que um instante).
+> Plano reescrito depois da [[Arma-do-Killy-revisao|revisão crítica]] (27 falhas). Cada falha está marcada **(R n)** onde é resolvida. A primeira versão (buracos por shader) foi feita e retirada; o histórico está no fim.
 
-> **Decidido (2026-09-30):** quando a arma for implementada, o buraco será feito pelo **método "de shader"** descrito abaixo (cilindros salvos + `discard` + borda pintada + colisão ignorando). Nada de CSG. Continua em aberto: se a arma existe mesmo (combate × só fuga), o que ela não fura, alcance, custo.
+## 0. Requisitos (do usuário)
 
-> Discussão de 2026-09-30. O usuário perguntou quão difícil seria implementar a arma do Killy (*Blame!*, [[14-Universo-Blame]]) **capaz de destruir terreno e obstáculos, deixando um buraco circular por onde o feixe passa**. Registrado para a fase 6 ("combate ou só fuga" — [[15-Plano-de-Implementacao]]).
+- Não atravessa **camada intransponível** nem **estrutura única**.
+- **Potência pelo tempo segurando o gatilho**, sem níveis: alcance, raio do feixe e gasto crescem juntos.
+- **≥ 5 tiros com carga cheia** com a célula cheia.
+- Furo **de verdade** e **efeitos dramáticos** coerentes com um feixe **gravitacional**.
 
-## Dificuldade estimada (0–100)
+## 1. Pendente de confirmação do usuário (decisões de jogo)
 
-| parte | nota | comentário |
+| # | proposta | por quê |
 |---|---|---|
-| a arma em si (modelo, carga, recuo, clarão, feixe na névoa, estrondo, gasto de energia, botão no teclado **e no controle**) | ~15 | igual à lanterna e ao aparelho: objeto preso à câmera |
-| buraco "de shader" (**escolhido**) | ~60 no total | ver abaixo |
-| buraco de geometria de verdade (CSG) | ~85 no total | recortar a malha de cada chunk atingido num worker; o feixe atravessa quilômetros → dezenas de chunks por tiro, engasgos; e todo chunk recarregado teria de reaplicar os cortes |
+| C1 | **A megaestrutura é ancorada**: o corte não derruba estruturas; o que fica solto de verdade (fragmentos sem contato) cai como detrito (ver §3.4) | derrubar estruturas é outro jogo (física de colapso); "nada flutua" fica garantido pelo detrito |
+| C2 | **Carregando, anda a 60%**, sem correr nem pular | compromisso: carregar é se expor — num jogo de fuga, escolher atirar custa |
+| C3 | **Dentro das estruturas únicas nada é cortado** (paredes E conteúdo: casas das vilas, consoles) — o feixe mata o que atravessa, mas não fura | as únicas são o "sagrado" do mapa (pistas, terminais, vilas) |
+| C4 | **Controle**: RT (7) atira; **segurando RT, o LT (6) cancela** a carga (correr está desligado enquanto carrega, então o LT fica livre); a lanterna do modo Livre vai do 7 para o **R3 (10)**, o único botão livre. Teclado: **Q ou clique esquerdo** atira; **clique direito ou Shift** cancela | **(R 13)** — o controle só tem o 10 livre; o 13 é o sensor |
 
-Por que o buraco é o difícil: o mundo **não é feito de blocos**. Cada chunk é gerado por fórmula (`Field`) e juntado numa malha só por material (`BatchedMesh`). Não existe "o pedaço de parede" para apagar.
+## 2. Ordem de trabalho — o risco primeiro **(R 25)**
 
-## O buraco "de shader" (o método escolhido)
+| fase | o quê | portão para seguir |
+|---|---|---|
+| **F0** | regras do mundo (§3), testes novos vazios (§9), limpar esta nota | — |
+| **F1 — protótipo de risco** (sem efeitos, sem carga: um tiro "cheio" por tecla de dev) | corte na geração com proteção por marca, cache, ordem de refazer, grafo/luzes/objetos sabendo do corte, fragmentos soltos → detrito | **medições do §8 dentro do orçamento**, geometria fora do furo preservada, `check:beam` (parte F1) verde. Se não passar: parar e decidir com o usuário |
+| **F2 — jogo** | emissor na mão, carga, estados, controle, gasto, morte, alerta, som básico | `check:beam` (F2) e `check:pad` verdes |
+| **F3 — efeitos** | §7, cada um com orçamento medido | `npm run profile` caso `tiro` dentro do §8 |
+| **F4 — acabamento** | salvamento, migração, LOD, testes de recarga | todos os checks |
 
-A ideia: **não cortar a geometria — esconder o que está dentro do buraco, e fazer o corpo ignorar o que está escondido.**
+## 3. Regras do mundo
 
-1. **O tiro vira um cilindro.** Cada disparo guarda só três coisas: de onde saiu, a direção, o raio. É um cilindro invisível atravessando a Cidade (ou uma cápsula, com o fim onde o feixe parou).
-2. **Os shaders apagam o que está dentro.** Todo material, ao pintar cada pixel, pergunta: "este ponto está dentro de algum cilindro de tiro?" Se está, o pixel não é desenhado (`discard`). Resultado: um furo redondo e limpo em tudo o que o feixe atravessou — paredes, lajes, vigas, dutos —, visto de qualquer ângulo.
-3. **A borda do corte.** As paredes são caixas **ocas** (só a casca). Sem cuidado, o furo mostraria o vazio de dentro da caixa. O truque: desenhar também o lado de dentro das caixas e pintá-lo como a borda do corte (escura, queimada, levemente incandescente logo depois do tiro). Olhando pelo furo, parece que a parede é maciça e foi fundida.
-4. **O corpo atravessa.** A colisão (`world/collision.js`) passa a ignorar os pontos dentro dos cilindros — dá para passar pelo buraco, e cair por ele.
-5. **A Cidade lembra.** Os cilindros ficam salvos no mundo (o `WorldState` de mudanças que já existe). Voltar ao lugar = o buraco continua lá. É determinístico: o mundo é refeito pela fórmula e o buraco é refeito pelo cilindro salvo.
+### 3.1 O que nunca é cortado — por MARCA, não por caixa **(R 8)**
+A geração marca as peças protegidas na hora de criá-las (`B.protect(true)` … `B.protect(false)` em volta): as **lajes das camadas**, a **casca e o conteúdo das estruturas únicas** (C3), e a **torre da passagem** (pilares e cabeçote do elevador grande — sem eles a travessia entre camadas morre). O CSG pula as peças marcadas. O feixe continua parando nas camadas e nas únicas pela conta analítica (`beamReach`, da versão retirada).
 
-O que pesa:
-- o `discard` entra em **todos** os shaders — inclusive a oclusão de ambiente (SSAO), o reflexo da água, as silhuetas colossais e o LOD distante;
-- há um limite de cilindros ativos por quadro (uns 32, os mais próximos);
-- `discard` custa um pouco de desempenho (desliga otimizações de profundidade da placa de vídeo).
+### 3.2 A estrutura (C1) **(R 5)**
+- Peças cortadas no meio continuam presas aos vizinhos (vigas viram balanços) — a Cidade é superdimensionada.
+- **Fragmentos soltos**: depois do CSG, cada peça vira componentes conexos; um componente que não toca nenhuma outra peça (caixa expandida 5 cm) e é menor que 8 m³ **sai da malha e vira detrito** (§7) — nada flutua.
+- **Trilho do vagão cortado**: a linha para no trecho (como num apagão — o relógio da linha para) e um vagão não entra num trecho cortado; **cabos/guia de um elevador cortados**: o elevador para de vez (como sem energia) — os seres já sabem desistir de elevador/vagão parado.
+- **Escadas de marinheiro**: os degraus cortados somem; o Walker já para onde a escada acaba.
 
-## A decisão de jogo (maior que a técnica)
+### 3.3 O que estava preso ao que foi cortado **(R 6)**
+Como o chunk é **refeito** com os cortes, o que nasce na geração já sai certo: `B.lamp` não cria a luminária (nem a luz) se a fixação cai num corte; o mesmo para gotas/vapor (`B.emit`), tomadas (`B.socket`). Fora da geração:
+- **Terminais, inscrições, obras dos Construtores, subestações**: consultam `Field.cutAt(x, y, z)` ao montar e somem/apagam se cortados.
+- **Grafo dos seres** (`gen/nav.js`): uma aresta cujo caminho passa a < r + 0,5 m do eixo de um corte é **inválida**; uma plataforma com o ponto de pé dentro de um corte sai do grafo; as pontes até os elevadores e as escadas idem. Rondas e andarilhos: o circuito memorizado do território é refeito quando um corte o toca.
+- **Field compartilhado**: os cortes (lista GLOBAL) vão para o Field do jogo e de cada worker (`Field.setCuts`) — a mesma regra nos dois lados.
 
-Se a arma fura tudo, as **camadas intransponíveis** deixam de ser intransponíveis: um tiro para baixo atravessa 72 m de laje e desfaz a lógica das passagens, dos elevadores e das pistas que trocam de camada. Recomendação: **camadas e estruturas únicas indestrutíveis**, alcance limitado. No mangá a megaestrutura resiste até certo ponto.
+### 3.4 Limites **(R 10)**
+- Carga mínima para disparar: **0,25 s** (antes disso, um estalo seco — sem tiro, sem gasto).
+- Intervalo entre tiros: **0,8 s**.
+- Raio mínimo do corte: **0,6 m** (um toque fura algo que um corpo atravessa abaixado? não — passa só um braço; é um tiro de "teste").
 
-Outras perguntas para a fase 6: quanta energia um tiro gasta; se atirar aumenta o alerta dos Safeguards (o barramento de eventos já alimenta isso na fase 5); se a arma existe no modo Livre.
+## 4. O corte (CSG)
+
+### 4.1 Onde
+`three-bvh-csg` **0.0.17** (a 0.0.18 pede three ≥ 0.179 — **(R 11)** ao subir o three, sobe junto; anotado em [[11-Invariantes-e-Armadilhas]]) no worker, por uma cópia gerada como a da `three-mesh-bvh` (`tools/vendor.mjs` generalizado para as duas, mesma versão de `three-mesh-bvh`).
+
+### 4.2 Peça por peça, com conferência **(R 2)**
+- Em `ChunkBuilder.add`, uma peça não protegida que algum corte do chunk cruza (pré-filtro: esfera da peça × segmento do corte) é recortada por **todos** os cortes que a cruzam, numa passada (os cilindros juntos num pincel).
+- **Peças fechadas** (caixas, cilindros fechados — a geração marca `closed`): CSG completo, com as faces do corte.
+- **Peças abertas** (`open: true`, planos, fitas): **sem CSG** — só se removem os triângulos dentro do cilindro e se partem os da borda (recorte de triângulo por cilindro). Nunca some nada de fora.
+- **Conferência obrigatória no protótipo** (o `csg-spike` v2): para cada peça, a área FORA do cilindro antes × depois tem de bater (± 0,5%); nada dentro; faces novas só sobre a superfície do cilindro.
+
+### 4.3 Cache — o custo não se repete **(R 1)**
+- A saída de um chunk cortado (as malhas por material, já fundidas, com a árvore de colisão serializada) vai para o **IndexedDB**, com a chave `seed · camada · nível · chunk · hash(lista de cortes do chunk)`.
+- Carregar um chunk: se a chave bate, **nada de CSG** — só ler. Atirar: só os chunks que o corte novo cruza mudam de chave.
+- Teto de segurança: 64 cortes por chunk (com os limites do §3.4, inatingível jogando; se atingido, o emissor engasga ali — aviso no aparelho).
+
+### 4.4 Ordem de refazer e a disputa com o streaming **(R 3)**
+- Os chunks cruzados são pedidos **do mais perto para o mais longe** (o mesmo sentido da detonação, §7.2).
+- No máximo **1 worker** de cada vez fica com cortes (os outros continuam gerando o mundo); prioridade acima dos chunks novos.
+- **LOD** **(R 7)**: os chunks de longe (LOD1/LOD2) cruzados também são refeitos (peças mais simples, mais baratos), por último; o túnel aparece de longe.
+
+### 4.5 Os lotes de desenho **(R 9)**
+Um chunk com cortes cresce (~2,6× nas peças cortadas). Ao refazer, se não couber na vaga, ele vai para uma página nova com folga de 50% em vez de realocar a página inteira (medir no protótipo).
+
+### 4.6 O intervalo até o furo aparecer **(R 4)**
+- **Sem buraco de shader provisório** (é a classe de bug que tirou a primeira versão).
+- O atraso é **escondido pela própria física do feixe** (§7.2, fiel ao *Blame!*): o tiro é uma linha fina e instantânea; a **detonação** (o clarão, a poeira, a onda) corre pela linha do mais perto ao mais longe a ~1500 m/s e **o furo aparece com ela**. Orçamento: o furo perto em ≤ 300 ms (p95) — a detonação perto acontece entre 50 e 300 ms.
+- Durante esse tempo a colisão ainda é a antiga (por 0,3 s ninguém atravessa a parede ainda inteira — certo); um ser atingido morre na hora, e o corpo só cai quando a malha nova chega (a poeira cobre).
+
+### 4.7 Salvamentos **(R 12)**
+- Os cortes ficam em `slot.cuts` (nome novo). O `slot.holes` da versão retirada é **ignorado** (e apagado ao salvar).
+- Compartilhar a seed (código) **não** leva os cortes — anotar.
+
+## 5. O jogo
+
+### 5.1 O emissor
+Uma ferramenta do inventário, na mão pela regra das mãos (da versão retirada: `git show 458d019:src/app/beam.js` — o modelo, o encaixe na mão, `beamReach`, a morte do que está no caminho, o alerta e os Safeguards ouvindo). Nos dois modos; no Livre não gasta.
+
+### 5.2 A carga **(R 15, 17)**
+- `t` = tempo segurando. Abaixo de 0,25 s: não atira. Acima: `u = (t − 0,25) / 2,25` (0..1, até 2,5 s), `k = 1 − (1 − u)²`.
+- Tudo contínuo com `k`: alcance 30 → 400 m · raio 0,6 → 2,8 m · gasto 3 → **18%** · coice, tremor, alerta.
+- **5 tiros cheios** = 90% da célula — sobram 10% para a lanterna acesa durante as 5 cargas (≈ 12 s ≈ 1%).
+- Segurar além do cheio mantém a carga (sem gastar mais). Se a célula não tem o bastante, a carga para onde ela alcança (o aparelho avisa).
+- **Como o jogador sabe**: as 5 bobinas acendem em sequência (emissivas — visíveis no escuro), o zumbido sobe de altura, a vibração do controle sobe; o aparelho mostra o gasto que o tiro terá.
+
+### 5.3 Estados durante a carga — o que cancela (sem tiro, sem gasto) **(R 14)**
+Abrir qualquer painel (inventário, conversa, mapa, menu, transporte), desmaio/captura, agarrar quina / pendurar / subir quina, montar ou subir escada, a mão trocar de ferramenta, a célula zerar, morrer, trocar de mundo. **Soltar o gatilho depois de um cancelamento não atira** (precisa soltar e apertar de novo). Carregar no ar é permitido.
+
+### 5.4 Movimento (C2) **(R 16)** · Controle (C4) **(R 13)**
+Ver §1.
+
+## 6. Testes **(R 26)** — `check:beam`
+| caso | o que confere |
+|---|---|
+| geometria fora | a área fora do furo preservada (peça por peça) — nada some indevidamente |
+| furo | o raio de colisão atravessa; a parede do corte existe (raio de dentro para o lado bate a ~r) |
+| protegidos | camadas, únicas e a torre da passagem inteiras |
+| solto | nenhum fragmento sem contato na malha (viraram detrito) |
+| luzes | nenhuma luz cuja fixação está num corte |
+| grafo | um ser com destino do outro lado de uma ponte cortada não pisa no vão (outro caminho ou "sem caminho") |
+| vagão/elevador | trilho cortado: a linha para antes; cabo cortado: o elevador para |
+| salvar/recarregar | os cortes voltam; a recarga lê do cache (0 CSG) |
+| carga | 0,2 s não atira; 1 s → k esperado; 2,5 s → cheio; 5 tiros cheios por célula |
+| estados | cada cancelamento do §5.3 |
+| desempenho | os números do §8 (no `npm run profile`, lugar `tiro`) |
++ `check:pad` (o mapeamento C4 pelo controle).
+
+## 7. Os efeitos — feixe gravitacional
+
+### 7.1 Princípios
+- O emissor **dobra o espaço**: carregar puxa o mundo para a frente da arma; o tiro é uma linha; o colapso vem depois, correndo pela linha.
+- Direção de arte ([[02-Direcao-de-Arte]]): branco e quente, distorção, poeira, metal em brasa; sem neon, nada mágico; toda luz tem fonte (a arma, o feixe, o metal quente).
+
+### 7.2 Fidelidade ao *Blame!* **(R 24)**
+No mangá, o que marca o emissor é a **linha fina** e a **detonação retardada** gigante, deixando um túnel reto até onde a vista alcança. Então: o tiro é um **traço fino e branco** (não um "laser" gordo), instantâneo; a **detonação** corre pela linha (≈ 1500 m/s), com clarão, onda de choque e o furo aparecendo junto (§4.6).
+
+### 7.3 Carregando
+- **Lente gravitacional** **(R 18)**: um ponto de atração 2–3 m à frente da arma, na mira (perto do centro da tela, não no canto onde fica a boca). Passe de distorção **depois do TAA** (não entra no histórico — sem fantasmas), com **máscara de profundidade**: nada a menos de 1,2 m do olho é distorcido (as mãos e a arma ficam limpas). Força máxima limitada + opção nas configurações ("distorções") para quem enjoa.
+- **A poeira puxada** **(R 19)**: o shader da poeira (`createDust`, já recebe `uCam`) ganha um atrator (posição + força): as partículas perto escorrem para o ponto.
+- **A arma**: as bobinas acendem, a mão treme, tremor leve da câmera, vibração subindo.
+- **Som**: zumbido grave subindo, ar sendo sugado, estalos.
+
+### 7.4 O disparo
+- **O traço**: núcleo fino quase cegante + halo estreito, ~0,15 s; ao longo dele, a distorção em linha por um instante.
+- **A luz do tiro sem roubar luminárias** **(R 20)**: uma **luz-linha** própria no shader das superfícies (2 uniforms: o segmento e a intensidade) — ilumina o corredor pelo caminho do feixe sem usar nenhuma das 16 vagas de luz.
+- **A detonação** (correndo pela linha): um clarão curto em cada ponto; **a onda de choque como malha transitória** **(R 22)** — anéis de poeira translúcida que se expandem a partir da linha (não mexe na conta da névoa); sucção rápida antes (a poeira entra).
+- **Coice**: câmera empurrada para trás/cima conforme `k`; na carga cheia, o corpo recua um passo.
+- **Som com atraso**: o estalo na hora; o estrondo de cada trecho chega pela distância (340 m/s); rangidos depois.
+
+### 7.5 Depois
+- **Bordas em brasa** **(R 21)**: as faces criadas pelo corte (o grupo do cilindro no CSG) vão para um **material próprio `cut`** (um lote só dele): o shader lê os últimos 8 cortes (eixo, raio, instante — uniforms) e brilha laranja → vermelho → metal escuro em ~15 s conforme o tempo do corte mais perto. Nenhum atributo novo nos outros materiais. Enquanto quente, emissivo (é a própria fonte da luz).
+- **Detritos** **(R 19, 5)**: os fragmentos soltos (§3.2) e lascas das bordas como partículas sólidas cinemáticas: no nascimento, **um** raio para baixo acha onde vão pousar (sem raio por quadro); caem com gravidade, quicam uma vez, ficam no chão e somem longe. Faíscas pingando das bordas quentes.
+- **Poeira assentando** no túnel por alguns segundos.
+
+## 8. Orçamento (medido com a máquina livre — sem outro Electron) **(R 3, 23)**
+
+| medida | limite |
+|---|---|
+| furo visível perto (< 100 m), do disparo | p95 ≤ 300 ms |
+| tiro inteiro (todos os chunks, LOD incluso) | p95 ≤ 1,5 s |
+| tempo de worker por tiro cheio | p95 ≤ 800 ms |
+| recarregar um chunk cortado (cache) | 0 CSG; ≤ o de um chunk normal + 10% |
+| refazer um chunk com 50 cortes | ≤ 2 s (worker) |
+| carregando (efeitos) | ≤ 1 ms CPU · ≤ 1,5 ms GPU por quadro |
+| quadro do disparo | ≤ +8 ms na linha principal |
+| depois dos efeitos | fps de volta ao de antes em ≤ 3 s |
+| streaming enquanto se atira | nenhum chunk do caminho do jogador atrasado > 1 s |
+
+Protocolo: 200 tiros em 8 biomas, `p50/p95/p99`, no `npm run profile` (lugar `tiro`) e num `tools/csg-bench.mjs` (worker isolado).
+
+## 9. Histórico da decisão **(R 27)**
+- 2026-09-30: discutido; escolhido o método "de shader" (cilindros + `discard` + colisão ignorando).
+- 2026-10-01: implementado assim (potência em 5 níveis); bugs: a colisão furava em volta (vetor temporário reaproveitado), peças ocas pelo furo, o corpo sumindo perto do cilindro.
+- 2026-10-02: retirado a pedido do usuário ("muito bugado"). Decidido: corte de verdade (CSG). Viabilidade inicial (`tools/csg-spike.mjs`): 0 exceções, nada dentro do furo — mas sem conferir a geometria de fora e com a máquina ocupada (ver a revisão). Potência pela carga e efeitos gravitacionais pedidos pelo usuário. Revisão crítica (27 falhas) → este plano v3.

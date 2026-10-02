@@ -1,9 +1,11 @@
 ---
-status: revisão crítica do plano (2026-10-02)
+status: revisão crítica do plano (2026-10-02) — tratada no plano v3
 tags: [futuro, arma, revisao]
 ---
 
 # Revisão crítica do plano da arma de Killy
+
+> Todas as 27 falhas foram tratadas no [[Arma-do-Killy|plano v3]] (marcadas lá como **(R n)**). Quatro pontos viraram decisões de jogo para o usuário confirmar (C1–C4).
 
 Pedido do usuário: revisar [[Arma-do-Killy]] "como um agente completamente diferente", buscando falhas, erros e decisões fracas (ele vai comparar com a análise de outros três agentes). Conferido no código onde dava. Gravidade: **[G]** grave (o plano não fecha sem resolver) · **[M]** média · **[L]** leve.
 
