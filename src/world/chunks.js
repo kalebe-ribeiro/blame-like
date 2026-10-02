@@ -26,13 +26,18 @@ export class WorkerPool {
     this.queue = [];
     this.inflight = new Map();
     this.nextId = 1;
-    for (let i = 0; i < count; i++) {
+    const spawn = () => {
       const w = new Worker(new URL('./chunkWorker.js', import.meta.url), { type: 'module' });
       w.onmessage = (e) => this._done(w, e.data);
       w.onerror = (e) => console.error('chunkWorker:', e.message);
       this.workers.push(w);
-      this.idle.push(w);
-    }
+      return w;
+    };
+    for (let i = 0; i < count; i++) this.idle.push(spawn());
+    // os cortes do emissor têm um worker só deles: o furo perto não espera o streaming
+    // (um chunk pesado sendo gerado) — um corte de cada vez, os outros na fila dele
+    this.cutWorker = spawn();
+    this.cutIdle = true;
   }
 
   submit(payload, owner, cb) {
@@ -48,13 +53,20 @@ export class WorkerPool {
   }
 
   pump() {
-    if (!this.queue.length || !this.idle.length) return;
+    if (!this.queue.length || (!this.idle.length && !this.cutIdle)) return;
     for (const j of this.queue) j.priority = j.owner.priorityOf(j);
     this.queue.sort((a, b) => a.priority - b.priority);
-    while (this.queue.length && this.idle.length) {
-      // (no máximo um pedido de corte de cada vez — os outros workers seguem gerando o mundo)
-      const cutting = [...this.inflight.values()].some((j) => j.payload.cutJob);
-      const at = cutting ? this.queue.findIndex((j) => !j.payload.cutJob) : 0;
+    if (this.cutIdle) {
+      const at = this.queue.findIndex((j) => j.payload.cutJob);
+      if (at >= 0) {
+        const job = this.queue.splice(at, 1)[0];
+        this.cutIdle = false;
+        this.inflight.set(job.id, job);
+        this.cutWorker.postMessage({ jobId: job.id, ...job.payload });
+      }
+    }
+    while (this.idle.length) {
+      const at = this.queue.findIndex((j) => !j.payload.cutJob);
       if (at < 0) break;
       const job = this.queue.splice(at, 1)[0];
       const w = this.idle.pop();
@@ -64,7 +76,8 @@ export class WorkerPool {
   }
 
   _done(w, data) {
-    this.idle.push(w);
+    if (w === this.cutWorker) this.cutIdle = true;
+    else this.idle.push(w);
     const job = this.inflight.get(data.jobId);
     this.inflight.delete(data.jobId);
     if (data.error) console.error('geração falhou:', data.error);
@@ -271,8 +284,15 @@ export class ChunkLayer {
         opts.owner ?? this,
         (data) => {
           if (opts.cutJob) entry.recutMs = performance.now() - t0;
-          if (cuts.length && data.meshes) cachePut(cutKey(this.seed, this.layer, this.level, entry.cx, entry.cy, entry.cz, cuts), data);
+          const key = cutKey(this.seed, this.layer, this.level, entry.cx, entry.cy, entry.cz, cuts);
+          if (cuts.length && data.meshes) cachePut(key, data);
           this._received(entry, data);
+          // pedido sem as caixas das peças (a lista grosseira): com elas agora, a chave de
+          // quando ele voltar é a precisa — o mesmo resultado vai para ela também
+          if (cuts.length && data.meshes && this.chunks.get(entry.key) === entry) {
+            const precise = cutKey(this.seed, this.layer, this.level, entry.cx, entry.cy, entry.cz, this.cutsFor(entry.cx, entry.cy, entry.cz));
+            if (precise !== key) cachePut(precise, data);
+          }
         },
       );
       entry.job.entry = entry;

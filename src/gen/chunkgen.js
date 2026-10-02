@@ -51,7 +51,7 @@ export class ChunkBuilder {
     /** @type {number|undefined} a aresta do chunk (m) — as partes que encostam na borda ficam (seguras pelo vizinho) */
     this.size = undefined;
     this.protect = 0; // > 0: as peças adicionadas agora não se cortam (camadas, únicas, a torre da passagem)
-    this.cutStats = { cut: 0, ms: 0 };
+    this.cutStats = { cut: 0, ms: 0, slow: [] };
     this.cutPieces = []; // as peças recortadas (os fragmentos soltos são procurados no fim)
     /** @type {number[]} as caixas (GLOBAIS, 6 números cada) das peças que podem ser cortadas */
     this.boxes = [];
@@ -138,8 +138,11 @@ export class ChunkBuilder {
       const t0 = performance.now();
       const r = cutPiece(geom, this.cutsL, { maxEdge: this.lod ? 1.5 : 0.5 });
       if (r.mode !== 'none') {
+        const ms = performance.now() - t0;
         this.cutStats.cut++;
-        this.cutStats.ms += performance.now() - t0;
+        this.cutStats.ms += ms;
+        // (as peças lentas, para medir: material, triângulos, ms, modo)
+        if (ms > 8) this.cutStats.slow.push(`${mat}:${(geom.index ? geom.index.count : geom.attributes.position.count) / 3}t:${ms.toFixed(0)}ms:${r.mode}`);
         if (r.kept) (this.parts[mat] ??= []).push(r.kept);
         if (r.caps) (this.parts.cut ??= []).push(r.caps);
         this.cutPieces.push({ mat, kept: r.kept, caps: r.caps });

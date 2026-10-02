@@ -143,6 +143,49 @@ function splitGroups(result) {
   return { kept: build(parts.kept), caps: build(parts.caps) };
 }
 
+/** Acima disto (triângulos), a peça é separada em partes antes do CSG (cutPiece). */
+const SPLIT_TRIS = 200;
+
+/** Os triângulos dados (índices) de uma geometria sem índice de verdade, como geometria nova sem índice. */
+function triSubset(g, tris) {
+  const P = g.attributes.position.array;
+  const N = g.attributes.normal.array;
+  const p = new Float32Array(tris.length * 9);
+  const n = new Float32Array(tris.length * 9);
+  tris.forEach((t, i) => {
+    p.set(P.subarray(t * 9, t * 9 + 9), i * 9);
+    n.set(N.subarray(t * 9, t * 9 + 9), i * 9);
+  });
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(n, 3));
+  return out;
+}
+
+/** Junta duas geometrias (posição e normal; a primeira pode ser null), com índice trivial. */
+function concat(a, b) {
+  if (!a) {
+    b.setIndex([...Array(b.attributes.position.count).keys()]);
+    return b;
+  }
+  const flat = (g, k) => (g.index ? g.toNonIndexed() : g).attributes[k].array;
+  const pa = flat(a, 'position');
+  const pb = flat(b, 'position');
+  const na = flat(a, 'normal');
+  const nb = flat(b, 'normal');
+  const p = new Float32Array(pa.length + pb.length);
+  p.set(pa);
+  p.set(pb, pa.length);
+  const n = new Float32Array(na.length + nb.length);
+  n.set(na);
+  n.set(nb, na.length);
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(n, 3));
+  out.setIndex([...Array(p.length / 3).keys()]);
+  return out;
+}
+
 /** Sem índice, só posição e normal (o que o CSG e o recorte usam). */
 function plain(geom) {
   const g = geom.index ? geom.toNonIndexed() : geom.clone();
@@ -260,11 +303,32 @@ export function cutPiece(geom, cuts, { maxEdge = 0.5 } = {}) {
     if (kept && !clipRemoved) return { kept: geom, caps: null, mode: 'none' };
     return { kept, caps: null, mode: 'clip' };
   }
+  // uma peça grande feita de partes soltas (barras de uma treliça fundidas numa malha): o CSG
+  // custa pelos triângulos todos — só as partes que o corte alcança passam por ele; as outras
+  // ficam como estão (partes desconexas são sólidos separados: o resultado é o mesmo)
+  let src = plain(geom);
+  let far = null;
+  const nt = src.attributes.position.count / 3;
+  if (nt > SPLIT_TRIS) {
+    src.setIndex([...Array(nt * 3).keys()]);
+    const comps = components(src);
+    if (comps.length > 1) {
+      const near = [];
+      const away = [];
+      for (const c of comps) (mine.some((cut) => cutHitsBoxes(cut, [...c.min, ...c.max])) ? near : away).push(...c.tris);
+      if (!near.length) return { kept: geom, caps: null, mode: 'none' };
+      if (away.length) {
+        far = triSubset(src, away);
+        src = triSubset(src, near);
+      }
+    }
+    if (!far) src.setIndex(null);
+  }
   try {
     const ev = new CSG.Evaluator();
     ev.attributes = ['position', 'normal'];
     ev.useGroups = true;
-    let res = new CSG.Brush(plain(geom), MAT_PIECE);
+    let res = new CSG.Brush(src, MAT_PIECE);
     res.updateMatrixWorld();
     for (const c of mine) {
       const next = ev.evaluate(res, cylinderBrush(c, geom.boundingSphere, MAT_CUT), CSG.SUBTRACTION);
@@ -277,7 +341,7 @@ export function cutPiece(geom, cuts, { maxEdge = 0.5 } = {}) {
     // peças feitas de várias caixas que se atravessam parecem fechadas, mas o CSG classifica
     // parte dos triângulos errado: o que sobrou dentro do furo sai (só de dentro — nada de fora)
     const clean = kept ? dropInside(kept, mine) : null;
-    return { kept: clean, caps, mode: clean !== kept ? 'csg+limpeza' : 'csg' };
+    return { kept: far ? concat(clean, far) : clean, caps, mode: (clean !== kept ? 'csg+limpeza' : 'csg') + (far ? '+partes' : '') };
   } catch {
     return { kept: clipOpen(geom, mine, maxEdge), caps: null, mode: 'csg-failed→clip' };
   }

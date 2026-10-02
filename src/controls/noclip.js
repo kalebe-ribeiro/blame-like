@@ -44,6 +44,11 @@ export class NoclipControls {
     this.invertY = false;
     // controle de videogame (API Gamepad): lido a cada quadro em update()
     this.pad = { active: false, prev: [] };
+    /** O emissor está carregando (app/beam.js): anda a 60%, sem correr nem pular (C2). */
+    this.charging = false;
+    /** O gatilho do emissor segurado no controle; e o aperto de correr (LT), que cancela a carga. */
+    this.padFire = false;
+    this.padCancel = false;
     this.onPadButton = null; // (nome) — botões de ação que o app trata (foto, interface…)
     this.onPadStart = null; // primeiro uso do controle (sai da tela de entrada)
     this.mode = 'walk';
@@ -151,11 +156,13 @@ export class NoclipControls {
       // voltam a valer depois de soltos (A que fechou o menu não vira pulo).
       this.pad.prev = gp.buttons.map((x) => x.pressed || (x.value ?? 0) > 0.4);
       this.pad.mute = true;
+      this.padFire = false;
       return out;
     }
     if (this.pad.mute) {
       if (gp.buttons.some((x) => x.pressed || (x.value ?? 0) > 0.4)) {
         this.pad.prev = gp.buttons.map((x) => x.pressed || (x.value ?? 0) > 0.4);
+        this.padFire = false;
         // ainda dá para andar e olhar enquanto solta
         out.f = -ly;
         out.r = lx;
@@ -191,6 +198,8 @@ export class NoclipControls {
     };
     out.run = hold('run');
     out.jump = hold('jump');
+    this.padFire = hold('fire');
+    if (edge('run')) this.padCancel = true;
     out.u = (hold('jump') ? 1 : 0) - (hold('descend') ? 1 : 0); // voando: pular sobe, descer desce
     // botões de ação: uma vez por aperto
     if (edge('fly') && this.canFly) {
@@ -223,12 +232,13 @@ export class NoclipControls {
     const h = (id) => (!this.frozen && bindings.held(id, k) ? 1 : 0);
     const f = clamp1(h('forward') - h('back') + pad.f);
     const r = clamp1(h('right') - h('left') + pad.r);
-    const run = (!!h('run') || pad.run) && !this.burden; // carregando uma carga (fase 7) não se corre
+    const run = (!!h('run') || pad.run) && !this.burden && !this.charging; // carregando uma carga (fase 7) ou o emissor não se corre
     this._applyRotation(time);
 
     if (this.mode === 'walk' && this.walker) {
       const input = { f, r, run, jump: !!h('jump') || pad.jump, burden: !!this.burden, descend: !!h('descend') || pad.u < -0.5 };
       if (this.forceInput) Object.assign(input, this.forceInput); // (os testes automáticos dirigem o corpo — dev/climbtest.js)
+      if (this.charging) Object.assign(input, { run: false, jump: false, slow: true }); // (C2: carregar é se expor)
       this.walker.step(dt, this.camera, input, this.yaw, this.scale, time);
       // agarrou uma quina de costas ou de lado: o corpo se vira para a parede
       const tt = this.walker.turnTo;

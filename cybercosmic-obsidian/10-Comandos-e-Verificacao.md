@@ -62,7 +62,7 @@ npx electron . --capture=shot.png --pos=x,y,z,yaw,pitch --mode=fly --seed=abc --
 - `npm run typecheck` — checagem de tipos do TypeScript sobre o próprio JavaScript (`tsconfig.json`, `checkJs`; sem passo de build). Segundos. **Rodar antes de qualquer check** — pega nome inexistente, propriedade errada, argumento trocado. Tem de dar 0 erros.
 - `npm run profile` — o perfil por sistema (`dev/profile.js`): ms por quadro de cada sistema (média e pior), chamadas de desenho, triângulos, tempo de GPU, em 9 lugares (chegada e parado). `--profplaces=a,b` só alguns; `--profres=0.5` muda a resolução (separa CPU de espera pela GPU). **A máquina varia muito entre rodadas: comparar antes × depois em seguida, alternando** (stash/pop).
 - `npm run check:moves` — os seres fazendo o que o jogador faz (`dev/movetest.js`): quina, escada (sobe e desce 240 m), elevador, vagão. ~15 min.
-- `npm run check:beam` — o corte da arma de Killy (`dev/beamtest.js`, fase F1): furo, camada, única, torre, luzes, grafo, vagão, recarregar do cache, tempo (10 tiros contra o orçamento).
+- `npm run check:beam` — a arma de Killy (`dev/beamtest.js`). F2 (o jogo): carga, andar (C2), estados (cancelamentos), controle (RT/LT por um controle falso). F1 (o corte): furo, camada, única, torre, luzes, grafo, vagão, recarregar do cache, tempo (10 tiros contra o orçamento). `--beampart=f1|f2` roda só uma parte. ~10 min.
 - `npm run check:climb` — as quinas (`dev/climbtest.js`): vault e agarrar em quinas de verdade em vários destinos, pegar a borda de uma plataforma e o piso de uma ponte suspensa caindo. ~6 min.
 
 ## Qual check rodar (pedido do usuário, 2026-09-30)

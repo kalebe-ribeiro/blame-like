@@ -299,3 +299,9 @@ Por que as coisas estão como estão, em ordem.
 - Erros achados no caminho do teste: a regra "embaixo de um ponto noutro nível = ponte errada" descartava a perna do elevador; o seguir-caminho tomava o controle antes de sair do carro; atravessar o carro de um lado ao outro levava mais que a parada (o carro descia com o corpo).
 - **Vagão instável** (achado ao rodar tudo de novo): (1) o corpo embarcava com só 6 s de parada pela frente e andar até o meio do vagão leva ~5 s — às vezes ele partia no meio; agora 10 s; (2) com o chão em volta ainda não carregado (a 36 m/s entra-se em chunks novos a todo instante) o corpo de um ser ficava parado no quadro — inclusive sem ser levado pelo piso: o vagão andava, ele ficava no ar e caía. Agora, de pé num piso que se move, ele vai junto mesmo assim (`_carry`). 3 de 3 depois.
 - `check:moves` com limite de 25 min (6 casos).
+
+## 2026-10-02 — a arma de Killy: o corte (F1) e o jogo (F2)
+
+- F1 (o corte de verdade, protótipo de risco) e F2 (carga, controles, cancelamentos, gasto, mortes, alerta, som básico): detalhes em [[Ideias/Futuro/Arma-do-Killy]] (Andamento). `npm run check:beam` 13/13: furo perto p95 145 ms, tiro inteiro p95 538 ms.
+- Os cortes do emissor têm um worker só deles; as rampas das escadarias infinitas são trechos de até 48 m (uma rampa inteira custava 183 ms de CSG).
+- Controle: a lanterna do Livre saiu do RT para o botão 10 (L3); RT = o emissor (segurar), LT cancela a carga.

@@ -315,6 +315,8 @@ export function setupDev(ctx) {
   }
   // --inventory=N: abre o inventário aos N s; --equip=lantern,device: equipa isso antes
   if (params.get('equip')) setTimeout(() => params.get('equip').split(',').forEach((id) => ctx.inventory.equip(id)), 4000);
+  // (--beamhold=S: segura o gatilho do emissor a partir de S s — capturas da carga)
+  if (params.get('beamhold')) setTimeout(() => (ctx.beam.testHeld = true), Number(params.get('beamhold')) * 1000);
   if (params.get('inventory')) setTimeout(() => ctx.inventory.open(), Number(params.get('inventory')) * 1000);
   // --golink=bottom|top: a passagem mais perto com as pontes até a rede (Field.passageLinks),
   // olhando a ponte de baixo (do anel) ou a rampa de cima (do fim da ponte da passagem)

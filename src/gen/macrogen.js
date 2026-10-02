@@ -927,12 +927,19 @@ function genStairways(F, B, box) {
     }
     for (const [a, b] of pieces) {
       if (b - a < 2) continue;
-      // corpo da rampa (topo 0,3 m abaixo da linha dos degraus)
-      B.add('stairway', slabBetween(P(a, -0.3), P(b, -0.3), e.width, 10));
-      // parapeitos
-      for (const sgn of [-1, 1]) {
-        const dl = sgn * (e.width / 2 + 1);
-        B.add('stairway', slabBetween(P(a, 3.2, dl), P(b, 3.2, dl), 2, 4.5));
+      // em trechos de até 48 m, cada um uma peça: o corte do emissor (gen/cut.js) só passa
+      // pelo trecho que atinge (uma rampa inteira, ~20 mil triângulos, custava ~180 ms de CSG)
+      const n = Math.ceil((b - a) / 48);
+      for (let q = 0; q < n; q++) {
+        const ta = a + ((b - a) * q) / n;
+        const tb = a + ((b - a) * (q + 1)) / n;
+        // corpo da rampa (topo 0,3 m abaixo da linha dos degraus)
+        B.add('stairway', slabBetween(P(ta, -0.3), P(tb, -0.3), e.width, 10));
+        // parapeitos
+        for (const sgn of [-1, 1]) {
+          const dl = sgn * (e.width / 2 + 1);
+          B.add('stairway', slabBetween(P(ta, 3.2, dl), P(tb, 3.2, dl), 2, 4.5));
+        }
       }
     }
     // pilares que descem para o nada

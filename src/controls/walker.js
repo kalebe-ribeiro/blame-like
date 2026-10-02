@@ -163,7 +163,7 @@ export class Walker {
     }
     _d.set(-sin * input.f + cos * input.r, 0, -cos * input.f - sin * input.r);
     if (_d.lengthSq() > 1) _d.normalize();
-    const speed = (input.run ? 8.5 : 4.2) * s * this.speedScale;
+    const speed = (input.run ? 8.5 : 4.2) * (input.slow ? 0.6 : 1) * s * this.speedScale;
     const control = this.grounded ? 12 : 2.2;
     const k = Math.min(1, control * dt);
     this.vel.x += (_d.x * speed - this.vel.x) * k;

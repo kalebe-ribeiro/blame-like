@@ -1019,6 +1019,80 @@ export class AudioEngine {
     this._thump(t + dur * 0.9, pan, 0.25, 520); // o pé apoiando em cima
   }
 
+  /**
+   * O emissor carregando: um zumbido grave que sobe de altura com a carga k (0..1), o ar
+   * sendo sugado por baixo. k < 0 desliga.
+   */
+  beamCharge(k) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    if (!this.charge) {
+      if (k < 0) return;
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.Q.value = 4;
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      o.connect(lp).connect(g);
+      const src = ctx.createBufferSource();
+      src.buffer = this._noiseBuffer(3);
+      src.loop = true;
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.Q.value = 1.2;
+      const ng = ctx.createGain();
+      ng.gain.value = 0;
+      src.connect(bp).connect(ng);
+      this._out(g, 1, 0.2);
+      this._out(ng, 1, 0.3);
+      o.start();
+      src.start();
+      this.charge = { o, lp, g, bp, ng };
+    }
+    const c = this.charge;
+    const on = k >= 0;
+    const kk = Math.max(0, k);
+    c.o.frequency.setTargetAtTime(38 + 120 * kk * kk, t, 0.05);
+    c.lp.frequency.setTargetAtTime(160 + 900 * kk, t, 0.05);
+    c.g.gain.setTargetAtTime(on ? 0.05 + 0.2 * kk : 0, t, on ? 0.06 : 0.03);
+    c.bp.frequency.setTargetAtTime(300 + 1400 * kk, t, 0.08);
+    c.ng.gain.setTargetAtTime(on ? 0.03 + 0.12 * kk : 0, t, on ? 0.08 : 0.03);
+  }
+
+  /** O emissor atirando (carga k): um baque grave que suga o ar, um estalo seco e o chiado do metal se desfazendo. */
+  beamShot(k = 1) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const out = this._placed(0, 0);
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(140 - 60 * k, t);
+    o.frequency.exponentialRampToValueAtTime(28, t + 0.6 + 0.4 * k);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(0.5 + 0.4 * k, t + 0.02);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.8 + 0.5 * k);
+    o.connect(og).connect(out);
+    o.start(t);
+    o.stop(t + 1.4);
+    this._clang(t + 0.01, out, 0.25 + 0.2 * k, 0.35);
+    const src = ctx.createBufferSource();
+    src.buffer = this._scrapeBuf ??= this._noiseBuffer(1.2);
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 2200;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.12 + 0.1 * k, t + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7 + 0.5 * k);
+    src.connect(hp).connect(g).connect(out);
+    src.start(t + 0.05);
+  }
+
   /** A vida de silício se mostrando: um guincho metálico que desce, e estalos. */
   siliconReveal(pan, dist) {
     if (!this.ctx) return;

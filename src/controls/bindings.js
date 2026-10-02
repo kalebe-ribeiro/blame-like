@@ -37,7 +37,8 @@ export const ACTIONS = [
   { id: 'autopilot', group: 'move', key: 'KeyP', pad: 12, modes: ['free'] },
   { id: 'use', group: 'act', key: 'KeyE', pad: 3 },
   { id: 'lantern', group: 'act', key: 'KeyF', pad: 2, modes: ['pilgrimage'] },
-  { id: 'torch', group: 'act', key: 'KeyL', pad: 7, modes: ['free'] }, // a lanterna no Livre (F é voar)
+  { id: 'torch', group: 'act', key: 'KeyL', pad: 10, modes: ['free'] }, // a lanterna no Livre (F é voar) — L3: o RT é do emissor
+  { id: 'fire', group: 'act', key: 'KeyQ', pad: 7 }, // o emissor (app/beam.js): segurar carrega, soltar atira — também o clique esquerdo; correr (LT/Shift) ou o clique direito cancela
   { id: 'sensor', group: 'act', key: 'KeyG', pad: 13, modes: ['pilgrimage'] },
   { id: 'mark', group: 'act', key: 'KeyV', pad: 4 },
   { id: 'photo', group: 'act', key: 'F2', pad: 5 },
