@@ -285,7 +285,10 @@ export class ChunkLayer {
         { layer: this.layer, level: this.level, seed: this.seed, cx: entry.cx, cy: entry.cy, cz: entry.cz, reserved: this.reserved, collide: this.collide, cuts, cutJob: !!opts.cutJob },
         opts.owner ?? this,
         (data) => {
-          if (opts.cutJob) entry.recutMs = performance.now() - t0;
+          if (opts.cutJob) {
+            entry.recutMs = performance.now() - t0; // (do pedido à resposta: com a fila)
+            entry.workMs = data.workMs ?? 0; // (só o trabalho no worker)
+          }
           const key = cutKey(this.seed, this.layer, this.level, entry.cx, entry.cy, entry.cz, cuts);
           if (cuts.length && data.meshes) cachePut(key, data);
           this._received(entry, data);

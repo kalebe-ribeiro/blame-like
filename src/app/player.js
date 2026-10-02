@@ -21,5 +21,7 @@ export function createPlayerState(saved) {
     hands: { right: null, left: null }, // as mãos começam vazias (app/inventory.js)
   };
   if (!saved) return base;
-  return { ...base, ...saved, energy: { ...base.energy, ...(saved.energy ?? {}) } };
+  const out = { ...base, ...saved, energy: { ...base.energy, ...(saved.energy ?? {}) } };
+  delete out.beamPower; // (a potência em níveis da primeira arma, retirada — a carga é pelo tempo)
+  return out;
 }

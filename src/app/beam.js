@@ -26,9 +26,34 @@ import { t as tr } from '../i18n/index.js';
 import { buildHand } from './hands.js';
 import { beamReach } from '../gen/beamreach.js';
 import { createBeamFx } from './beamfx.js';
+import { cutHitsBoxes } from '../gen/cut.js';
+import { CHUNK } from '../gen/field.js';
 
 export const CHARGE = { min: 0.25, full: 2.5 };
 export const COOLDOWN = 0.8;
+/** O teto de cortes num chunk (§4.3 — inatingível jogando; atingido, o emissor engasga ali). */
+export const MAX_CUTS_PER_CHUNK = 64;
+
+/**
+ * Até onde o feixe vai antes de um chunk que já tem o teto de cortes (a — GLOBAL, dir, t):
+ * a distância onde ele entra nesse chunk, ou t.
+ */
+export function jamAt(F, a, dir, t) {
+  if ((F.cuts?.length ?? 0) < MAX_CUTS_PER_CHUNK) return t;
+  const seen = new Set();
+  for (let s = 0; s <= t; s += CHUNK / 4) {
+    const cx = Math.floor((a.x + dir.x * s) / CHUNK);
+    const cy = Math.floor((a.y + dir.y * s) / CHUNK);
+    const cz = Math.floor((a.z + dir.z * s) / CHUNK);
+    const key = `${cx},${cy},${cz}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const box = [cx * CHUNK, cy * CHUNK, cz * CHUNK, (cx + 1) * CHUNK, (cy + 1) * CHUNK, (cz + 1) * CHUNK];
+    let n = 0;
+    for (const c of F.cuts) if (cutHitsBoxes(c, box) && ++n >= MAX_CUTS_PER_CHUNK) return Math.max(0, s - CHUNK / 4);
+  }
+  return t;
+}
 /** A curva da carga: tempo segurando → k (0..1), ou −1 abaixo do mínimo. */
 export function chargeK(t) {
   if (t < CHARGE.min) return -1;
@@ -182,7 +207,15 @@ export function createBeam(ctx) {
     camera.getWorldDirection(_d);
     const eye = world.toGlobal(camera.position, new THREE.Vector3());
     _a.copy(eye).addScaledVector(_d, 0.6);
-    const { t, stop } = beamReach(world.field, _a, _d, S.range);
+    const reach = beamReach(world.field, _a, _d, S.range);
+    let { t, stop } = reach;
+    // um chunk com o teto de cortes no caminho: o emissor engasga ali (o aparelho avisa)
+    const jam = jamAt(world.field, _a, _d, t);
+    if (jam < t) {
+      t = jam;
+      stop = 'jam';
+      ctx.carried?.say?.(tr('device.beamJam'), 3);
+    }
     const end = _a.clone().addScaledVector(_d, t);
     const a = _a.clone();
     if (t > 0.5) world.addCut({ a: a.toArray(), b: end.toArray(), r: S.r }, a);

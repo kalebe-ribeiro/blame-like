@@ -23,7 +23,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { beamReach } from '../gen/beamreach.js';
-import { chargeK, shotOf } from '../app/beam.js';
+import { chargeK, shotOf, jamAt } from '../app/beam.js';
+import { onWorldBuilt } from '../app/render.js';
 import { bindings } from '../controls/bindings.js';
 import { cutKey, cacheGet } from '../world/cutCache.js';
 
@@ -62,11 +63,13 @@ async function run(ctx) {
     let first = null;
     let last = null;
     let firstE = null; // o primeiro chunk trocado: { worker (ms), csg (ms), peças cortadas }
+    let worker = 0; // o tempo de worker somado de todos os chunks refeitos
     const t0 = performance.now();
     for (const L of layers) {
       L.onRecut = (e) => {
         swapped++;
         const ms = performance.now() - t0;
+        worker += e.workMs ?? 0;
         firstE ??= { worker: e.recutMs ?? -1, csg: e.cutStats?.ms ?? -1, pieces: e.cutStats?.cut ?? -1, slow: (e.cutStats?.slow ?? []).join(' '), layer: L.layer };
         first ??= ms;
         last = ms;
@@ -77,7 +80,7 @@ async function run(ctx) {
     const end = performance.now() + 15000;
     while (swapped < n && performance.now() < end) await sleep(20);
     for (const L of layers) L.onRecut = null;
-    return { t, stop, n, swapped, first, last, firstE, a, b };
+    return { t, stop, n, swapped, first, last, firstE, worker, a, b };
   };
   const refreshCol = (col, at) => {
     col._t = -1e9; // (a lista de malhas é reaproveitada por 300 ms: refazer agora)
@@ -317,6 +320,7 @@ async function run(ctx) {
   {
     const near = [];
     const all = [];
+    const work = [];
     const tags = [];
     let n = 0;
     for (const place of ['colmeia', 'macico', 'deposito', 'maquinas', 'teia', 'estrato', 'galeria', 'silo', 'escadaria', 'trelica']) {
@@ -333,6 +337,7 @@ async function run(ctx) {
       tags.push(`${place} ${s.n}ch (${s.firstE?.layer}: worker ${s.firstE?.worker.toFixed(0)} ms · CSG ${s.firstE?.csg.toFixed(0)} ms · ${s.firstE?.pieces} peças · lentas ${s.firstE?.slow})`);
       near.push(s.first);
       all.push(s.last);
+      work.push(s.worker);
     }
     const p95 = (arr) => {
       const v = arr.slice().sort((x, y) => x - y);
@@ -340,7 +345,54 @@ async function run(ctx) {
     };
     const pn = p95(near);
     const pa = p95(all);
-    report({ kind: 'tempo', ok: n >= 5 && pn <= 300 && pa <= 1500, why: `${n} tiros · furo perto p95 ${pn.toFixed(0)} ms (≤ 300) · tiro inteiro p95 ${pa.toFixed(0)} ms (≤ 1500) · ${near.map((x) => x.toFixed(0)).join('/')} · ${all.map((x) => x.toFixed(0)).join('/')} · pior: ${tags[near.indexOf(Math.max(...near))]}` });
+    const pw = p95(work);
+    report({ kind: 'tempo', ok: n >= 5 && pn <= 300 && pa <= 1500 && pw <= 800, why: `${n} tiros · furo perto p95 ${pn.toFixed(0)} ms (≤ 300) · tiro inteiro p95 ${pa.toFixed(0)} ms (≤ 1500) · worker por tiro p95 ${pw.toFixed(0)} ms (≤ 800) · ${near.map((x) => x.toFixed(0)).join('/')} · ${all.map((x) => x.toFixed(0)).join('/')} · pior: ${tags[near.indexOf(Math.max(...near))]}` });
+  }
+
+  // ── teto: um chunk com 64 cortes faz o feixe engasgar na entrada dele (puro) ──
+  {
+    const mk = (n) => ({
+      cuts: Array.from({ length: n }, (_, i) => ({ id: 'T' + i, a: [10, 20 + i * 2.5, 96], b: [180, 20 + i * 2.5, 96], r: 0.6 })), // (só dentro do chunk 0,0,0)
+    });
+    const a = new THREE.Vector3(-500, 96, 96);
+    const dir = new THREE.Vector3(1, 0, 0);
+    const j64 = jamAt(mk(64), a, dir, 1000);
+    const j63 = jamAt(mk(63), a, dir, 1000);
+    report({ kind: 'teto', ok: j64 >= 400 && j64 <= 500 && j63 === 1000, why: `64 cortes no chunk: o feixe para em ${j64.toFixed(0)} m (o chunk começa a 500 m) · 63: ${j63.toFixed(0)} m` });
+  }
+
+  // ── salvar: os cortes passam pelo salvamento (JSON, como storeSlot) e o mundo volta com eles —
+  //    do cache, sem CSG (o que o jogo faz ao abrir um mundo salvo: app.js) ──
+  {
+    const saved = JSON.parse(JSON.stringify({ cuts: world.cuts }));
+    const ids0 = world.cuts.map((c) => c.id).sort().join(',');
+    const back = camera.position.clone().add(world.origin);
+    const yaw = controls.yaw;
+    const pitch = controls.pitch;
+    world.cuts = saved.cuts.slice();
+    world.build(ctx.seed);
+    world.setView({ renderDistance: ctx.settings.renderDistance, fog: ctx.settings.fog });
+    onWorldBuilt(ctx);
+    controls.setMode('fly');
+    controls.setView({ pos: back.clone().sub(world.origin), yaw, pitch, scale: 1 });
+    await sleep(SETTLE + 5000);
+    let cut = 0;
+    let cached = 0;
+    let jobs = 0;
+    for (const L of [...world.layers, world.macroLayer]) {
+      for (const e of L.chunks.values()) {
+        if (!e.received || !L.cutsFor(e.cx, e.cy, e.cz).length) continue;
+        cut++;
+        if (e.fromCache) cached++;
+        else if ((e.cutStats?.cut ?? 0) > 0) jobs++;
+      }
+    }
+    const ids1 = world.cuts.map((c) => c.id).sort().join(',');
+    report({
+      kind: 'salvar',
+      ok: ids0 === ids1 && world.field.cuts.length === world.cuts.length && cut > 0 && jobs === 0,
+      why: `${world.cuts.length} cortes de volta (ids ${ids0 === ids1 ? 'iguais' : 'DIFERENTES'}) · ${cut} chunks com cortes em volta · ${cached} do cache · ${jobs} cortados de novo (CSG) · ${cut - cached - jobs} sem peça atingida`,
+    });
   }
 }
 

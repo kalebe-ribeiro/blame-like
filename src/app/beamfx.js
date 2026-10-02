@@ -355,6 +355,12 @@ export function createBeamFx(ctx) {
     const bm = new THREE.BatchedMesh(1, 3, 3, world.materials.cut);
     bm.addGeometry(tri);
     sc.add(bm);
+    // (e a variante dos chunks de longe — os túneis vistos de longe)
+    const bmFar = world.lodMaterials?.cut ? new THREE.BatchedMesh(1, 3, 3, world.lodMaterials.cut) : null;
+    if (bmFar) {
+      bmFar.addGeometry(tri);
+      sc.add(bmFar);
+    }
     for (const m of Object.values(world.materials)) sc.add(new THREE.Mesh(boxGeo, m));
     if (ctx.lens) sc.add(new THREE.Mesh(boxGeo, ctx.lens.material));
     for (const o of [...group.children]) {
@@ -364,7 +370,10 @@ export function createBeamFx(ctx) {
     }
     r.compileAsync(sc, camera)
       .catch(() => {})
-      .finally(() => bm.dispose());
+      .finally(() => {
+        bm.dispose();
+        bmFar?.dispose();
+      });
     // e um disparo mudo, longe e fora da vista: o primeiro de verdade não paga a primeira vez
     // de cada caminho (o JS ainda frio, os buffers subindo para a GPU)
     const far = world.toGlobal(camera.position, new THREE.Vector3()).add(new THREE.Vector3(0, -5000, 0));

@@ -83,8 +83,99 @@ export function isClosed(geom) {
   return edges.size > 0;
 }
 
+/**
+ * Os cortes em grupos que não se encostam (cilindros disjuntos): cada grupo vira UM pincel —
+ * várias partes separadas — e uma subtração só. O CSG decide dentro/fora por paridade, e
+ * sólidos disjuntos não a confundem; cilindros que se cruzam vão para grupos diferentes.
+ * (50 cortes numa peça eram 50 subtrações seguidas, cada uma sobre um resultado maior:
+ * segundos por peça.)
+ */
+function groupCuts(cuts) {
+  /** @type {any[][]} */
+  const groups = [];
+  for (const c of cuts) {
+    const g = groups.find((gr) => gr.every((d) => segSegDist(c, d) > c.r + d.r + 0.1));
+    if (g) g.push(c);
+    else groups.push([c]);
+  }
+  return groups;
+}
+
+/** A menor distância entre os segmentos (eixos) de dois cortes. */
+function segSegDist(c, d) {
+  const p1 = c.a;
+  const q1 = c.b;
+  const p2 = d.a;
+  const q2 = d.b;
+  const d1 = [q1[0] - p1[0], q1[1] - p1[1], q1[2] - p1[2]];
+  const d2 = [q2[0] - p2[0], q2[1] - p2[1], q2[2] - p2[2]];
+  const r = [p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2]];
+  const dot = (u, v) => u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+  const a = dot(d1, d1);
+  const e = dot(d2, d2);
+  const f = dot(d2, r);
+  let s;
+  let t;
+  if (a < 1e-9 && e < 1e-9) {
+    s = t = 0;
+  } else if (a < 1e-9) {
+    s = 0;
+    t = Math.max(0, Math.min(1, f / e));
+  } else {
+    const cc = dot(d1, r);
+    if (e < 1e-9) {
+      t = 0;
+      s = Math.max(0, Math.min(1, -cc / a));
+    } else {
+      const b = dot(d1, d2);
+      const den = a * e - b * b;
+      s = den > 1e-9 ? Math.max(0, Math.min(1, (b * f - cc * e) / den)) : 0;
+      t = (b * s + f) / e;
+      if (t < 0) {
+        t = 0;
+        s = Math.max(0, Math.min(1, -cc / a));
+      } else if (t > 1) {
+        t = 1;
+        s = Math.max(0, Math.min(1, (b - cc) / a));
+      }
+    }
+  }
+  const x = r[0] + d1[0] * s - d2[0] * t;
+  const y = r[1] + d1[1] * s - d2[1] * t;
+  const z = r[2] + d1[2] * s - d2[2] * t;
+  return Math.hypot(x, y, z);
+}
+
+/** Vários cortes disjuntos num pincel só (as geometrias juntas, sem índice). */
+function groupBrush(group, sphere, material) {
+  if (group.length === 1) return cylinderBrush(group[0], sphere, material);
+  const parts = group.map((c) => cylinderGeom(c, sphere).toNonIndexed());
+  const n = parts.reduce((q, g) => q + g.attributes.position.count, 0);
+  const p = new Float32Array(n * 3);
+  const nn = new Float32Array(n * 3);
+  let o = 0;
+  for (const g of parts) {
+    p.set(g.attributes.position.array, o * 3);
+    nn.set(g.attributes.normal.array, o * 3);
+    o += g.attributes.position.count;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(nn, 3));
+  const brush = new CSG.Brush(geo, material);
+  brush.updateMatrixWorld();
+  return brush;
+}
+
 /** O cilindro de um corte como pincel, só no trecho que passa perto da peça (esfera). */
 function cylinderBrush(c, sphere, material) {
+  const brush = new CSG.Brush(cylinderGeom(c, sphere), material);
+  brush.updateMatrixWorld();
+  return brush;
+}
+
+/** A geometria do cilindro de um corte, só no trecho perto da peça (esfera). */
+function cylinderGeom(c, sphere) {
   const a = new THREE.Vector3(...c.a);
   const b = new THREE.Vector3(...c.b);
   const ab = b.clone().sub(a);
@@ -101,9 +192,7 @@ function cylinderBrush(c, sphere, material) {
   // o eixo do cilindro (y) alinhado ao corte
   g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir));
   g.translate((p0.x + p1.x) / 2, (p0.y + p1.y) / 2, (p0.z + p1.z) / 2);
-  const brush = new CSG.Brush(g, material);
-  brush.updateMatrixWorld();
-  return brush;
+  return g;
 }
 
 const MAT_PIECE = new THREE.MeshBasicMaterial();
@@ -293,7 +382,7 @@ function dropInside(g, cuts) {
  * → { kept: geometria da peça que ficou (ou null), caps: as faces do corte (ou null), mode }
  *   mode: 'none' (nenhum corte a toca) · 'csg' · 'clip' (aberta) · 'csg-failed→clip'
  */
-export function cutPiece(geom, cuts, { maxEdge = 0.5 } = {}) {
+export function cutPiece(geom, cuts, { maxEdge = 0.5, memo = null, key = '' } = {}) {
   if (!geom.boundingSphere) geom.computeBoundingSphere();
   const mine = cutsNear(geom.boundingSphere.center, geom.boundingSphere.radius, cuts);
   if (!mine.length) return { kept: geom, caps: null, mode: 'none' };
@@ -303,20 +392,37 @@ export function cutPiece(geom, cuts, { maxEdge = 0.5 } = {}) {
     if (kept && !clipRemoved) return { kept: geom, caps: null, mode: 'none' };
     return { kept, caps: null, mode: 'clip' };
   }
+  // a memória da peça (no worker — chunkgen.js pieceMemo): os cortes chegam um de cada vez;
+  // com o resultado de antes, só os cortes NOVOS passam pelo CSG (50 cortes de uma vez numa
+  // peça grande eram segundos; um a mais sobre o resultado guardado, milissegundos)
+  const ids = mine.map((c) => c.id ?? '');
+  const prev = memo && key ? memo.get(key) : null;
+  const usable = prev && prev.ids.every((id) => ids.includes(id));
+  let todo = mine;
+  let start = null;
+  if (usable) {
+    todo = mine.filter((c) => !prev.ids.includes(c.id ?? ''));
+    if (!todo.length) return prev.none ? { kept: geom, caps: null, mode: 'none' } : { kept: prev.kept?.clone() ?? null, caps: prev.caps?.clone() ?? null, mode: 'memo' };
+    if (!prev.none) start = partsBrush(prev.kept, prev.caps);
+  }
+  const remember = (r) => {
+    if (memo && key) memo.set(key, r.mode === 'none' ? { ids, none: true } : { ids, kept: r.kept?.clone() ?? null, caps: r.caps?.clone() ?? null });
+    return r;
+  };
   // uma peça grande feita de partes soltas (barras de uma treliça fundidas numa malha): o CSG
   // custa pelos triângulos todos — só as partes que o corte alcança passam por ele; as outras
   // ficam como estão (partes desconexas são sólidos separados: o resultado é o mesmo)
-  let src = plain(geom);
+  let src = start ? null : plain(geom);
   let far = null;
-  const nt = src.attributes.position.count / 3;
-  if (nt > SPLIT_TRIS) {
+  const nt = src ? src.attributes.position.count / 3 : 0;
+  if (src && nt > SPLIT_TRIS) {
     src.setIndex([...Array(nt * 3).keys()]);
     const comps = components(src);
     if (comps.length > 1) {
       const near = [];
       const away = [];
-      for (const c of comps) (mine.some((cut) => cutHitsBoxes(cut, [...c.min, ...c.max])) ? near : away).push(...c.tris);
-      if (!near.length) return { kept: geom, caps: null, mode: 'none' };
+      for (const c of comps) (todo.some((cut) => cutHitsBoxes(cut, [...c.min, ...c.max])) ? near : away).push(...c.tris);
+      if (!near.length) return remember({ kept: geom, caps: null, mode: 'none' });
       if (away.length) {
         far = triSubset(src, away);
         src = triSubset(src, near);
@@ -328,23 +434,68 @@ export function cutPiece(geom, cuts, { maxEdge = 0.5 } = {}) {
     const ev = new CSG.Evaluator();
     ev.attributes = ['position', 'normal'];
     ev.useGroups = true;
-    let res = new CSG.Brush(src, MAT_PIECE);
+    let res = start ?? new CSG.Brush(src, MAT_PIECE);
     res.updateMatrixWorld();
-    for (const c of mine) {
-      const next = ev.evaluate(res, cylinderBrush(c, geom.boundingSphere, MAT_CUT), CSG.SUBTRACTION);
+    const groups = groupCuts(todo);
+    for (const group of groups) {
+      const next = ev.evaluate(res, groupBrush(group, geom.boundingSphere, MAT_CUT), CSG.SUBTRACTION);
       next.updateMatrixWorld();
       res = next;
     }
     const { kept, caps } = splitGroups(res);
-    // o cilindro passou ao lado (o pré-filtro é pela esfera): nenhuma face do corte — nada mudou
-    if (!caps) return { kept: geom, caps: null, mode: 'none' };
+    // nenhuma face do corte: ou o cilindro passou ao lado (o pré-filtro é pela esfera) — nada
+    // mudou —, ou a peça é mais fina que ele (uma nervura de 7 cm atravessada: o pedaço de dentro
+    // sai, mas a parede do furo fica toda fora da peça). Decide pelos vértices: algum dentro?
+    if (!caps && !anyInside(start ? null : geom, todo)) return remember(start ? { kept: prev.kept?.clone() ?? null, caps: null, mode: 'memo' } : { kept: geom, caps: null, mode: 'none' });
     // peças feitas de várias caixas que se atravessam parecem fechadas, mas o CSG classifica
     // parte dos triângulos errado: o que sobrou dentro do furo sai (só de dentro — nada de fora)
     const clean = kept ? dropInside(kept, mine) : null;
-    return { kept: far ? concat(clean, far) : clean, caps, mode: (clean !== kept ? 'csg+limpeza' : 'csg') + (far ? '+partes' : '') };
+    return remember({ kept: far ? concat(clean, far) : clean, caps, mode: (start ? 'memo+' : '') + (clean !== kept ? 'csg+limpeza' : 'csg') + (far ? '+partes' : '') });
   } catch {
     return { kept: clipOpen(geom, mine, maxEdge), caps: null, mode: 'csg-failed→clip' };
   }
+}
+
+/** Alguma aresta da peça passa dentro de um dos cortes? (sem peça — o resultado guardado —: sim)
+ *  Pelas arestas, não pelos vértices: uma barra longa cruzada no meio não tem vértice ali. */
+function anyInside(geom, cuts) {
+  if (!geom) return true;
+  const p = geom.attributes.position;
+  const ix = geom.index;
+  const n = ix ? ix.count : p.count;
+  const v = (i) => {
+    const k = ix ? ix.getX(i) : i;
+    return [p.getX(k), p.getY(k), p.getZ(k)];
+  };
+  for (let t = 0; t < n; t += 3) {
+    const A = v(t);
+    const B = v(t + 1);
+    const C = v(t + 2);
+    for (const [a, b] of [[A, B], [B, C], [C, A]]) for (const c of cuts) if (segSegDist({ a, b }, c) < c.r) return true;
+  }
+  return false;
+}
+
+/** O resultado guardado de uma peça (o que ficou + as faces do corte) como pincel: as faces
+ *  do corte continuam no material do corte. */
+function partsBrush(kept, caps) {
+  const flat = (g, k) => (g ? (g.index ? g.toNonIndexed() : g).attributes[k].array : new Float32Array(0));
+  const pk = flat(kept, 'position');
+  const pc = flat(caps, 'position');
+  const p = new Float32Array(pk.length + pc.length);
+  p.set(pk);
+  p.set(pc, pk.length);
+  const n = new Float32Array(p.length);
+  n.set(flat(kept, 'normal'));
+  n.set(flat(caps, 'normal'), pk.length);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(n, 3));
+  g.addGroup(0, pk.length / 3, 0);
+  g.addGroup(pk.length / 3, pc.length / 3, 1);
+  const brush = new CSG.Brush(g, [MAT_PIECE, MAT_CUT]);
+  brush.updateMatrixWorld();
+  return brush;
 }
 
 /**

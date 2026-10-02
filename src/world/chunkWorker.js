@@ -23,6 +23,7 @@ let nav = null;
 
 self.onmessage = (e) => {
   const { jobId, layer, level = 0, seed, cx, cy, cz, reserved } = e.data;
+  const t0 = performance.now();
   try {
     const key = `${seed}|${JSON.stringify(reserved)}`;
     if (!field || fieldKey !== key) {
@@ -53,7 +54,7 @@ self.onmessage = (e) => {
         for (const r of s.roots) transfer.push(r);
       }
     }
-    /** @type {any} */ (self).postMessage({ jobId, ...res }, transfer);
+    /** @type {any} */ (self).postMessage({ jobId, ...res, workMs: performance.now() - t0 }, transfer); // (o tempo de trabalho, sem a fila)
   } catch (err) {
     self.postMessage({ jobId, error: String(err && err.stack ? err.stack : err), meshes: [], lights: [] });
   }

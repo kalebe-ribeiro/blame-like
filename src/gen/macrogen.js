@@ -22,7 +22,7 @@ import * as THREE from '../lib/three.js';
 import { MACRO, MEGA, RELIEF, UNIQUE, COLOSSUS } from './field.js';
 import { hash4, rngAt } from './hash.js';
 import { place, cylinderBetween, slabBetween } from '../world/geometry.js';
-import { ChunkBuilder } from './chunkgen.js';
+import { ChunkBuilder, pieceMemo } from './chunkgen.js';
 import { SODIUM, FLUORO, COLD, WELD } from './colors.js';
 import { beamGeometry } from './beams.js';
 import { villageLayout } from './villages.js';
@@ -35,6 +35,7 @@ const W = MEGA.wall;
 export function generateMacro(F, mx, my, mz) {
   const B = new ChunkBuilder(mx * MACRO, my * MACRO, mz * MACRO);
   B.setCuts(F.cutsInBox((mx - 1) * MACRO, (my - 1) * MACRO, (mz - 1) * MACRO, (mx + 2) * MACRO, (my + 2) * MACRO, (mz + 2) * MACRO));
+  if (B.cutsL.length) B.memo = pieceMemo(`m:${mx},${my},${mz}`);
   B.size = MACRO;
   const box = {
     x0: mx * MACRO, y0: my * MACRO, z0: mz * MACRO,

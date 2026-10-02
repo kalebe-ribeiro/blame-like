@@ -239,6 +239,7 @@ export default {
   'transit.late': ' · DELAYED',
   // ── o aparelho na mão (Peregrinação) ──
   'device.beamWeak': 'EMITTER: NEEDS {n}%',
+  'device.beamJam': 'EMITTER: STRUCTURE SATURATED',
   'device.beamCharge': 'EMITTER  {n}%',
   'device.beamCapped': 'EMITTER  {n}% · CELL LIMIT',
   'device.substation': 'SUBSTATION  [{key}]',

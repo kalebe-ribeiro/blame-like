@@ -48,6 +48,8 @@ export class ChunkBuilder {
     // os cortes do emissor que tocam este chunk (GLOBAIS e locais) — ver setCuts
     this.cutsG = [];
     this.cutsL = [];
+    /** @type {Map<string, any>|null} a memória das peças cortadas deste chunk (pieceMemo — só no worker, com cortes) */
+    this.memo = null;
     /** @type {number|undefined} a aresta do chunk (m) — as partes que encostam na borda ficam (seguras pelo vizinho) */
     this.size = undefined;
     this.protect = 0; // > 0: as peças adicionadas agora não se cortam (camadas, únicas, a torre da passagem)
@@ -108,7 +110,7 @@ export class ChunkBuilder {
   /** Os cortes (GLOBAIS) que tocam este chunk: as peças passam a ser recortadas por eles. */
   setCuts(list) {
     this.cutsG = list ?? [];
-    this.cutsL = this.cutsG.map((c) => ({ a: [c.a[0] - this.x0, c.a[1] - this.y0, c.a[2] - this.z0], b: [c.b[0] - this.x0, c.b[1] - this.y0, c.b[2] - this.z0], r: c.r }));
+    this.cutsL = this.cutsG.map((c) => ({ id: c.id, a: [c.a[0] - this.x0, c.a[1] - this.y0, c.a[2] - this.z0], b: [c.b[0] - this.x0, c.b[1] - this.y0, c.b[2] - this.z0], r: c.r }));
   }
 
   /** O ponto GLOBAL está num corte? (o que nasceria ali — uma luminária, uma gota — não nasce) */
@@ -136,7 +138,7 @@ export class ChunkBuilder {
     // os cortes do emissor: a peça sai recortada (as faces do corte no material 'cut')
     if (this.cutsL.length && !this.protect && !NO_CUT.has(mat)) {
       const t0 = performance.now();
-      const r = cutPiece(geom, this.cutsL, { maxEdge: this.lod ? 1.5 : 0.5 });
+      const r = cutPiece(geom, this.cutsL, { maxEdge: this.lod ? 1.5 : 0.5, memo: this.memo, key: this.memo ? pieceKey(mat, geom) : '' });
       if (r.mode !== 'none') {
         const ms = performance.now() - t0;
         this.cutStats.cut++;
@@ -333,6 +335,30 @@ function* lattice(lo, hi, step, off = 0) {
  * geradores em modo simplificado (B.lod): só as massas grandes, sem cabos,
  * corrimãos, degraus, luzes nem detalhes.
  */
+// ── a memória das peças cortadas (no worker): os últimos chunks refeitos guardam o resultado
+//    de cada peça e os cortes que ele já tem (gen/cut.js cutPiece — só os cortes novos passam
+//    pelo CSG). A chave da peça é a forma dela (a ordem muda quando um corte apaga uma luminária).
+const MEMO = new Map();
+const MEMO_CHUNKS = 48;
+export function pieceMemo(key) {
+  let m = MEMO.get(key);
+  if (m) MEMO.delete(key); // (o mais recente vai para o fim)
+  else m = new Map();
+  MEMO.set(key, m);
+  while (MEMO.size > MEMO_CHUNKS) MEMO.delete(MEMO.keys().next().value);
+  return m;
+}
+/** (ferramentas) esquece tudo */
+export function clearPieceMemo() {
+  MEMO.clear();
+}
+function pieceKey(mat, geom) {
+  if (!geom.boundingBox) geom.computeBoundingBox();
+  const b = geom.boundingBox;
+  const r = (v) => Math.round(v * 100);
+  return `${mat}|${geom.attributes.position.count}|${r(b.min.x)},${r(b.min.y)},${r(b.min.z)},${r(b.max.x)},${r(b.max.y)},${r(b.max.z)}`;
+}
+
 export function generateChunk(F, cx, cy, cz, level = 0) {
   const n = 1 << level;
   const size = CHUNK * n;
@@ -341,6 +367,7 @@ export function generateChunk(F, cx, cy, cz, level = 0) {
   // os cortes vêm de uma caixa com um chunk de margem; o pré-filtro de cada peça descarta o resto)
   B.setCuts(F.cutsInBox((cx - 1) * size, (cy - 1) * size, (cz - 1) * size, (cx + 2) * size, (cy + 2) * size, (cz + 2) * size));
   B.size = size;
+  if (B.cutsL.length) B.memo = pieceMemo(`c${level}:${cx},${cy},${cz}`);
   for (let a = 0; a < n; a++) {
     for (let b = 0; b < n; b++) {
       for (let c = 0; c < n; c++) {
