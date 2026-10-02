@@ -1,5 +1,5 @@
 ---
-status: futuro — plano v3 (2026-10-02), revisado; aguardando 4 confirmações do usuário
+status: em andamento — plano v3 (2026-10-02); C1–C4 confirmadas; fase F1 (protótipo de risco)
 prioridade: próxima
 tags: [futuro, arma, safeguards, terreno]
 ---
@@ -15,7 +15,7 @@ tags: [futuro, arma, safeguards, terreno]
 - **≥ 5 tiros com carga cheia** com a célula cheia.
 - Furo **de verdade** e **efeitos dramáticos** coerentes com um feixe **gravitacional**.
 
-## 1. Pendente de confirmação do usuário (decisões de jogo)
+## 1. Decisões de jogo — **confirmadas pelo usuário em 2026-10-02**
 
 | # | proposta | por quê |
 |---|---|---|
