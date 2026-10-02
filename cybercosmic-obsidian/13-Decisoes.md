@@ -195,3 +195,8 @@ O usuário respondeu item a item (na ordem deste arquivo):
 O usuário pediu a análise de migrar para outra stack/engine com o requisito de eu gerenciar tudo sozinho. Comparadas: ficar e reforçar; Godot 4; Bevy; Unity; Unreal. Unity e Unreal reprovam no requisito (dependem do editor; Blueprints binários). Godot passa, mas custaria reescrever ~27 mil linhas com o jogo parado. **Decisão do usuário: reforçar a stack atual.**
 
 O perfil (`npm run profile`) mudou o plano: a física (Walker) custa ~1,3 ms — trocar pelo Rapier não traria fps; ficou de fora. O que pesava: o reflexo da água desenhando a cena de novo sem água na tela, e travadas de chegada (circuitos de ronda, obras, terminais, subida de chunks) na linha principal. E TypeScript por `checkJs` (sem build) para eu errar menos.
+
+### Arma de Killy — potência e efeitos (2026-10-02)
+
+- **A potência vem do tempo segurando o gatilho**, não de níveis explícitos: segurar carrega, soltar atira; alcance, raio e gasto crescem juntos com a carga (contínuo). Continua: ≥ 5 tiros com carga cheia por célula; não atravessa camadas nem únicas.
+- **Efeitos visuais mais dramáticos**, levando em conta que é um feixe **gravitacional**: carregar puxa o espaço e a poeira para a boca (lente gravitacional), o tiro é um colapso em linha com distorção, onda de choque, coice, som com atraso; as bordas do corte em brasa esfriando. Detalhes em [[Ideias/Futuro/Arma-do-Killy]].
