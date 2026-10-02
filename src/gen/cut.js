@@ -24,6 +24,7 @@ export function setCSG(lib) {
 }
 
 const SEGMENTS = 24; // lados do cilindro do corte
+let clipRemoved = false; // o último clipOpen tirou algum triângulo?
 
 /** Distância do ponto (x,y,z) ao segmento do corte c (e o t ao longo dele, 0..1). */
 export function segDist(x, y, z, c) {
@@ -214,6 +215,7 @@ export function clipOpen(geom, cuts, maxEdge) {
       kN.push(N[i * 9 + j]);
     }
   }
+  clipRemoved = kP.length < P.length;
   if (!kP.length) return null;
   const out = new THREE.BufferGeometry();
   out.setAttribute('position', new THREE.BufferAttribute(new Float32Array(kP), 3));
@@ -252,7 +254,12 @@ export function cutPiece(geom, cuts, { maxEdge = 0.5 } = {}) {
   if (!geom.boundingSphere) geom.computeBoundingSphere();
   const mine = cutsNear(geom.boundingSphere.center, geom.boundingSphere.radius, cuts);
   if (!mine.length) return { kept: geom, caps: null, mode: 'none' };
-  if (!isClosed(geom)) return { kept: clipOpen(geom, mine, maxEdge), caps: null, mode: 'clip' };
+  if (!isClosed(geom)) {
+    const kept = clipOpen(geom, mine, maxEdge);
+    // (o pré-filtro é pela esfera da peça: o cilindro pode passar ao lado — nada muda, nada conta)
+    if (kept && !clipRemoved) return { kept: geom, caps: null, mode: 'none' };
+    return { kept, caps: null, mode: 'clip' };
+  }
   try {
     const ev = new CSG.Evaluator();
     ev.attributes = ['position', 'normal'];
@@ -265,6 +272,8 @@ export function cutPiece(geom, cuts, { maxEdge = 0.5 } = {}) {
       res = next;
     }
     const { kept, caps } = splitGroups(res);
+    // o cilindro passou ao lado (o pré-filtro é pela esfera): nenhuma face do corte — nada mudou
+    if (!caps) return { kept: geom, caps: null, mode: 'none' };
     // peças feitas de várias caixas que se atravessam parecem fechadas, mas o CSG classifica
     // parte dos triângulos errado: o que sobrou dentro do furo sai (só de dentro — nada de fora)
     const clean = kept ? dropInside(kept, mine) : null;
@@ -291,4 +300,60 @@ export function areaOutside(geom, cuts, step = 0.25) {
     A += u.cross(v).length() / 2;
   }
   return A;
+}
+
+/**
+ * As partes conexas de uma geometria indexada (triângulos ligados por vértices na mesma
+ * posição): [{ tris: [índices dos triângulos], min: [x,y,z], max: [x,y,z] }].
+ */
+export function components(g) {
+  const pos = g.attributes.position;
+  const ix = g.index;
+  const n = ix.count / 3;
+  // vértices soldados pela posição
+  const vid = new Map();
+  const weld = (v) => {
+    const k = `${Math.round(pos.getX(v) * 1e3)},${Math.round(pos.getY(v) * 1e3)},${Math.round(pos.getZ(v) * 1e3)}`;
+    let id = vid.get(k);
+    if (id === undefined) vid.set(k, (id = vid.size));
+    return id;
+  };
+  const tv = new Int32Array(ix.count);
+  for (let i = 0; i < ix.count; i++) tv[i] = weld(ix.getX(i));
+  const parent = new Int32Array(vid.size).map((_, i) => i);
+  const find = (x) => {
+    while (parent[x] !== x) x = parent[x] = parent[parent[x]];
+    return x;
+  };
+  for (let t = 0; t < n; t++) {
+    const a = find(tv[t * 3]);
+    parent[find(tv[t * 3 + 1])] = a;
+    parent[find(tv[t * 3 + 2])] = a;
+  }
+  const comps = new Map();
+  for (let t = 0; t < n; t++) {
+    const root = find(tv[t * 3]);
+    let c = comps.get(root);
+    if (!c) comps.set(root, (c = { tris: [], min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] }));
+    c.tris.push(t);
+    for (let j = 0; j < 3; j++) {
+      const v = ix.getX(t * 3 + j);
+      const p = [pos.getX(v), pos.getY(v), pos.getZ(v)];
+      for (let k = 0; k < 3; k++) {
+        if (p[k] < c.min[k]) c.min[k] = p[k];
+        if (p[k] > c.max[k]) c.max[k] = p[k];
+      }
+    }
+  }
+  return [...comps.values()];
+}
+
+/** Só os triângulos dados (índices) de uma geometria indexada — ou null se nenhum. */
+export function keepTris(g, tris) {
+  if (!tris.length) return null;
+  const ix = g.index;
+  const out = [];
+  for (const t of tris) out.push(ix.getX(t * 3), ix.getX(t * 3 + 1), ix.getX(t * 3 + 2));
+  g.setIndex(out);
+  return g;
 }

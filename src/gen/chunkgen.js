@@ -19,7 +19,7 @@ import { genTransit, stationNear } from './transit.js';
 import { rngAt } from './hash.js';
 import { mergeAll, place, cylinderBetween } from '../world/geometry.js';
 import { catenaryCable, plumbLine } from '../world/cables.js';
-import { cutPiece, segDist } from './cut.js';
+import { cutPiece, segDist, components, keepTris } from './cut.js';
 
 import { FLUORO, SODIUM, COLD, WARN } from './colors.js';
 import { genNetwork } from './network.js';
@@ -48,8 +48,12 @@ export class ChunkBuilder {
     // os cortes do emissor que tocam este chunk (GLOBAIS e locais) — ver setCuts
     this.cutsG = [];
     this.cutsL = [];
+    /** @type {number|undefined} a aresta do chunk (m) — as partes que encostam na borda ficam (seguras pelo vizinho) */
+    this.size = undefined;
     this.protect = 0; // > 0: as peças adicionadas agora não se cortam (camadas, únicas, a torre da passagem)
     this.cutStats = { cut: 0, ms: 0 };
+    this.cutPieces = []; // as peças recortadas (os fragmentos soltos são procurados no fim)
+    this.debris = []; // fragmentos soltos que saíram da malha (GLOBAIS): { x, y, z, sx, sy, sz, mat }
   }
 
   /** Os cortes (GLOBAIS) que tocam este chunk: as peças passam a ser recortadas por eles. */
@@ -86,6 +90,7 @@ export class ChunkBuilder {
         this.cutStats.ms += performance.now() - t0;
         if (r.kept) (this.parts[mat] ??= []).push(r.kept);
         if (r.caps) (this.parts.cut ??= []).push(r.caps);
+        this.cutPieces.push({ mat, kept: r.kept, caps: r.caps });
         return;
       }
     }
@@ -152,7 +157,62 @@ export class ChunkBuilder {
     }
   }
 
+  /**
+   * Fragmentos soltos (decisão C1 — a Cidade é ancorada; nada flutua): uma parte de uma peça
+   * recortada que ficou pequena (< 8 m³ de caixa), não encosta em nenhuma outra peça nem na
+   * borda do chunk, sai da malha e vira detrito (this.debris — cai no jogo).
+   */
+  _dropLoose() {
+    if (!this.cutPieces.length) return;
+    const own = new Set(this.cutPieces.flatMap((p) => [p.kept, p.caps]).filter(Boolean));
+    // as caixas de todas as outras peças do chunk
+    const boxes = [];
+    for (const list of Object.values(this.parts)) {
+      for (const g of list) {
+        if (own.has(g)) continue;
+        if (!g.boundingBox) g.computeBoundingBox();
+        boxes.push(g.boundingBox);
+      }
+    }
+    const size = this.size ?? Infinity;
+    const E = 0.05;
+    for (const p of this.cutPieces) {
+      // o que ficou da peça e as faces do corte formam UM sólido (encontram-se na emenda):
+      // as partes conexas são procuradas nos dois juntos
+      const geoms = [p.kept, p.caps].filter(Boolean);
+      if (!geoms.length) continue;
+      const joint = mergeAll(geoms.map((g) => g.clone()));
+      const split = geoms[0].index.count / 3; // triângulos [0, split) são do primeiro
+      const comps = components(joint);
+      if (comps.length < 2) continue;
+      const keep = geoms.map(() => []);
+      for (const c of comps) {
+        const vol = (c.max[0] - c.min[0]) * (c.max[1] - c.min[1]) * (c.max[2] - c.min[2]);
+        const atEdge = c.min.some((v) => v <= E) || c.max.some((v) => v >= size - E);
+        const touches = atEdge || boxes.some((b) => b.min.x <= c.max[0] + E && b.max.x >= c.min[0] - E && b.min.y <= c.max[1] + E && b.max.y >= c.min[1] - E && b.min.z <= c.max[2] + E && b.max.z >= c.min[2] - E);
+        if (vol < 8 && !touches) {
+          this.debris.push({ x: (c.min[0] + c.max[0]) / 2 + this.x0, y: (c.min[1] + c.max[1]) / 2 + this.y0, z: (c.min[2] + c.max[2]) / 2 + this.z0, sx: c.max[0] - c.min[0], sy: c.max[1] - c.min[1], sz: c.max[2] - c.min[2], mat: p.mat });
+          continue;
+        }
+        for (const t of c.tris) {
+          if (t < split) keep[0].push(t);
+          else keep[1].push(t - split);
+        }
+      }
+      geoms.forEach((g, i) => {
+        if (keep[i].length === g.index.count / 3) return;
+        if (!keepTris(g, keep[i])) {
+          for (const list of Object.values(this.parts)) {
+            const j = list.indexOf(g);
+            if (j >= 0) list.splice(j, 1);
+          }
+        }
+      });
+    }
+  }
+
   finish() {
+    this._dropLoose();
     const meshes = [];
     for (const [mat, list] of Object.entries(this.parts)) {
       const g = mergeAll(list);
@@ -167,7 +227,14 @@ export class ChunkBuilder {
         sphere: [bs.center.x, bs.center.y, bs.center.z, bs.radius],
       });
     }
-    return { meshes, lights: this.lights, emitters: this.emitters };
+    // os limites REAIS da geometria (GLOBAIS) — o jogo decide por eles que cortes mandar e que chunks refazer
+    let bounds = null;
+    for (const m of meshes) {
+      const [x, y, z, r] = m.sphere;
+      const b = [x - r + this.x0, y - r + this.y0, z - r + this.z0, x + r + this.x0, y + r + this.y0, z + r + this.z0];
+      bounds = bounds ? [Math.min(bounds[0], b[0]), Math.min(bounds[1], b[1]), Math.min(bounds[2], b[2]), Math.max(bounds[3], b[3]), Math.max(bounds[4], b[4]), Math.max(bounds[5], b[5])] : b;
+    }
+    return { meshes, lights: this.lights, emitters: this.emitters, debris: this.debris, cutStats: this.cutStats, bounds };
   }
 }
 
@@ -202,7 +269,10 @@ export function generateChunk(F, cx, cy, cz, level = 0) {
   const n = 1 << level;
   const size = CHUNK * n;
   const B = new ChunkBuilder(cx * size, cy * size, cz * size, level);
-  B.setCuts(F.cutsInBox(cx * size, cy * size, cz * size, (cx + 1) * size, (cy + 1) * size, (cz + 1) * size));
+  // (as peças de um chunk podem passar da caixa dele — pontes entre plataformas vizinhas, cabos:
+  // os cortes vêm de uma caixa com um chunk de margem; o pré-filtro de cada peça descarta o resto)
+  B.setCuts(F.cutsInBox((cx - 1) * size, (cy - 1) * size, (cz - 1) * size, (cx + 2) * size, (cy + 2) * size, (cz + 2) * size));
+  B.size = size;
   for (let a = 0; a < n; a++) {
     for (let b = 0; b < n; b++) {
       for (let c = 0; c < n; c++) {

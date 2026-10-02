@@ -34,7 +34,8 @@ const W = MEGA.wall;
 
 export function generateMacro(F, mx, my, mz) {
   const B = new ChunkBuilder(mx * MACRO, my * MACRO, mz * MACRO);
-  B.setCuts(F.cutsInBox(mx * MACRO, my * MACRO, mz * MACRO, (mx + 1) * MACRO, (my + 1) * MACRO, (mz + 1) * MACRO));
+  B.setCuts(F.cutsInBox((mx - 1) * MACRO, (my - 1) * MACRO, (mz - 1) * MACRO, (mx + 2) * MACRO, (my + 2) * MACRO, (mz + 2) * MACRO));
+  B.size = MACRO;
   const box = {
     x0: mx * MACRO, y0: my * MACRO, z0: mz * MACRO,
     x1: (mx + 1) * MACRO, y1: (my + 1) * MACRO, z1: (mz + 1) * MACRO,

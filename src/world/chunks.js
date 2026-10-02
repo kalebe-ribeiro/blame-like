@@ -226,10 +226,16 @@ export class ChunkLayer {
     }
   }
 
-  /** Os cortes do emissor que tocam o chunk (x, y, z) — vão no pedido ao worker. */
+  /**
+   * Os cortes do emissor que tocam o chunk (x, y, z) — vão no pedido ao worker. Pelos limites
+   * reais da geometria dele (as peças passam da caixa) se já chegou; senão, a caixa com um chunk de margem.
+   */
   cutsFor(x, y, z) {
+    if (!this.field) return [];
+    const b = this.chunks.get(`${x},${y},${z}`)?.bounds;
+    if (b) return this.field.cutsInBox(b[0], b[1], b[2], b[3], b[4], b[5]);
     const s = this.size;
-    return this.field ? this.field.cutsInBox(x * s, y * s, z * s, (x + 1) * s, (y + 1) * s, (z + 1) * s) : [];
+    return this.field.cutsInBox((x - 1) * s, (y - 1) * s, (z - 1) * s, (x + 2) * s, (y + 2) * s, (z + 2) * s);
   }
 
   /**
@@ -239,11 +245,13 @@ export class ChunkLayer {
    */
   recut(cut, from) {
     const s = this.size;
-    const lo = [0, 1, 2].map((k) => Math.floor((Math.min(cut.a[k], cut.b[k]) - cut.r - 1) / s));
-    const hi = [0, 1, 2].map((k) => Math.floor((Math.max(cut.a[k], cut.b[k]) + cut.r + 1) / s));
+    // (pelos limites reais da geometria de cada chunk — as peças passam da caixa)
+    const lo = [0, 1, 2].map((k) => Math.floor((Math.min(cut.a[k], cut.b[k]) - cut.r - 1) / s) - 1);
+    const hi = [0, 1, 2].map((k) => Math.floor((Math.max(cut.a[k], cut.b[k]) + cut.r + 1) / s) + 1);
     const hit = [];
     for (const e of this.chunks.values()) {
       if (e.cx < lo[0] || e.cx > hi[0] || e.cy < lo[1] || e.cy > hi[1] || e.cz < lo[2] || e.cz > hi[2]) continue;
+      if (e.received && !e.bounds) continue; // vazio
       if (!this.cutsFor(e.cx, e.cy, e.cz).includes(cut)) continue;
       hit.push(e);
     }
@@ -270,6 +278,8 @@ export class ChunkLayer {
     entry.lights = data.lights;
     entry.emitters = data.emitters ?? [];
     entry.received = true;
+    entry.bounds = data.bounds ?? null;
+    entry.debris = data.debris ?? [];
     entry.empty = data.meshes.length === 0;
     if (!entry.empty) this.uploads.push({ entry, data });
   }
