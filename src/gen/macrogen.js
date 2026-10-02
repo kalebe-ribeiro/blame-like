@@ -509,7 +509,45 @@ function buildUnique(F, B, u) {
   return off;
 }
 
+/**
+ * As pontes da passagem até a rede (Field.passageLinks): embaixo, um tabuleiro plano do anel
+ * de embarque até uma plataforma; em cima, uma rampa da ponte +x (sobre a laje) até uma
+ * plataforma 48 m acima — com guarda-corpo, e a rampa apoiada na laje.
+ */
+function passageLinkBridges(F, B, b, p) {
+  const L = F.passageLinks(b, p);
+  if (!L.bottom || !L.top) return;
+  for (const link of [L.bottom, L.top]) {
+    const a = B.L(link.a.x, link.a.y, link.a.z);
+    const e = B.L(link.e.x, link.e.y, link.e.z);
+    const W = 4;
+    B.add('bridge', slabBetween(a, e, W, 0.6));
+    // guarda-corpo dos dois lados (montantes a cada ~6 m)
+    const v = e.clone().sub(a);
+    const len = v.length();
+    const side = new THREE.Vector3(-v.z, 0, v.x).normalize().multiplyScalar(W / 2 - 0.15);
+    for (const s of [-1, 1]) {
+      const o = side.clone().multiplyScalar(s);
+      B.add('bridge', cylinderBetween(a.clone().add(o).setY(a.y + 1.0), e.clone().add(o).setY(e.y + 1.0), 0.06, 0.06, 5, { open: true }));
+      for (let t = 0; t <= len; t += 6) {
+        const q = a.clone().addScaledVector(v, t / len).add(o);
+        B.add('frame', cylinderBetween(q, q.clone().setY(q.y + 1.0), 0.05, 0.05, 4));
+      }
+    }
+    // a rampa de cima: pernas até a laje, a cada ~24 m
+    if (link === L.top) {
+      for (let t = 24; t < len - 6; t += 24) {
+        const q = a.clone().addScaledVector(v, t / len);
+        const top = q.y - 0.6;
+        const floor = b.top - B.y0;
+        if (top - floor > 1) B.add('frame', place(new THREE.BoxGeometry(0.6, top - floor, 0.6), { x: q.x, y: floor + (top - floor) / 2, z: q.z }));
+      }
+    }
+  }
+}
+
 function passageTower(F, B, b, p) {
+  passageLinkBridges(F, B, b, p);
   const y0 = Math.floor((b.bottom - 150) / 48) * 48 - 0.4; // plataforma de embarque de baixo
   const yTop = b.top + 70;
   const hw = 27; // meia largura do quadro (o carro tem 40 × 40)
@@ -533,9 +571,9 @@ function passageTower(F, B, b, p) {
     B.add('floor', place(new THREE.BoxGeometry(sx, 3, sz), { ...toXYZ(V(cx, y0 - 1.5, cz)) }));
   }
   // em cima: quatro pontes ligando a borda da passagem ao carro
-  const hole = p.size / 2;
+  // (até a primeira placa de laje montada: o vão de verdade em volta do buraco é maior que ele)
   for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-    const len = hole - 20.5;
+    const len = F.passageBridgeEnd(b, p, dx, dz) - 20.5;
     const mid = 20.5 + len / 2;
     B.add('floor', place(new THREE.BoxGeometry(dx ? len : 10, 1.5, dz ? len : 10), { ...toXYZ(V(dx * mid, b.top - 0.75, dz * mid)) }));
   }

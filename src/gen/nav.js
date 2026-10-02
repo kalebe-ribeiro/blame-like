@@ -303,6 +303,51 @@ export class NavGraph {
 
   // ── vértices ───────────────────────────────────────────────────────────────
 
+  /** A ponta de uma ligação de passagem (Field.passageLinks): no anel de baixo ou na laje de cima. */
+  plinkVertex(L, side) {
+    const { b, p } = L;
+    const a = L[side].a;
+    return { id: `PL${b.n},${p.pi},${p.pk}:${side}`, kind: 'plink', L, side, x: a.x, y: a.y, z: a.z };
+  }
+
+  /**
+   * A perna 'lift' de baixo para cima (ou o contrário): pelo anel até o lado do elevador,
+   * o elevador (ou a escada de manutenção), e pela ponte +x de cima até o começo da rampa.
+   */
+  liftPts(L, up) {
+    const { p, y0, bottom, top } = L;
+    const a = bottom.a;
+    // embarca já do lado em que vai sair lá em cima (atravessar os 40 m do carro leva mais
+    // que a parada): em cima sai-se na ponte ±x; pelas pontes ±z, contorna-se o canto do poço
+    const [dx, dz] = top.dir;
+    const ex = dx || 1;
+    const sx = Math.sign(a.x - p.x) || 1;
+    const sz = Math.sign(a.z - p.z) || 1;
+    const pts = [{ x: a.x, y: y0, z: a.z }];
+    // pelo anel (quadrado, com o carro no meio): pelas quinas, nunca pelo vão
+    if (Math.abs(a.z - p.z) > 22 || sx !== ex) pts.push({ x: p.x + sx * 34, y: y0, z: p.z + sz * 34 });
+    if (sx !== ex) pts.push({ x: p.x + ex * 34, y: y0, z: p.z + sz * 34 });
+    pts.push({ x: p.x + ex * 30, y: y0, z: p.z });
+    pts.push({ x: p.x + ex * 24.5, y: L.b.top, z: p.z });
+    if (dz) {
+      const ex = p.x + this.F.passageBridgeEnd(L.b, p, 1, 0) + 4;
+      pts.push({ x: ex, y: L.b.top, z: p.z });
+      pts.push({ x: ex, y: L.b.top, z: top.a.z });
+    }
+    pts.push({ x: top.a.x, y: top.a.y, z: top.a.z });
+    return up ? pts : pts.slice().reverse();
+  }
+
+  /** Os pontos de uma ponte de ligação, da ponta da passagem até a plataforma (a rampa em degraus de 8 m). */
+  _linkPts(link) {
+    const { a, e } = link;
+    const len = Math.hypot(e.x - a.x, e.z - a.z);
+    const N = Math.max(1, Math.round(len / 8));
+    const pts = [];
+    for (let i = 0; i <= N; i++) pts.push({ x: a.x + ((e.x - a.x) * i) / N, y: a.y + ((e.y - a.y) * i) / N, z: a.z + ((e.z - a.z) * i) / N });
+    return pts;
+  }
+
   nodeVertex(n) {
     return { id: `n${n.i},${n.l},${n.k}`, kind: 'node', n, x: n.x, y: n.y, z: n.z };
   }
@@ -436,6 +481,22 @@ export class NavGraph {
       }
       const cn = this.connector(n);
       if (cn && this.run(cn.wk, cn.t)) out.push({ v: this.walkVertex(cn.wk, cn.t), cost: len(cn.pts), pts: cn.pts, kind: 'connector' });
+      // as pontes até os elevadores das passagens (de uma rede à da outra camada)
+      if (ride) {
+        for (const { links, side } of F.passageLinksAt(n)) {
+          const pts = this._linkPts(links[side]).reverse();
+          out.push({ v: this.plinkVertex(links, side), cost: len(pts), pts, kind: 'link' });
+        }
+      }
+      return out;
+    }
+    if (v.kind === 'plink') {
+      const L = v.L;
+      const link = L[v.side];
+      const pts = this._linkPts(link);
+      out.push({ v: this.nodeVertex(link.node), cost: len(pts), pts, kind: 'link' });
+      const other = v.side === 'bottom' ? 'top' : 'bottom';
+      out.push({ v: this.plinkVertex(L, other), cost: 150, pts: this.liftPts(L, v.side === 'bottom'), kind: 'lift' });
       return out;
     }
     // ponto de passarela: as conexões mais próximas para cada lado no mesmo trecho

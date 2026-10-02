@@ -291,3 +291,11 @@ Por que as coisas estão como estão, em ordem.
 - **Terminais**: criar, fazer os textos (~10 ms) e o primeiro desenho em quadros separados (vila: 48/34/41 → 41/23/25 ms).
 - **Arma de Killy preparada**: `three-bvh-csg` 0.0.17 instalada; teste de viabilidade do corte de verdade (`tools/csg-spike.mjs`) com chunks reais: 0 falhas, nada sobra dentro do furo (fora das lajes das camadas, que não se cortam), ~70–100 ms por chunk no worker. Plano em [[Ideias/Futuro/Arma-do-Killy]].
 - **Custo de base do desenho** (a pendência): medido por material (`npm run profile` agora conta os triângulos de cada material): 2–4,4 milhões por quadro, espalhados (pontes, nervuras, estruturas, dutos, camadas, colmeia…), sem um vilão. Com as melhorias de hoje o jogo roda a ~100 fps em todos os lugares medidos (quadro ~10 ms, GPU ~9 ms) — reduzir geometria não se paga agora. Fica o perfil para quando algo novo pesar.
+
+## 2026-10-02 — viagens entre camadas; as pontes de cima até a laje
+
+- Pontes da rede até os elevadores das passagens e a perna `lift` no grafo: [[Ideias/Gameplay/Seres-como-o-jogador]] (Viagens entre camadas). Capturas: o tabuleiro de baixo (88 m) e a rampa de cima (173 m).
+- O vão em volta das passagens era maior que o buraco (placas inteiras): as pontes de cima não chegavam à laje — corrigido para todos (jogador incluído).
+- Erros achados no caminho do teste: a regra "embaixo de um ponto noutro nível = ponte errada" descartava a perna do elevador; o seguir-caminho tomava o controle antes de sair do carro; atravessar o carro de um lado ao outro levava mais que a parada (o carro descia com o corpo).
+- **Vagão instável** (achado ao rodar tudo de novo): (1) o corpo embarcava com só 6 s de parada pela frente e andar até o meio do vagão leva ~5 s — às vezes ele partia no meio; agora 10 s; (2) com o chão em volta ainda não carregado (a 36 m/s entra-se em chunks novos a todo instante) o corpo de um ser ficava parado no quadro — inclusive sem ser levado pelo piso: o vagão andava, ele ficava no ar e caía. Agora, de pé num piso que se move, ele vai junto mesmo assim (`_carry`). 3 de 3 depois.
+- `check:moves` com limite de 25 min (6 casos).

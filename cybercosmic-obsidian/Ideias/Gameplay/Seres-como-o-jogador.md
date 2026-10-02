@@ -23,6 +23,17 @@ Os seres já usavam o **mesmo Walker** do jogador (`controls/walker.js`) e a mes
 - Eventos: `being:board`, `being:ride`, `being:lift`, `being:ladder`, `being:leap`, `being:level`.
 - Teste: `npm run check:moves` (`dev/movetest.js`): quina, escada (subir 240 m e descer), elevador (descer 240 m), vagão (1440 m). `--moveonly=quina|escada|elevador|vagao`, `--movetrace=1` (o estado do corpo a cada segundo).
 
+## Viagens entre camadas (2026-10-02)
+
+A rede andável não chegava às pontas dos elevadores grandes (das 704 passagens examinadas, nenhuma tinha plataforma no nível de cima). Agora o mundo tem **pontes até a rede** (`Field.passageLinks`, geometria em `gen/macrogen.js passageLinkBridges`):
+- **embaixo**: um tabuleiro plano do anel de embarque até a plataforma mais perto no mesmo nível (70–360 m);
+- **em cima**: uma rampa do fim de uma das quatro pontes da passagem (já sobre a laje) até uma plataforma 48 m acima (a rede não encosta no alto da camada), apoiada na laje;
+- só se o corredor estiver livre (pilares, plataformas, trilhos, passarelas, maciço, colmeia, galerias, únicas, relevo) e só as duas juntas — ~19% das passagens (130 de 704 na seed abc).
+
+No grafo (`gen/nav.js`): vértices `plink` nas pontas, pernas `link` (as pontes) e `lift` (do anel ao alto da passagem). O corpo segue a perna `lift` com a mesma rotina do elevador (`_vertical`): pelo anel até o lado do carro em que vai sair lá em cima (atravessar os 40 m do carro levava mais que a parada), espera perto da borda, sobe, sai. As rondas não usam (o relógio as leva). Teste: `check:moves` caso `viagem` (288 m acima, pela passagem).
+
+**Defeito do mundo achado (valia para o jogador):** a laje é montada em placas inteiras de 80 m, e uma placa só existe se o centro e dois cantos estão fora do buraco — o vão de verdade em volta de uma passagem vai até 72 m em média (até 117 m), mas as quatro pontes de cima paravam em 48 m: **de cima do elevador grande não se saía andando para a laje**. Agora cada ponte vai até a primeira placa montada (`Field.passageBridgeEnd`, `barrierTileSolid` — a mesma regra das placas).
+
 ## Defeitos do mundo achados no caminho (valiam para o jogador também)
 
 - **Duto atravessando a escada de manutenção** do elevador grande a 37 m do chão: os dutos da rede não evitavam a torre. Agora evitam a coluna das passagens (`Field.passageColumnHit`).

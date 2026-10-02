@@ -297,6 +297,156 @@ export class Field {
     return null;
   }
 
+  // ── ligações das passagens com a rede (os seres viajam de camada em camada) ──
+
+  /**
+   * As pontes que ligam o elevador grande de uma passagem à rede andável — memorizado.
+   *   bottom  um tabuleiro plano do anel de embarque de baixo até a plataforma mais perto
+   *           no mesmo nível (70–260 m)
+   *   top     uma rampa do fim da ponte +x de cima (já sobre a laje) até uma plataforma
+   *           48 m acima (a rede não encosta no alto da camada), na direção +x
+   * Cada uma: { node, a: {x,y,z} (no anel/na laje), e: {x,y,z} (na borda da plataforma) } ou null.
+   * Também: y0 (o nível do anel), x/z da passagem. Só existe se o corredor está livre (pilares,
+   * plataformas, trilhos, passarelas, maciço, colmeia, galerias, únicas, relevo).
+   */
+  passageLinks(b, p) {
+    return this._memo(`PL${b.n},${p.pi},${p.pk}`, () => {
+      const y0 = Math.floor((b.bottom - 150) / 48) * 48 - 0.4;
+      const edge = (n, ux, uz) => ({ x: n.x - ux * (n.r * Math.cos(Math.PI / n.sides) - 0.6), z: n.z - uz * (n.r * Math.cos(Math.PI / n.sides) - 0.6) });
+      // o nó linkado mais perto num nível, dentro de [dMin, dMax] de (cx, cz), aceito por ok(n)
+      const pick = (l, cx, cz, dMin, dMax, ok) => {
+        let best = null;
+        const H = NODE.h;
+        for (let i = Math.floor((cx - dMax) / H); i <= Math.floor((cx + dMax) / H); i++) {
+          for (let k = Math.floor((cz - dMax) / H); k <= Math.floor((cz + dMax) / H); k++) {
+            const n = this.node(i, l, k);
+            if (!n || !this.nodeLinked(n)) continue;
+            const d = Math.hypot(n.x - cx, n.z - cz);
+            if (d < dMin || d > dMax || !ok(n)) continue;
+            if (!best || d < best.d) best = { n, d };
+          }
+        }
+        return best?.n ?? null;
+      };
+      const bottom = (() => {
+        const n = pick(Math.round((y0 + 0.4) / NODE.v), p.x, p.z, 70, 360, () => true);
+        if (!n) return null;
+        const d = Math.hypot(n.x - p.x, n.z - p.z);
+        const ux = (n.x - p.x) / d;
+        const uz = (n.z - p.z) / d;
+        const t = 45.5 / Math.max(Math.abs(ux), Math.abs(uz)); // a borda de fora do anel (quadrado, ±46)
+        const a = { x: p.x + ux * t, y: y0, z: p.z + uz * t };
+        const e = { ...edge(n, ux, uz), y: y0 };
+        return this._linkClear(b, a, e, n, p) ? { node: n, a, e } : null;
+      })();
+      // em cima: do fim de uma das quatro pontes (já sobre a laje), a rampa para fora
+      const free = (x, z) => this.barrierTileSolid(b, x, z) && !this.reliefAt(b, x, z, 6) && !this.uniqueAt(b, x, z, 10);
+      const top = (() => {
+        let best = null;
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const sx = p.x + dx * (this.passageBridgeEnd(b, p, dx, dz) + 4);
+          const sz = p.z + dz * (this.passageBridgeEnd(b, p, dx, dz) + 4);
+          if (!free(sx, sz)) continue;
+          // pelas pontes ±z sai-se do carro pela +x e contorna-se o canto do poço sobre a laje
+          const ex = p.x + this.passageBridgeEnd(b, p, 1, 0) + 4;
+          if (dz && !(free(ex, p.z) && free(ex, sz) && free((ex + sx) / 2, sz) && free(ex, (p.z + sz) / 2))) continue;
+          const along = (m) => (m.x - sx) * dx + (m.z - sz) * dz; // para fora
+          const across = (m) => Math.abs((m.x - sx) * dz - (m.z - sz) * dx);
+          const n = pick(Math.round((b.top + 48) / NODE.v), sx, sz, 110, 320, (m) => along(m) > 100 && across(m) < along(m) * 0.7);
+          if (!n) continue;
+          const d = Math.hypot(n.x - sx, n.z - sz);
+          const ux = (n.x - sx) / d;
+          const uz = (n.z - sz) / d;
+          const a = { x: sx, y: b.top, z: sz };
+          const e = { ...edge(n, ux, uz), y: n.y };
+          if (!this._linkClear(b, a, e, n, p)) continue;
+          if (!best || d < best.d) best = { node: n, a, e, dir: [dx, dz], d };
+        }
+        return best;
+      })();
+      return { b, p, y0, bottom, top };
+    });
+  }
+
+  /** O corredor de a até e (uma ponte de 4 m de largura) está livre? */
+  _linkClear(b, a, e, n, p) {
+    const len = Math.hypot(e.x - a.x, e.y - a.y, e.z - a.z);
+    if (this._crossesTrack(a, e) || this.reservedHit(Math.min(a.x, e.x) - 3, Math.min(a.y, e.y) - 3, Math.min(a.z, e.z) - 3, Math.max(a.x, e.x) + 3, Math.max(a.y, e.y) + 6, Math.max(a.z, e.z) + 3)) return false;
+    const { spacing, ySpacing } = WALK;
+    for (let s = 0; s <= len; s += 3) {
+      const u = s / len;
+      const x = a.x + (e.x - a.x) * u;
+      const y = a.y + (e.y - a.y) * u;
+      const z = a.z + (e.z - a.z) * u;
+      const bio = this.biome(x, y, z);
+      if (bio === 'colmeia' || bio === 'macico') return false;
+      if (this.insideVoid(x, y + 1.5, z)) return false;
+      // um pilar no caminho
+      for (let i = Math.floor(x / PILLAR_CELL) - 1; i <= Math.floor(x / PILLAR_CELL) + 1; i++) {
+        for (let k = Math.floor(z / PILLAR_CELL) - 1; k <= Math.floor(z / PILLAR_CELL) + 1; k++) {
+          const pl = this.pillar(i, k);
+          if (!pl) continue;
+          const c = this.pillarCenter(pl, y);
+          if (Math.hypot(x - c.x, z - c.z) < pl.baseR * 1.3 + 3) return false;
+        }
+      }
+      // outra plataforma no caminho (perto do nível desta altura)
+      for (const l of [Math.floor(y / NODE.v), Math.ceil(y / NODE.v)]) {
+        if (Math.abs(l * NODE.v - y) > 5) continue;
+        const m = this.node(Math.floor(x / NODE.h), l, Math.floor(z / NODE.h));
+        if (m && (m.i !== n.i || m.l !== n.l || m.k !== n.k) && Math.hypot(x - m.x, z - m.z) < m.r + 3) return false;
+      }
+      // uma passarela atravessada (no nível dela)
+      if (Math.abs(y - Math.round(y / ySpacing) * ySpacing) < 6 && Math.abs(x - Math.round(x / spacing) * spacing) < 12) return false;
+      const yx = y - ySpacing / 2;
+      if (Math.abs(yx - Math.round(yx / ySpacing) * ySpacing) < 6 && Math.abs(z - spacing / 2 - Math.round((z - spacing / 2) / spacing) * spacing) < 12) return false;
+      // a torre de outra passagem
+      const q = this.passageColumnHit(x - 2, y - 2, z - 2, x + 2, y + 2, z + 2);
+      if (q && q !== p) return false;
+    }
+    return true;
+  }
+
+  /** As ligações (das passagens) que chegam à plataforma n: [{ links, side: 'bottom'|'top' }]. */
+  passageLinksAt(n) {
+    const out = [];
+    const P = MEGA.passage;
+    for (const b of this.barriersNear(n.y)) {
+      for (let pi = Math.floor((n.x - 400) / P); pi <= Math.floor((n.x + 400) / P); pi++) {
+        for (let pk = Math.floor((n.z - 400) / P); pk <= Math.floor((n.z + 400) / P); pk++) {
+          const p = this.passage(b.n, pi, pk);
+          if (!p || Math.hypot(p.x - n.x, p.z - n.z) > 400) continue;
+          const L = this.passageLinks(b, p);
+          if (!L.bottom || !L.top) continue; // (só as duas juntas servem: uma rede à outra)
+          const same = (m) => m.i === n.i && m.l === n.l && m.k === n.k;
+          if (same(L.bottom.node)) out.push({ links: L, side: 'bottom' });
+          if (same(L.top.node)) out.push({ links: L, side: 'top' });
+        }
+      }
+    }
+    return out;
+  }
+
+  /**
+   * A placa de laje (MEGA.tile) que contém (x, z) é montada? — a MESMA regra de genBarriers
+   * (gen/macrogen.js): uma placa só existe se o centro e dois cantos estão fora dos buracos.
+   * Em volta de uma passagem o vão de verdade é maior que o buraco (placas inteiras).
+   */
+  barrierTileSolid(b, x, z) {
+    const T = MEGA.tile;
+    const xc = (Math.floor(x / T) + 0.5) * T;
+    const zc = (Math.floor(z / T) + 0.5) * T;
+    return this.barrierSolid(b, xc - 30, zc - 30) && this.barrierSolid(b, xc + 30, zc + 30) && this.barrierSolid(b, xc, zc);
+  }
+
+  /** Até onde vai a ponte de cima de uma passagem na direção (dx, dz): a primeira placa de laje montada (+1 m). */
+  passageBridgeEnd(b, p, dx, dz) {
+    return this._memo(`PE${b.n},${p.pi},${p.pk},${dx},${dz}`, () => {
+      for (let d = p.size / 2; d < 200; d += 1) if (this.barrierTileSolid(b, p.x + dx * d, p.z + dz * d)) return d + 1;
+      return p.size / 2;
+    });
+  }
+
   /** A laje da camada existe neste ponto? (só as passagens a perfuram) */
   barrierSolid(b, x, z) {
     const P = MEGA.passage;

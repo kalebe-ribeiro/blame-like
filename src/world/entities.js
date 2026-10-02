@@ -63,6 +63,7 @@ const _s = new THREE.Vector3();
 
 export class EntitySystem {
   constructor(group, materials, world) {
+    this.debugVert = false; // (dev/movetest.js --movetrace: por que desistiu, por que replanejou)
     /** @type {THREE.MeshBasicMaterial|undefined} o escuro sem luz dentro dos capuzes */
     this._void = undefined;
     this.group = group;
@@ -250,9 +251,29 @@ export class EntitySystem {
     }
   }
 
+  /** De pé num piso que se move (vagão, elevador): anda junto (o quanto ele andou neste quadro). */
+  _carry(e) {
+    const w = e.walker;
+    const gd = w.grounded ? w.groundObj?.userData : null;
+    if (gd && (gd.dx || gd.dy || gd.dz)) {
+      e.feet.x += gd.dx || 0;
+      e.feet.y += gd.dy || 0;
+      e.feet.z += gd.dz || 0;
+    }
+  }
+
   /** Passa para a física: o corpo pousa no chão real sob o ponto em que estava. */
   _toNear(e, origin) {
     const w = e.walker;
+    // no meio do trecho vertical de uma passagem (andando "no ar" ao longe): volta para a ponta
+    // mais perto — senão cairia pelo poço
+    const leg = e.path?.legs?.[e.path.ptLeg?.[e.pi] ?? -1];
+    const P = e.path?.pts;
+    if (leg?.kind === 'lift' && P && e.pi > 0 && e.pi < P.length && Math.abs(P[e.pi].y - P[e.pi - 1].y) > LEVEL) {
+      const q = Math.abs(e.feet.y - P[e.pi - 1].y) < Math.abs(e.feet.y - P[e.pi].y) ? P[e.pi - 1] : P[e.pi];
+      e.feet.set(q.x, q.y, q.z);
+      if (q === P[e.pi]) e.pi++;
+    }
     w.feet.copy(e.feet).sub(origin);
     w.vel.set(0, 0, 0);
     w.grounded = false;
@@ -313,8 +334,9 @@ export class EntitySystem {
   _stepNear(e, dt, origin, time) {
     e.stats.near += dt;
     const w = e.walker;
-    // o chão em volta ainda não chegou: fica parado onde está (não anda no ar)
-    if (!this.world.chunkLayer.isReadyAround(e.feet, 30)) return;
+    // o chão em volta ainda não chegou: fica parado onde está (não anda no ar) — mas, de pé
+    // num vagão ou elevador, vai junto com ele (senão o piso andava e o corpo ficava no ar)
+    if (!this.world.chunkLayer.isReadyAround(e.feet, 30)) return this._carry(e);
     w.feet.copy(e.feet).sub(origin); // (a origem flutuante pode ter mudado)
     let f = 0;
     let yaw = e.yaw;
@@ -334,13 +356,19 @@ export class EntitySystem {
         } else {
           // bem em cima (ou embaixo) do ponto, noutro nível: está noutra ponte que corre
           // junto desta (uma rampa sob uma passarela) — esta aresta não serve daqui
-          wrongDeck = hd < ARRIVE && Math.abs(p.y - e.feet.y) > 2.5;
+          wrongDeck = hd < ARRIVE && Math.abs(p.y - e.feet.y) > 2.5 && legNow?.kind !== 'lift'; // (na perna do elevador, o outro nível em cima é de propósito)
           break;
         }
       }
       if (wrongDeck) this._replan(e);
       else if (e.pi >= pts.length) this._arrive(e);
-      else {
+      else if (legNow?.kind === 'lift' && (e.vert || Math.abs(pts[e.pi].y - e.feet.y) > LEVEL) && this._vertical(e, pts[e.pi], dt, origin, time)) {
+        // o próximo ponto é o outro nível de uma passagem: o elevador grande (ou a escada) —
+        // que comanda até sair dele lá (não só até chegar à altura)
+        e.stuckT = 0;
+        e.best = Infinity;
+        return;
+      } else {
         const p = pts[e.pi];
         yaw = Math.atan2(-(p.x - e.feet.x), -(p.z - e.feet.z));
         f = 1;
@@ -369,7 +397,11 @@ export class EntitySystem {
    * Para quem tem brain (os Safeguards). Devolve a distância horizontal que falta.
    */
   walkToward(e, target, dt, origin, time) {
-    if (e.tier !== 'near' || !this.world.chunkLayer.isReadyAround(e.feet, 30)) return Infinity;
+    if (e.tier !== 'near') return Infinity;
+    if (!this.world.chunkLayer.isReadyAround(e.feet, 30)) {
+      this._carry(e); // (num elevador/vagão, vai junto mesmo sem o chão em volta pronto)
+      return Infinity;
+    }
     e.walker.feet.copy(e.feet).sub(origin);
     const hd = Math.hypot(target.x - e.feet.x, target.z - e.feet.z);
     // noutro nível: um elevador ou uma escada perto leva até lá
@@ -425,7 +457,9 @@ export class EntitySystem {
     if (R.phase === 'wait') {
       // na passarela, diante da estação, até um vagão parar com tempo para entrar
       const there = go(W0, 1.2);
-      if (there && car(L.ride.from, 6)) R.phase = 'board';
+      // (com folga: andar da passarela ao meio do vagão leva ~5 s — com 6 s de parada, às vezes
+      // ele partia no meio do embarque e o corpo ficava para trás)
+      if (there && car(L.ride.from, 10)) R.phase = 'board';
       if (R.t > 400) return this._rideFail(e);
     } else if (R.phase === 'board') {
       go(C0, 1.4, false);
@@ -581,6 +615,7 @@ export class EntitySystem {
   }
 
   _vertDone(e, ok, time) {
+    if (!ok && this.debugVert) console.warn(`MOVE desistiu de ${e.vert?.kind} ${e.vert?.id} na fase ${e.vert?.phase} (t ${e.vert?.t?.toFixed(1)})`);
     if (!ok && e.vert) e.vertBan.set(e.vert.id, time + 60);
     e.vert = null;
     e.walker.canClimb = false;
@@ -637,7 +672,7 @@ export class EntitySystem {
         // parado na minha ponta, e ainda vai ficar uns segundos
         if (still(V.from) && Math.abs(ElevatorSystem.heightAt(d, car.clock + 5) - V.from) < 0.01) V.phase = 'board';
       } else if (V.phase === 'board') {
-        go(d.x + V.sx * d.w * 0.15, d.z, 0.8, false);
+        go(d.x + V.sx * (d.w / 2 - 3), d.z, 0.8, false); // (perto da borda: a saída lá é do mesmo lado)
         if (w.groundObj?.userData.elevator && Math.abs(e.feet.x - d.x) < d.w / 2 - 0.6 && Math.abs(e.feet.z - d.z) < d.d / 2 - 0.6) {
           V.phase = 'ride';
           this.bus?.emit('being:board', { id: e.id, lift: V.id });
@@ -878,6 +913,10 @@ export class EntitySystem {
 
   /** Outro caminho, sem a aresta em que está agora. */
   _replan(e) {
+    if (this.debugVert) {
+      const P = e.path?.pts?.[e.pi];
+      console.warn(`MOVE replan pi ${e.pi} perna ${e.path?.legs?.[e.path.ptLeg?.[e.pi] ?? -1]?.kind} pés ${e.feet.toArray().map(Math.round)} próximo ${P ? [P.x, P.y, P.z].map(Math.round) : '-'} ${(new Error().stack ?? '').split(String.fromCharCode(10))[2]?.trim()}`);
+    }
     e.replans++;
     e.stats.replans++;
     e.stuckT = 0;

@@ -316,6 +316,42 @@ export function setupDev(ctx) {
   // --inventory=N: abre o inventário aos N s; --equip=lantern,device: equipa isso antes
   if (params.get('equip')) setTimeout(() => params.get('equip').split(',').forEach((id) => ctx.inventory.equip(id)), 4000);
   if (params.get('inventory')) setTimeout(() => ctx.inventory.open(), Number(params.get('inventory')) * 1000);
+  // --golink=bottom|top: a passagem mais perto com as pontes até a rede (Field.passageLinks),
+  // olhando a ponte de baixo (do anel) ou a rampa de cima (do fim da ponte da passagem)
+  if (params.get('golink')) {
+    setTimeout(() => {
+      const F = world.field;
+      const g = world.toGlobal(camera.position);
+      const P = 1920;
+      let found = null;
+      for (let r = 0; r <= 8 && !found; r++) {
+        for (const b of [...F.barriersNear(g.y), ...F.barriersNear(g.y + 2880), ...F.barriersNear(g.y - 2880)]) {
+          for (let pi = Math.floor(g.x / P) - r; pi <= Math.floor(g.x / P) + r && !found; pi++) {
+            for (let pk = Math.floor(g.z / P) - r; pk <= Math.floor(g.z / P) + r && !found; pk++) {
+              const p = F.passage(b.n, pi, pk);
+              if (!p) continue;
+              const L = F.passageLinks(b, p);
+              if (L.bottom && L.top) found = L;
+            }
+          }
+        }
+      }
+      if (!found) return console.warn('GOLINK: nenhuma');
+      const link = found[params.get('golink') === 'top' ? 'top' : 'bottom'];
+      const a = link.a;
+      const e = link.e;
+      // um pouco atrás da ponta, de lado, olhando a ponte inteira
+      const d = Math.hypot(e.x - a.x, e.z - a.z);
+      const ux = (e.x - a.x) / d;
+      const uz = (e.z - a.z) / d;
+      const pos = new THREE.Vector3(a.x - ux * 6 - uz * 5, a.y + 3.5, a.z - uz * 6 + ux * 5);
+      const v = new THREE.Vector3(e.x, e.y, e.z).sub(pos);
+      ctx.controls.canFly = true;
+      ctx.controls.setMode('fly');
+      ctx.controls.setView({ pos: pos.sub(world.origin), yaw: Math.atan2(-v.x, -v.z), pitch: Math.atan2(v.y, Math.hypot(v.x, v.z)) - 0.05, scale: 1 });
+      console.warn(`GOLINK: passagem ${found.b.n},${found.p.pi},${found.p.pk} · ponte ${Math.round(d)} m`);
+    }, Number(params.get('golinkat') || 4) * 1000);
+  }
   // --grabtest=N: aos N s, o Safeguard de ronda mais perto fica 1,5 m atrás de você e te pega
   // (para ver a animação de ser pego — app/wake.js)
   if (params.get('grabtest')) {

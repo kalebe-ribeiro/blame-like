@@ -8,6 +8,8 @@
 //              entra, desce, sai (pulando o vão do anel de embarque)
 //    vagao     numa estação, o destino na estação seguinte: o caminho usa o vagão
 //              (perna 'ride'); espera, embarca, viaja, desce e chega
+//    viagem    de uma rede à da camada de cima: a ponte até o anel, o elevador grande,
+//              a rampa até a plataforma lá em cima (Field.passageLinks, perna 'lift')
 //  A câmera segue o corpo (o corpo fica na física completa).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -31,6 +33,7 @@ export async function runMoveTest(ctx) {
 async function run(ctx) {
   const { world, camera, controls } = ctx;
   const E = world.entities;
+  E.debugVert = !!ctx.params.get('movetrace');
   const report = (o) => console.warn('CHECK:' + JSON.stringify(o));
   window.addEventListener('error', (e) => console.error('CHECK-ERR ' + e.message));
   const only = ctx.params.get('moveonly');
@@ -171,6 +174,56 @@ async function run(ctx) {
       }
     }
     report({ kind: 'elevador', ok: !!res?.ok, why: res ? `desceu ${res.H.toFixed(0)} m? ${res.lift ? 'sim' : 'não'} · embarcou ${res.board} · a ${res.dy.toFixed(1)} m do piso de baixo · ${res.phase}${res.dead ? ' · MORREU' : ''}` : 'nenhum elevador grande' });
+  }
+
+  // ── viagem: de camada em camada pela passagem ──
+  if (want('viagem')) {
+    let res = null;
+    const F = world.field;
+    const g = world.toGlobal(camera.position, new THREE.Vector3());
+    let L = null;
+    for (let r = 0; r <= 8 && !L; r++) {
+      for (const b of [...F.barriersNear(g.y), ...F.barriersNear(g.y + 2880), ...F.barriersNear(g.y - 2880)]) {
+        for (let pi = Math.floor(g.x / 1920) - r; pi <= Math.floor(g.x / 1920) + r && !L; pi++) {
+          for (let pk = Math.floor(g.z / 1920) - r; pk <= Math.floor(g.z / 1920) + r && !L; pk++) {
+            const p = F.passage(b.n, pi, pk);
+            if (!p) continue;
+            const q = F.passageLinks(b, p);
+            if (q.bottom && q.top) L = q;
+          }
+        }
+      }
+    }
+    if (L) {
+      const nb = L.bottom.node;
+      const nt = L.top.node;
+      const outages = world.elevators.outages;
+      world.elevators.outages = null; // (o elevador com energia — o teste é viajar)
+      const feet = new THREE.Vector3(nb.x, nb.y, nb.z);
+      // a câmera vai antes e segue o corpo voando (a Peregrinação não deixa voar: só aqui)
+      const couldFly = controls.canFly;
+      controls.canFly = true;
+      controls.setMode('fly');
+      controls.setView({ pos: feet.clone().sub(world.origin).setY(feet.y - world.origin.y + 4), yaw: 0, pitch: -0.3, scale: 1 });
+      await waitFor(() => world.chunkLayer.isReadyAround(feet, 40), 30);
+      await sleep(3000);
+      const e = E.spawn({ id: `mv${++n}`, kind: 'human', feet: { x: nb.x, y: nb.y, z: nb.z }, persist: false, goal: { x: nt.x, y: nt.y, z: nt.z } });
+      traced = e;
+      const kinds = e.path ? e.path.legs.map((l) => l.kind) : [];
+      const lg = e.path?.legs.find((l) => l.kind === 'lift');
+      if (lg) console.warn(`MOVE perna lift: passagem x ${L.p.x.toFixed(1)} z ${L.p.z.toFixed(1)} · topo dir ${L.top.dir} · pts ${lg.pts.map((q) => [q.x - L.p.x, q.y, q.z - L.p.z].map(Math.round).join('/')).join(' → ')}`);
+      const stop = followBody(ctx, e);
+      const ok = await waitFor(() => e.state === 'arrived' || e.state === 'stuck' || e.state === 'lost' || e.dead, 420);
+      stop();
+      controls.setMode('walk');
+      controls.canFly = couldFly;
+      world.elevators.outages = outages;
+      const at = Math.hypot(e.feet.x - nt.x, e.feet.z - nt.z) + Math.abs(e.feet.y - nt.y);
+      res = { ok: ok && e.state === 'arrived' && at < 8 && kinds.includes('lift'), kinds, state: e.state, at, dy: nt.y - nb.y, lift: events.some((x) => x.ev === 'being:lift' && x.id === e.id), dead: e.dead };
+      console.warn(`MOVE eventos: ${events.filter((x) => x.id === e.id).map((x) => x.ev.slice(6) + (x.kind ? ':' + x.kind : '')).join(' ')} · proibidos ${[...e.vertBan.keys()].join(',')} · evitar ${[...e.avoid].join(' | ')}`);
+      E.remove(e.id);
+    }
+    report({ kind: 'viagem', ok: !!res?.ok, why: res ? `caminho ${res.kinds.join(',')} · subiu de elevador ${res.lift} · ${res.state} a ${res.at.toFixed(1)} m do destino (${res.dy.toFixed(0)} m acima)${res.dead ? ' · MORREU' : ''}` : 'nenhuma passagem com as duas pontes' });
   }
 
   // ── vagão ──
