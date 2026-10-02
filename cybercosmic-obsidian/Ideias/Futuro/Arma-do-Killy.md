@@ -1,10 +1,27 @@
 ---
-status: futuro (fase 6) — método decidido
+status: futuro — pronto para retomar (corte de verdade)
 prioridade: futura
 tags: [futuro, arma, safeguards, terreno]
 ---
 
 # A arma do Killy — emissor de feixe gravitacional (fase 6)
+
+> ## Preparado para retomar (2026-10-02) — o corte de verdade (CSG)
+>
+> A primeira versão (buracos por shader) foi retirada a pedido do usuário: não convencia. Os requisitos dele continuam: **não atravessa camada intransponível nem estrutura única**; **potência ajustável** (alcance, raio do feixe, gasto por tiro); **≥ 5 tiros com a célula cheia**. Retomando, o furo é **geometria de verdade**.
+>
+> **Viabilidade medida** (`node tools/csg-spike.mjs [raio] [chunks]`, `three-bvh-csg` 0.0.17 — a 0.0.18 exige three ≥ 0.179): chunks reais do mundo, um cilindro atravessando, cada peça que ele cruza recortada (peça − cilindro).
+> - 11 chunks, raio 1,4 m: 226 peças perto do feixe, 97 cortadas, **0 falhas**; ~70–100 ms por chunk com a máquina livre (pior ~250 ms; com outros testes rodando na máquina, até 2 s — medir de novo antes de fechar números). Tudo no worker de geração: o quadro não trava.
+> - Conferência: **nenhum triângulo dentro do cilindro** fora das lajes das camadas (`barrier`) — que a arma não corta.
+> - As peças cortadas ganham triângulos (8,3 mil → 22 mil nas cortadas): aceitável.
+>
+> **Como fica (o plano):**
+> 1. A jogabilidade da versão retirada volta quase igual (`git show 458d019:src/app/beam.js`): o emissor no inventário e nas mãos, Q/clique/RT, potência B/roda/R3, a tabela de potência, o gasto, a morte do que está no caminho, o som, o alerta. Sai tudo o que era buraco de shader.
+> 2. Os cortes ficam no mundo salvo: cilindros GLOBAIS (a, b, r), como antes.
+> 3. A geração: o pedido de cada chunk leva os cilindros que tocam a caixa dele; em `ChunkBuilder.add` cada peça que um cilindro cruza sai recortada (CSG) — **nunca** as lajes das camadas, as peças das estruturas únicas, nem dentro das "caixas guardadas" (a faixa das camadas, a caixa das únicas). A `three-bvh-csg` vai para o worker como a `three-mesh-bvh` (`tools/vendor-bvh.mjs` → um vendor para ela também).
+> 4. O tiro: os chunks cruzados (perto, macro; os LOD podem ficar sem o furo de longe) são pedidos de novo; a malha velha fica até a nova chegar (sem piscar).
+> 5. A colisão vem da malha nova (com a árvore já montada no worker) — sem truque nenhum: corpo, mãos, seres e vagões nunca somem.
+> 6. Teste `check:beam` de volta, conferindo a geometria: o raio de colisão passa pelo furo, a parede do corte existe (um raio de dentro do furo, para o lado, bate a ~r do eixo), as camadas e únicas ficam inteiras, 5 tiros na potência máxima.
 
 > **Decidido (2026-09-30):** quando a arma for implementada, o buraco será feito pelo **método "de shader"** descrito abaixo (cilindros salvos + `discard` + borda pintada + colisão ignorando). Nada de CSG. Continua em aberto: se a arma existe mesmo (combate × só fuga), o que ela não fura, alcance, custo.
 

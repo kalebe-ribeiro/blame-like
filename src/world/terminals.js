@@ -66,6 +66,7 @@ export class TerminalSystem {
 
   /** O texto inteiro de um terminal para ler (com a linha viva do horário, nas estações). */
   readable(it, time) {
+    it.lines ??= terminalRecords(this.field, it.site); // (recém-criado: os textos ainda não foram feitos)
     const lines = it.lines.slice();
     const live = this._live(it.site, time);
     if (live) lines.splice(2, 0, live);
@@ -118,7 +119,7 @@ export class TerminalSystem {
     group.rotation.y = site.yaw;
     this.parent.add(group);
     const r = rngAt(this.seed, Math.round(site.x), Math.round(site.y), Math.round(site.z), 950);
-    return { site, group, screen, tool, canvas, ctx: canvas.getContext('2d'), tex, lines: terminalRecords(this.field, site), shown: 0, next: 0, r, powered: true };
+    return { site, group, screen, tool, canvas, ctx: canvas.getContext('2d'), tex, lines: null, shown: 0, next: 0, r, powered: true };
   }
 
   _draw(t, time) {
@@ -173,7 +174,14 @@ export class TerminalSystem {
     if (nx && !this.items.has(nx[0])) this.items.set(nx[0], this._create(nx[1]));
     this.lights.length = 0;
     this.meshes.length = 0;
+    let heavy = false; // (os textos de um terminal novo: um por quadro — levam ~10 ms)
     for (const t of this.items.values()) {
+      if (!t.lines) {
+        if (heavy) continue;
+        t.lines = terminalRecords(this.field, t.site);
+        heavy = true;
+        continue;
+      }
       const s = t.site;
       t.group.position.set(s.x - origin.x, s.y - origin.y, s.z - origin.z);
       t.tool.visible = !!this.toolAt?.(s);

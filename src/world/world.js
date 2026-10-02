@@ -81,6 +81,7 @@ export class World {
   constructor(scene, shared) {
     /** @type {any} o que o jogador mudou no mundo (WorldState — app.js), lido no build */
     this.worldState = null;
+    this.frameNo = 0;
     this.scene = scene;
     this.shared = shared;
     this.origin = new THREE.Vector3();
@@ -531,6 +532,7 @@ export class World {
   }
 
   update(time, dt, camera, observerScale) {
+    this.frameNo = (this.frameNo ?? 0) + 1; // (o orçamento de colisão por quadro — world/collision.js)
     const g = this.toGlobal(camera.position, new THREE.Vector3());
     camera.getWorldDirection(_fwd);
 

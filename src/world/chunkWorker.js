@@ -9,6 +9,9 @@ import { generateChunk } from '../gen/chunkgen.js';
 import { generateMacro } from '../gen/macrogen.js';
 import { NavGraph } from '../gen/nav.js';
 import { patrolCircuit } from '../gen/patrols.js';
+import { MeshBVH } from '../lib/three-mesh-bvh.js';
+import { BufferGeometry, BufferAttribute } from '../lib/three.js';
+import { NO_COLLIDE } from './noCollide.js';
 
 let field = null;
 let fieldKey = '';
@@ -31,6 +34,19 @@ self.onmessage = (e) => {
     const res = layer === 'macro' ? generateMacro(field, cx, cy, cz) : generateChunk(field, cx, cy, cz, level);
     const transfer = [];
     for (const m of res.meshes) transfer.push(m.position.buffer, m.normal.buffer, m.index.buffer);
+    // as camadas com colisão: a árvore (BVH) de cada malha montada aqui, fora do quadro — ela
+    // reordena o índice (o mesmo array que segue para a GPU) e vai serializada
+    if (e.data.collide) {
+      for (const m of res.meshes) {
+        if (NO_COLLIDE.has(m.mat)) continue;
+        const g = new BufferGeometry();
+        g.setAttribute('position', new BufferAttribute(m.position, 3));
+        g.setIndex(new BufferAttribute(m.index, 1));
+        const s = MeshBVH.serialize(new MeshBVH(g, { maxLeafTris: 12 }), { cloneBuffers: false });
+        /** @type {any} */ (m).bvh = s.roots;
+        for (const r of s.roots) transfer.push(r);
+      }
+    }
     /** @type {any} */ (self).postMessage({ jobId, ...res }, transfer);
   } catch (err) {
     self.postMessage({ jobId, error: String(err && err.stack ? err.stack : err), meshes: [], lights: [] });

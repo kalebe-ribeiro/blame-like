@@ -14,6 +14,12 @@ import { MeshBVH, acceleratedRaycast } from 'three-mesh-bvh';
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
 
 const _c = new THREE.Vector3();
+// Montar a árvore (BVH) de uma malha grande leva vários ms. Cada corpo (jogador, Safeguards,
+// moradores…) tem a sua CollisionWorld — mas a árvore fica na geometria, compartilhada; e o
+// orçamento por quadro é UM para todos (antes, cada corpo montava até 2 por quadro: com vários
+// chegando juntos, travadas de 30+ ms).
+const BVH_MS = 4; // ms por quadro, somando todos os corpos
+const _bvh = { frame: -1, ms: 0, n: 0 };
 const _g = new THREE.Vector3();
 
 export class CollisionWorld {
@@ -57,11 +63,21 @@ export class CollisionWorld {
       _c.copy(geom.boundingSphere.center).applyMatrix4(mesh.matrixWorld);
       if (_c.distanceTo(scenePos) - geom.boundingSphere.radius > radius) return;
       if (!geom.boundsTree) {
-        if (budget <= 0) {
+        const f = w.frameNo ?? 0;
+        if (_bvh.frame !== f) {
+          _bvh.frame = f;
+          _bvh.ms = 0;
+          _bvh.n = 0;
+        }
+        // sempre ao menos uma por quadro (senão nada anda); depois, até o orçamento
+        if (budget <= 0 || (_bvh.n > 0 && _bvh.ms > BVH_MS)) {
           ready = false;
           return;
         }
+        const t0 = performance.now();
         geom.boundsTree = new MeshBVH(geom, { maxLeafTris: 12 });
+        _bvh.ms += performance.now() - t0;
+        _bvh.n++;
         budget--;
       }
       this.meshes.push(mesh);

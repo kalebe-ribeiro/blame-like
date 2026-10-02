@@ -13,12 +13,14 @@
     "check:safeguards": "electron . --check=safeguards --game=pilgrimage",
     "check:npcs": "electron . --check=npcs --game=pilgrimage",
     "check:moves": "electron . --check=moves --game=pilgrimage",
+    "vendor": "node tools/vendor-bvh.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "profile": "electron . --check=profile --game=pilgrimage",
     "check:climb": "electron . --check=climb --game=pilgrimage"
   },
   "dependencies": {
     "three": "^0.170.0",
+    "three-bvh-csg": "^0.0.17",
     "three-mesh-bvh": "^0.8.3"
   },
   "devDependencies": {

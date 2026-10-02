@@ -14,6 +14,8 @@
 //  chunk é um Group posicionado em (canto − origem), ver World.rebase().
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { MeshBVH } from 'three-mesh-bvh';
+import { NO_COLLIDE } from './noCollide.js';
 
 export class WorkerPool {
   constructor(count) {
@@ -188,7 +190,7 @@ export class ChunkLayer {
           const entry = { key, cx: x, cy: y, cz: z, group: null, lights: [], job: null };
           this.chunks.set(key, entry);
           entry.job = this.pool.submit(
-            { layer: this.layer, level: this.level, seed: this.seed, cx: x, cy: y, cz: z, reserved: this.reserved },
+            { layer: this.layer, level: this.level, seed: this.seed, cx: x, cy: y, cz: z, reserved: this.reserved, collide: this.collide },
             this,
             (data) => this._received(entry, data),
           );
@@ -254,6 +256,8 @@ export class ChunkLayer {
         entry.handles.push(this.batches.add(material, g, group.matrixWorld, RENDER_ORDER[m.mat] ?? 0));
         // cabos, feixes de luz, panos e pichações não colidem
         if (!this.collide || NO_COLLIDE.has(m.mat)) continue;
+        // a árvore de colisão já vem montada do worker (montar aqui travava o quadro ~40 ms)
+        if (m.bvh) g.boundsTree = MeshBVH.deserialize({ roots: m.bvh, index: g.index.array }, g, { setIndex: false });
         const mesh = new THREE.Mesh(g, material);
         mesh.userData.mat = m.mat;
         mesh.matrixAutoUpdate = false;
@@ -328,7 +332,6 @@ export class ChunkLayer {
 }
 
 const UPLOAD_MS = 4; // ms por quadro subindo geometria (por camada)
-const NO_COLLIDE = new Set(['cable', 'beam', 'cloth', 'graffiti', 'cascade', 'flood']);
 // transparentes: a água antes dos feixes de luz
 const RENDER_ORDER = { cascade: 4, beam: 5 };
 const _tmp = new THREE.Vector3();

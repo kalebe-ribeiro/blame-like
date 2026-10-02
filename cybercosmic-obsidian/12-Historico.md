@@ -283,3 +283,10 @@ Por que as coisas estão como estão, em ordem.
 
 - Dois defeitos achados ao escrever o teste: caçando, se a distância não diminuía em 7 s ele desistia — esperando o elevador ela não diminui; procurando, parado contava como "procurou e não achou" — parado esperando o carro também. Com um elevador/escada em andamento (`e.vert`), nenhum dos dois conta.
 - Casos novos no `check:safeguards`: `subir:elevador` e `subir:escada` — procurando você 240 m acima (a ponte de cima de uma passagem), ele chega de elevador; sem elevador, pela escada de manutenção. (No teste a câmera voa atrás dele — a Peregrinação não deixa voar: liberado só nesse caso.)
+
+## 2026-10-02 — picos de chegada restantes; a arma preparada
+
+- **Colisão montada no worker**: a árvore (BVH) de cada malha colidível de um chunk é montada no worker de geração e chega serializada (`MeshBVH.serialize`/`deserialize`). Montar uma árvore de chunk grande na linha principal travava o corpo ~35–40 ms ao chegar; lado a lado (3 rodadas): vila 34/38/39 → 8–20 ms. A `three-mesh-bvh` entra no worker por uma cópia gerada (`npm run vendor`, `tools/vendor-bvh.mjs` — o worker não enxerga o import map).
+- **Orçamento de colisão por quadro**: as árvores que ainda são montadas na linha principal (elevadores, vagões…) somam no máximo ~4 ms por quadro para todos os corpos juntos (antes, cada corpo montava até 2 por quadro).
+- **Terminais**: criar, fazer os textos (~10 ms) e o primeiro desenho em quadros separados (vila: 48/34/41 → 41/23/25 ms).
+- **Arma de Killy preparada**: `three-bvh-csg` 0.0.17 instalada; teste de viabilidade do corte de verdade (`tools/csg-spike.mjs`) com chunks reais: 0 falhas, nada sobra dentro do furo (fora das lajes das camadas, que não se cortam), ~70–100 ms por chunk no worker. Plano em [[Ideias/Futuro/Arma-do-Killy]].
