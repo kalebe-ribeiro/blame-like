@@ -540,7 +540,7 @@ export class World {
   /**
    * Um corte do emissor de feixe (GLOBAL: { a: [x,y,z], b: [x,y,z], r }): vai para o Field (e
    * para os pedidos dos workers) e os chunks que ele cruza são refeitos, do mais perto de
-   * `from` ao mais longe. Devolve quantos chunks foram pedidos, por camada.
+   * `from` (GLOBAL) ao mais longe. Devolve quantos chunks foram pedidos, por camada.
    */
   addCut(cut, from) {
     cut.id ??= `C${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;

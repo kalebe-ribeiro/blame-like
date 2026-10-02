@@ -330,13 +330,14 @@ export function setupDev(ctx) {
       const b = a.clone().addScaledVector(d, t);
       const r = Number(params.get('cutr') || 2.8);
       const t0 = performance.now();
-      const n = world.addCut({ a: a.toArray(), b: b.toArray(), r }, a.clone().sub(world.origin));
+      for (const L of [...world.layers, world.macroLayer]) /** @type {any} */ (L).debugRecut = true;
+      const n = world.addCut({ a: a.toArray(), b: b.toArray(), r }, a.clone());
       console.warn(`CUTSHOT: ${t.toFixed(0)} m (${stop ?? 'livre'}) · raio ${r} · chunks pedidos ${JSON.stringify(n)}`);
       // quanto cada chunk refeito levou até a malha nova entrar (do disparo) — só os refeitos
       for (const L of [...world.layers, world.macroLayer]) {
         L.onRecut = (en) => {
-          const dist = Math.round(L._chunkCenter(en, new THREE.Vector3()).distanceTo(a.clone().sub(world.origin)));
-          console.warn(`CUTSHOT: ${L.layer}${L.level ? ' lod' + L.level : ''} a ${dist} m do disparo · trocado em ${(performance.now() - t0).toFixed(0)} ms (worker ${en.recutMs?.toFixed(0)} ms)`);
+          const dist = Math.round(L._chunkCenter(en, new THREE.Vector3()).distanceTo(a));
+          console.warn(`CUTSHOT: ${L.layer}${L.level ? ' lod' + L.level : ''} a ${dist} m do disparo · trocado em ${(performance.now() - t0).toFixed(0)} ms (worker ${en.recutMs?.toFixed(0)} ms) · peças cortadas ${en.cutStats?.cut ?? '?'} · limites ${en.bounds ? [3, 4, 5].map((k) => Math.round(en.bounds[k] - en.bounds[k - 3])).join('×') : '-'}`);
         };
       }
     }, Number(params.get('cutshot')) * 1000);

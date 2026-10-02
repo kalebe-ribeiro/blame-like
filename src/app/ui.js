@@ -278,6 +278,7 @@ export function createUI(ctx) {
   // ─── novo mundo (R ou o botão) ───
   function regenerate() {
     ctx.seed = Math.floor(Math.random() * 2 ** 31);
+    world.cuts = []; // (mundo novo: sem os cortes do anterior)
     world.build(ctx.seed);
     world.setView({ renderDistance: ctx.settings.renderDistance, fog: ctx.settings.fog });
     ctx.travel.newWorld();

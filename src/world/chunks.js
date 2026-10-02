@@ -16,6 +16,8 @@
 import * as THREE from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
 import { NO_COLLIDE } from './noCollide.js';
+import { cutKey, cacheGet, cachePut } from './cutCache.js';
+import { cutHitsBoxes } from '../gen/cut.js';
 
 export class WorkerPool {
   constructor(count) {
@@ -198,12 +200,7 @@ export class ChunkLayer {
           if (this.chunks.has(key)) continue;
           const entry = { key, cx: x, cy: y, cz: z, group: null, lights: [], job: null };
           this.chunks.set(key, entry);
-          entry.job = this.pool.submit(
-            { layer: this.layer, level: this.level, seed: this.seed, cx: x, cy: y, cz: z, reserved: this.reserved, collide: this.collide, cuts: this.cutsFor(x, y, z) },
-            this,
-            (data) => this._received(entry, data),
-          );
-          entry.job.entry = entry;
+          this._request(entry);
         }
       }
     }
@@ -232,10 +229,46 @@ export class ChunkLayer {
    */
   cutsFor(x, y, z) {
     if (!this.field) return [];
-    const b = this.chunks.get(`${x},${y},${z}`)?.bounds;
-    if (b) return this.field.cutsInBox(b[0], b[1], b[2], b[3], b[4], b[5]);
+    const e = this.chunks.get(`${x},${y},${z}`);
+    // já chegou: só os cortes que encostam numa peça cortável dele (a chave do cache fica
+    // estável — um tiro ao lado não muda um chunk que ele não tocou)
+    if (e?.pieceBoxes) {
+      const b = e.bounds;
+      return b ? this.field.cutsInBox(b[0], b[1], b[2], b[3], b[4], b[5]).filter((c) => cutHitsBoxes(c, e.pieceBoxes)) : [];
+    }
     const s = this.size;
     return this.field.cutsInBox((x - 1) * s, (y - 1) * s, (z - 1) * s, (x + 2) * s, (y + 2) * s, (z + 2) * s);
+  }
+
+  /**
+   * Pede o chunk ao worker — ou, se tem cortes do emissor, primeiro ao cache (o corte não se
+   * repete a cada carregamento: cutCache.js). O resultado de um pedido com cortes vai para o cache.
+   */
+  _request(entry, opts = {}) {
+    const cuts = this.cutsFor(entry.cx, entry.cy, entry.cz);
+    const ask = () => {
+      const t0 = performance.now();
+      entry.job = this.pool.submit(
+        { layer: this.layer, level: this.level, seed: this.seed, cx: entry.cx, cy: entry.cy, cz: entry.cz, reserved: this.reserved, collide: this.collide, cuts, cutJob: !!opts.cutJob },
+        opts.owner ?? this,
+        (data) => {
+          if (opts.cutJob) entry.recutMs = performance.now() - t0;
+          if (cuts.length && data.meshes) cachePut(cutKey(this.seed, this.layer, this.level, entry.cx, entry.cy, entry.cz, cuts), data);
+          this._received(entry, data);
+        },
+      );
+      entry.job.entry = entry;
+    };
+    if (!cuts.length || opts.cutJob) return ask(); // (um corte novo nunca está no cache)
+    const placeholder = { entry, cancelled: false };
+    entry.job = placeholder;
+    cacheGet(cutKey(this.seed, this.layer, this.level, entry.cx, entry.cy, entry.cz, cuts)).then((hit) => {
+      if (this.chunks.get(entry.key) !== entry || entry.job !== placeholder || placeholder.cancelled) return;
+      if (hit) {
+        entry.fromCache = true;
+        this._received(entry, hit);
+      } else ask();
+    });
   }
 
   /**
@@ -253,21 +286,20 @@ export class ChunkLayer {
       if (e.cx < lo[0] || e.cx > hi[0] || e.cy < lo[1] || e.cy > hi[1] || e.cz < lo[2] || e.cz > hi[2]) continue;
       if (e.received && !e.bounds) continue; // vazio
       if (!this.cutsFor(e.cx, e.cy, e.cz).includes(cut)) continue;
+      if (!e.received) {
+        // ainda na fila: pedido de novo com o corte, na prioridade normal (não fura o carregamento)
+        if (e.job) this.pool.cancel(e.job);
+        this._request(e);
+        continue;
+      }
       hit.push(e);
     }
+    if (this.debugRecut) console.warn(`RECUT ${this.layer}${this.level ? this.level : ''}: ${hit.length} · com caixas ${hit.filter((e) => e.pieceBoxes).length} · caixas ${hit.map((e) => (e.pieceBoxes ? e.pieceBoxes.length / 6 : '-')).slice(0, 8).join(',')}`);
     hit.sort((p, q) => this._chunkCenter(p, _tmp).distanceToSquared(from) - this._chunkCenter(q, _tmp2).distanceToSquared(from));
     hit.forEach((e, i) => {
       if (e.job) this.pool.cancel(e.job);
-      const t0 = performance.now();
       e.recutting = true;
-      e.job = this.pool.submit(
-        { layer: this.layer, level: this.level, seed: this.seed, cx: e.cx, cy: e.cy, cz: e.cz, reserved: this.reserved, collide: this.collide, cuts: this.cutsFor(e.cx, e.cy, e.cz), cutJob: true },
-        { priorityOf: () => -1e11 + i },
-        (data) => {
-          e.recutMs = performance.now() - t0;
-          this._received(e, data);
-        },
-      );
+      this._request(e, { cutJob: true, owner: { priorityOf: () => -1e11 + i } });
     });
     return hit.length;
   }
@@ -279,6 +311,8 @@ export class ChunkLayer {
     entry.emitters = data.emitters ?? [];
     entry.received = true;
     entry.bounds = data.bounds ?? null;
+    entry.pieceBoxes = data.pieceBoxes ?? null;
+    entry.cutStats = data.cutStats ?? null;
     entry.debris = data.debris ?? [];
     entry.empty = data.meshes.length === 0;
     if (!entry.empty) this.uploads.push({ entry, data });

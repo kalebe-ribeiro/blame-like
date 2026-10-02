@@ -357,3 +357,35 @@ export function keepTris(g, tris) {
   g.setIndex(out);
   return g;
 }
+
+/**
+ * O corte (GLOBAL, { a, b, r }) encosta em alguma das caixas (Float32Array, 6 por caixa)?
+ * O segmento contra cada caixa engordada pelo raio (o teste do raio contra a caixa).
+ */
+export function cutHitsBoxes(c, boxes) {
+  if (!boxes) return true;
+  const o = c.a;
+  const d = [c.b[0] - o[0], c.b[1] - o[1], c.b[2] - o[2]];
+  const r = c.r + 0.1;
+  for (let i = 0; i < boxes.length; i += 6) {
+    let t0 = 0;
+    let t1 = 1;
+    let ok = true;
+    for (let k = 0; k < 3 && ok; k++) {
+      const mn = boxes[i + k] - r;
+      const mx = boxes[i + 3 + k] + r;
+      if (Math.abs(d[k]) < 1e-9) {
+        if (o[k] < mn || o[k] > mx) ok = false;
+        continue;
+      }
+      let ta = (mn - o[k]) / d[k];
+      let tb = (mx - o[k]) / d[k];
+      if (ta > tb) [ta, tb] = [tb, ta];
+      if (ta > t0) t0 = ta;
+      if (tb < t1) t1 = tb;
+      if (t0 > t1) ok = false;
+    }
+    if (ok) return true;
+  }
+  return false;
+}

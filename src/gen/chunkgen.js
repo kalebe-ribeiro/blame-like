@@ -53,7 +53,56 @@ export class ChunkBuilder {
     this.protect = 0; // > 0: as peças adicionadas agora não se cortam (camadas, únicas, a torre da passagem)
     this.cutStats = { cut: 0, ms: 0 };
     this.cutPieces = []; // as peças recortadas (os fragmentos soltos são procurados no fim)
+    /** @type {number[]} as caixas (GLOBAIS, 6 números cada) das peças que podem ser cortadas */
+    this.boxes = [];
     this.debris = []; // fragmentos soltos que saíram da malha (GLOBAIS): { x, y, z, sx, sy, sz, mat }
+  }
+
+  /**
+   * As caixas de uma peça (GLOBAIS) para o teste "este tiro encosta neste chunk?". Uma peça longa
+   * (um cabo de 1 km, uma viga) vira várias caixas ao longo do comprimento (~24 m cada, até 32):
+   * cada triângulo entra em todas as fatias que atravessa, com a caixa dele (conservador — nunca
+   * deixa de cortar onde devia).
+   */
+  _pieceBoxes(geom) {
+    if (!geom.boundingBox) geom.computeBoundingBox();
+    const b = geom.boundingBox;
+    const ext = [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z];
+    const ax = ext.indexOf(Math.max(...ext));
+    const K = Math.min(32, Math.max(1, Math.ceil(ext[ax] / 24)));
+    const push = (mn, mx) => this.boxes.push(mn[0] + this.x0, mn[1] + this.y0, mn[2] + this.z0, mx[0] + this.x0, mx[1] + this.y0, mx[2] + this.z0);
+    if (K === 1) return push([b.min.x, b.min.y, b.min.z], [b.max.x, b.max.y, b.max.z]);
+    const lo = [b.min.x, b.min.y, b.min.z][ax];
+    const step = ext[ax] / K;
+    const mins = Array.from({ length: K }, () => [Infinity, Infinity, Infinity]);
+    const maxs = Array.from({ length: K }, () => [-Infinity, -Infinity, -Infinity]);
+    const pos = geom.attributes.position;
+    const ix = geom.index;
+    const n = ix ? ix.count : pos.count;
+    for (let t = 0; t < n; t += 3) {
+      const tmn = [Infinity, Infinity, Infinity];
+      const tmx = [-Infinity, -Infinity, -Infinity];
+      for (let j = 0; j < 3; j++) {
+        const v = ix ? ix.getX(t + j) : t + j;
+        const p = [pos.getX(v), pos.getY(v), pos.getZ(v)];
+        for (let k = 0; k < 3; k++) {
+          if (p[k] < tmn[k]) tmn[k] = p[k];
+          if (p[k] > tmx[k]) tmx[k] = p[k];
+        }
+      }
+      const i0 = Math.max(0, Math.min(K - 1, Math.floor((tmn[ax] - lo) / step)));
+      const i1 = Math.max(0, Math.min(K - 1, Math.floor((tmx[ax] - lo) / step)));
+      for (let i = i0; i <= i1; i++) {
+        const a0 = lo + i * step;
+        for (let k = 0; k < 3; k++) {
+          const mn = k === ax ? Math.max(tmn[k], a0) : tmn[k];
+          const mx = k === ax ? Math.min(tmx[k], a0 + step) : tmx[k];
+          if (mn < mins[i][k]) mins[i][k] = mn;
+          if (mx > maxs[i][k]) maxs[i][k] = mx;
+        }
+      }
+    }
+    for (let i = 0; i < K; i++) if (mins[i][0] <= maxs[i][0]) push(mins[i], maxs[i]);
   }
 
   /** Os cortes (GLOBAIS) que tocam este chunk: as peças passam a ser recortadas por eles. */
@@ -81,6 +130,9 @@ export class ChunkBuilder {
 
   add(mat, geom) {
     if (!geom) return;
+    // a caixa de cada peça que PODE ser cortada (GLOBAL) — o jogo decide por elas que chunks
+    // um tiro refaz e que cortes mandar (finish → pieceBoxes)
+    if (!this.protect && !NO_CUT.has(mat)) this._pieceBoxes(geom);
     // os cortes do emissor: a peça sai recortada (as faces do corte no material 'cut')
     if (this.cutsL.length && !this.protect && !NO_CUT.has(mat)) {
       const t0 = performance.now();
@@ -228,13 +280,26 @@ export class ChunkBuilder {
       });
     }
     // os limites REAIS da geometria (GLOBAIS) — o jogo decide por eles que cortes mandar e que chunks refazer
+    // (a caixa exata dos vértices — a esfera de uma malha que ocupa o chunk vira um cubo 1,7× maior)
     let bounds = null;
     for (const m of meshes) {
-      const [x, y, z, r] = m.sphere;
-      const b = [x - r + this.x0, y - r + this.y0, z - r + this.z0, x + r + this.x0, y + r + this.y0, z + r + this.z0];
-      bounds = bounds ? [Math.min(bounds[0], b[0]), Math.min(bounds[1], b[1]), Math.min(bounds[2], b[2]), Math.max(bounds[3], b[3]), Math.max(bounds[4], b[4]), Math.max(bounds[5], b[5])] : b;
+      const p = m.position;
+      for (let i = 0; i < p.length; i += 3) {
+        const x = p[i] + this.x0;
+        const y = p[i + 1] + this.y0;
+        const z = p[i + 2] + this.z0;
+        if (!bounds) bounds = [x, y, z, x, y, z];
+        else {
+          if (x < bounds[0]) bounds[0] = x;
+          if (y < bounds[1]) bounds[1] = y;
+          if (z < bounds[2]) bounds[2] = z;
+          if (x > bounds[3]) bounds[3] = x;
+          if (y > bounds[4]) bounds[4] = y;
+          if (z > bounds[5]) bounds[5] = z;
+        }
+      }
     }
-    return { meshes, lights: this.lights, emitters: this.emitters, debris: this.debris, cutStats: this.cutStats, bounds };
+    return { meshes, lights: this.lights, emitters: this.emitters, debris: this.debris, cutStats: this.cutStats, bounds, pieceBoxes: new Float32Array(this.boxes) };
   }
 }
 

@@ -116,6 +116,7 @@ ctx.lexicon = new Lexicon(profile, () => ctx.rules.translation, () => {
 });
 ctx.world.lexicon = ctx.lexicon;
 ctx.world.worldState = ctx.worldState; // o que o jogador mudou (setores religados…) — lido no build
+ctx.world.cuts = (ctx.slot.cuts ?? []).slice(); // os cortes do emissor (o cofre, Arma-do-Killy)
 ctx.world.build(ctx.seed);
 ctx.dust = createDust();
 ctx.scene.add(ctx.dust);

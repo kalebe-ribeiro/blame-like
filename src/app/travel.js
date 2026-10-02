@@ -37,7 +37,9 @@ export function createTravel(ctx) {
       trail: trail.toJSON(),
       player: ctx.player,
       entities: ctx.beings?.serialize() ?? [],
+      cuts: world.cuts, // os cortes do emissor de feixe (a arma de Killy)
     });
+    delete slot.holes; // (os buracos "de shader" da versão retirada: ignorados)
     storeSlot(slot);
   }
   window.addEventListener('beforeunload', save);
@@ -127,6 +129,7 @@ export function createTravel(ctx) {
       slot.boosts = {};
       slot.sectors = {};
       slot.entities = [];
+      slot.cuts = [];
       ctx.alert?.reset();
     },
     update(dt) {
