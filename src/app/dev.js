@@ -405,6 +405,7 @@ export function setupDev(ctx) {
   else if (params.get('check') === 'beings') import('../dev/beingtest.js').then((m) => m.runBeingTest(ctx));
   else if (params.get('check') === 'climb') import('../dev/climbtest.js').then((m) => m.runClimbTest(ctx));
   else if (params.get('check') === 'npcs') import('../dev/npctest.js').then((m) => m.runNpcTest(ctx));
+  else if (params.get('check') === 'beam') import('../dev/beamtest.js').then((m) => m.runBeamTest(ctx));
   else if (params.get('check') === 'profile') import('../dev/profile.js').then((m) => m.runProfile(ctx));
   else if (params.get('check') === 'moves') import('../dev/movetest.js').then((m) => m.runMoveTest(ctx));
   else if (params.get('check') === 'safeguards') import('../dev/sgtest.js').then((m) => m.runSafeguardTest(ctx));

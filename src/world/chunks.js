@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
 import { NO_COLLIDE } from './noCollide.js';
-import { cutKey, cacheGet, cachePut } from './cutCache.js';
+import { cutKey, boxKey, cacheGet, cachePut } from './cutCache.js';
 import { cutHitsBoxes } from '../gen/cut.js';
 
 export class WorkerPool {
@@ -120,6 +120,9 @@ export class ChunkLayer {
     this.field = o.field ?? null;
     /** @type {((entry: any) => void) | null} um chunk refeito por um corte entrou (medição) */
     this.onRecut = null;
+    /** @type {Map<string, {bounds: any, pieceBoxes: any, none?: boolean}>} as caixas das peças dos chunks perto de cortes (ficam quando o chunk sai) */
+    this.boxMemo = new Map();
+    this.debugRecut = false; // (dev: --cutshot conta os chunks refeitos)
     this.chunks = new Map();
     this.uploads = [];
     this.center = new THREE.Vector3();
@@ -232,9 +235,11 @@ export class ChunkLayer {
     const e = this.chunks.get(`${x},${y},${z}`);
     // já chegou: só os cortes que encostam numa peça cortável dele (a chave do cache fica
     // estável — um tiro ao lado não muda um chunk que ele não tocou)
-    if (e?.pieceBoxes) {
-      const b = e.bounds;
-      return b ? this.field.cutsInBox(b[0], b[1], b[2], b[3], b[4], b[5]).filter((c) => cutHitsBoxes(c, e.pieceBoxes)) : [];
+    // (as caixas ficam guardadas quando o chunk sai — e no IndexedDB, para a próxima sessão)
+    const k = e?.pieceBoxes ? e : this.boxMemo.get(`${x},${y},${z}`);
+    if (k && !k.none) {
+      const b = k.bounds;
+      return b && k.pieceBoxes ? this.field.cutsInBox(b[0], b[1], b[2], b[3], b[4], b[5]).filter((c) => cutHitsBoxes(c, k.pieceBoxes)) : [];
     }
     const s = this.size;
     return this.field.cutsInBox((x - 1) * s, (y - 1) * s, (z - 1) * s, (x + 2) * s, (y + 2) * s, (z + 2) * s);
@@ -245,6 +250,19 @@ export class ChunkLayer {
    * repete a cada carregamento: cutCache.js). O resultado de um pedido com cortes vai para o cache.
    */
   _request(entry, opts = {}) {
+    // perto de um corte e sem as caixas das peças: primeiro elas (do IndexedDB), para a lista
+    // de cortes — e a chave do cache — ser a mesma de quando o chunk foi cortado
+    if (!opts.cutJob && !entry.pieceBoxes && !this.boxMemo.has(entry.key) && this.cutsFor(entry.cx, entry.cy, entry.cz).length) {
+      const wait = { entry, cancelled: false };
+      entry.job = wait;
+      cacheGet(boxKey(this.seed, this.layer, this.level, entry.cx, entry.cy, entry.cz)).then((hit) => {
+        this.boxMemo.set(entry.key, hit ?? { bounds: null, pieceBoxes: null, none: true });
+        if (this.chunks.get(entry.key) !== entry || entry.job !== wait || wait.cancelled) return;
+        entry.job = null;
+        this._request(entry, opts);
+      });
+      return;
+    }
     const cuts = this.cutsFor(entry.cx, entry.cy, entry.cz);
     const ask = () => {
       const t0 = performance.now();
@@ -312,6 +330,15 @@ export class ChunkLayer {
     entry.received = true;
     entry.bounds = data.bounds ?? null;
     entry.pieceBoxes = data.pieceBoxes ?? null;
+    // as caixas das peças, guardadas se há corte perto (servem para a chave do cache depois)
+    const known = this.boxMemo.get(entry.key);
+    const s = this.size;
+    const [x, y, z] = [entry.cx, entry.cy, entry.cz];
+    if ((!known || known.none) && this.field?.cutsInBox((x - 1) * s, (y - 1) * s, (z - 1) * s, (x + 2) * s, (y + 2) * s, (z + 2) * s).length) {
+      const k = { bounds: entry.bounds, pieceBoxes: entry.pieceBoxes };
+      this.boxMemo.set(entry.key, k);
+      cachePut(boxKey(this.seed, this.layer, this.level, entry.cx, entry.cy, entry.cz), k);
+    }
     entry.cutStats = data.cutStats ?? null;
     entry.debris = data.debris ?? [];
     entry.empty = data.meshes.length === 0;

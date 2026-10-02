@@ -31,6 +31,7 @@ self.onmessage = (e) => {
       nav = null;
     }
     if (e.data.task === 'circuit') {
+      field.setCuts(e.data.cuts ?? []);
       nav ??= new NavGraph(field);
       self.postMessage({ jobId, circuit: patrolCircuit(field, nav, e.data.t, e.data.salt) });
       return;

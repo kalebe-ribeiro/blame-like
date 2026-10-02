@@ -932,6 +932,16 @@ export class EntitySystem {
     this._plan(e);
   }
 
+  /** Um corte do emissor: quem tem caminho por ele pede outro (o grafo já não passa ali). */
+  onCut() {
+    const F = this.world.field;
+    for (const e of this.list.values()) {
+      if (e.dead || e.state !== 'walk' || !e.path) continue;
+      const rest = e.path.pts.slice(Math.max(0, e.pi - 1));
+      if (F.cutOnPath(rest)) this._plan(e);
+    }
+  }
+
   /** Estado para o salvamento do mundo (só os corpos persistentes). */
   serialize() {
     const out = [];

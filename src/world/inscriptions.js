@@ -247,7 +247,7 @@ export class InscriptionSystem {
     this._scan -= dt;
     if (this._scan <= 0) {
       this._scan = 1;
-      const want = new Map(this._sites(g).map((s) => [s.id, s]));
+      const want = new Map(this._sites(g).filter((s) => !this.field.cutAt(s.x, s.y + 1, s.z, 0.5)).map((s) => [s.id, s])); // (num corte do emissor: não existe)
       for (const [id, it] of this.items) {
         if (want.has(id)) continue;
         it.mesh.removeFromParent();

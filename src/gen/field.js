@@ -168,6 +168,7 @@ export class Field {
   constructor(seed, reserved = []) {
     /** @type {{ a: number[], b: number[], r: number, id?: string }[]} os cortes do emissor (setCuts) */
     this.cuts = [];
+    this.cutVer = 0;
     /** @type {Map<string, any>|undefined} lugares de pistas já ancorados (memorizado — anchoredSites) */
     this._anchored = undefined;
     this.restored = new Map(); // setores religados pelo jogador: id → { x, y, z, t0 } (app/power.js)
@@ -457,6 +458,24 @@ export class Field {
    */
   setCuts(list) {
     this.cuts = list ?? [];
+    this.cutVer = (this.cutVer ?? 0) + 1;
+  }
+
+  /** Um caminho (pontos GLOBAIS no piso) passa por algum corte? (amostras a cada 2 m, à altura do corpo) */
+  cutOnPath(pts, margin = 0.5) {
+    if (!this.cuts?.length) return false;
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      if (this.cutAt(p.x, p.y + 1, p.z, margin)) return true;
+      const q = pts[i + 1];
+      if (!q) break;
+      const n = Math.floor(Math.hypot(q.x - p.x, q.y - p.y, q.z - p.z) / 2);
+      for (let k = 1; k < n; k++) {
+        const u = k / n;
+        if (this.cutAt(p.x + (q.x - p.x) * u, p.y + (q.y - p.y) * u + 1, p.z + (q.z - p.z) * u, margin)) return true;
+      }
+    }
+    return false;
   }
 
   /** Os cortes cuja caixa (com o raio) encosta na caixa dada. */

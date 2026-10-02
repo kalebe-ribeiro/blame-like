@@ -131,7 +131,19 @@ export class ElevatorSystem {
     this.lights.length = 0;
     for (const car of this.cars.values()) {
       // sem energia, o motor para (desacelerando) e o carro fica onde está
-      const powered = !this.outages || this.outages.power(car.def.x, car.y + 3, car.def.z, 3.3, time) >= 0.5;
+      let powered = !this.outages || this.outages.power(car.def.x, car.y + 3, car.def.z, 3.3, time) >= 0.5;
+      // o trilho de um elevador de fachada cortado pelo emissor: parado de vez (a torre do
+      // elevador grande é protegida — não se corta)
+      const F = this.field;
+      if (car.def.kind !== 'grand' && F.cuts?.length) {
+        if (car.cutVer !== F.cutVer) {
+          car.cutVer = F.cutVer;
+          const d = car.def;
+          car.cut = false;
+          for (let y = d.y0; y <= (d.headY ?? d.y1) && !car.cut; y += 2) if (F.cutAt(d.x, y, d.z, Math.max(d.w, d.d) / 2)) car.cut = true;
+        }
+        if (car.cut) powered = false;
+      }
       car.rate = powered ? Math.min(1, car.rate + dt / 8) : Math.max(0, car.rate - dt / 4);
       car.clock += car.rate * dt;
       const y = ElevatorSystem.heightAt(car.def, car.clock);

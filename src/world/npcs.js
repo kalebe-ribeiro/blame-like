@@ -92,6 +92,16 @@ export class NpcSystem {
     }
   }
 
+  /** Um corte do emissor: os andarilhos de circuito cortado saem (o próximo varrer refaz o circuito). */
+  onCut() {
+    for (const [id, e] of this.wanderers) {
+      if (e.npc.state !== 'walk' || !this.field.cutOnPath(e.npc.c.pts)) continue;
+      this.ents.remove(e.id);
+      this.wanderers.delete(id);
+    }
+    this.scanT = 0;
+  }
+
   _scanWanderers(g) {
     const F = this.field;
     const ids = new Map();

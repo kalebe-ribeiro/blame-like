@@ -195,7 +195,7 @@ export class BuilderSystem {
     this._scanTimer -= dt;
     if (this._scanTimer <= 0) {
       this._scanTimer = 2;
-      const want = new Map(this.field.builderSitesNear(g.x, g.y, g.z, 2200).map((s) => [s.id, s]));
+      const want = new Map(this.field.builderSitesNear(g.x, g.y, g.z, 2200).filter((s) => !this.field.cutAt(s.x, s.y + 1, s.z, 0.5)).map((s) => [s.id, s])); // (num corte do emissor: não existe)
       for (const [id, site] of this.sites) {
         if (!want.has(id)) {
           site.group.traverse((o) => o.geometry?.dispose());

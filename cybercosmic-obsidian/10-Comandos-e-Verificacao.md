@@ -62,6 +62,7 @@ npx electron . --capture=shot.png --pos=x,y,z,yaw,pitch --mode=fly --seed=abc --
 - `npm run typecheck` — checagem de tipos do TypeScript sobre o próprio JavaScript (`tsconfig.json`, `checkJs`; sem passo de build). Segundos. **Rodar antes de qualquer check** — pega nome inexistente, propriedade errada, argumento trocado. Tem de dar 0 erros.
 - `npm run profile` — o perfil por sistema (`dev/profile.js`): ms por quadro de cada sistema (média e pior), chamadas de desenho, triângulos, tempo de GPU, em 9 lugares (chegada e parado). `--profplaces=a,b` só alguns; `--profres=0.5` muda a resolução (separa CPU de espera pela GPU). **A máquina varia muito entre rodadas: comparar antes × depois em seguida, alternando** (stash/pop).
 - `npm run check:moves` — os seres fazendo o que o jogador faz (`dev/movetest.js`): quina, escada (sobe e desce 240 m), elevador, vagão. ~15 min.
+- `npm run check:beam` — o corte da arma de Killy (`dev/beamtest.js`, fase F1): furo, camada, única, torre, luzes, grafo, vagão, recarregar do cache, tempo (10 tiros contra o orçamento).
 - `npm run check:climb` — as quinas (`dev/climbtest.js`): vault e agarrar em quinas de verdade em vários destinos, pegar a borda de uma plataforma e o piso de uma ponte suspensa caindo. ~6 min.
 
 ## Qual check rodar (pedido do usuário, 2026-09-30)
@@ -76,6 +77,7 @@ Cada check leva minutos: rodar **só os pertinentes** à mudança.
 | seres: entidades, navegação, corpos, `Walker` (e mudanças na rede andável ou nas passarelas, que o grafo espelha) | `npm run check:beings` |
 | Safeguards: rondas, percepção, caçada, captura, paredes, alerta, despertar | `npm run check:safeguards` (+ `check:beings` se mexeu nas entidades) |
 | NPCs: vilas, conversa, cargas, andarilhos, vida de silício | `npm run check:npcs` (+ `check:pad` se mexeu no painel da conversa) |
+| Arma de Killy: cortes, recorte de chunks, cache | `npm run check:beam` (+ `check:moves`/`check:safeguards` se mexeu no grafo) |
 | movimento do corpo: quinas, `Walker` | `npm run check:climb` (+ `check:beings` e `check:moves` — os seres usam o mesmo `Walker`) |
 | seres em escadas/elevadores/vagões (`entities.js`, `nav.js` ride) | `npm run check:moves` |
 | só textos/i18n, documentação, cofre | nenhum (no máximo importar o módulo) |

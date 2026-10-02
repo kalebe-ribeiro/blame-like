@@ -529,7 +529,7 @@ export class World {
     const nav = this.entities.nav;
     const key = `${t.id}#${salt}`;
     if (nav._patrols?.has(key)) return cb(nav._patrols.get(key));
-    this.pool.submit({ task: 'circuit', seed: this.seed, reserved: field.reserved, t, salt }, CIRCUIT_JOB, (d) => {
+    this.pool.submit({ task: 'circuit', seed: this.seed, reserved: field.reserved, t, salt, cuts: field.cuts }, CIRCUIT_JOB, (d) => {
       if (this.field !== field) return; // outro mundo nesse meio tempo
       nav._patrols ??= new Map();
       nav._patrols.set(key, d.circuit ?? null);
@@ -548,6 +548,12 @@ export class World {
     this.field.setCuts(this.cuts);
     const out = {};
     for (const L of [...this.layers, this.macroLayer]) out[L.level ? 'lod' + L.level : L.layer] = L.recut(cut, from);
+    // o resto do mundo: os caminhos, as rondas, os objetos montados fora da geração
+    this.entities.onCut();
+    this.safeguards.onCut();
+    this.npcs.onCut();
+    for (const sys of [this.terminals, this.inscriptions, this.substations]) if (sys) sys._scan = 0;
+    if (this.builders) this.builders._scanTimer = 0;
     return out;
   }
 

@@ -169,6 +169,31 @@ export class TransitCars {
         if (this.outages.power(x, L.y + 3, z, 7.7, time) < 0.5) dark.add(L.id);
       }
     }
+    // um trilho cortado pelo emissor: a linha para (os vagões não entram num trecho cortado)
+    const F = this.field;
+    if (F.cuts?.length) {
+      for (const L of this.lines) {
+        if (L.cutVer === F.cutVer) {
+          if (L.cut) dark.add(L.id);
+          continue;
+        }
+        L.cutVer = F.cutVer;
+        const lat = L.u + L.track.off;
+        // o trilho é uma reta ao longo do eixo da linha, em (lat, y − 1,5)
+        L.cut = F.cuts.some((c) => {
+          for (let s = 0; s <= 20; s++) {
+            const u = s / 20;
+            const x = c.a[0] + (c.b[0] - c.a[0]) * u;
+            const y = c.a[1] + (c.b[1] - c.a[1]) * u;
+            const z = c.a[2] + (c.b[2] - c.a[2]) * u;
+            const off = L.axis === 'z' ? x - lat : z - lat;
+            if (Math.hypot(off, y - (L.y - 1.5)) < c.r + 1.2) return true;
+          }
+          return false;
+        });
+        if (L.cut) dark.add(L.id);
+      }
+    }
     for (const [id, k] of this.clocks) {
       // freia em ~6 s; na volta da energia, retoma devagar (~12 s)
       k.rate = dark.has(id) ? Math.max(0, k.rate - dt / 6) : Math.min(1, k.rate + dt / 12);

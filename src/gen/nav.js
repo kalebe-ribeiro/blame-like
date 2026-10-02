@@ -199,6 +199,11 @@ export class NavGraph {
     const F = this.F;
     const ts = m * MOD;
     if (F.walkGap(wk.salt, ts + MOD / 2, wk.w.main, wk.y)) return false;
+    // (um corte do emissor no tabuleiro: um vão)
+    if (F.cuts?.length) {
+      const c = this.walkPoint(wk, ts + MOD / 2);
+      if (F.cutAt(c.x, c.y + 0.5, c.z, wk.w.width / 2)) return false;
+    }
     const hw = wk.w.width / 2;
     const [x0, z0, x1, z1] = wk.axis === 'z' ? [wk.u - hw - 1, ts, wk.u + hw + 1, ts + MOD] : [ts, wk.u - hw - 1, ts + MOD, wk.u + hw + 1];
     const res = F.reservedHit(x0, wk.y - 4, z0, x1, wk.y + 12, z1);
@@ -453,6 +458,18 @@ export class NavGraph {
    * `goal` (opcional): um vértice de passarela entra como vizinho direto se estiver no mesmo trecho.
    */
   neighbors(v, goal = null, ride = true) {
+    const F = this.F;
+    // os cortes do emissor mudaram: o que foi memorizado sobre o grafo vale de novo
+    if (this._cutVer !== F.cutVer) {
+      this._cutVer = F.cutVer;
+      this._runs.clear();
+      this._patrols?.clear();
+    }
+    if (F.cuts?.length) return this._neighbors(v, goal, ride).filter((nb) => !F.cutOnPath(nb.pts) && !(nb.v.kind === 'node' && F.cutAt(nb.v.x, nb.v.y + 1, nb.v.z, 1)));
+    return this._neighbors(v, goal, ride);
+  }
+
+  _neighbors(v, goal = null, ride = true) {
     const F = this.F;
     const out = [];
     const len = (pts) => {

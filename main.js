@@ -201,7 +201,7 @@ function createWindow() {
   if (checkMode) {
     win.webContents.on('render-process-gone', (_e, d) => finishCheck(`processo do renderer caiu: ${d.reason}`));
     // o teste dos corpos anda de verdade (a pé, a ~2,3 m/s): tem mais tempo
-    const limit = argValue('check') === 'moves' ? 25 : ['beings', 'safeguards', 'npcs', 'profile'].includes(argValue('check')) ? 12 : 6;
+    const limit = argValue('check') === 'moves' ? 25 : ['beings', 'safeguards', 'npcs', 'profile', 'beam'].includes(argValue('check')) ? 12 : 6;
     setTimeout(() => finishCheck(`tempo esgotado (${limit} min)`), limit * 60 * 1000);
   }
 

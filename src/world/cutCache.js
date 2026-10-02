@@ -32,6 +32,15 @@ export function cutKey(seed, layer, level, cx, cy, cz, cuts) {
   return `${seed}|${layer}|${level}|${cx},${cy},${cz}|${cuts.map((c) => c.id).sort().join(',')}`;
 }
 
+/**
+ * A chave das caixas das peças cortáveis de um chunk (não dependem dos cortes: são
+ * registradas antes de cortar). Com elas, os cortes que contam para um chunk — e a chave
+ * do resultado — são os mesmos ao carregar de novo e depois de um tiro.
+ */
+export function boxKey(seed, layer, level, cx, cy, cz) {
+  return `caixas|${seed}|${layer}|${level}|${cx},${cy},${cz}`;
+}
+
 /** O resultado guardado (ou null). */
 export async function cacheGet(key) {
   const d = await db();

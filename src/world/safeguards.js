@@ -135,6 +135,17 @@ export class SafeguardSystem {
     for (const e of this.hunters) this._panel(e, dt, origin);
   }
 
+  /** Um corte do emissor: as rondas de circuito cortado saem (o próximo varrer refaz o circuito). */
+  onCut() {
+    const F = this.field;
+    for (const [id, e] of this.byTerritory) {
+      if (e.sg.state !== 'patrol' || !F.cutOnPath(e.sg.c.pts)) continue;
+      this.ents.remove(e.id);
+      this.byTerritory.delete(id);
+    }
+    this.scanT = 0;
+  }
+
   _spawnPatrol(c) {
     const s = c.phase + this.clock() * PATROL.speed;
     const p = circuitAt(c, s);
