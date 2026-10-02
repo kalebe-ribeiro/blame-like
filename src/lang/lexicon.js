@@ -20,7 +20,7 @@ export class Lexicon {
   /**
    * @param {object} profile  o perfil global (ganha .lexicon e .lexSources)
    * @param {() => boolean} canLearn  o modo atual deixa aprender?
-   * @param {() => void} onChange  o léxico mudou (salvar o perfil, avisar)
+   * @param {(learned: string[]) => void} onChange  o léxico mudou (salvar o perfil, avisar) — com as palavras aprendidas
    */
   constructor(profile, canLearn, onChange) {
     this.profile = profile;

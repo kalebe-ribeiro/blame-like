@@ -87,7 +87,7 @@ export class HUD {
     let ry = window.innerHeight - 100;
     ctx.fillStyle = 'rgba(178,188,172,0.45)';
     for (const [axis, v] of [['X', pos.x], ['Y', pos.y], ['Z', pos.z]]) {
-      ctx.fillText(`${axis} ${fmtNum(Math.round(v)).padStart(10)} m`, rx, ry);
+      ctx.fillText(`${axis} ${fmtNum(Math.round(Number(v))).padStart(10)} m`, rx, ry);
       ry += 16;
     }
     ry += 6;

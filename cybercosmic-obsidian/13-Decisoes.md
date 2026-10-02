@@ -189,3 +189,9 @@ O usuário respondeu item a item (na ordem deste arquivo):
 - **Fase 7:** mantém tudo.
 - **Bateria ×3** ("a bateria acaba muito rápido"): todos os gastos da célula divididos por 3 (lanterna 21 min, sensor 45 min, religar setor, ler fragmento).
 - **Arma do Killy — requisitos para quando for feita** (não está no jogo): não atravessa camadas nem únicas; potência ajustável (alcance, raio, gasto); ≥ 5 tiros com carga máxima → [[Ideias/Futuro/Arma-do-Killy]]. Uma primeira versão (buracos por shader) foi feita e **retirada a pedido do usuário em 2026-10-02**: não convencia (peças ocas pelo furo, o próprio corpo sumindo perto do cilindro, entidades erradas no tiro). Se voltar: o corte de verdade (CSG peça por peça em `ChunkBuilder.add`, refazendo os chunks atingidos), não o shader.
+
+### Stack: reforçar, não migrar (2026-10-02)
+
+O usuário pediu a análise de migrar para outra stack/engine com o requisito de eu gerenciar tudo sozinho. Comparadas: ficar e reforçar; Godot 4; Bevy; Unity; Unreal. Unity e Unreal reprovam no requisito (dependem do editor; Blueprints binários). Godot passa, mas custaria reescrever ~27 mil linhas com o jogo parado. **Decisão do usuário: reforçar a stack atual.**
+
+O perfil (`npm run profile`) mudou o plano: a física (Walker) custa ~1,3 ms — trocar pelo Rapier não traria fps; ficou de fora. O que pesava: o reflexo da água desenhando a cena de novo sem água na tela, e travadas de chegada (circuitos de ronda, obras, terminais, subida de chunks) na linha principal. E TypeScript por `checkJs` (sem build) para eu errar menos.

@@ -53,6 +53,7 @@ const _b3 = new THREE.Vector3();
 
 export class Walker {
   constructor(collision) {
+    this.jumpScale = 1; // (uma carga pesada pula menos — app/people.js)
     this.col = collision;
     this.vel = new THREE.Vector3();
     this.feet = new THREE.Vector3();

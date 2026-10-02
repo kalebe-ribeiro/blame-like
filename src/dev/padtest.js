@@ -32,7 +32,7 @@ export async function runPadTest(ctx) {
     axes: [0, 0, 0, 0],
     buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
   };
-  navigator.getGamepads = () => [pad];
+  navigator.getGamepads = () => /** @type {any} */ ([pad]);
   const set = (i, on) => {
     pad.buttons[i] = { pressed: on, value: on ? 1 : 0 };
   };

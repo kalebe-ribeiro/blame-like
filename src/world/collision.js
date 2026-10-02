@@ -18,6 +18,10 @@ const _g = new THREE.Vector3();
 
 export class CollisionWorld {
   constructor(world) {
+    /** @type {THREE.Vector3|undefined} onde a lista de malhas foi feita (reaproveitada perto dali) */
+    this._at = undefined;
+    this._r = 0;
+    this._t = 0;
     this.world = world;
     this.raycaster = new THREE.Raycaster();
     this.raycaster.firstHitOnly = true;

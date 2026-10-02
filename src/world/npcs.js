@@ -37,6 +37,7 @@ export class NpcSystem {
     this.wanderers = new Map(); // território → entidade
     this.noWander = new Set();
     this.wqueue = [];
+    this.wpending = new Set(); // circuitos sendo calculados (num worker)
     this.clock = () => Date.now() / 1000;
     /** o jogador (app/people.js): { carrying(), steal(), drain(), walking() } */
     this.player = null;
@@ -67,9 +68,15 @@ export class NpcSystem {
   }
 
   update(time, dt, g) {
-    // um circuito de andarilho por quadro
+    // um circuito de andarilho por quadro — calculado num worker
     const q = this.wqueue.shift();
-    if (q) this._spawnWanderer(q);
+    if (q) {
+      this.wpending.add(q.id);
+      this.world.circuitAsync(q, SALT, (c) => {
+        this.wpending.delete(q.id);
+        if (this.enabled && !this.wanderers.has(q.id)) this._spawnWanderer(q, c);
+      });
+    }
     if ((this.scanT -= dt) > 0) return;
     this.scanT = 2;
     if (!this.enabled) return this.clear();
@@ -97,7 +104,7 @@ export class NpcSystem {
       }
     }
     for (const [id, t] of ids) {
-      if (this.wanderers.has(id) || this.noWander.has(id) || this.wqueue.some((w) => w.id === id)) continue;
+      if (this.wanderers.has(id) || this.noWander.has(id) || this.wpending.has(id) || this.wqueue.some((w) => w.id === id)) continue;
       if (!wandererOf(F, t)) {
         this.noWander.add(id);
         continue;
@@ -113,9 +120,8 @@ export class NpcSystem {
     if (this.noWander.size > 3000) this.noWander.clear();
   }
 
-  _spawnWanderer(t) {
+  _spawnWanderer(t, c = patrolCircuit(this.field, this.ents.nav, t, SALT)) {
     const F = this.field;
-    const c = patrolCircuit(F, this.ents.nav, t, SALT);
     if (!c) {
       this.noWander.add(t.id);
       return;

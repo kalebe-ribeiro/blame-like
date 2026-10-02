@@ -215,6 +215,7 @@ export function leadPartTokens(F, lead) {
  */
 export function leadLine(F, lead, shown = Object.keys(PARTS)) {
   const parts = leadPartTokens(F, lead);
+  /** @type {any} (os tokens da linha, mais .lead e .parts) */
   const line = [W('ROUTE'), P(':'), ...kindWords(lead)];
   for (const k of Object.keys(PARTS)) {
     line.push(P('·'));

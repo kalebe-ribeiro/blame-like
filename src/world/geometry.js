@@ -11,9 +11,9 @@ import * as THREE from '../lib/three.js';
  *
  * @param {THREE.Vector3[]} points  pontos de controle (suavizados por Catmull-Rom)
  * @param {number[]} radii          raio em cada ponto de controle
- * @param {object} opts
- * @param {number} opts.radialSegments  lados do tubo
- * @param {number} opts.smooth          subdivisões por trecho entre pontos
+ * @param {object} [opts]
+ * @param {number} [opts.radialSegments]  lados do tubo
+ * @param {number} [opts.smooth]          subdivisões por trecho entre pontos
  */
 export function buildTaperedTube(points, radii, { radialSegments = 6, smooth = 3 } = {}) {
   if (points.length < 2) return null;
@@ -130,7 +130,12 @@ const _q = new THREE.Quaternion();
 
 /**
  * Cilindro (ou tronco de cone) ligando os pontos a → b.
- * @param {number} ra raio em a   @param {number} rb raio em b
+ * @param {THREE.Vector3} a
+ * @param {THREE.Vector3} b
+ * @param {number} ra raio em a
+ * @param {number} rb raio em b
+ * @param {number} [sides]
+ * @param {{ spin?: number, open?: boolean, heightSegments?: number }} [opts]
  */
 export function cylinderBetween(a, b, ra, rb, sides = 8, { spin = 0, open = false, heightSegments } = {}) {
   _dir.subVectors(b, a);

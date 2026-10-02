@@ -41,6 +41,8 @@ function travel(t) {
 
 export class TransitCars {
   constructor(parent, materials) {
+    /** @type {any} o vagão em que o jogador está (não some de perto enquanto ele estiver dentro) */
+    this.riding = null;
     this.group = new THREE.Group();
     this.group.name = 'transportadores';
     parent.add(this.group);

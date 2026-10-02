@@ -35,6 +35,7 @@ export async function runSafeguardTest(ctx) {
   // o relógio das rondas começa sempre no mesmo instante (senão cada rodada cai noutro ponto)
   const t0clock = performance.now();
   sg.clock = () => 1.7e9 + (performance.now() - t0clock) / 1000;
+  /** @type {any} */
   let woke = null;
   world.bus.on('player:wake', (ev) => (woke = ev));
   const fiscal = { wall: 0, fell: 0 };

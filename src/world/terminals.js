@@ -25,6 +25,8 @@ const LINE_H = 13;
 
 export class TerminalSystem {
   constructor(parent, materials, seed) {
+    /** @type {any} o World (colossos, léxico) — ligado depois de criado */
+    this.world = null;
     this.parent = parent;
     this.materials = materials;
     this.seed = seed;
@@ -164,8 +166,11 @@ export class TerminalSystem {
           this.items.delete(id);
         }
       }
-      for (const [id, s] of want) if (!this.items.has(id)) this.items.set(id, this._create(s));
+      // os terminais novos: um por quadro (cada um monta a tela e o texto)
+      this._pend = [...want.entries()].filter(([id]) => !this.items.has(id));
     }
+    const nx = this._pend?.shift();
+    if (nx && !this.items.has(nx[0])) this.items.set(nx[0], this._create(nx[1]));
     this.lights.length = 0;
     this.meshes.length = 0;
     for (const t of this.items.values()) {

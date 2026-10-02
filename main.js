@@ -156,7 +156,7 @@ function createWindow() {
   if (process.argv.includes('--nonpcs')) query.set('nonpcs', '1');
   if (process.argv.includes('--wreveal')) query.set('wreveal', '1');
   if (process.argv.includes('--sgwatch')) query.set('sgwatch', '1');
-  for (const k of ['sgnear', 'sgdist', 'sgemerge', 'sgcam', 'talk', 'talkpick', 'wcam', 'hang', 'ledgestats', 'ambient', 'climbonly', 'shimmy', 'inventory', 'equip', 'grabtest', 'grabfreeze', 'moveonly', 'movetrace']) if (argValue(k)) query.set(k, argValue(k));
+  for (const k of ['sgnear', 'sgdist', 'sgemerge', 'sgcam', 'talk', 'talkpick', 'wcam', 'hang', 'ledgestats', 'ambient', 'climbonly', 'shimmy', 'inventory', 'equip', 'grabtest', 'grabfreeze', 'moveonly', 'movetrace', 'profplaces', 'profres']) if (argValue(k)) query.set(k, argValue(k));
   if (argValue('gounique')) query.set('gounique', argValue('gounique'));
   if (argValue('body')) query.set('body', argValue('body')); // --body=6: um corpo de teste aos 6 s (fase 5)
   if (argValue('bodydist')) query.set('bodydist', argValue('bodydist'));
@@ -201,7 +201,7 @@ function createWindow() {
   if (checkMode) {
     win.webContents.on('render-process-gone', (_e, d) => finishCheck(`processo do renderer caiu: ${d.reason}`));
     // o teste dos corpos anda de verdade (a pé, a ~2,3 m/s): tem mais tempo
-    const limit = ['beings', 'safeguards', 'npcs', 'moves'].includes(argValue('check')) ? 12 : 6;
+    const limit = ['beings', 'safeguards', 'npcs', 'moves', 'profile'].includes(argValue('check')) ? 12 : 6;
     setTimeout(() => finishCheck(`tempo esgotado (${limit} min)`), limit * 60 * 1000);
   }
 
@@ -220,7 +220,7 @@ const checkRows = [];
 const checkErrors = [];
 function onCheckMessage(level, message, sourceId, line) {
   if (message === 'CHECK:DONE') return finishCheck();
-  if (message.startsWith('BEING ') || message.startsWith('MOVE ')) return console.log('    ' + message); // o rastro do teste dos corpos
+  if (message.startsWith('BEING ') || message.startsWith('MOVE ') || message.startsWith('PROF ')) return console.log('    ' + message); // o rastro do teste dos corpos
   if (message.startsWith('CHECK:')) {
     const r = JSON.parse(message.slice(6));
     checkRows.push(r);

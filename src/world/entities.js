@@ -63,6 +63,8 @@ const _s = new THREE.Vector3();
 
 export class EntitySystem {
   constructor(group, materials, world) {
+    /** @type {THREE.MeshBasicMaterial|undefined} o escuro sem luz dentro dos capuzes */
+    this._void = undefined;
     this.group = group;
     this.materials = materials;
     this.world = world;

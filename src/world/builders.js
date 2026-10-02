@@ -203,12 +203,14 @@ export class BuilderSystem {
           this.sites.delete(id);
         }
       }
-      for (const [id, def] of want) {
-        if (this.sites.has(id)) continue;
-        const site = this._createSite(def);
-        this.group.add(site.group);
-        this.sites.set(id, site);
-      }
+      // as obras novas: uma por quadro (montar uma leva dezenas de ms — todas juntas travavam a chegada)
+      this._pend = [...want.values()].filter((def) => !this.sites.has(def.id));
+    }
+    const def = this._pend?.shift();
+    if (def && !this.sites.has(def.id)) {
+      const site = this._createSite(def);
+      this.group.add(site.group);
+      this.sites.set(def.id, site);
     }
 
     this.lights.length = 0;

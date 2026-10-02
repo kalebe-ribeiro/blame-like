@@ -134,6 +134,7 @@ async function run(ctx) {
   report({ kind: 'entrega', ok: delivered, why: `${delivered ? 'entregue · célula cheia' : 'não entregou'} · ${rewardWhy}` });
 
   // ── despertar ──
+  /** @type {any} */
   let woke = null;
   const off = world.bus.on('player:wake', (ev) => (woke = ev));
   ctx.ui.teleport('teia', 'teia');

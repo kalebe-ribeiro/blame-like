@@ -44,7 +44,7 @@ export function genFloods(F, B, box) {
           [!flooded(i, k - 1), (i + 0.5) * T, k * T, T, FLOOD.damW],
           [!flooded(i, k + 1), (i + 0.5) * T, (k + 1) * T, T, FLOOD.damW],
         ];
-        for (const [open, x, z, sx, sz] of edges) {
+        for (const [open, x, z, sx, sz] of /** @type {[boolean, number, number, number, number][]} */ (edges)) {
           if (!open) continue;
           const c = B.L(x, surf.top + h / 2, z);
           B.add(damMat, place(new THREE.BoxGeometry(sx, h, sz), { x: c.x, y: c.y, z: c.z }));

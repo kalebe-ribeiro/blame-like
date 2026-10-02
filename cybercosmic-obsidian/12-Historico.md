@@ -270,3 +270,11 @@ Por que as coisas estão como estão, em ordem.
 - O usuário não gostou do resultado ("muito bugado"; difícil de ficar convincente pelo método de shader; entidades erradas no tiro) e pediu para deixar o jogo como se a arma nunca tivesse sido feita.
 - Retirado: `app/beam.js`, `world/holes.js`, `dev/beamtest.js` (`check:beam`), os buracos nos shaders e na colisão, a ferramenta `emitter`, os atalhos `fire`/`power` (a lanterna do Livre voltou ao botão 7 do controle), o som, os textos e as flags de captura. Ficaram: a animação de captura, a célula inicial em 100%, a bateria ×3 e tudo dos seres.
 - A nota [[Ideias/Futuro/Arma-do-Killy]] voltou a ser só ideia; os requisitos do usuário e o método recomendado se ela voltar estão em [[13-Decisoes]].
+
+## 2026-10-02 — stack reforçada: perfil, desempenho, TypeScript
+
+- **Perfil por sistema** (`npm run profile`, `dev/profile.js`). Média de 9 lugares (parado): render ~14 ms de CPU, reflexo 4,5 ms (12–21 ms onde há água), corpo 1,3 ms, seres 1 ms (5–11 na vila); ~250 chamadas e ~2,8 milhões de triângulos por quadro; GPU 10–16 ms e pouco sensível à resolução (o custo está nos triângulos, não nos pixels).
+- **Reflexo da água**: só desenha com alguma placa inundada no campo de visão (antes: com água a até 350 m abaixo, mesmo fora da tela); alcance 1200 → 700 m. transportador 35 → 58 fps, safeguard 27 → 52, estrato 28 → 61 (água perto, fora da tela). Captura num setor inundado: o reflexo igual.
+- **Travadas de chegada**: os circuitos de ronda (Safeguards, andarilhos) passaram para os workers de geração (`world.circuitAsync`; o Field é determinístico — o mesmo circuito); as obras dos Construtores e os terminais são montados um por quadro; a subida de chunks tem teto de 4 ms por quadro. Comparando lado a lado: Safeguards/NPCs 25–148 ms → fora dos picos; Construtores 34–68 → ≤ 5. Sobram picos de ~20–30 ms (primeiro terminal — compilação do material —, colisão dos corpos montando BVH).
+- **TypeScript sem build** (`npm run typecheck`, `tsconfig.json` com `checkJs`): 339 erros na primeira passada, nenhum bug real — campos criados fora do construtor (agora declarados nele), a interface DOM, JSDoc desatualizado. Zero erros.
+- Rapier ficou de fora: a física não é o gargalo (1,3 ms).

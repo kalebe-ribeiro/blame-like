@@ -1,0 +1,21 @@
+{
+  // Checagem de tipos sobre o próprio JavaScript (não há passo de build: o jogo roda
+  // os .js como estão). `npm run typecheck` — pega variável inexistente, propriedade
+  // com nome errado, argumento trocado, antes de abrir o jogo.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["three"],
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*.js", "src/**/*.d.ts"],
+  "exclude": ["src/lib/**"]
+}

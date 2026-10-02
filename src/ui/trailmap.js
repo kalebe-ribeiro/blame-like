@@ -411,6 +411,7 @@ export class TrailMap {
         const Wd = 7.5 * dpr;
         const ca = Math.cos(ang);
         const sa = Math.sin(ang);
+        /** @returns {[number, number]} */
         const P = (a, b) => [px + ca * a - sa * b, py + sa * a + ca * b];
         g.moveTo(...P(L, 0)); // a ponta
         g.lineTo(...P(-L * 0.55, Wd));

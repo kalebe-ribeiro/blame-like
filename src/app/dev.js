@@ -345,6 +345,7 @@ export function setupDev(ctx) {
   else if (params.get('check') === 'beings') import('../dev/beingtest.js').then((m) => m.runBeingTest(ctx));
   else if (params.get('check') === 'climb') import('../dev/climbtest.js').then((m) => m.runClimbTest(ctx));
   else if (params.get('check') === 'npcs') import('../dev/npctest.js').then((m) => m.runNpcTest(ctx));
+  else if (params.get('check') === 'profile') import('../dev/profile.js').then((m) => m.runProfile(ctx));
   else if (params.get('check') === 'moves') import('../dev/movetest.js').then((m) => m.runMoveTest(ctx));
   else if (params.get('check') === 'safeguards') import('../dev/sgtest.js').then((m) => m.runSafeguardTest(ctx));
   else if (params.get('check')) {
@@ -416,7 +417,7 @@ export function setupDev(ctx) {
       console.warn(
         `fps=${(frames / 2).toFixed(0)} chunks=${s.chunks} lod1=${s.lod1} lod2=${s.lod2} macro=${s.macro} fila=${s.pending} ` +
           `lotes=${bs.pages} uso=${Math.round((100 * bs.used) / bs.cap)}% livres=${bs.freeSlots} mats=${bs.materials} comp=${world.batches.compactions ?? 0}/${(world.batches.compactMs ?? 0).toFixed(1)}ms draws=${info.calls} tris=${(info.triangles / 1e6).toFixed(2)}M pos=${g.x.toFixed(0)},${g.y.toFixed(0)},${g.z.toFixed(0)} região=${world.regionAt(camera.position)}` +
-          (performance.memory ? ` heap=${Math.round(performance.memory.usedJSHeapSize / 1048576)}MB` : ''),
+          (/** @type {any} */ (performance).memory ? ` heap=${Math.round(/** @type {any} */ (performance).memory.usedJSHeapSize / 1048576)}MB` : ''),
       );
       timeLists();
       console.warn(`  vagas desenhadas/quadro: cena ${Math.round(subDraws.main / Math.max(1, frames))} · reflexo ${Math.round(subDraws.reflection / Math.max(1, frames))}`);

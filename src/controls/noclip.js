@@ -22,6 +22,11 @@ const MOVE = ['forward', 'back', 'left', 'right', 'jump', 'descend'];
 
 export class NoclipControls {
   constructor(camera, dom) {
+    this.frozen = false; // conversa/inventário abertos: o corpo não anda (app/people.js)
+    /** @type {any} o peso de uma carga (fase 7): não se corre, pula-se menos */
+    this.burden = null;
+    /** @type {object|null} entrada imposta pelos testes automáticos (dev/climbtest.js) */
+    this.forceInput = null;
     this.camera = camera;
     this.dom = dom;
     this.yaw = 0;

@@ -25,7 +25,7 @@ import { MEGA, FLOOD } from '../gen/field.js';
 //  usa a projeção normal até REFL_FAR mais a própria água como piso (a oblíqua
 //  distorce o plano far). As partículas de poeira ficam de fora.
 const SCALE = 0.5; // resolução do reflexo em relação à tela
-const REFL_FAR = 1200; // m
+const REFL_FAR = 700; // m (além disso a névoa já apagou quase tudo no reflexo)
 
 export class ReflectionSystem {
   constructor(shared) {
@@ -40,6 +40,11 @@ export class ReflectionSystem {
     this._clip = new THREE.Vector4();
     this._q = new THREE.Vector4();
     this._timer = 0;
+    this.tiles = []; // as placas inundadas perto (caixas GLOBAIS): só se desenha com alguma na tela
+    this._frustum = new THREE.Frustum();
+    this._pm = new THREE.Matrix4();
+    this._box = new THREE.Box3();
+    this.skipped = 0; // quadros em que havia água perto mas nenhuma na tela (perfil)
     // recorte próprio: a projeção normal (antes da oblíqua) e a água como piso
     this._cullProj = new THREE.Matrix4();
     this._cullPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -62,6 +67,7 @@ export class ReflectionSystem {
     if (this._timer > 0) return;
     this._timer = 0.25;
     this.level = null;
+    this.tiles = [];
     if (!this.enabled || !field) return;
     const T = MEGA.tile;
     const i0 = Math.floor(g.x / T);
@@ -72,22 +78,42 @@ export class ReflectionSystem {
       if (h < 0 || h > 350) continue;
       // água sob o observador ou a poucas placas dele
       const R = h < 40 ? 3 : 6;
-      let found = false;
-      for (let di = -R; di <= R && !found; di += 1) {
-        for (let dk = -R; dk <= R && !found; dk += 1) {
+      const tiles = [];
+      for (let di = -R; di <= R; di += 1) {
+        for (let dk = -R; dk <= R; dk += 1) {
           if (Math.abs(di) + Math.abs(dk) > R + 1) continue;
-          if (field.floodedTile(surf, i0 + di, k0 + dk)) found = true;
+          if (field.floodedTile(surf, i0 + di, k0 + dk)) tiles.push([(i0 + di) * T, (k0 + dk) * T]);
         }
       }
-      if (found) {
+      if (tiles.length) {
         this.level = lvl;
+        this.tiles = tiles;
         return;
       }
     }
   }
 
+  /** Alguma placa inundada perto está no campo de visão da câmera? */
+  _waterInView(camera, origin) {
+    const T = MEGA.tile;
+    this._pm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    this._frustum.setFromProjectionMatrix(this._pm);
+    const y = this.level - origin.y;
+    for (const [x, z] of this.tiles) {
+      this._box.min.set(x - origin.x, y - 0.5, z - origin.z);
+      this._box.max.set(x + T - origin.x, y + 0.5, z + T - origin.z);
+      if (this._frustum.intersectsBox(this._box)) return true;
+    }
+    return false;
+  }
+
   render(renderer, scene, camera, origin) {
-    const on = this.level !== null;
+    let on = this.level !== null;
+    // água perto, mas nenhuma na tela: não desenha a cena outra vez (a água fora da tela não lê o reflexo)
+    if (on && !this._waterInView(camera, origin)) {
+      on = false;
+      this.skipped++;
+    }
     for (const m of this.materials) m.uniforms.uReflOn.value = on ? 1 : 0;
     if (!on) return;
     const L = this.level - origin.y; // em coordenadas de cena

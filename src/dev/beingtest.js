@@ -126,6 +126,7 @@ export async function runBeingTest(ctx) {
     }
     if (!spot) report({ kind: 'queda', ok: false, why: 'nenhuma beirada com chão 14–60 m abaixo' });
     else {
+      /** @type {any} */
       let died = null;
       const off = world.bus.on('being:die', (ev) => (died = ev));
       const e = world.entities.spawn({ id: 'fall-test', kind: 'test', feet: spot, persist: false });

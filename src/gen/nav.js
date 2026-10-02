@@ -173,6 +173,8 @@ class Heap {
 
 export class NavGraph {
   constructor(F) {
+    /** @type {Map<string, any>|undefined} circuitos de ronda já feitos (gen/patrols.js) */
+    this._patrols = undefined;
     this.F = F;
     this._runs = new Map(); // passarela → [[m0, m1], …] trechos sem vão já achados
   }

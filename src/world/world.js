@@ -74,8 +74,13 @@ export const VIEWS = {
 const _g = new THREE.Vector3();
 const _fwd = new THREE.Vector3();
 
+/** Os circuitos de ronda vão à frente dos chunks na fila dos workers (são pequenos). */
+const CIRCUIT_JOB = { priorityOf: () => -1e12 };
+
 export class World {
   constructor(scene, shared) {
+    /** @type {any} o que o jogador mudou no mundo (WorldState — app.js), lido no build */
+    this.worldState = null;
     this.scene = scene;
     this.shared = shared;
     this.origin = new THREE.Vector3();
@@ -508,6 +513,23 @@ export class World {
 
   // ── frame ────────────────────────────────────────────────────────────────
 
+  /**
+   * Um circuito de ronda (gen/patrols.js) calculado num worker de geração: cb(circuito | null).
+   * Fica também no cache do grafo daqui (quem pedir o mesmo depois, na hora, já acha).
+   */
+  circuitAsync(t, salt, cb) {
+    const field = this.field;
+    const nav = this.entities.nav;
+    const key = `${t.id}#${salt}`;
+    if (nav._patrols?.has(key)) return cb(nav._patrols.get(key));
+    this.pool.submit({ task: 'circuit', seed: this.seed, reserved: field.reserved, t, salt }, CIRCUIT_JOB, (d) => {
+      if (this.field !== field) return; // outro mundo nesse meio tempo
+      nav._patrols ??= new Map();
+      nav._patrols.set(key, d.circuit ?? null);
+      cb(d.circuit ?? null);
+    });
+  }
+
   update(time, dt, camera, observerScale) {
     const g = this.toGlobal(camera.position, new THREE.Vector3());
     camera.getWorldDirection(_fwd);
@@ -531,7 +553,7 @@ export class World {
     this.substations.update(time, dt, g, this.origin);
     this.entities.update(time, dt, g, this.origin);
     this.safeguards.update(time, dt, g, this.origin);
-    this.npcs.update(time, dt, g, this.origin);
+    this.npcs.update(time, dt, g);
     this.inscriptions.update(time, dt, g, this.origin, camera);
     this.particles.update(time, dt, g, this.origin, () => [...this.chunkLayer.allEmitters(), ...this.macroLayer.allEmitters()]);
 
@@ -574,7 +596,7 @@ export class World {
     this.chunkLayer = this.lod1Layer = this.lod2Layer = this.macroLayer = null;
     for (const grp of [this.staticGroup, this.streamGroup]) {
       if (!grp) continue;
-      grp.traverse((o) => o.geometry?.dispose());
+      grp.traverse((o) => /** @type {any} */ (o).geometry?.dispose());
       this.scene.remove(grp);
     }
     this.staticGroup = this.streamGroup = null;

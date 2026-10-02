@@ -237,7 +237,7 @@ function dressFace(F, B, box, face) {
       const p = L(t, face.y0, h * Math.sin(lean) + 1.5);
       g.translate(p.x, p.y, p.z);
       B.add('dress', g);
-      rubble(B, G(t, face.y0, h * Math.sin(lean) + 6), r, 10);
+      rubble(B, /** @type {[number, number, number]} */ (G(t, face.y0, h * Math.sin(lean) + 6)), r, 10);
     }
   }
 }

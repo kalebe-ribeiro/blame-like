@@ -326,6 +326,7 @@ export function createSurfaceMaterial(shared, params = {}) {
     fogAmount: 1,
     fade: [1e9, 2e9],
     cutout: 0,
+    reflect: false, // água parada: lê o reflexo planar (render/reflection.js)
     wet: 0,
     side: THREE.FrontSide,
     ...params,

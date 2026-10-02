@@ -166,6 +166,8 @@ export class Field {
    *        caixas onde nada é gerado (keepWalkways: passarelas continuam passando)
    */
   constructor(seed, reserved = []) {
+    /** @type {Map<string, any>|undefined} lugares de pistas já ancorados (memorizado — anchoredSites) */
+    this._anchored = undefined;
     this.restored = new Map(); // setores religados pelo jogador: id → { x, y, z, t0 } (app/power.js)
     this.seed = seed >>> 0;
     this.noise3 = createNoise3D(mulberry32(this.seed ^ 0x9e3779b9));

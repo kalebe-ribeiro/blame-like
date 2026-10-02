@@ -83,12 +83,30 @@ export class ChunkLayer {
    * @param {number} o.seed
    * @param {object[]} o.reserved
    * @param {number} o.uploadsPerFrame
-   * @param {number} o.bias         prioridade extra (negativo = antes)
+   * @param {number} [o.bias]       prioridade extra (negativo = antes)
    * @param {import('./batches.js').BatchSet} o.batches  lotes de desenho (um por material)
-   * @param {boolean} o.collide      guardar malhas por chunk para a colisão
+   * @param {boolean} [o.collide]    guardar malhas por chunk para a colisão
+   * @param {number} [o.level]        0 = perto; 1, 2 = LOD
+   * @param {(layer: ChunkLayer, cx: number, cy: number, cz: number) => boolean} [o.desiredFn]
+   * @param {(layer: ChunkLayer, e: any) => boolean} [o.canDisposeFn]
+   * @param {number} [o.scanRadius]
    */
   constructor(o) {
-    Object.assign(this, o);
+    this.pool = o.pool;
+    this.materials = o.materials;
+    this.layer = o.layer;
+    this.size = o.size;
+    this.loadRadius = o.loadRadius;
+    this.seed = o.seed;
+    this.reserved = o.reserved;
+    this.uploadsPerFrame = o.uploadsPerFrame;
+    this.bias = o.bias ?? 0;
+    this.batches = o.batches;
+    this.collide = !!o.collide;
+    this.level = o.level;
+    this.desiredFn = o.desiredFn;
+    this.canDisposeFn = o.canDisposeFn;
+    this.scanRadius = o.scanRadius;
     this.chunks = new Map();
     this.uploads = [];
     this.center = new THREE.Vector3();
@@ -214,7 +232,10 @@ export class ChunkLayer {
     if (this.uploads.length > 1) {
       this.uploads.sort((a, b) => this._chunkCenter(a.entry, _tmp).distanceToSquared(this.center) - this._chunkCenter(b.entry, _tmp2).distanceToSquared(this.center));
     }
-    while (n-- > 0 && this.uploads.length) {
+    // teto de tempo além do de quantidade: um chunk pesado sozinho já leva vários ms —
+    // passou de UPLOAD_MS, o resto fica para o próximo quadro (sempre sobe ao menos um)
+    const t0 = performance.now();
+    while (n-- > 0 && this.uploads.length && (n === this.uploadsPerFrame - 1 || performance.now() - t0 < UPLOAD_MS)) {
       const { entry, data } = this.uploads.shift();
       if (this.chunks.get(entry.key) !== entry) continue;
       // `group` não entra na cena: o desenho sai dos lotes. Ele guarda a posição
@@ -306,6 +327,7 @@ export class ChunkLayer {
   }
 }
 
+const UPLOAD_MS = 4; // ms por quadro subindo geometria (por camada)
 const NO_COLLIDE = new Set(['cable', 'beam', 'cloth', 'graffiti', 'cascade', 'flood']);
 // transparentes: a água antes dos feixes de luz
 const RENDER_ORDER = { cascade: 4, beam: 5 };

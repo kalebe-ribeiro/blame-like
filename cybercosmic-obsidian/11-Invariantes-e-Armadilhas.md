@@ -61,6 +61,10 @@
 | Geometria gerada atravessando caminhos verticais (duto na escada de manutenção; patamar em cima de quem sobe) | ao gerar algo perto de escada/elevador, testar SUBINDO de verdade (`check:moves`) |
 | Dois Electron escrevendo no mesmo log (no Windows não há `pkill`) | `taskkill //F //IM electron.exe` antes de outro teste em segundo plano |
 
+| Nome de script Python igual a um módulo da biblioteca (`types.py`): o Python importou o script no lugar do módulo e ele rodou duas vezes (inserções em dobro) | nomes de script que não colidem (`fix_types.py`) |
+| Medir desempenho uma vez só: a mesma cena deu 22 ms e 14 ms em rodadas seguidas | comparar antes × depois alternando, na mesma sessão |
+| Trabalho pesado de uma vez na linha principal (circuitos de ronda, montar todas as obras/terminais novos juntos) — travadas de 50–150 ms ao chegar | cálculo puro → worker (`world.circuitAsync`); montagem → uma por quadro; subida de chunks com teto de tempo (`UPLOAD_MS`) |
+
 ## Checklist antes de commitar
 
 1. `npm run check` passou (0 falhas, 0 erros).

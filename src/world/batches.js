@@ -62,6 +62,7 @@ const _cam = new THREE.Vector3();
  * Mesmo resultado: _multiDrawStarts/_multiDrawCounts/_multiDrawCount e a
  * textura de índices (qual instância cada desenho usa).
  */
+/** @this {any} (a página de lotes) */
 function fastLists(renderer, scene, camera, geometry) {
   const L = this._lists;
   // página reserva ainda sem nada (nem índices)
@@ -217,9 +218,9 @@ class MaterialBatch {
     page.perObjectFrustumCulled = true;
     page.sortObjects = !this.material.transparent; // opacos de frente para trás (early-z)
     page.renderOrder = this.renderOrder;
-    page.freeV = 0; // vértices reservados em vagas livres nesta página
+    /** @type {any} */ (page).freeV = 0; // vértices reservados em vagas livres nesta página
     const view = () => ({ order: [], at: new THREE.Vector3(), seen: -1, changed: true, count: -1, tex: null });
-    page._lists = { sph: new Float32Array(START_INSTANCES * 4), dist: new Float32Array(START_INSTANCES), local: [], ver: 0, views: [view(), view()] };
+    /** @type {any} */ (page)._lists = { sph: new Float32Array(START_INSTANCES * 4), dist: new Float32Array(START_INSTANCES), local: [], ver: 0, views: [view(), view()] };
     page.onBeforeRender = fastLists;
     this.pages.push(page);
     this.set.parent.add(page);

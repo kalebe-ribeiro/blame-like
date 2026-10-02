@@ -82,7 +82,7 @@ export function genHive(F, B, box) {
         const floorY = y0 - 0.3; // topo do piso desta célula
         // três faces positivas (+x, +y, +z) pertencem a esta célula
         for (const d of [0, 1, 2]) {
-          const Bn = F.hiveRoom(i + (d === 0), j + (d === 1), k + (d === 2));
+          const Bn = F.hiveRoom(i + +(d === 0), j + +(d === 1), k + +(d === 2));
           if (!A && !Bn) continue;
           const exterior = A !== Bn;
           if (lod && !exterior) continue;

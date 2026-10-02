@@ -40,6 +40,16 @@ const HARMONY = {
 
 export class AudioEngine {
   constructor() {
+    // (ruídos em buffer, criados na primeira vez em que cada som toca)
+    /** @type {AudioBuffer|null} */ this._stepBuf = null;
+    /** @type {AudioBuffer|null} */ this._gustBuf = null;
+    /** @type {AudioBuffer|null} */ this._rumbleBuf = null;
+    /** @type {AudioBuffer|null} */ this._scrapeBuf = null;
+    /** @type {AudioBuffer|null} */ this._clangBuf = null;
+    /** @type {AudioBuffer|null} */ this._crackBuf = null;
+    /** @type {AudioBuffer|null} */ this._splashBuf = null;
+    /** @type {AudioBuffer|null} */ this._thudBuf = null;
+    /** @type {AudioBuffer|null} */ this._weldBuf = null;
     this.ctx = null;
     this._timers = [];
     this.droneOscs = [];
@@ -131,7 +141,7 @@ export class AudioEngine {
       const f = h.root * Math.pow(2, semi / 12);
       const pan = this._panner(((i / Math.max(1, set.length - 1)) * 2 - 1) * 0.6);
       pan.connect(lp);
-      for (const [type, cents, a] of [['triangle', -4, 1], ['sine', 5, 0.8]]) {
+      for (const [type, cents, a] of /** @type {[OscillatorType, number, number][]} */ ([['triangle', -4, 1], ['sine', 5, 0.8]])) {
         const o = ctx.createOscillator();
         o.type = type;
         o.frequency.value = f;
@@ -230,6 +240,7 @@ export class AudioEngine {
     breath.start();
 
     // [razão, forma de onda, ganho] — fundamental, sub, quinta, oitava, trítono
+    /** @type {[number, OscillatorType, number][]} */
     const partials = [
       [1, 'sawtooth', 0.45],
       [0.5, 'sine', 0.7],

@@ -17,6 +17,8 @@ export class ElevatorSystem {
    * @param {object} materials  { machine, grate }
    */
   constructor(parent, materials) {
+    /** @type {any} OutageSystem (o motor para nos apagões) — ligado pelo World */
+    this.outages = null;
     this.group = new THREE.Group();
     this.group.name = 'elevators';
     parent.add(this.group);

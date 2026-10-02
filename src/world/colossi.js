@@ -127,6 +127,7 @@ export class ColossusSystem {
   /**
    * A máquina mais próxima (em posição GLOBAL) de um ponto que `accept` aceite,
    * ou null — para o transporte.
+   * @param {(m: any) => boolean} [accept]
    */
   nearest(field, g, time, accept = () => true) {
     this.field ??= field;

@@ -46,7 +46,10 @@ export function t(key, params) {
   return s;
 }
 
-/** Preenche os elementos marcados com data-i18n / data-i18n-html. */
+/**
+ * Preenche os elementos marcados com data-i18n / data-i18n-html.
+ * @param {ParentNode} [root]
+ */
 export function applyDom(root = document) {
   for (const el of root.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
   for (const el of root.querySelectorAll('[data-i18n-html]')) el.innerHTML = t(el.dataset.i18nHtml);

@@ -62,6 +62,7 @@ export class SafeguardSystem {
     this.senses = null;
     this.onCatch = null;
     this.byTerritory = new Map(); // território → entidade de ronda
+    this.pending = new Set(); // territórios com o circuito sendo calculado (num worker)
     this.none = new Set(); // territórios sem ronda (sem rede andável)
     this.queue = [];
     this.hunters = new Set(); // entidades que saíram das paredes
@@ -107,7 +108,7 @@ export class SafeguardSystem {
         if (!ids.has(id)) ids.set(id, p.split(',').map(Number));
       }
       for (const [id, p] of ids) {
-        if (!this.byTerritory.has(id) && !this.none.has(id) && !this.queue.some((q) => q.id === id)) this.queue.push({ id, p });
+        if (!this.byTerritory.has(id) && !this.none.has(id) && !this.pending.has(id) && !this.queue.some((q) => q.id === id)) this.queue.push({ id, p });
       }
       for (const [id, e] of this.byTerritory) {
         if (!ids.has(id) && e.sg.state === 'patrol' && e.feet.distanceTo(g) > DROP) {
@@ -116,15 +117,19 @@ export class SafeguardSystem {
         }
       }
     }
-    // um circuito novo por quadro (cada um leva alguns ms)
+    // um circuito novo por quadro — calculado num worker (a busca no grafo leva até ~100 ms)
     const q = this.queue.shift();
     if (q) {
       const t = territoryAt(this.field, q.p[0], q.p[1], q.p[2]);
-      const c = patrolCircuit(this.field, this.nav, t);
-      if (!c) {
-        this.none.add(q.id);
-        if (this.none.size > 2000) this.none.clear();
-      } else this._spawnPatrol(c);
+      this.pending.add(q.id);
+      this.world.circuitAsync(t, 0, (c) => {
+        this.pending.delete(q.id);
+        if (!this.enabled) return;
+        if (!c) {
+          this.none.add(q.id);
+          if (this.none.size > 2000) this.none.clear();
+        } else if (!this.byTerritory.has(c.id)) this._spawnPatrol(c);
+      });
     }
     // os caçadores que saíram das paredes: a placa abrindo/fechando
     for (const e of this.hunters) this._panel(e, dt, origin);

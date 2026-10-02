@@ -59,6 +59,8 @@ npx electron . --capture=shot.png --pos=x,y,z,yaw,pitch --mode=fly --seed=abc --
 
 - `npm run check:npcs` — os raros vivos na Peregrinação (`dev/npctest.js`): vila, conversa, carga, entrega, despertar numa vila, andarilhos, ladrão, vida de silício, terceira força, fiscal. ~8 min (teleporta entre vilas a dezenas de km).
 
+- `npm run typecheck` — checagem de tipos do TypeScript sobre o próprio JavaScript (`tsconfig.json`, `checkJs`; sem passo de build). Segundos. **Rodar antes de qualquer check** — pega nome inexistente, propriedade errada, argumento trocado. Tem de dar 0 erros.
+- `npm run profile` — o perfil por sistema (`dev/profile.js`): ms por quadro de cada sistema (média e pior), chamadas de desenho, triângulos, tempo de GPU, em 9 lugares (chegada e parado). `--profplaces=a,b` só alguns; `--profres=0.5` muda a resolução (separa CPU de espera pela GPU). **A máquina varia muito entre rodadas: comparar antes × depois em seguida, alternando** (stash/pop).
 - `npm run check:moves` — os seres fazendo o que o jogador faz (`dev/movetest.js`): quina, escada (sobe e desce 240 m), elevador, vagão. ~15 min.
 - `npm run check:climb` — as quinas (`dev/climbtest.js`): vault e agarrar em quinas de verdade em vários destinos, pegar a borda de uma plataforma e o piso de uma ponte suspensa caindo. ~6 min.
 
