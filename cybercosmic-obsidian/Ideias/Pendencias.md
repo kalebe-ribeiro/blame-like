@@ -8,7 +8,7 @@ tags: [pendencias]
 
 Registradas em 2026-09-29.
 
-## Em aberto (2026-10-01) — depois dos movimentos dos seres
+## Em aberto (2026-10-02)
 
 1. **Elevadores e escadas só de perto**: o grafo de navegação tem os vagões, mas não os elevadores nem as escadas. Quem persegue ou foge (`walkToward`) usa um elevador a até 60 m ou uma escada a até 14 m; uma viagem longa planejada (um morador, um andarilho indo a outra vila) ainda não troca de camada por eles. Pôr elevadores/escadas no grafo pede achar as escadas de fachada pela lei do mundo (hoje só a geometria sabe onde estão).
 

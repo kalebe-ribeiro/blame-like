@@ -94,14 +94,24 @@ async function run(ctx) {
       }
     };
     const sLists = slot('  ↳ listas dos lotes');
+    const names = new Map();
+    for (const [k, m] of Object.entries(world.materials)) names.set(m, k);
+    for (const [k, m] of Object.entries(world.lodMaterials ?? {})) names.set(m, 'longe:' + k);
+    const this_material = (m) => names.get(m) ?? m?.type ?? '?';
     const timeLists = () =>
       ctx.scene.traverse((o) => {
         if (!o.isBatchedMesh || o._prof) return;
         const obr = o.onBeforeRender;
+        // de quem é este lote: o nome do material e se é dos chunks de longe (LOD)
+        const mat = this_material(o.material);
         o.onBeforeRender = function (...a) {
           const t0 = performance.now();
           obr.apply(this, a);
           sLists.cur += performance.now() - t0;
+          if (a[2] !== ctx.camera) return; // (só a câmera principal)
+          let n = 0;
+          for (let i = 0; i < this._multiDrawCount; i++) n += this._multiDrawCounts[i];
+          triFrame.set(mat, (triFrame.get(mat) ?? 0) + n / 3);
         };
         o._prof = true;
       });
@@ -167,6 +177,9 @@ async function run(ctx) {
     };
   }
 
+  // triângulos por material (só a câmera principal), somados por quadro
+  const triFrame = new Map();
+  const triAcc = new Map();
   // a cada quadro: fecha o que cada sistema gastou nele
   let frames = 0;
   const intervals = [];
@@ -185,6 +198,8 @@ async function run(ctx) {
       }
     }
     for (const s of acc.values()) s.cur = 0;
+    if (on) for (const [k, v] of triFrame) triAcc.set(k, (triAcc.get(k) ?? 0) + v);
+    triFrame.clear();
     last = now;
   };
   raf(tick);
@@ -196,6 +211,7 @@ async function run(ctx) {
     }
     intervals.length = 0;
     frames = 0;
+    triAcc.clear();
     gpu.ms = 0;
     gpu.n = 0;
     gpu.max = 0;
@@ -217,6 +233,12 @@ async function run(ctx) {
       why: `${(1000 / avgIv).toFixed(0)} fps · quadro ${avgIv.toFixed(1)} ms (p95 ${p95.toFixed(0)}, pior ${worst.toFixed(0)}) · CPU ${cpu ? cpu.avg.toFixed(1) : '?'} ms · GPU ${g !== null ? g.toFixed(1) + ' ms (pior ' + gpu.max.toFixed(0) + ')' : '?'}`,
     });
     log(`${label}:${phase} mais caros: ${top.map((r) => `${r.k} ${r.avg.toFixed(2)}`).join(' · ')}`);
+    if (phase === 'parado') {
+      const tri = [...triAcc.entries()].map(([k, v]) => [k, v / Math.max(1, frames)]).sort((x, y) => y[1] - x[1]);
+      const all = tri.reduce((q, [, v]) => q + v, 0);
+      const far = tri.filter(([k]) => k.startsWith('longe:')).reduce((q, [, v]) => q + v, 0);
+      log(`${label}:${phase} triângulos ${(all / 1000).toFixed(0)} mil (longe ${((100 * far) / Math.max(1, all)).toFixed(0)}%): ${tri.slice(0, 8).map(([k, v]) => `${k} ${(v / 1000).toFixed(0)}k`).join(' · ')}`);
+    }
     log(`${label}:${phase} picos: ${spikes.map((r) => `${r.k} ${r.max.toFixed(0)}`).join(' · ')}`);
     if (phase === 'parado') {
       for (const r of rows) total.set(r.k, (total.get(r.k) ?? 0) + r.avg);
