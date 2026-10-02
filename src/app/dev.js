@@ -318,6 +318,29 @@ export function setupDev(ctx) {
   if (params.get('inventory')) setTimeout(() => ctx.inventory.open(), Number(params.get('inventory')) * 1000);
   // --golink=bottom|top: a passagem mais perto com as pontes até a rede (Field.passageLinks),
   // olhando a ponte de baixo (do anel) ou a rampa de cima (do fim da ponte da passagem)
+  // --cutshot=N: aos N s, um tiro do emissor "cheio" (400 m, raio 2,8 m) da câmera para onde ela olha
+  // — o protótipo de risco da arma (o cofre, Arma-do-Killy, F1): só o corte, sem efeitos
+  if (params.get('cutshot')) {
+    setTimeout(async () => {
+      const { beamReach } = await import('../gen/beamreach.js');
+      const d = new THREE.Vector3();
+      camera.getWorldDirection(d);
+      const a = world.toGlobal(camera.position).addScaledVector(d, 0.6);
+      const { t, stop } = beamReach(world.field, a, d, Number(params.get('cutrange') || 400));
+      const b = a.clone().addScaledVector(d, t);
+      const r = Number(params.get('cutr') || 2.8);
+      const t0 = performance.now();
+      const n = world.addCut({ a: a.toArray(), b: b.toArray(), r }, a.clone().sub(world.origin));
+      console.warn(`CUTSHOT: ${t.toFixed(0)} m (${stop ?? 'livre'}) · raio ${r} · chunks pedidos ${JSON.stringify(n)}`);
+      // quanto cada chunk refeito levou até a malha nova entrar (do disparo) — só os refeitos
+      for (const L of [...world.layers, world.macroLayer]) {
+        L.onRecut = (en) => {
+          const dist = Math.round(L._chunkCenter(en, new THREE.Vector3()).distanceTo(a.clone().sub(world.origin)));
+          console.warn(`CUTSHOT: ${L.layer}${L.level ? ' lod' + L.level : ''} a ${dist} m do disparo · trocado em ${(performance.now() - t0).toFixed(0)} ms (worker ${en.recutMs?.toFixed(0)} ms)`);
+        };
+      }
+    }, Number(params.get('cutshot')) * 1000);
+  }
   if (params.get('golink')) {
     setTimeout(() => {
       const F = world.field;

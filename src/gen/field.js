@@ -166,6 +166,8 @@ export class Field {
    *        caixas onde nada é gerado (keepWalkways: passarelas continuam passando)
    */
   constructor(seed, reserved = []) {
+    /** @type {{ a: number[], b: number[], r: number, id?: string }[]} os cortes do emissor (setCuts) */
+    this.cuts = [];
     /** @type {Map<string, any>|undefined} lugares de pistas já ancorados (memorizado — anchoredSites) */
     this._anchored = undefined;
     this.restored = new Map(); // setores religados pelo jogador: id → { x, y, z, t0 } (app/power.js)
@@ -445,6 +447,37 @@ export class Field {
       for (let d = p.size / 2; d < 200; d += 1) if (this.barrierTileSolid(b, p.x + dx * d, p.z + dz * d)) return d + 1;
       return p.size / 2;
     });
+  }
+
+  // ── os cortes do emissor de feixe (a arma de Killy) ─────────────────────
+
+  /**
+   * Os cortes do emissor, GLOBAIS: { a: [x,y,z], b: [x,y,z], r, id } — os mesmos no jogo e em
+   * cada worker (lá, só os que tocam o chunk pedido). A geração recorta as peças por eles.
+   */
+  setCuts(list) {
+    this.cuts = list ?? [];
+  }
+
+  /** Os cortes cuja caixa (com o raio) encosta na caixa dada. */
+  cutsInBox(x0, y0, z0, x1, y1, z1) {
+    return (this.cuts ?? []).filter((c) => {
+      const r = c.r + 1;
+      return Math.max(c.a[0], c.b[0]) + r > x0 && Math.min(c.a[0], c.b[0]) - r < x1 && Math.max(c.a[1], c.b[1]) + r > y0 && Math.min(c.a[1], c.b[1]) - r < y1 && Math.max(c.a[2], c.b[2]) + r > z0 && Math.min(c.a[2], c.b[2]) - r < z1;
+    });
+  }
+
+  /** O ponto (GLOBAL) está dentro de algum corte (mais `margin`)? */
+  cutAt(x, y, z, margin = 0) {
+    for (const c of this.cuts ?? []) {
+      const dx = c.b[0] - c.a[0];
+      const dy = c.b[1] - c.a[1];
+      const dz = c.b[2] - c.a[2];
+      const L2 = dx * dx + dy * dy + dz * dz || 1;
+      const t = Math.max(0, Math.min(1, ((x - c.a[0]) * dx + (y - c.a[1]) * dy + (z - c.a[2]) * dz) / L2));
+      if (Math.hypot(c.a[0] + dx * t - x, c.a[1] + dy * t - y, c.a[2] + dz * t - z) < c.r + margin) return c;
+    }
+    return null;
   }
 
   /** A laje da camada existe neste ponto? (só as passagens a perfuram) */

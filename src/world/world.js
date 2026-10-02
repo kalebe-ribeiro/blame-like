@@ -55,7 +55,7 @@ const LOD0_RADIUS = 420;
 const LOD1_RADIUS = 1300;
 
 // materiais que somem perto do raio dos chunks / da camada macro
-const NEAR_MATS = ['lamp', 'tower', 'bridge', 'rib', 'cable', 'duct', 'dress', 'block', 'slab', 'monolith', 'plaza', 'tube', 'hive', 'massif',
+const NEAR_MATS = ['cut', 'lamp', 'tower', 'bridge', 'rib', 'cable', 'duct', 'dress', 'block', 'slab', 'monolith', 'plaza', 'tube', 'hive', 'massif',
   'rungs', 'grate', 'door', 'sign', 'shack', 'cloth', 'screen', 'graffiti', 'water'];
 const FAR_MATS = ['lampFar', 'wall', 'floor', 'frame', 'stairway', 'macro', 'conduit', 'barrier', 'beam', 'cascade', 'pool', 'flood'];
 /** Período do deslocamento de origem nos shaders (múltiplo de CHUNK). */
@@ -79,6 +79,8 @@ const CIRCUIT_JOB = { priorityOf: () => -1e12 };
 
 export class World {
   constructor(scene, shared) {
+    /** @type {{ a: number[], b: number[], r: number, id?: string }[]} os cortes do emissor de feixe (addCut) */
+    this.cuts = [];
     /** @type {any} o que o jogador mudou no mundo (WorldState — app.js), lido no build */
     this.worldState = null;
     this.frameNo = 0;
@@ -135,9 +137,10 @@ export class World {
     this.scene.add(this.streamGroup);
     // a mesma "lei" dos workers, na thread principal (consultas como nearestNode)
     this.field = new Field(this.seed, reserved);
+    this.field.setCuts(this.cuts);
     this.outages.field = this.field; // setores apagados: trens, elevadores e terminais param
     this.batches = new BatchSet(this.streamGroup);
-    const common = { pool: this.pool, batches: this.batches, materials: m, seed: this.seed, reserved };
+    const common = { pool: this.pool, batches: this.batches, materials: m, seed: this.seed, reserved, field: this.field };
     const lodHooks = {
       desiredFn: (layer, x, y, z) => this._lodDesired(layer.level, x, y, z),
       canDisposeFn: (layer, e) => this._lodCovered(layer.level, e.cx, e.cy, e.cz),
@@ -247,6 +250,9 @@ export class World {
       massif: mk({ ...megaWall, panel: 6, windows: 0.08, windowSize: [3, 4], noiseScale: 0.02, fogAmount: 0.7, fade: fadeNear }),
       conduit: mk({ ...steel, base: C(0.14, 0.142, 0.145), panel: 4, windows: 0.01, windowSize: [2, 2], side: THREE.DoubleSide, fogAmount: 0.4, fade: fadeMacro }),
       // ── camadas, escala humana, vestígios ──
+      // as faces abertas pelo emissor de feixe (a arma de Killy): metal fundido, escuro
+      // (a brasa que esfria vem nos efeitos — o cofre, Arma-do-Killy §7.5)
+      cut: mk({ ...steel, base: C(0.075, 0.07, 0.068), accent: C(0.16, 0.08, 0.04), accentAmount: 0.6, panel: 100, streaks: 0.2, fade: fadeNear }),
       barrier: mk({ ...darkConcrete, base: C(0.13, 0.126, 0.12), panel: 16, streaks: 0.9, noiseScale: 0.006, fogAmount: 0.35, fade: fadeMacro }),
       rungs: mk({ ...steel, panel: 100, cutout: 1, side: THREE.DoubleSide, fade: fadeNear }),
       grate: mk({ ...steel, panel: 100, cutout: 2, side: THREE.DoubleSide, fade: fadeNear }),
@@ -529,6 +535,20 @@ export class World {
       nav._patrols.set(key, d.circuit ?? null);
       cb(d.circuit ?? null);
     });
+  }
+
+  /**
+   * Um corte do emissor de feixe (GLOBAL: { a: [x,y,z], b: [x,y,z], r }): vai para o Field (e
+   * para os pedidos dos workers) e os chunks que ele cruza são refeitos, do mais perto de
+   * `from` ao mais longe. Devolve quantos chunks foram pedidos, por camada.
+   */
+  addCut(cut, from) {
+    cut.id ??= `C${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
+    this.cuts.push(cut);
+    this.field.setCuts(this.cuts);
+    const out = {};
+    for (const L of [...this.layers, this.macroLayer]) out[L.level ? 'lod' + L.level : L.layer] = L.recut(cut, from);
+    return out;
   }
 
   update(time, dt, camera, observerScale) {

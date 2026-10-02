@@ -12,6 +12,10 @@ import { patrolCircuit } from '../gen/patrols.js';
 import { MeshBVH } from '../lib/three-mesh-bvh.js';
 import { BufferGeometry, BufferAttribute } from '../lib/three.js';
 import { NO_COLLIDE } from './noCollide.js';
+import * as CSGLIB from '../lib/three-bvh-csg.js';
+import { setCSG } from '../gen/cut.js';
+
+setCSG(CSGLIB);
 
 let field = null;
 let fieldKey = '';
@@ -31,6 +35,7 @@ self.onmessage = (e) => {
       self.postMessage({ jobId, circuit: patrolCircuit(field, nav, e.data.t, e.data.salt) });
       return;
     }
+    field.setCuts(e.data.cuts ?? []); // (os cortes do emissor que tocam este chunk)
     const res = layer === 'macro' ? generateMacro(field, cx, cy, cz) : generateChunk(field, cx, cy, cz, level);
     const transfer = [];
     for (const m of res.meshes) transfer.push(m.position.buffer, m.normal.buffer, m.index.buffer);

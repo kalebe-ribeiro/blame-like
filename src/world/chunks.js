@@ -50,7 +50,11 @@ export class WorkerPool {
     for (const j of this.queue) j.priority = j.owner.priorityOf(j);
     this.queue.sort((a, b) => a.priority - b.priority);
     while (this.queue.length && this.idle.length) {
-      const job = this.queue.shift();
+      // (no máximo um pedido de corte de cada vez — os outros workers seguem gerando o mundo)
+      const cutting = [...this.inflight.values()].some((j) => j.payload.cutJob);
+      const at = cutting ? this.queue.findIndex((j) => !j.payload.cutJob) : 0;
+      if (at < 0) break;
+      const job = this.queue.splice(at, 1)[0];
       const w = this.idle.pop();
       this.inflight.set(job.id, job);
       w.postMessage({ jobId: job.id, ...job.payload });
@@ -92,6 +96,7 @@ export class ChunkLayer {
    * @param {(layer: ChunkLayer, cx: number, cy: number, cz: number) => boolean} [o.desiredFn]
    * @param {(layer: ChunkLayer, e: any) => boolean} [o.canDisposeFn]
    * @param {number} [o.scanRadius]
+   * @param {any} [o.field]
    */
   constructor(o) {
     this.pool = o.pool;
@@ -109,6 +114,10 @@ export class ChunkLayer {
     this.desiredFn = o.desiredFn;
     this.canDisposeFn = o.canDisposeFn;
     this.scanRadius = o.scanRadius;
+    /** @type {any} o Field do mundo (os cortes do emissor vão em cada pedido) */
+    this.field = o.field ?? null;
+    /** @type {((entry: any) => void) | null} um chunk refeito por um corte entrou (medição) */
+    this.onRecut = null;
     this.chunks = new Map();
     this.uploads = [];
     this.center = new THREE.Vector3();
@@ -190,7 +199,7 @@ export class ChunkLayer {
           const entry = { key, cx: x, cy: y, cz: z, group: null, lights: [], job: null };
           this.chunks.set(key, entry);
           entry.job = this.pool.submit(
-            { layer: this.layer, level: this.level, seed: this.seed, cx: x, cy: y, cz: z, reserved: this.reserved, collide: this.collide },
+            { layer: this.layer, level: this.level, seed: this.seed, cx: x, cy: y, cz: z, reserved: this.reserved, collide: this.collide, cuts: this.cutsFor(x, y, z) },
             this,
             (data) => this._received(entry, data),
           );
@@ -215,6 +224,44 @@ export class ChunkLayer {
         this.chunks.delete(key);
       }
     }
+  }
+
+  /** Os cortes do emissor que tocam o chunk (x, y, z) — vão no pedido ao worker. */
+  cutsFor(x, y, z) {
+    const s = this.size;
+    return this.field ? this.field.cutsInBox(x * s, y * s, z * s, (x + 1) * s, (y + 1) * s, (z + 1) * s) : [];
+  }
+
+  /**
+   * Um corte novo: os chunks carregados que ele cruza são pedidos de novo (com os cortes);
+   * a malha velha fica até a nova subir (sem piscar). Do mais perto de `from` ao mais longe.
+   * Devolve quantos foram pedidos.
+   */
+  recut(cut, from) {
+    const s = this.size;
+    const lo = [0, 1, 2].map((k) => Math.floor((Math.min(cut.a[k], cut.b[k]) - cut.r - 1) / s));
+    const hi = [0, 1, 2].map((k) => Math.floor((Math.max(cut.a[k], cut.b[k]) + cut.r + 1) / s));
+    const hit = [];
+    for (const e of this.chunks.values()) {
+      if (e.cx < lo[0] || e.cx > hi[0] || e.cy < lo[1] || e.cy > hi[1] || e.cz < lo[2] || e.cz > hi[2]) continue;
+      if (!this.cutsFor(e.cx, e.cy, e.cz).includes(cut)) continue;
+      hit.push(e);
+    }
+    hit.sort((p, q) => this._chunkCenter(p, _tmp).distanceToSquared(from) - this._chunkCenter(q, _tmp2).distanceToSquared(from));
+    hit.forEach((e, i) => {
+      if (e.job) this.pool.cancel(e.job);
+      const t0 = performance.now();
+      e.recutting = true;
+      e.job = this.pool.submit(
+        { layer: this.layer, level: this.level, seed: this.seed, cx: e.cx, cy: e.cy, cz: e.cz, reserved: this.reserved, collide: this.collide, cuts: this.cutsFor(e.cx, e.cy, e.cz), cutJob: true },
+        { priorityOf: () => -1e11 + i },
+        (data) => {
+          e.recutMs = performance.now() - t0;
+          this._received(e, data);
+        },
+      );
+    });
+    return hit.length;
   }
 
   _received(entry, data) {
@@ -242,6 +289,8 @@ export class ChunkLayer {
       if (this.chunks.get(entry.key) !== entry) continue;
       // `group` não entra na cena: o desenho sai dos lotes. Ele guarda a posição
       // do chunk e, nas camadas com colisão, as malhas usadas pelos raios.
+      // refeito (um corte): a malha velha sai no mesmo quadro em que a nova entra
+      const oldHandles = entry.handles;
       const group = new THREE.Group();
       entry.group = group;
       entry.handles = [];
@@ -264,6 +313,11 @@ export class ChunkLayer {
         group.add(mesh);
       }
       group.updateMatrixWorld(true);
+      if (oldHandles) for (const h of oldHandles) this.batches.remove(h);
+      if (entry.recutting) {
+        entry.recutting = false;
+        this.onRecut?.(entry);
+      }
     }
   }
 

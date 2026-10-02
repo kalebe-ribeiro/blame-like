@@ -34,6 +34,7 @@ const W = MEGA.wall;
 
 export function generateMacro(F, mx, my, mz) {
   const B = new ChunkBuilder(mx * MACRO, my * MACRO, mz * MACRO);
+  B.setCuts(F.cutsInBox(mx * MACRO, my * MACRO, mz * MACRO, (mx + 1) * MACRO, (my + 1) * MACRO, (mz + 1) * MACRO));
   const box = {
     x0: mx * MACRO, y0: my * MACRO, z0: mz * MACRO,
     x1: (mx + 1) * MACRO, y1: (my + 1) * MACRO, z1: (mz + 1) * MACRO,
@@ -306,7 +307,17 @@ function shell(B, f, y, h, T, doorW, doorH, r) {
   return off;
 }
 
+/** As estruturas únicas (casca e conteúdo) não se cortam — o emissor mata, mas não fura (decisão C3). */
 function buildUnique(F, B, u) {
+  B.protect++;
+  try {
+    return buildUniqueInner(F, B, u);
+  } finally {
+    B.protect--;
+  }
+}
+
+function buildUniqueInner(F, B, u) {
   const r = rngAt(F.seed, Math.round(u.x), u.n, Math.round(u.z), 982);
   const f = uniqueFrame(u);
   const { ha, hc, box, P } = f;
@@ -546,8 +557,18 @@ function passageLinkBridges(F, B, b, p) {
   }
 }
 
+/** A torre do elevador grande não se corta (sem ela, a travessia entre camadas morre); as pontes até a rede, sim. */
 function passageTower(F, B, b, p) {
   passageLinkBridges(F, B, b, p);
+  B.protect++;
+  try {
+    passageTowerInner(F, B, b, p);
+  } finally {
+    B.protect--;
+  }
+}
+
+function passageTowerInner(F, B, b, p) {
   const y0 = Math.floor((b.bottom - 150) / 48) * 48 - 0.4; // plataforma de embarque de baixo
   const yTop = b.top + 70;
   const hw = 27; // meia largura do quadro (o carro tem 40 × 40)

@@ -19,6 +19,7 @@ import { genTransit, stationNear } from './transit.js';
 import { rngAt } from './hash.js';
 import { mergeAll, place, cylinderBetween } from '../world/geometry.js';
 import { catenaryCable, plumbLine } from '../world/cables.js';
+import { cutPiece, segDist } from './cut.js';
 
 import { FLUORO, SODIUM, COLD, WARN } from './colors.js';
 import { genNetwork } from './network.js';
@@ -32,6 +33,9 @@ const COLORS = [FLUORO, SODIUM, COLD];
 const lerp = (a, b, t) => a + (b - a) * t;
 
 /** Acumula geometrias por material + luzes, e empacota para transferência. */
+// o que o emissor não corta: os feixes de luz (volumes de luz, não matéria)
+const NO_CUT = new Set(['beam', 'colossusBeam', 'barrier']); // (+ a laje das camadas — intransponível)
+
 export class ChunkBuilder {
   constructor(x0, y0, z0, lod = 0) {
     this.x0 = x0;
@@ -41,10 +45,28 @@ export class ChunkBuilder {
     this.parts = {};
     this.lights = [];
     this.emitters = []; // gotas / vapor (animados na thread principal)
+    // os cortes do emissor que tocam este chunk (GLOBAIS e locais) — ver setCuts
+    this.cutsG = [];
+    this.cutsL = [];
+    this.protect = 0; // > 0: as peças adicionadas agora não se cortam (camadas, únicas, a torre da passagem)
+    this.cutStats = { cut: 0, ms: 0 };
+  }
+
+  /** Os cortes (GLOBAIS) que tocam este chunk: as peças passam a ser recortadas por eles. */
+  setCuts(list) {
+    this.cutsG = list ?? [];
+    this.cutsL = this.cutsG.map((c) => ({ a: [c.a[0] - this.x0, c.a[1] - this.y0, c.a[2] - this.z0], b: [c.b[0] - this.x0, c.b[1] - this.y0, c.b[2] - this.z0], r: c.r }));
+  }
+
+  /** O ponto GLOBAL está num corte? (o que nasceria ali — uma luminária, uma gota — não nasce) */
+  cutAt(x, y, z, margin = 0.3) {
+    for (const c of this.cutsG) if (segDist(x, y, z, c) < c.r + margin) return true;
+    return false;
   }
 
   /** Emissor de partículas em coordenadas GLOBAIS: { type: 'drip'|'steam', x, y, z, ... } */
   emit(e) {
+    if (this.cutAt(e.x, e.y, e.z)) return;
     if (!this.lod) this.emitters.push(e);
   }
 
@@ -55,6 +77,18 @@ export class ChunkBuilder {
 
   add(mat, geom) {
     if (!geom) return;
+    // os cortes do emissor: a peça sai recortada (as faces do corte no material 'cut')
+    if (this.cutsL.length && !this.protect && !NO_CUT.has(mat)) {
+      const t0 = performance.now();
+      const r = cutPiece(geom, this.cutsL, { maxEdge: this.lod ? 1.5 : 0.5 });
+      if (r.mode !== 'none') {
+        this.cutStats.cut++;
+        this.cutStats.ms += performance.now() - t0;
+        if (r.kept) (this.parts[mat] ??= []).push(r.kept);
+        if (r.caps) (this.parts.cut ??= []).push(r.caps);
+        return;
+      }
+    }
     (this.parts[mat] ??= []).push(geom);
   }
 
@@ -63,6 +97,7 @@ export class ChunkBuilder {
    * nasce de algo que existe (uma tela, um braseiro, uma carcaça); senão, lamp().
    */
   light(x, y, z, color, intensity, mode = 'steady', grid = true) {
+    if (this.cutAt(x, y, z)) return; // (a fonte foi cortada)
     if (this.lod) return; // chunks distantes não contribuem luzes
     const l = { x, y, z, color, intensity, mode, phase: Math.abs((x * 0.013 + y * 0.029 + z * 0.071) % 100) };
     if (!grid) l.grid = false; // energia própria: não apaga com a rede do setor
@@ -86,7 +121,7 @@ export class ChunkBuilder {
    * (x,y,z) GLOBAL = o centro da caixa; yaw vira a caixa.
    */
   socket(x, y, z, yaw = 0) {
-    if (this.lod) return;
+    if (this.lod || this.cutAt(x, y, z)) return;
     const L = this.L(x, y, z);
     this.add('machine', place(new THREE.BoxGeometry(0.24, 0.32, 0.14), { x: L.x, y: L.y, z: L.z, ry: yaw }));
     const f = new THREE.Vector3(0, 0.06, 0.075).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
@@ -95,6 +130,8 @@ export class ChunkBuilder {
   }
 
   lamp(x, y, z, color, intensity, mode = 'steady', { to = null, size = 1, far = false, grid = true } = {}) {
+    // a luminária (ou a haste dela) cortada: nem a peça nem a luz
+    if (this.cutAt(x, y, z, 0.6) || (to && this.cutAt(to[0], to[1], to[2], 0.3))) return;
     this.light(x, y, z, color, intensity, mode, grid);
     if (this.lod) return;
     const s = size;
@@ -165,6 +202,7 @@ export function generateChunk(F, cx, cy, cz, level = 0) {
   const n = 1 << level;
   const size = CHUNK * n;
   const B = new ChunkBuilder(cx * size, cy * size, cz * size, level);
+  B.setCuts(F.cutsInBox(cx * size, cy * size, cz * size, (cx + 1) * size, (cy + 1) * size, (cz + 1) * size));
   for (let a = 0; a < n; a++) {
     for (let b = 0; b < n; b++) {
       for (let c = 0; c < n; c++) {
