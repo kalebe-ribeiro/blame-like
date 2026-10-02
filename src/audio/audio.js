@@ -1093,6 +1093,65 @@ export class AudioEngine {
     src.start(t + 0.05);
   }
 
+  /**
+   * Um trecho da detonação do emissor, de onde ele está: um baque grave e um estrondo de
+   * ruído abafado. `delay` (s): o som leva tempo para chegar (340 m/s).
+   */
+  beamBoom(pan, dist, k = 1, delay = 0) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime + delay;
+    const out = this._placed(pan, dist);
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(70 + 30 * k, t);
+    o.frequency.exponentialRampToValueAtTime(24, t + 1.2);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(0.35 + 0.35 * k, t + 0.015);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+    o.connect(og).connect(out);
+    o.start(t);
+    o.stop(t + 1.5);
+    const src = ctx.createBufferSource();
+    src.buffer = this._scrapeBuf ??= this._noiseBuffer(1.2);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(1800, t);
+    lp.frequency.exponentialRampToValueAtTime(120, t + 1.0);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.25 + 0.2 * k, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+    src.connect(lp).connect(g).connect(out);
+    src.start(t);
+  }
+
+  /** O metal cortado acomodando, de onde ele está: um rangido curto, depois do estrondo. */
+  beamCreak(pan, dist, delay = 0) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime + delay;
+    const dur = rand(1.5, 3);
+    const out = this._placed(pan, dist);
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    const f0 = rand(70, 110);
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.linearRampToValueAtTime(f0 * rand(0.55, 0.75), t + dur);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 420;
+    lp.Q.value = 9;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.12, t + dur * 0.3);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp).connect(g).connect(out);
+    o.start(t);
+    o.stop(t + dur + 0.1);
+  }
+
   /** A vida de silício se mostrando: um guincho metálico que desce, e estalos. */
   siliconReveal(pan, dist) {
     if (!this.ctx) return;

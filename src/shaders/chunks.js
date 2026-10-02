@@ -114,6 +114,8 @@ uniform vec4  uRestoredId[8];             // setores religados: (i, faixa, k, 1 
 uniform vec4  uRestoredFront[8];          //   (subestação x, z em cena, frente da luz em m, y em cena)
 uniform vec4  uOutageA[4];                // apagões: centro (cena) + frente da queda (m)
 uniform vec4  uOutageB[4];                // frente do religamento (m), raio do setor
+uniform vec4  uShotA;                     // o tiro do emissor (app/beamfx.js): uma luz-linha — início (cena), intensidade
+uniform vec4  uShotB;                     //   fim (cena)
 
 // Energia da rede (0..1) num ponto — mesma lógica de world/outages.js.
 // j (0..1) desloca a frente um pouco, para as janelas não apagarem em bloco.

@@ -96,6 +96,7 @@ export default {
   'settings.reflections': 'reflexo da água (setores inundados)',
   'settings.music': 'trilha (acordes raros e lentos)',
   'settings.headBob': 'balanço da cabeça ao andar',
+  'settings.distortion': 'distorção do espaço do emissor',
   'settings.motionFx': 'efeitos de queda (campo de visão, tremor)',
   'settings.invertY': 'inverter eixo vertical',
   'settings.outages': 'apagões de setor',

@@ -28,6 +28,7 @@ export const DEFAULTS = {
   music: true, // trilha: acordes raros e lentos sobre o drone
   headBob: true, // balanço da cabeça ao andar
   motionFx: true, // na queda: campo de visão abrindo, tremor, afundamento no pouso
+  distortion: true, // a lente do emissor (carregando e no disparo) — desligar se enjoa
   invertY: false, // inverter o eixo vertical (mouse e controle)
 };
 
@@ -45,6 +46,7 @@ const FIELDS = [
   { key: 'music', type: 'toggle' },
   { key: 'headBob', type: 'toggle' },
   { key: 'motionFx', type: 'toggle' },
+  { key: 'distortion', type: 'toggle' },
   { key: 'invertY', type: 'toggle' },
   { key: 'outages', type: 'toggle' },
   { key: 'collapses', type: 'toggle' },

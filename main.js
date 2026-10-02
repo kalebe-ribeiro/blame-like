@@ -156,7 +156,7 @@ function createWindow() {
   if (process.argv.includes('--nonpcs')) query.set('nonpcs', '1');
   if (process.argv.includes('--wreveal')) query.set('wreveal', '1');
   if (process.argv.includes('--sgwatch')) query.set('sgwatch', '1');
-  for (const k of ['sgnear', 'sgdist', 'sgemerge', 'sgcam', 'talk', 'talkpick', 'wcam', 'hang', 'ledgestats', 'ambient', 'climbonly', 'shimmy', 'inventory', 'equip', 'grabtest', 'grabfreeze', 'moveonly', 'movetrace', 'profplaces', 'profres', 'sgtrace', 'golink', 'golinkat', 'cutshot', 'cutrange', 'cutr', 'beampart', 'beamhold']) if (argValue(k)) query.set(k, argValue(k));
+  for (const k of ['sgnear', 'sgdist', 'sgemerge', 'sgcam', 'talk', 'talkpick', 'wcam', 'hang', 'ledgestats', 'ambient', 'climbonly', 'shimmy', 'inventory', 'equip', 'grabtest', 'grabfreeze', 'moveonly', 'movetrace', 'profplaces', 'profres', 'sgtrace', 'golink', 'golinkat', 'cutshot', 'cutrange', 'cutr', 'beampart', 'beamhold', 'beamfire', 'profshot', 'fxshots']) if (argValue(k)) query.set(k, argValue(k));
   if (argValue('gounique')) query.set('gounique', argValue('gounique'));
   if (argValue('body')) query.set('body', argValue('body')); // --body=6: um corpo de teste aos 6 s (fase 5)
   if (argValue('bodydist')) query.set('bodydist', argValue('bodydist'));
@@ -206,6 +206,16 @@ function createWindow() {
   }
 
   if (capturePath) {
+    // (dev) capturas pedidas pela página, no instante certo (--fxshots — app/dev.js): ao lado
+    // da captura final, com o nome dado
+    ipcMain.removeHandler('dev:capture');
+    ipcMain.handle('dev:capture', async (_e, name) => {
+      const image = await win.webContents.capturePage();
+      const out = path.join(path.dirname(path.resolve(capturePath)), path.basename(String(name)));
+      fs.writeFileSync(out, image.toPNG());
+      console.log(`captura salva em ${out}`);
+      return true;
+    });
     setTimeout(async () => {
       const image = await win.webContents.capturePage();
       fs.writeFileSync(path.resolve(capturePath), image.toPNG());

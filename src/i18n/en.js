@@ -96,6 +96,7 @@ export default {
   'settings.reflections': 'water reflections (flooded sectors)',
   'settings.music': 'soundtrack (rare, slow chords)',
   'settings.headBob': 'head bob while walking',
+  'settings.distortion': 'emitter space distortion',
   'settings.motionFx': 'fall effects (field of view, shake)',
   'settings.invertY': 'invert vertical axis',
   'settings.outages': 'sector power outages',

@@ -10,6 +10,11 @@
 //    parado    os MEASURE s seguintes (o custo de regime)
 //  e reporta fps, o quadro médio e o pior, e os sistemas mais caros.
 //  No fim, o resumo de todos os lugares (a média de cada sistema).
+//
+//  --profshot: em vez disso, o caso `tiro` (a arma de Killy — o cofre, Arma-do-Killy §8):
+//  em cada lugar, parado (o regime), carregando (o CPU do emissor e o GPU a mais) e o
+//  disparo (o quadro do tiro a mais que o regime, o pior quadro depois, e quanto tempo
+//  até o fps voltar ao de antes).
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SETTLE = 7000;
@@ -66,6 +71,9 @@ async function run(ctx) {
   wrap(ctx.composer, 'render', 'render (cena+pós)');
   wrap(ctx.sound, 'update', 'som (lugares)');
   wrap(ctx.hud, 'update', 'hud');
+  wrap(ctx.beam, 'update', 'arma (emissor)');
+  wrap(world, 'addCut', 'arma: addCut');
+  wrap(ctx.beam.fx, 'fire', 'arma: efeitos do tiro');
   wrap(ctx.audio, 'update', 'áudio');
   // dentro de world.update
   for (const L of world.layers) {
@@ -185,10 +193,14 @@ async function run(ctx) {
   const intervals = [];
   let last = performance.now();
   let on = false;
+  /** @type {{ t: number, iv: number, cpu: number, beam: number, cut: number, fx: number, top: string }[]|null} o caso tiro: quadro a quadro */
+  let rec = null;
   const tick = () => {
     raf(tick);
     ctx._profFrame?.();
     const now = performance.now();
+    rec?.push({ t: now, iv: now - last, cpu: frameS.cur, beam: acc.get('arma (emissor)')?.cur ?? 0, cut: acc.get('arma: addCut')?.cur ?? 0, fx: acc.get('arma: efeitos do tiro')?.cur ?? 0,
+      top: now - last > 40 ? [...acc.entries()].filter(([k]) => !/\(n\)|milhares|QUADRO/.test(k)).sort((x, y) => y[1].cur - x[1].cur).slice(0, 3).map(([k, v]) => `${k} ${v.cur.toFixed(0)}`).join(', ') : '' });
     if (on) {
       intervals.push(now - last);
       frames++;
@@ -254,6 +266,77 @@ async function run(ctx) {
     window.dispatchEvent(new Event('resize'));
   }
   await sleep(SETTLE);
+  if (new URLSearchParams(location.search).get('profshot')) {
+    // ── o caso tiro ──
+    const gpuWin = () => {
+      const g0 = { ms: gpu.ms, n: gpu.n };
+      return () => (gpu.n > g0.n ? (gpu.ms - g0.ms) / (gpu.n - g0.n) : 0);
+    };
+    const avg = (arr, f) => arr.reduce((q, x) => q + f(x), 0) / Math.max(1, arr.length);
+    const all = { charge: [], gpu: [], fire: [], worst: [], back: [] };
+    ctx.rules.safeguards = false; // (uma captura no meio estraga a medida)
+    for (const place of PLACES) {
+      if (!ctx.ui.teleport(place, place)) continue;
+      controls.setMode('walk');
+      ctx.inventory.equip('emitter');
+      ctx.player.energy.value = 1;
+      await sleep(SETTLE + 3000);
+      for (let i = 0; i < 150 && ctx.wake?.active; i++) await sleep(200); // (o despertar do começo)
+      controls.pitch = 0;
+      // regime
+      rec = [];
+      let g = gpuWin();
+      await sleep(3000);
+      const base = rec;
+      const gBase = g();
+      // carregando (do 0,4 s em diante: a carga já começou)
+      rec = [];
+      ctx.beam.testHeld = true;
+      await sleep(400);
+      rec = [];
+      g = gpuWin();
+      await sleep(2300);
+      const charging = rec;
+      const gCharge = g();
+      // o disparo e os 4 s seguintes
+      rec = [];
+      ctx.beam.testHeld = false;
+      await sleep(4000);
+      ctx.beam.testHeld = null;
+      const after = rec;
+      rec = null;
+      const baseIv = avg(base, (f) => f.iv);
+      const baseCpu = avg(base, (f) => f.cpu);
+      const fireF = after.reduce((q, f) => (f.beam > q.beam ? f : q), after[0]);
+      const worst = Math.max(...after.map((f) => f.iv));
+      // de volta: a primeira janela de 0,5 s com o quadro médio a menos de 10% do regime
+      let back = -1;
+      for (let i = 0; i < after.length; i++) {
+        const w = after.filter((f) => f.t >= after[i].t && f.t < after[i].t + 500);
+        if (w.length > 3 && avg(w, (f) => f.iv) < baseIv * 1.1) {
+          back = (after[i].t - after[0].t) / 1000;
+          break;
+        }
+      }
+      const chargeCpu = avg(charging, (f) => f.beam);
+      const fireExtra = fireF.cpu - baseCpu;
+      all.charge.push(chargeCpu);
+      all.gpu.push(gCharge - gBase);
+      all.fire.push(fireExtra);
+      all.worst.push(worst);
+      all.back.push(back);
+      report({
+        kind: `tiro:${place}`,
+        ok: chargeCpu <= 1 && gCharge - gBase <= 1.5 && fireExtra <= 8 && back >= 0 && back <= 3,
+        why: `regime ${baseIv.toFixed(1)} ms (CPU ${baseCpu.toFixed(1)}, GPU ${gBase.toFixed(1)}) · carregando: emissor ${chargeCpu.toFixed(2)} ms CPU (≤ 1), GPU +${(gCharge - gBase).toFixed(2)} ms (≤ 1,5) · disparo: quadro +${fireExtra.toFixed(1)} ms CPU (≤ 8; emissor ${fireF.beam.toFixed(1)}: addCut ${fireF.cut.toFixed(1)}, efeitos ${fireF.fx.toFixed(1)}) · pior quadro depois ${worst.toFixed(0)} ms · fps de volta em ${back < 0 ? '>4' : back.toFixed(1)} s (≤ 3)`,
+      });
+      log(`tiro:${place} quadros depois do disparo (ms): ${after.slice(0, 40).map((f) => f.iv.toFixed(0)).join(' ')}`);
+      log(`tiro:${place} quadros longos: ${after.filter((f) => f.top).map((f) => `${f.iv.toFixed(0)} ms em ${((f.t - after[0].t) / 1000).toFixed(2)} s [${f.top}]`).join(' | ') || 'nenhum'}`);
+    }
+    const mx = (a) => Math.max(...a);
+    log(`TIRO: carregando ≤ ${mx(all.charge).toFixed(2)} ms CPU · GPU +${mx(all.gpu).toFixed(2)} ms · disparo +${mx(all.fire).toFixed(1)} ms · pior quadro ${mx(all.worst).toFixed(0)} ms · volta ${mx(all.back).toFixed(1)} s`);
+    return;
+  }
   let n = 0;
   for (const place of PLACES) {
     if (!ctx.ui.teleport(place, place)) continue;

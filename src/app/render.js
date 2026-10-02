@@ -14,6 +14,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { SignalShader } from '../shaders/post.js';
 import { ScenePass } from '../render/pipeline.js';
 import { ReflectionSystem } from '../render/reflection.js';
+import { createLensPass } from '../render/lens.js';
 
 export function createRenderer(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
@@ -33,6 +34,9 @@ export function setupRender(ctx) {
   // cena + oclusão de ambiente + antialiasing temporal (render/pipeline.js)
   const scenePass = new ScenePass(scene, camera, shared);
   composer.addPass(scenePass);
+  // a lente gravitacional do emissor (render/lens.js — desligada até carregar/atirar)
+  const lens = createLensPass(scenePass.sceneRT.depthTexture);
+  composer.addPass(lens);
   composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.35, 0.6, 0.7));
   composer.addPass(new OutputPass());
   const signal = new ShaderPass(SignalShader);
@@ -42,7 +46,7 @@ export function setupRender(ctx) {
   const reflection = new ReflectionSystem(shared);
   reflection.attach(world.materials.flood);
   reflection.hidden.push(ctx.dust);
-  Object.assign(ctx, { composer, scenePass, signal, reflection });
+  Object.assign(ctx, { composer, scenePass, lens, signal, reflection });
   window.addEventListener('resize', () => resize(ctx));
   resize(ctx);
 }

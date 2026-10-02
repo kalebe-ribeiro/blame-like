@@ -61,6 +61,9 @@ export function createSharedUniforms() {
     // setores religados perto (world/substations.js): (i, faixa, k, ativo) e (subestação x, z em cena, frente da luz, y)
     uRestoredId: { value: Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 0, 0)) },
     uRestoredFront: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
+    // o tiro do emissor (app/beamfx.js): uma luz ao longo do feixe — não usa vaga de luz
+    uShotA: { value: new THREE.Vector4() }, // início (cena), intensidade (0 = apagada)
+    uShotB: { value: new THREE.Vector4() }, // fim (cena)
   };
 }
 
@@ -129,6 +132,11 @@ uniform float uWet;           // 0..1 superfície molhada (poças)
 #ifdef USE_REFLECTION
 uniform sampler2D uReflTex;   // reflexo planar (render/reflection.js)
 uniform float uReflOn;
+#endif
+#ifdef USE_HEAT
+uniform vec4 uCutA[8];        // os últimos cortes (app/beamfx.js): início (cena), raio
+uniform vec4 uCutB[8];        //   fim (cena), instante do tiro (s; < 0 = vaga vazia)
+uniform float uHeatNow;
 #endif
 
 varying vec3 vWorldPos;
@@ -282,6 +290,41 @@ void main() {
     }
   }
 
+  // o tiro do emissor: luz branca e quente vinda do ponto mais perto do feixe
+  if (uShotA.w > 1e-3) {
+    vec3 ab = uShotB.xyz - uShotA.xyz;
+    float tq = clamp(dot(vWorldPos - uShotA.xyz, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
+    vec3 Lv = uShotA.xyz + ab * tq - vWorldPos;
+    float d2 = dot(Lv, Lv);
+    float d = sqrt(d2);
+    vec3 sc = vec3(1.0, 0.9, 0.78) * uShotA.w * exp(-uFogDensity * d) / (1.0 + 0.6 * d2);
+    lit += min(sc, vec3(3.0)) * max(dot(N, Lv / max(d, 1e-3)), 0.0);
+  }
+
+  // as faces do corte em brasa (só o material 'cut'): branco-alaranjado → vermelho → aço escuro
+  // em ~15 s, a partir de quando a detonação passa ali (1500 m/s ao longo do feixe)
+  #ifdef USE_HEAT
+  for (int i = 0; i < 8; i++) {
+    vec4 A = uCutA[i];
+    vec4 B = uCutB[i];
+    if (B.w < 0.0) continue;
+    vec3 ab = B.xyz - A.xyz;
+    float L2 = max(dot(ab, ab), 1e-4);
+    float tq = clamp(dot(vWorldPos - A.xyz, ab) / L2, 0.0, 1.0);
+    float age = uHeatNow - B.w - tq * sqrt(L2) / 1500.0;
+    if (age < 0.0 || age > 16.0) continue;
+    float d = length(A.xyz + ab * tq - vWorldPos);
+    float on = 1.0 - smoothstep(0.2, 0.7, abs(d - A.w));
+    if (on <= 0.0) continue;
+    // (manchas: o metal esfria desigual — e o calor some primeiro onde a placa é fina)
+    float mott = smoothstep(-0.7, 0.45, snoise(W * 1.7 + float(i))) * (0.75 + 0.25 * snoise(W * 6.0));
+    // (cores puras: o filme dessatura tudo para ~38% — app/render.js — e o laranja tem de chegar quente)
+    vec3 hc = age < 0.6 ? mix(vec3(1.0, 0.7, 0.35), vec3(1.0, 0.26, 0.02), age / 0.6)
+                        : mix(vec3(1.0, 0.26, 0.02), vec3(0.6, 0.02, 0.0), clamp((age - 0.6) / 5.0, 0.0, 1.0));
+    emit += hc * on * mott * 3.2 * exp(-age / 2.0) * (1.0 - smoothstep(10.0, 15.0, age));
+  }
+  #endif
+
   float fres = pow(1.0 - max(dot(N, V), 0.0), 4.0);
   vec3 c = albedo * lit + spec * (0.08 + 3.0 * uWet) + emit;
   c += uFogColorB * fres * uWet * 3.0; // reflexo da poeira iluminada na água
@@ -328,11 +371,12 @@ export function createSurfaceMaterial(shared, params = {}) {
     cutout: 0,
     reflect: false, // água parada: lê o reflexo planar (render/reflection.js)
     wet: 0,
+    heat: false, // as faces do corte do emissor: em brasa depois do tiro (só o material 'cut')
     side: THREE.FrontSide,
     ...params,
   };
   return new THREE.ShaderMaterial({
-    defines: { LIGHT_COUNT, ...(p.cutout ? { USE_CUTOUT: 1 } : {}), ...(p.reflect ? { USE_REFLECTION: 1 } : {}) },
+    defines: { LIGHT_COUNT, ...(p.cutout ? { USE_CUTOUT: 1 } : {}), ...(p.reflect ? { USE_REFLECTION: 1 } : {}), ...(p.heat ? { USE_HEAT: 1 } : {}) },
     uniforms: {
       ...shared,
       uBaseColor: { value: p.base },
@@ -354,6 +398,13 @@ export function createSurfaceMaterial(shared, params = {}) {
       uWet: { value: p.wet },
       uReflTex: { value: null },
       uReflOn: { value: 0 },
+      ...(p.heat
+        ? {
+            uCutA: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
+            uCutB: { value: Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 0, -1)) },
+            uHeatNow: { value: 0 },
+          }
+        : {}),
     },
     vertexShader: SURF_VERT,
     fragmentShader: SURF_FRAG,
@@ -633,6 +684,7 @@ uniform float uBox;
 uniform vec3 uVel;      // velocidade do observador (m/s)
 uniform float uStreak;  // duração do rastro (s): 0 parado, ~0,05 em queda livre
 uniform vec2 uRes;      // tamanho do buffer de desenho (px)
+uniform vec4 uAttract;  // o emissor carregando (app/beamfx.js): ponto (cena), força (< 0 empurra)
 varying float vA;
 varying vec2 vDir;      // direção do risco na tela
 varying float vLen;     // comprimento do risco (fração do sprite)
@@ -642,6 +694,15 @@ void main() {
   float fallSpeed = 0.12;
   vec3 p = position + vec3(sin(uTime * 0.07 + position.y) * 1.5, -uTime * fallSpeed * 1.5, cos(uTime * 0.05 + position.x) * 1.5);
   p = uCam + mod(p - uCam + uBox * 0.5, uBox) - uBox * 0.5;
+  // o emissor dobra o espaço: a poeira perto escorre para o ponto de atração (cada grão
+  // num ciclo próprio — chega, some, recomeça de fora)
+  if (abs(uAttract.w) > 1e-3) {
+    vec3 d = uAttract.xyz - p;
+    float L = length(d);
+    float ph = fract(uTime * 0.9 + fract(position.x * 12.9898 + position.z * 78.233));
+    float pull = abs(uAttract.w) * exp(-L * L / 36.0);
+    p += d * min(0.92, pull * (uAttract.w > 0.0 ? ph : 1.0 - ph * 0.5) * sign(uAttract.w) * 1.1);
+  }
   vec4 mv = viewMatrix * vec4(p, 1.0);
   float dist = -mv.z;
   float base = uSize * 60.0 / max(dist, 0.5);
@@ -695,6 +756,7 @@ export function createDust(count = 1800, box = 50) {
       uVel: { value: new THREE.Vector3() },
       uStreak: { value: 0 },
       uRes: { value: new THREE.Vector2(1920, 1080) },
+      uAttract: { value: new THREE.Vector4() },
     },
     vertexShader: DUST_VERT,
     fragmentShader: DUST_FRAG,

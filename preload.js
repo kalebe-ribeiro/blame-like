@@ -8,4 +8,6 @@ contextBridge.exposeInMainWorld('cybercosmic', {
   toggleFullscreen: () => ipcRenderer.send('fullscreen:toggle'),
   clipboardWrite: (text) => ipcRenderer.invoke('clipboard:write', String(text)),
   clipboardRead: () => ipcRenderer.invoke('clipboard:read'),
+  // (dev: só responde no modo captura — main.js)
+  devCapture: (name) => ipcRenderer.invoke('dev:capture', String(name)),
 });

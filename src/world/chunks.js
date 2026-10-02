@@ -133,6 +133,8 @@ export class ChunkLayer {
     this.field = o.field ?? null;
     /** @type {((entry: any) => void) | null} um chunk refeito por um corte entrou (medição) */
     this.onRecut = null;
+    /** @type {((e: any) => void)|null} o mesmo, para o mundo (world.js → 'cut:swap') */
+    this.onSwap = null;
     /** @type {Map<string, {bounds: any, pieceBoxes: any, none?: boolean}>} as caixas das peças dos chunks perto de cortes (ficam quando o chunk sai) */
     this.boxMemo = new Map();
     this.debugRecut = false; // (dev: --cutshot conta os chunks refeitos)
@@ -408,6 +410,7 @@ export class ChunkLayer {
       if (entry.recutting) {
         entry.recutting = false;
         this.onRecut?.(entry);
+        this.onSwap?.(entry);
       }
     }
   }

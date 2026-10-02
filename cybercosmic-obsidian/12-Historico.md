@@ -305,3 +305,8 @@ Por que as coisas estão como estão, em ordem.
 - F1 (o corte de verdade, protótipo de risco) e F2 (carga, controles, cancelamentos, gasto, mortes, alerta, som básico): detalhes em [[Ideias/Futuro/Arma-do-Killy]] (Andamento). `npm run check:beam` 13/13: furo perto p95 145 ms, tiro inteiro p95 538 ms.
 - Os cortes do emissor têm um worker só deles; as rampas das escadarias infinitas são trechos de até 48 m (uma rampa inteira custava 183 ms de CSG).
 - Controle: a lanterna do Livre saiu do RT para o botão 10 (L3); RT = o emissor (segurar), LT cancela a carga.
+
+## 2026-10-02 — a arma de Killy: os efeitos (F3)
+
+- Lente gravitacional, poeira puxada, traço, luz-linha do tiro, detonação a 1500 m/s (clarões, anéis, poeira), estrondo pela distância, brasa nas faces do corte, faíscas, lascas e detritos caindo: [[Ideias/Futuro/Arma-do-Killy]] (Andamento F3). Medido no orçamento: disparo +3–4,4 ms, carregando ≤ 0,1 ms.
+- O primeiro tiro travava 1,7 s compilando shaders: compilação antecipada (`compileAsync`) por mundo.

@@ -81,6 +81,7 @@ export class World {
   constructor(scene, shared) {
     /** @type {{ a: number[], b: number[], r: number, id?: string }[]} os cortes do emissor de feixe (addCut) */
     this.cuts = [];
+    this._afterCut = 0; // o quadro depois do qual o resto do mundo reage aos cortes novos
     /** @type {any} o que o jogador mudou no mundo (WorldState — app.js), lido no build */
     this.worldState = null;
     this.frameNo = 0;
@@ -150,6 +151,8 @@ export class World {
     this.lod2Layer = new ChunkLayer({ ...common, ...lodHooks, materials: this.lodMaterials, layer: 'chunk', level: 2, size: CHUNK * 4, loadRadius: 0, uploadsPerFrame: 1, bias: 400 });
     this.layers = [this.chunkLayer, this.lod1Layer, this.lod2Layer];
     this.macroLayer = new ChunkLayer({ ...common, layer: 'macro', size: MACRO, loadRadius: MACRO_RADIUS, uploadsPerFrame: 1, bias: -2000, collide: true });
+    // um chunk refeito por um corte entrou em cena (os detritos dele caem — app/beamfx.js)
+    for (const L of [this.chunkLayer, this.macroLayer]) L.onSwap = (e) => this.bus.emit('cut:swap', { entry: e, layer: L.layer });
 
     // ── coisas que se movem: elevadores, construtores, água ──
     this.elevators = new ElevatorSystem(this.streamGroup, m);
@@ -252,7 +255,7 @@ export class World {
       // ── camadas, escala humana, vestígios ──
       // as faces abertas pelo emissor de feixe (a arma de Killy): metal fundido, escuro
       // (a brasa que esfria vem nos efeitos — o cofre, Arma-do-Killy §7.5)
-      cut: mk({ ...steel, base: C(0.075, 0.07, 0.068), accent: C(0.16, 0.08, 0.04), accentAmount: 0.6, panel: 100, streaks: 0.2, fade: fadeNear }),
+      cut: mk({ ...steel, base: C(0.075, 0.07, 0.068), accent: C(0.16, 0.08, 0.04), accentAmount: 0.6, panel: 100, streaks: 0.2, fade: fadeNear, heat: true }), // (em brasa depois do tiro — app/beamfx.js)
       barrier: mk({ ...darkConcrete, base: C(0.13, 0.126, 0.12), panel: 16, streaks: 0.9, noiseScale: 0.006, fogAmount: 0.35, fade: fadeMacro }),
       rungs: mk({ ...steel, panel: 100, cutout: 1, side: THREE.DoubleSide, fade: fadeNear }),
       grate: mk({ ...steel, panel: 100, cutout: 2, side: THREE.DoubleSide, fade: fadeNear }),
@@ -548,17 +551,25 @@ export class World {
     this.field.setCuts(this.cuts);
     const out = {};
     for (const L of [...this.layers, this.macroLayer]) out[L.level ? 'lod' + L.level : L.layer] = L.recut(cut, from);
-    // o resto do mundo: os caminhos, as rondas, os objetos montados fora da geração
+    // o resto do mundo (os caminhos, as rondas, os objetos montados fora da geração): no
+    // próximo quadro (world.update — o quadro do tiro fica leve)
+    this._afterCut = (this.frameNo ?? 0) + 1; // (o update deste quadro ainda vem: o do seguinte)
+    return out;
+  }
+
+  /** O resto do mundo reage aos cortes novos (addCut). */
+  _reactToCuts() {
+    this._afterCut = 0;
     this.entities.onCut();
     this.safeguards.onCut();
     this.npcs.onCut();
     for (const sys of [this.terminals, this.inscriptions, this.substations]) if (sys) sys._scan = 0;
     if (this.builders) this.builders._scanTimer = 0;
-    return out;
   }
 
   update(time, dt, camera, observerScale) {
     this.frameNo = (this.frameNo ?? 0) + 1; // (o orçamento de colisão por quadro — world/collision.js)
+    if (this._afterCut && this.frameNo > this._afterCut) this._reactToCuts();
     const g = this.toGlobal(camera.position, new THREE.Vector3());
     camera.getWorldDirection(_fwd);
 

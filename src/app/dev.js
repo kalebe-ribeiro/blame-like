@@ -317,6 +317,54 @@ export function setupDev(ctx) {
   if (params.get('equip')) setTimeout(() => params.get('equip').split(',').forEach((id) => ctx.inventory.equip(id)), 4000);
   // (--beamhold=S: segura o gatilho do emissor a partir de S s — capturas da carga)
   if (params.get('beamhold')) setTimeout(() => (ctx.beam.testHeld = true), Number(params.get('beamhold')) * 1000);
+  // (--fxshots=lugar: os efeitos do emissor capturados no instante certo — com --capture e
+  //  um --delay longo: vai ao lugar, mira a parede mais perto, captura carregando e depois
+  //  do disparo em +0,03 · 0,12 · 0,5 · 2 · 6 s; os arquivos ficam ao lado da captura final)
+  if (params.get('fxshots')) {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const shot = (name) => /** @type {any} */ (window).cybercosmic?.devCapture?.(name);
+    (async () => {
+      await sleep(5000);
+      const place = params.get('fxshots');
+      ctx.ui.teleport(place, place);
+      ctx.controls.setMode('walk');
+      await sleep(9000);
+      for (let i = 0; i < 150 && ctx.wake?.active; i++) await sleep(200);
+      ctx.inventory.equip('emitter');
+      // a parede mais perto, na altura dos olhos
+      const w = ctx.controls.walker;
+      w.col._t = -1e9;
+      w.col.refresh(ctx.camera.position, 40);
+      let best = null;
+      for (let q = 0; q < 24; q++) {
+        const yaw = (q / 24) * Math.PI * 2;
+        const h = w.col.ray(ctx.camera.position, new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), 40);
+        if (h && h.distance > 5 && (!best || h.distance < best.d)) best = { yaw, d: h.distance };
+      }
+      if (best) ctx.controls.yaw = best.yaw;
+      ctx.controls.pitch = -0.05;
+      await sleep(1500);
+      ctx.beam.testHeld = true;
+      await sleep(1600);
+      await shot('fx-carregando.png');
+      await sleep(1100);
+      ctx.beam.testHeld = false;
+      const t0 = performance.now();
+      /** @type {[number, string][]} */
+      const when = [[30, 'fx-0.03s'], [120, 'fx-0.12s'], [500, 'fx-0.5s'], [2000, 'fx-2s'], [6000, 'fx-6s']];
+      for (const [ms, name] of when) {
+        await sleep(Math.max(0, ms - (performance.now() - t0)));
+        await shot(`${name}.png`);
+      }
+      console.warn('FXSHOTS: pronto');
+    })();
+  }
+  // (--beamfire=S: segura a partir de S s e solta na carga cheia — capturas do tiro)
+  if (params.get('beamfire')) {
+    const s = Number(params.get('beamfire'));
+    setTimeout(() => (ctx.beam.testHeld = true), s * 1000);
+    setTimeout(() => (ctx.beam.testHeld = false), (s + 2.6) * 1000);
+  }
   if (params.get('inventory')) setTimeout(() => ctx.inventory.open(), Number(params.get('inventory')) * 1000);
   // --golink=bottom|top: a passagem mais perto com as pontes até a rede (Field.passageLinks),
   // olhando a ponte de baixo (do anel) ou a rampa de cima (do fim da ponte da passagem)

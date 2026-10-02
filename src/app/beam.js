@@ -25,6 +25,7 @@ import { bindings } from '../controls/bindings.js';
 import { t as tr } from '../i18n/index.js';
 import { buildHand } from './hands.js';
 import { beamReach } from '../gen/beamreach.js';
+import { createBeamFx } from './beamfx.js';
 
 export const CHARGE = { min: 0.25, full: 2.5 };
 export const COOLDOWN = 0.8;
@@ -38,7 +39,6 @@ export function chargeK(t) {
 export function shotOf(k) {
   return { range: 30 + 370 * k, r: 0.6 + 2.2 * k, cost: 0.03 + 0.15 * k };
 }
-const TRACE_SHOW = 0.15; // s que o traço fica visível
 
 /** O emissor: um corpo de chapa, o cano com as cinco bobinas, o cabo. */
 function buildEmitter(m) {
@@ -102,7 +102,7 @@ export function createBeam(ctx) {
   /** Os testes seguram o gatilho por aqui (dev/beamtest.js). */
   let testHeld = null;
   let lastShot = null;
-  const traces = [];
+  const fx = createBeamFx(ctx); // o que se vê e se ouve (app/beamfx.js)
   const _d = new THREE.Vector3();
   const _a = new THREE.Vector3();
   const _m = new THREE.Vector3();
@@ -198,26 +198,16 @@ export function createBeam(ctx) {
         kills++;
       }
     }
-    // o traço: uma linha fina e branca da boca até onde acabou (os efeitos são a fase F3)
+    // os efeitos: o traço, a detonação correndo pela linha, a brasa, o que cai (app/beamfx.js)
     em.group.updateMatrixWorld(true);
     em.muzzle.getWorldPosition(_m);
-    const endS = end.clone().sub(world.origin);
-    const len = Math.max(0.1, _m.distanceTo(endS));
-    const geo = new THREE.CylinderGeometry(0.035, 0.035, 1, 6, 1, true);
-    geo.translate(0, 0.5, 0);
-    const mat = new THREE.MeshBasicMaterial({ color: 0xfff4e2, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.copy(_m);
-    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), endS.sub(_m).normalize());
-    mesh.scale.set(1, len, 1);
-    mesh.frustumCulled = false;
-    mesh.userData.noCollide = true;
-    ctx.scene.add(mesh);
-    traces.push({ mesh, t: 0, origin: world.origin.clone() });
+    fx.fire(a, end, kk, S.r, _m.clone());
     // som, coice, atenção
     audio.beamShot?.(kk);
     controls.rumble?.(0.45 + 0.55 * kk, 0.3 + 0.4 * kk, 140 + 300 * kk);
     controls.pitch = Math.min(1.5, controls.pitch + 0.01 + 0.05 * kk);
+    // na carga cheia, o corpo recua um passo
+    if (controls.mode === 'walk' && controls.walker && kk > 0.6) controls.walker.vel.addScaledVector(_d.clone().setY(0).normalize(), -3.5 * (kk - 0.6) / 0.4);
     ctx.alert?.raise(eye.x, eye.y, eye.z, 0.08 + 0.23 * kk);
     world.safeguards?.hear(eye.x, eye.y - 1.7, eye.z, 60 + 80 * kk);
     lastShot = { k: kk, ...S, t, stop, kills };
@@ -264,6 +254,10 @@ export function createBeam(ctx) {
     },
     cancel,
     fire,
+    /** (medidas) os efeitos */
+    get fx() {
+      return fx;
+    },
     update(dt) {
       cool = Math.max(0, cool - dt);
       kick = Math.max(0, kick - dt * 6);
@@ -306,21 +300,8 @@ export function createBeam(ctx) {
         em.coils.forEach((mat, i) => mat.color.copy(DIM).lerp(LIT, Math.max(0, Math.min(1, lit - i))));
       }
       for (const s of [1, -1]) grips[s].group.visible = side === s;
-      for (let i = traces.length - 1; i >= 0; i--) {
-        const b = traces[i];
-        b.t += dt;
-        b.mesh.material.opacity = Math.max(0, 1 - b.t / TRACE_SHOW);
-        if (!b.origin.equals(world.origin)) {
-          b.mesh.position.add(b.origin).sub(world.origin);
-          b.origin.copy(world.origin);
-        }
-        if (b.t > TRACE_SHOW) {
-          ctx.scene.remove(b.mesh);
-          b.mesh.geometry.dispose();
-          b.mesh.material.dispose();
-          traces.splice(i, 1);
-        }
-      }
+      fx.charge(state === 'charging' && chargeK(held) >= 0 ? k : -1);
+      fx.update(dt);
     },
   };
 }
