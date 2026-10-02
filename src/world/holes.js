@@ -21,6 +21,7 @@ const BIG = 1e7;
 const LIMIT = 200; // guardados no mundo
 const _v = new THREE.Vector3();
 const _ab = new THREE.Vector3();
+const _p = new THREE.Vector3(); // (o ponto consultado: nunca o mesmo vetor que dist() usa por dentro)
 
 export class HoleSystem {
   constructor(shared) {
@@ -79,9 +80,9 @@ export class HoleSystem {
   /** O ponto (CENA) está dentro de algum buraco perto? (a colisão passa por ele) */
   insideScene(p, origin) {
     if (!this.near.length) return false;
-    _v.copy(p).add(origin);
-    if (this._kept(_v)) return false;
-    for (const h of this.near) if (HoleSystem.dist(h, _v).d < h.r) return true;
+    _p.copy(p).add(origin);
+    if (this._kept(_p)) return false;
+    for (const h of this.near) if (HoleSystem.dist(h, _p).d < h.r) return true;
     return false;
   }
 

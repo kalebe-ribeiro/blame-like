@@ -252,3 +252,9 @@ Por que as coisas estão como estão, em ordem.
 - Cinco defeitos achados subindo e descendo de verdade (valiam para o jogador): duto atravessando a escada de manutenção; patamar de cima sem saída; fixações soltando quem sobe; raio de chão caindo pela junta de duas peças; descer uma escada longa contava como queda de 240 m.
 - Checks com o código final: `moves` (5/5), `safeguards`, `npcs`, `beings`, `climb`; antes das duas últimas correções (só na escada e nas rondas) também `pad`, `check`, `pilgrimage`, `beam`.
 - Erros meus no caminho: o desvio local sem rumo ainda avançava devagar (o corpo caiu no poço do elevador); o ponto de montar na escada para descer supunha um telhado atrás dos degraus; uma linha de depuração quebrou a sintaxe e custou 12 min de teste; dois Electron escreveram no mesmo log.
+
+## 2026-10-01 — arma: a colisão furava muito além do cilindro
+
+- Relato do usuário: ao atirar, toda uma área em volta ficava atravessável, não só o cilindro.
+- Causa (erro meu): em `world/holes.js`, `insideScene` passava o ponto no vetor temporário `_v`, e `HoleSystem.dist` usa o mesmo `_v` para o ponto mais perto do eixo → a distância saía sempre 0. Todo ponto dentro do comprimento do feixe, a qualquer distância de lado, contava como "dentro do buraco" para a colisão (o desenho estava certo). O teste não pegou porque só olhava pontos dentro do raio e o piso das camadas (protegido pelas caixas guardadas).
+- Correção: um vetor próprio para o ponto consultado. Caso novo `cilindro` no `check:beam` (3 m fora do raio = sólido; 0,2 m dentro = furado): reprova com o código antigo, passa com o novo.

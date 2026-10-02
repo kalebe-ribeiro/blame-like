@@ -62,6 +62,12 @@ async function run(ctx) {
       const floor = new THREE.Vector3(40, b.top - 0.05, 7).sub(world.origin);
       const air = new THREE.Vector3(40, b.top + 0.5, 7).sub(world.origin);
       const okFloor = !H.insideScene(floor, world.origin) && H.insideScene(air, world.origin);
+      // só o cilindro: um ponto ao lado do feixe (no mesmo trecho, 3 m fora do raio) continua sólido
+      const side = new THREE.Vector3(40, b.top + 1.7, 7 + POWER[4].r + 3).sub(world.origin);
+      const inSide = H.insideScene(side, world.origin);
+      const edge = new THREE.Vector3(40, b.top + 1.7, 7 + POWER[4].r - 0.2).sub(world.origin);
+      const inEdge = H.insideScene(edge, world.origin);
+      report({ kind: 'cilindro', ok: !inSide && inEdge, why: `3 m fora do raio: ${inSide ? 'FURADO' : 'sólido'} · 0,2 m dentro: ${inEdge ? 'furado' : 'SÓLIDO'}` });
       H.list = keepList;
       H._keepAt = null;
       report({ kind: 'rente', ok: okFloor, why: `piso da camada ${H.insideScene(floor, world.origin) ? 'FURADO' : 'inteiro'} · ar acima ${okFloor ? 'furado' : '?'}` });
