@@ -12,7 +12,6 @@ Registradas em 2026-09-29.
 
 1. **Elevadores e escadas só de perto**: o grafo de navegação tem os vagões, mas não os elevadores nem as escadas. Quem persegue ou foge (`walkToward`) usa um elevador a até 60 m ou uma escada a até 14 m; uma viagem longa planejada (um morador, um andarilho indo a outra vila) ainda não troca de camada por eles. Pôr elevadores/escadas no grafo pede achar as escadas de fachada pela lei do mundo (hoje só a geometria sabe onde estão).
 2. **Safeguard subindo atrás do jogador** por escada/elevador: usa o mesmo `walkToward` que o `check:moves` testa, mas não tem um teste próprio (no `check:safeguards`).
-3. **Cofre**: `Copiar-glifos.md` apagado e `.obsidian/` (grafo, área de trabalho) mudados fora das minhas tarefas — deixados sem commit.
 
 ## ✔ Feitas na fase 0 (2026-09-29)
 

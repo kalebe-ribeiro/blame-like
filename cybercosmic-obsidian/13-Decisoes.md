@@ -69,7 +69,7 @@ Registro das decisões do usuário, com data. Uma decisão só muda se o usuári
 | commits | **commit a cada fase** (e, dentro dela, a cada etapa) |
 | iniciar a fase 1? | **não por enquanto** — o usuário pediu para não começar a fase 1 |
 
-### Fase 3 (2026-09-29) — escolhas feitas por padrão, **a confirmar**
+### Fase 3 (2026-09-29) — escolhas feitas por padrão — **confirmadas em 2026-10-01** (exceto: a energia inicial passou a 100%)
 
 O usuário pediu para finalizar a fase 3 sem responder às perguntas abertas. O que foi escolhido (tudo fácil de mudar):
 
@@ -118,7 +118,7 @@ Como está feito:
 
 Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de shader"**: cada tiro guarda um cilindro (origem, direção, raio) no mundo; todos os shaders descartam o que está dentro; o lado de dentro das caixas é pintado como borda fundida; a colisão ignora o que está dentro. **Não** recortar geometria (CSG). Detalhes em [[Ideias/Futuro/Arma-do-Killy]]. Em aberto para a fase 6: combate × só fuga, o que o feixe não fura (recomendação: camadas e estruturas únicas), alcance, custo em energia, alerta dos Safeguards.
 
-### Fase 4 — escolhas feitas por padrão, **a confirmar** (2026-09-30)
+### Fase 4 — escolhas feitas por padrão (2026-09-30) — **confirmadas em 2026-10-01**
 
 | pergunta | escolha |
 |---|---|
@@ -130,7 +130,7 @@ Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de sh
 | efeito das estruturas únicas | só na **primeira** leitura do console, por mundo; valores: arquivo 14 palavras, usina 2,5 km, console 3 vizinhas, Construtores 6 km (mesma laje), antena ×2,5 |
 | travessias difíceis | escada de manutenção (~220 m) em cada passagem; pistas das passagens para as escotilhas e de escotilha em escotilha |
 
-### Fase 5 — escolhas feitas por padrão, **a confirmar** (2026-09-30)
+### Fase 5 — escolhas feitas por padrão (2026-09-30) — **confirmadas em 2026-10-01** (exceto: os seres fazem toda a movimentação do jogador — [[Ideias/Gameplay/Seres-como-o-jogador]])
 
 | pergunta | escolha |
 |---|---|
@@ -151,7 +151,7 @@ Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de sh
 - Raridade: a proposta (primeiro encontro provocado depois de ~30–60 min de Peregrinação).
 - **Pelo menos um Safeguard sempre rondando** cada território — vivo mesmo quando o jogador não sabe dele, para que dê para encontrar um de repente, ou vê-lo de longe e mudar de rota/se esconder. A mecânica do alerta continua; isto é somado. Território = setor × fatia de 480 m (o setor inteiro tem 2880 m de altura). No escuro ele é ouvido e aparece no sensor (modo movimento). Modo Livre: desligados por padrão.
 
-### Fase 6 — escolhas feitas por padrão, **a confirmar** (2026-09-30)
+### Fase 6 — escolhas feitas por padrão (2026-09-30) — **confirmadas em 2026-10-01** (mais: a animação de ser capturado)
 
 | pergunta | escolha |
 |---|---|
@@ -166,7 +166,7 @@ Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de sh
 | modo Livre | desligados por padrão; opção "Safeguards no modo Livre" nas configurações |
 | no escuro | sem luz própria; passos secos audíveis até ~180 m (com direção); zumbido quando caçam; o sensor (movimento) acha um a até 600 m |
 
-### Fase 7 — escolhas feitas por padrão, **a confirmar** (2026-09-30)
+### Fase 7 — escolhas feitas por padrão (2026-09-30) — **confirmadas em 2026-10-01**
 
 | pergunta | escolha |
 |---|---|

@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "15-Plano-de-Implementacao.md",
+                "file": "13-Decisoes.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "15-Plano-de-Implementacao"
+              "title": "13-Decisoes"
             }
           }
         ]
@@ -190,11 +190,13 @@
   },
   "active": "ce4c8cf8abaf8e7f",
   "lastOpenFiles": [
+    "Ideias/Gameplay/Seres-como-o-jogador.md",
+    "Copiar-glifos.md",
+    "15-Plano-de-Implementacao.md",
+    "09-Mapa-de-Arquivos.md",
+    "11-Invariantes-e-Armadilhas.md",
     "12-Historico.md",
     "Ideias/Gameplay/Inventario-e-maos.md",
-    "11-Invariantes-e-Armadilhas.md",
-    "09-Mapa-de-Arquivos.md",
-    "15-Plano-de-Implementacao.md",
     "13-Decisoes.md",
     "14-Universo-Blame.md",
     "Ideias/Gameplay/Plano-de-Gameplay.md",
@@ -204,7 +206,6 @@
     "04-Mundo-e-Geracao.md",
     "Ideias/Mundo/Enderecamento-da-Cidade.md",
     "Ideias/Gameplay/Copiar-inscricoes.md",
-    "Copiar-glifos.md",
     "Ideias/00-Ideias.md",
     "Ideias/Gameplay/Interface-diegetica.md",
     "Ideias/Gameplay/Inicio-do-mundo.md",
@@ -218,7 +219,6 @@
     "Ideias/Futuro",
     "Ideias/Gameplay/Marcas-do-jogador.md",
     "Ideias/Gameplay/Seeds-compartilhaveis.md",
-    "Ideias/Gameplay/Modo-expedicao.md",
-    "Ideias/Gameplay/Cargas.md"
+    "Ideias/Gameplay/Modo-expedicao.md"
   ]
 }
