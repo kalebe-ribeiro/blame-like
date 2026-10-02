@@ -1,115 +1,96 @@
-// Teste de viabilidade do corte de verdade para a arma de Killy (ver o cofre, Arma-do-Killy):
-// gera chunks reais, passa um "feixe" (cilindro) por eles e recorta, peça por peça, as que o
-// cilindro atravessa (three-bvh-csg: peça − cilindro). Mede o tempo, conta as peças e confere
-// que nenhum triângulo do resultado ficou dentro do cilindro.
-//   node tools/csg-spike.mjs [raio] [n de chunks]
+// Viabilidade do corte de verdade (arma de Killy — o cofre, Arma-do-Killy, fase F1):
+// chunks reais, um feixe (cilindro) atravessando, cada peça recortada pelo módulo do jogo
+// (src/gen/cut.js). Confere, peça por peça:
+//   • nada sobra DENTRO do cilindro;
+//   • a área FORA do cilindro é a mesma de antes (nada some indevidamente);
+// e mede o tempo. As lajes das camadas ('barrier') ficam de fora (a arma não as corta).
+//   node tools/csg-spike.mjs [raio] [n de chunks] [semente do sorteio]
 import * as THREE from 'three';
-import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg';
-import { Field, CHUNK } from '../src/gen/field.js';
+import * as CSGLIB from 'three-bvh-csg';
+import { Field } from '../src/gen/field.js';
 import { ChunkBuilder, generateChunk } from '../src/gen/chunkgen.js';
 import { generateMacro } from '../src/gen/macrogen.js';
+import { setCSG, cutPiece, areaOutside, insideCuts } from '../src/gen/cut.js';
 
+setCSG(CSGLIB);
 const R = Number(process.argv[2] || 1.4);
 const COUNT = Number(process.argv[3] || 12);
+let rnd = Number(process.argv[4] || 7);
+const rand = () => ((rnd = (rnd * 1664525 + 1013904223) >>> 0) / 4294967296);
 const F = new Field(parseInt('abc', 36), []);
 
-// as peças de cada chunk, antes de serem fundidas por material
 let pieces = [];
 const add = ChunkBuilder.prototype.add;
 ChunkBuilder.prototype.add = function (mat, geom) {
-  if (geom) pieces.push({ mat, geom: geom.clone(), x0: this.x0, y0: this.y0, z0: this.z0 });
+  if (geom) pieces.push({ mat, geom: geom.clone() });
   return add.call(this, mat, geom);
 };
 
-const ev = new Evaluator();
-ev.attributes = ['position', 'normal'];
-ev.useGroups = false;
-
-const dist = (p, a, b) => {
-  const ab = b.clone().sub(a);
-  const t = Math.max(0, Math.min(1, p.clone().sub(a).dot(ab) / ab.lengthSq()));
-  return a.clone().addScaledVector(ab, t).distanceTo(p);
-};
-
-let tot = { chunks: 0, pieces: 0, cut: 0, ms: 0, worst: 0, worstChunk: 0, fail: 0, leftInside: 0, tris0: 0, tris1: 0, open: 0 };
-let rnd = 7;
-const rand = () => ((rnd = (rnd * 1664525 + 1013904223) >>> 0) / 4294967296);
+const st = { chunks: 0, cut: 0, csg: 0, clip: 0, failCsg: 0, ms: [], chunkMs: [], badArea: [], inside: 0, tris0: 0, tris1: 0 };
 for (let c = 0; c < COUNT; c++) {
-  // chunks de verdade em lugares variados (perto da origem e na teia/colmeia)
   const cx = Math.floor(rand() * 40) - 20;
   const cy = Math.floor(rand() * 16) - 8;
   const cz = Math.floor(rand() * 40) - 20;
   pieces = [];
   generateChunk(F, cx, cy, cz, 0);
   if (rand() < 0.3) generateMacro(F, cx >> 2, cy >> 2, cz >> 2);
-  if (!pieces.length) continue;
-  // o feixe: atravessa o chunk numa direção qualquer, passando por uma peça ao acaso
-  const target = pieces[Math.floor(rand() * pieces.length)];
+  const cand = pieces.filter((p) => p.mat !== 'barrier');
+  if (!cand.length) continue;
+  const target = cand[Math.floor(rand() * cand.length)];
   target.geom.computeBoundingBox();
   const mid = target.geom.boundingBox.getCenter(new THREE.Vector3());
   const dir = new THREE.Vector3(rand() - 0.5, (rand() - 0.5) * 0.4, rand() - 0.5).normalize();
   const A = mid.clone().addScaledVector(dir, -120);
-  const Bp = mid.clone().addScaledVector(dir, 120);
-  const len = A.distanceTo(Bp);
-  const cyl = new THREE.CylinderGeometry(R, R, len, 24, 1, false);
-  cyl.rotateX(Math.PI / 2); // eixo z
-  const m = new THREE.Matrix4().lookAt(A, Bp, new THREE.Vector3(0, 1, 0));
-  cyl.applyMatrix4(m);
-  cyl.translate((A.x + Bp.x) / 2, (A.y + Bp.y) / 2, (A.z + Bp.z) / 2);
-  const cutter = new Brush(cyl);
-  cutter.updateMatrixWorld();
+  const B = mid.clone().addScaledVector(dir, 120);
+  const cuts = [{ a: A.toArray(), b: B.toArray(), r: R }];
+  const shrunk = cuts.map((q) => ({ ...q, r: q.r * Math.cos(Math.PI / 24) - 0.03 })); // (o cilindro é um polígono de 24 lados)
   let chunkMs = 0;
-  for (const pc of pieces) {
+  for (const pc of cand) {
     const g = pc.geom;
-    if (!g.index) continue;
     g.computeBoundingSphere();
-    const bs = g.boundingSphere;
-    if (dist(bs.center, A, Bp) > bs.radius + R) continue; // longe do feixe
-    tot.pieces++;
-    // a peça é atravessada? (algum vértice dentro do cilindro, ou o eixo passa pela caixa)
-    g.computeBoundingBox();
-    const ray = new THREE.Ray(A, dir);
-    const hitsBox = ray.intersectBox(g.boundingBox.clone().expandByScalar(R), new THREE.Vector3()) !== null;
-    if (!hitsBox) continue;
-    if (!g.attributes.normal) g.computeVertexNormals();
-    const tris0 = g.index.count / 3;
     const t0 = performance.now();
-    let out;
-    try {
-      const br = new Brush(g);
-      br.updateMatrixWorld();
-      out = ev.evaluate(br, cutter, SUBTRACTION);
-    } catch (err) {
-      tot.fail++;
-      continue;
-    }
+    const res = cutPiece(g, cuts, { maxEdge: Math.min(0.5, R / 3) });
     const ms = performance.now() - t0;
+    if (res.mode === 'none') continue;
     chunkMs += ms;
-    tot.worst = Math.max(tot.worst, ms);
-    const og = out.geometry;
-    const pos = og.attributes.position;
-    const nT = (og.index ? og.index.count : pos.count) / 3;
-    if (nT === tris0 && og.index && og.index.count === g.index.count) continue; // não cortou nada
-    tot.cut++;
-    tot.tris0 += tris0;
-    tot.tris1 += nT;
-    // conferência: nenhum triângulo com o centro dentro do cilindro
-    const v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
-    for (let t = 0; t < nT; t++) {
-      for (let j = 0; j < 3; j++) v[j].fromBufferAttribute(pos, og.index ? og.index.getX(t * 3 + j) : t * 3 + j);
-      const cc = v[0].clone().add(v[1]).add(v[2]).divideScalar(3);
-      // (o cilindro é um polígono de 24 lados: a face dele fica a R·cos(π/24) do eixo)
-      if (dist(cc, A, Bp) < R * Math.cos(Math.PI / 24) - 0.03) {
-        tot.leftInside++;
-        (tot.bad ??= {})[pc.mat] = (tot.bad[pc.mat] ?? 0) + 1;
+    st.ms.push(ms);
+    st.cut++;
+    if (res.mode === 'csg') st.csg++;
+    else if (res.mode === 'clip') st.clip++;
+    else st.failCsg++;
+    const k = res.kept;
+    if (k) {
+      const p = k.attributes.position;
+      const ix = k.index;
+      for (let i = 0; i < ix.count; i += 3) {
+        const v = [ix.getX(i), ix.getX(i + 1), ix.getX(i + 2)];
+        const x = (p.getX(v[0]) + p.getX(v[1]) + p.getX(v[2])) / 3;
+        const y = (p.getY(v[0]) + p.getY(v[1]) + p.getY(v[2])) / 3;
+        const z = (p.getZ(v[0]) + p.getZ(v[1]) + p.getZ(v[2])) / 3;
+        if (insideCuts(x, y, z, shrunk)) {
+          st.inside++;
+          const key = `${pc.mat}/${res.mode}`;
+          (st.insideBy ??= {})[key] = (st.insideBy[key] ?? 0) + 1;
+        }
       }
     }
+    const a0 = areaOutside(g, cuts, 0.25);
+    const a1 = k ? areaOutside(k, cuts, 0.25) : 0;
+    // tolerância: 1% da área, e no mínimo a faixa da borda (2 × perímetro do furo × passo)
+    if (Math.abs(a1 - a0) > Math.max(0.01 * a0, 2 * 2 * Math.PI * R * 0.25)) st.badArea.push({ mat: pc.mat, mode: res.mode, antes: +a0.toFixed(1), depois: +a1.toFixed(1) });
+    st.tris0 += (g.index ? g.index.count : g.attributes.position.count) / 3;
+    st.tris1 += (k ? k.index.count / 3 : 0) + (res.caps ? res.caps.index.count / 3 : 0);
   }
-  tot.chunks++;
-  tot.ms += chunkMs;
-  tot.worstChunk = Math.max(tot.worstChunk, chunkMs);
+  st.chunks++;
+  st.chunkMs.push(chunkMs);
 }
-console.log(`raio ${R} m · ${tot.chunks} chunks · ${tot.pieces} peças perto do feixe · ${tot.cut} cortadas · falhas ${tot.fail}`);
-console.log(`tempo: ${tot.ms.toFixed(0)} ms no total · ${(tot.ms / Math.max(1, tot.chunks)).toFixed(1)} ms/chunk (pior ${tot.worstChunk.toFixed(0)}) · ${(tot.ms / Math.max(1, tot.cut)).toFixed(1)} ms/peça (pior ${tot.worst.toFixed(0)})`);
-console.log('sobras por material:', JSON.stringify(tot.bad ?? {}));
-console.log(`triângulos das peças cortadas: ${tot.tris0} → ${tot.tris1} · triângulos que ficaram dentro do cilindro: ${tot.leftInside}`);
+const pct = (arr, q) => {
+  const s = arr.slice().sort((a, b) => a - b);
+  return s.length ? s[Math.min(s.length - 1, Math.floor(s.length * q))] : 0;
+};
+console.log(`raio ${R} m · ${st.chunks} chunks · ${st.cut} peças cortadas (csg ${st.csg} · abertas ${st.clip} · csg falhou→recorte ${st.failCsg})`);
+console.log(`tempo por peça: p50 ${pct(st.ms, 0.5).toFixed(1)} · p95 ${pct(st.ms, 0.95).toFixed(1)} · máx ${pct(st.ms, 1).toFixed(0)} ms`);
+console.log(`tempo por chunk: p50 ${pct(st.chunkMs, 0.5).toFixed(0)} · p95 ${pct(st.chunkMs, 0.95).toFixed(0)} · máx ${pct(st.chunkMs, 1).toFixed(0)} ms`);
+console.log('dentro, por peça/modo:', JSON.stringify(st.insideBy ?? {}));
+console.log(`dentro do furo: ${st.inside} triângulos · área de fora alterada: ${st.badArea.length} peças ${JSON.stringify(st.badArea.slice(0, 6))}`);
+console.log(`triângulos das peças cortadas: ${st.tris0} → ${st.tris1}`);

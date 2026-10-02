@@ -1,4 +1,4 @@
-// GERADO por tools/vendor-bvh.mjs — não editar. A three-mesh-bvh para os workers de geração.
+// GERADO por tools/vendor-bvh.mjs — não editar. three-mesh-bvh para os workers de geração.
 import { BufferAttribute, Vector3, Vector2, Plane, Line3, Triangle, Sphere, Matrix4, Box3, REVISION, BackSide, DoubleSide, FrontSide, Object3D, Mesh, BufferGeometry, Group, LineBasicMaterial, MeshBasicMaterial, Ray, BatchedMesh, RGBAFormat, RGFormat, RedFormat, RGBAIntegerFormat, RGIntegerFormat, RedIntegerFormat, DataTexture, NearestFilter, IntType, UnsignedIntType, FloatType, UnsignedByteType, UnsignedShortType, ByteType, ShortType, Vector4, Matrix3 } from './three.js';
 
 // Split strategy constants

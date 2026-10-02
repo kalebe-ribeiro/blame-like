@@ -166,6 +166,10 @@ No mangá, o que marca o emissor é a **linha fina** e a **detonação retardada
 
 Protocolo: 200 tiros em 8 biomas, `p50/p95/p99`, no `npm run profile` (lugar `tiro`) e num `tools/csg-bench.mjs` (worker isolado).
 
+## Andamento
+
+- **F1.1 — o núcleo do corte** (`src/gen/cut.js`, 2026-10-02): peça fechada → CSG (faces do corte à parte, para a brasa); peça aberta → subdivide perto do furo e tira só os de dentro; peças de várias caixas que se atravessam (a colmeia) deixavam triângulos dentro → limpeza pós-CSG (só de dentro). `tools/csg-spike.mjs` v2, máquina livre, 29 chunks reais, raios 0,6 e 2,8 m: **0 triângulos dentro, 0 peças com a área de fora alterada, 0 falhas**; 0,7 ms por peça (p95 4 ms, máx 57), ~20 ms por chunk (p95 ~105 ms). A biblioteca de corte gerada para os workers (`npm run vendor`).
+
 ## 9. Histórico da decisão **(R 27)**
 - 2026-09-30: discutido; escolhido o método "de shader" (cilindros + `discard` + colisão ignorando).
 - 2026-10-01: implementado assim (potência em 5 níveis); bugs: a colisão furava em volta (vetor temporário reaproveitado), peças ocas pelo furo, o corpo sumindo perto do cilindro.
