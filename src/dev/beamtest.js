@@ -24,6 +24,7 @@
 import * as THREE from 'three';
 import { beamReach } from '../gen/beamreach.js';
 import { chargeK, shotOf, jamAt } from '../app/beam.js';
+import { CHUNK as CHUNK_S } from '../gen/field.js';
 import { onWorldBuilt } from '../app/render.js';
 import { bindings } from '../controls/bindings.js';
 import { cutKey, cacheGet } from '../world/cutCache.js';
@@ -75,7 +76,7 @@ async function run(ctx) {
         last = ms;
       };
     }
-    const counts = t > 0.5 ? world.addCut({ a: a.toArray(), b: b.toArray(), r }, a) : {};
+    const counts = t > 0.5 ? world.addCut({ a: a.toArray(), b: b.toArray(), r }, a, { now: true }) : {};
     const n = Object.values(counts).reduce((s, v) => s + v, 0);
     const end = performance.now() + 15000;
     while (swapped < n && performance.now() < end) await sleep(20);
@@ -451,6 +452,97 @@ async function run(ctx) {
     const [lo, hi, over] = out;
     const ok = hi.peak > lo.peak * 2.5 && hi.moved > lo.moved * 3 && hi.moved > 1.5 && hi.rest > 0.2 * hi.peak && hi.rest < 0.7 * hi.peak && over.moved > hi.moved * 4;
     report({ kind: 'coice', ok, why: out.map((o) => `carga ${o.kk}${o.oo ? ' + sobrecarga ' + o.oo : ''}: mira +${(o.peak * 57.3).toFixed(1)}° (assentou em +${(o.rest * 57.3).toFixed(1)}°) · empurrado ${o.moved.toFixed(2)} m (livre atrás ${o.room.toFixed(0)} m)`).join(' · ') });
+  }
+
+  // ── streaming: atirando, o mundo continua chegando — a demora de cada chunk do caminho (do
+  //    pedido até chegar) com e sem tiros (o cofre §8: nenhum atrasado mais de 1 s) ──
+  {
+    const sgWas = ctx.rules.safeguards;
+    ctx.rules.safeguards = false;
+    const run = async (shooting) => {
+      ctx.ui.teleport('teia', 'teia');
+      controls.setMode('fly');
+      await sleep(SETTLE);
+      const start = camera.position.clone().add(world.origin);
+      const dir = new THREE.Vector3(-Math.sin(controls.yaw), 0, -Math.cos(controls.yaw));
+      const seenBefore = new Set([...world.chunkLayer.chunks.keys()]);
+      const t0 = performance.now();
+      let nextShot = 0;
+      while (performance.now() - t0 < 12000) {
+        const s = ((performance.now() - t0) / 1000) * 70; // (70 m/s: passa do raio carregado — 560 m — e chunks novos chegam no caminho)
+        controls.setView({ pos: start.clone().addScaledVector(dir, s).sub(world.origin), yaw: controls.yaw, pitch: 0, scale: 1 });
+        if (shooting && performance.now() - t0 > nextShot) {
+          nextShot += 2000;
+          ctx.player.energy.value = 1;
+          // (de lado: o furo não fica na frente do caminho)
+          const yaw0 = controls.yaw;
+          controls.yaw = yaw0 + Math.PI / 2;
+          camera.rotation.set(0, controls.yaw, 0);
+          camera.updateMatrixWorld();
+          ctx.beam.fire(1, 1);
+          controls.yaw = yaw0;
+        }
+        await sleep(50);
+      }
+      await sleep(2500);
+      // os chunks perto do caminho que foram pedidos nesta corrida
+      const lat = [];
+      for (const [key, e] of world.chunkLayer.chunks) {
+        if (seenBefore.has(key) || e.loadMs === undefined) continue;
+        const c = new THREE.Vector3((e.cx + 0.5) * CHUNK_S, (e.cy + 0.5) * CHUNK_S, (e.cz + 0.5) * CHUNK_S);
+        const rel = c.clone().sub(start);
+        const along = rel.dot(dir);
+        if (along < 0 || along > 900 || rel.clone().addScaledVector(dir, -along).length() > 200) continue;
+        lat.push(e.loadMs);
+      }
+      lat.sort((x, y) => x - y);
+      return { n: lat.length, p95: lat[Math.floor(lat.length * 0.95)] ?? 0, max: lat[lat.length - 1] ?? 0 };
+    };
+    const base = await run(false);
+    const shoot2 = await run(true);
+    ctx.rules.safeguards = sgWas;
+    controls.setMode('walk');
+    report({
+      kind: 'streaming',
+      ok: base.n > 3 && shoot2.n > 3 && shoot2.max <= base.max + 1000,
+      why: `sem tiros: ${base.n} chunks do caminho, p95 ${base.p95.toFixed(0)} ms, pior ${base.max.toFixed(0)} ms · atirando (sobrecarga a cada 2 s): ${shoot2.n}, p95 ${shoot2.p95.toFixed(0)} ms, pior ${shoot2.max.toFixed(0)} ms (≤ sem tiros + 1000)`,
+    });
+  }
+
+  // ── lotes: a memória de vídeo — um chunk cortado cresce (as faces do corte); 10 tiros de
+  //    colapso (os maiores: 18,7 m, 2000 m) em direções diferentes. Cada página ~3 MB. ──
+  {
+    const sgWas = ctx.rules.safeguards;
+    ctx.rules.safeguards = false;
+    ctx.ui.teleport('colmeia', 'colmeia');
+    controls.setMode('fly');
+    await sleep(SETTLE + 3000);
+    const st0 = world.batches.stats;
+    const t0 = performance.now();
+    for (let i = 0; i < 10; i++) {
+      ctx.beam.restoreArms();
+      ctx.inventory.equip('emitter');
+      ctx.player.energy.value = 1;
+      controls.yaw = (i / 10) * Math.PI * 2;
+      controls.pitch = (i % 3 - 1) * 0.15;
+      camera.rotation.set(controls.pitch, controls.yaw, 0, 'YXZ');
+      camera.updateMatrixWorld();
+      ctx.beam.fire(1, 2);
+      await sleep(2500);
+    }
+    await sleep(4000);
+    const st1 = world.batches.stats;
+    ctx.beam.restoreArms();
+    ctx.inventory.equip('emitter');
+    ctx.rules.safeguards = sgWas;
+    controls.setMode('walk');
+    const dPages = st1.pages - st0.pages;
+    const mb = (v) => ((v * 32) / 1048576).toFixed(0); // (~32 bytes por vértice com índice)
+    report({
+      kind: 'lotes',
+      ok: dPages <= 20,
+      why: `10 tiros de colapso: páginas ${st0.pages} → ${st1.pages} (+${dPages}; ≤ 20 ≈ 60 MB) · vértices em uso ${(st0.used / 1e6).toFixed(2)} → ${(st1.used / 1e6).toFixed(2)} milhões · capacidade ~${mb(st0.cap)} → ~${mb(st1.cap)} MB · vagas livres ${st0.freeSlots} → ${st1.freeSlots} · ${((performance.now() - t0) / 1000).toFixed(0)} s`,
+    });
   }
 
   // ── teto: um chunk com 64 cortes faz o feixe engasgar na entrada dele (puro) ──

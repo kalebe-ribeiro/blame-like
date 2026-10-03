@@ -326,6 +326,8 @@ export function createBeamFx(ctx) {
   /** @type {{ g: THREE.Vector3, until: number, rate: number, acc: number }[]} */
   const drips = []; // pontos de borda quente que pingam faíscas
   const seenDebris = new Set();
+  /** @type {any[][]} pedaços esperando para cair (2 por quadro — armBurst) */
+  const pendingDrops = [];
   /** @type {{ a: THREE.Vector3, dir: THREE.Vector3, k: number, r: number, t0: number, pts: number[], i: number, silent: boolean, booms: { g: THREE.Vector3, d: number, born: number }[] }[]} */
   const detonations = []; // as detonações sendo semeadas (alguns pontos por quadro)
   let charge = 0; // a carga mostrada (0..1)
@@ -347,6 +349,18 @@ export function createBeamFx(ctx) {
   };
 
   /** Um pedaço que cai (detrito ou lasca): `size` em m, em g (GLOBAL), material do mundo. */
+  /**
+   * A colisão dos efeitos cobrindo `pos` (cena) num raio r: reaproveita a varredura recente se
+   * ela já cobre (uma varredura passa por todas as malhas do mundo — várias por quadro travavam
+   * o disparo); senão varre 40 m em volta.
+   */
+  function ensureCol(pos, r) {
+    const fresh = col._at && performance.now() - col._t < 500 && col._at.distanceTo(pos) + r <= col._r;
+    if (fresh) return;
+    col._t = -1e9;
+    col.refresh(pos, Math.max(40, r));
+  }
+
   function drop(g, sx, sy, sz, mat, vel = null) {
     if (falling.length > 60) {
       const old = falling.shift();
@@ -359,8 +373,7 @@ export function createBeamFx(ctx) {
     mesh.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
     group.add(mesh);
     // um raio para baixo, só agora: onde vai pousar
-    col._t = -1e9;
-    col.refresh(mesh.position, Math.max(10, sy + 4));
+    ensureCol(mesh.position, Math.max(10, sy + 4));
     const hit = col.ray(mesh.position, DOWN, 160);
     const floor = hit ? hit.point.y + world.origin.y + Math.min(sx, sy, sz) * 0.4 : g.y - 160;
     falling.push({ mesh, vy: vel?.y ?? 0, vx: vel?.x ?? 0, vz: vel?.z ?? 0, floor, rest: false, bounced: false, g: g.clone(), spin: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(6) });
@@ -391,8 +404,7 @@ export function createBeamFx(ctx) {
         // uma direção perpendicular ao feixe, ao acaso
         _q.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).cross(s.dir).normalize();
         const from = axis.clone().sub(world.origin);
-        col._t = -1e9;
-        col.refresh(from, s.r + 3);
+        ensureCol(from, s.r + 3);
         const hit = col.ray(from, _q, s.r + 0.6);
         if (!hit || Math.abs(hit.distance - s.r) > 0.6) continue;
         const g = hit.point.clone().add(world.origin);
@@ -466,10 +478,11 @@ export function createBeamFx(ctx) {
     /** O braço que atira se desfaz (muzzle: a boca, na cena): pedaços caindo, faíscas, poeira. */
     armBurst(muzzle) {
       const g = muzzle.clone().add(world.origin);
+      // (os pedaços numa fila: caem 2 por quadro — não todos no quadro do disparo)
       for (let i = 0; i < 9; i++) {
         const c = 0.03 + Math.random() * 0.07;
         const v = new THREE.Vector3((Math.random() - 0.5) * 6, 1 + Math.random() * 4, (Math.random() - 0.5) * 6);
-        drop(g.clone(), c, c * (1 + Math.random() * 2), c, i % 2 ? 'cloth' : 'machine', v);
+        pendingDrops.push([g.clone(), c, c * (1 + Math.random() * 2), c, i % 2 ? 'cloth' : 'machine', v]);
       }
       const t = now();
       for (let i = 0; i < 40; i++) sparks.spawn(g, _v.set((Math.random() - 0.5) * 5, Math.random() * 4, (Math.random() - 0.5) * 5), t, 0.5 + Math.random() * 0.8, 0.06 + Math.random() * 0.06);
@@ -561,13 +574,15 @@ export function createBeamFx(ctx) {
           const g = D.a.clone().addScaledVector(D.dir, s);
           const born = D.t0 + s / DET_SPEED;
           // (perto da boca, menor: um clarão do tamanho do mundo no rosto só cega)
-          if (s > 4) flashes.spawn(g, _v.set(0, 0, 0), born, 0.09 + 0.08 * D.k, (1.2 + 2.4 * D.r) * Math.min(1, s / 25));
-          if (s > 6) rings.spawn(g, D.dir, born + 0.01, 1.4 + 1.2 * D.k, D.r * 0.8, D.r * (3 + 3 * D.k)); // (não em volta de quem atira)
+          // (os tamanhos têm teto: um furo de 19 m faria clarões, anéis e poeira de 50–110 m — camadas
+          //  translúcidas enormes umas sobre as outras pesavam na GPU por segundos depois do tiro)
+          if (s > 4) flashes.spawn(g, _v.set(0, 0, 0), born, 0.09 + 0.08 * D.k, Math.min(14, 1.2 + 2.4 * D.r) * Math.min(1, s / 25));
+          if (s > 6) rings.spawn(g, D.dir, born + 0.01, 1.4 + 1.2 * D.k, D.r * 0.8, Math.min(40, D.r * (3 + 3 * D.k))); // (não em volta de quem atira)
           // a poeira: o que a onda levanta e depois assenta
           for (let j = 0; j < 2; j++) {
             _q.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).cross(D.dir).normalize();
             const p = g.clone().addScaledVector(_q, D.r * (0.4 + Math.random() * 0.8));
-            dust.spawn(p, _q.multiplyScalar(1.5 + 3 * D.k), born + 0.05, 4 + Math.random() * 4, 1.2 + 2.5 * D.r);
+            dust.spawn(p, _q.multiplyScalar(1.5 + 3 * D.k), born + 0.05, 4 + Math.random() * 4, Math.min(10, 1.2 + 2.5 * D.r));
           }
           D.booms.push({ g, d: g.distanceTo(eye), born });
         }
@@ -742,6 +757,10 @@ export function createBeamFx(ctx) {
           d.acc -= 1;
           sparks.spawn(d.g, _v.set((Math.random() - 0.5) * 1.2, -Math.random() * 0.5, (Math.random() - 0.5) * 1.2), t, 0.6 + Math.random() * 0.9, 0.09 + Math.random() * 0.07);
         }
+      }
+      for (let n = 0; n < 2 && pendingDrops.length; n++) {
+        const [pg, sx, sy, sz, mat, v] = pendingDrops.shift();
+        drop(pg, sx, sy, sz, mat, v);
       }
       // ── o que cai ──
       for (let i = falling.length - 1; i >= 0; i--) {

@@ -342,7 +342,8 @@ export function setupDev(ctx) {
         if (h && h.distance > 5 && (!best || h.distance < best.d)) best = { yaw, d: h.distance };
       }
       if (best) ctx.controls.yaw = best.yaw;
-      ctx.controls.pitch = -0.05;
+      // (--fxfar=cima: atira reto para baixo — o poço visto de 700 m acima)
+      ctx.controls.pitch = params.get('fxfar') === 'cima' ? -1.55 : -0.05;
       await sleep(1500);
       // (--fxhold=S: segura S s — a sobrecarga: 3 a 6,5 s; a captura "carregando" 1,1 s antes de soltar)
       const holdS = Number(params.get('fxhold') || 2.7);
@@ -367,7 +368,10 @@ export function setupDev(ctx) {
         await sleep(1200);
         const d = new THREE.Vector3(-Math.sin(yaw0), 0, -Math.cos(yaw0));
         ctx.controls.setMode('fly');
-        ctx.controls.setView({ pos: eye0.clone().addScaledVector(d, -600).add(new THREE.Vector3(0, 20, 0)).sub(ctx.world.origin), yaw: yaw0, pitch: -0.02, scale: 1 });
+        // (--fxfar=dentro: 40 m dentro do túnel, olhando ao longo dele — o fim, além de 420 m, nos chunks de longe)
+        if (params.get('fxfar') === 'dentro') ctx.controls.setView({ pos: eye0.clone().addScaledVector(d, 40).sub(ctx.world.origin), yaw: yaw0, pitch: -0.05, scale: 1 });
+        else if (params.get('fxfar') === 'cima') ctx.controls.setView({ pos: eye0.clone().add(new THREE.Vector3(0, 700, 0)).sub(ctx.world.origin), yaw: yaw0, pitch: -1.55, scale: 1 });
+        else ctx.controls.setView({ pos: eye0.clone().addScaledVector(d, -600).add(new THREE.Vector3(0, 20, 0)).sub(ctx.world.origin), yaw: yaw0, pitch: -0.02, scale: 1 });
         await sleep(2500);
         let lod = 0;
         let lodCut = 0;

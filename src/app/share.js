@@ -5,7 +5,9 @@
 //  (app/marks.js). O mundo é 100% determinístico pela seed: quem abre o código
 //  atravessa a mesma Cidade, começa no mesmo lugar, e acha as suas setas
 //  pintadas (em cor de ferrugem). O estado (setores religados, pistas, léxico)
-//  não vai junto: cada um faz a própria travessia.
+//  não vai junto: cada um faz a própria travessia. Nem os cortes do emissor de feixe
+//  (a arma de Killy — slot.cuts): quem abre o código acha a Cidade inteira (o aviso
+//  está na mensagem de "código copiado").
 //
 //  Formato: "CYC1." + base64url(JSON { s: seed (base 36), m: modo, k: marcas })
 //  marcas: [x, y, z, nx, ny, nz, dx, dy, dz] arredondadas.

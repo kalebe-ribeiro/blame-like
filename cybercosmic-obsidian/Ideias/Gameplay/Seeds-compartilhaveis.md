@@ -13,3 +13,5 @@ tags: [gameplay, social]
 Um código com a seed (e, opcionalmente, suas [[Marcas-do-jogador|marcas]] e o ponto de partida) para outra pessoa atravessar o mesmo mundo. O mundo já é 100% determinístico pela seed.
 
 Em aberto: compartilhar também o **estado** (setores religados, pistas)? Ou só o mundo cru?
+
+> **Os cortes do emissor não vão no código** (2026-10-03 — o plano da [[Arma-do-Killy]], §4.7): quem abre o código acha a Cidade inteira; a mensagem de "código copiado" avisa.

@@ -68,7 +68,7 @@ export default {
   'worlds.new': 'NEW WORLD',
   'worlds.confirmNew': 'REPLACE THIS WORLD?',
   'worlds.copy': 'COPY CODE',
-  'worlds.copied': 'code copied: seed, mode and your marks',
+  'worlds.copied': 'code copied: seed, mode and your marks (not the emitter cuts)',
   'worlds.copyFail': 'could not copy',
   'worlds.paste': 'PASTE CODE',
   'worlds.badCode': 'the clipboard has no world code',

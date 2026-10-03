@@ -82,6 +82,8 @@ export class World {
     /** @type {{ a: number[], b: number[], r: number, id?: string, keep?: number[] }[]} os cortes do emissor de feixe (addCut) */
     this.cuts = [];
     this._afterCut = 0; // o quadro depois do qual o resto do mundo reage aos cortes novos
+    /** @type {any[]} as camadas de longe e a macro a refazer no próximo quadro (addCut) */
+    this._lateRecut = [];
     /** @type {any} o que o jogador mudou no mundo (WorldState — app.js), lido no build */
     this.worldState = null;
     this.frameNo = 0;
@@ -545,12 +547,19 @@ export class World {
    * para os pedidos dos workers) e os chunks que ele cruza são refeitos, do mais perto de
    * `from` (GLOBAL) ao mais longe. Devolve quantos chunks foram pedidos, por camada.
    */
-  addCut(cut, from) {
+  addCut(cut, from, { now = false } = {}) {
     cut.id ??= `C${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
     this.cuts.push(cut);
     this.field.setCuts(this.cuts);
     const out = {};
-    for (const L of [...this.layers, this.macroLayer]) out[L.level ? 'lod' + L.level : L.layer] = L.recut(cut, from);
+    // a camada de perto agora (o furo que se vê primeiro); as de longe e a macro no próximo
+    // quadro — um corte de 2000 m cruza muitos chunks, e agendar todos de uma vez pesava no
+    // quadro do tiro. (`now`: tudo agora — os testes que medem o tiro inteiro)
+    for (const L of [...this.layers, this.macroLayer]) {
+      const key = L.level ? 'lod' + L.level : L.layer;
+      if (now || L === this.chunkLayer) out[key] = L.recut(cut, from);
+      else this._lateRecut.push([L, cut, from.clone()]);
+    }
     // o resto do mundo (os caminhos, as rondas, os objetos montados fora da geração): no
     // próximo quadro (world.update — o quadro do tiro fica leve)
     this._afterCut = (this.frameNo ?? 0) + 1; // (o update deste quadro ainda vem: o do seguinte)
@@ -587,7 +596,11 @@ export class World {
 
   update(time, dt, camera, observerScale) {
     this.frameNo = (this.frameNo ?? 0) + 1; // (o orçamento de colisão por quadro — world/collision.js)
-    if (this._afterCut && this.frameNo > this._afterCut) this._reactToCuts();
+    // depois de um corte: no quadro seguinte, as camadas de longe; no outro, o resto do mundo
+    // (cada coisa num quadro — o tiro não junta tudo num só)
+    if (this._lateRecut.length && this.frameNo > this._afterCut) {
+      for (const [L, c, f] of this._lateRecut.splice(0)) L.recut(c, f);
+    } else if (this._afterCut && this.frameNo > this._afterCut + 1) this._reactToCuts();
     const g = this.toGlobal(camera.position, new THREE.Vector3());
     camera.getWorldDirection(_fwd);
 

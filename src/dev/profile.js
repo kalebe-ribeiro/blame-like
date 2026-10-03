@@ -285,6 +285,7 @@ async function run(ctx) {
     for (const place of PLACES) {
       if (!ctx.ui.teleport(place, place)) continue;
       controls.setMode('walk');
+      ctx.beam.restoreArms?.(); // (além do limite o braço que atira se perde)
       ctx.inventory.equip('emitter');
       ctx.player.energy.value = 1;
       await sleep(SETTLE + 3000);
@@ -340,6 +341,7 @@ async function run(ctx) {
         why: `regime ${baseIv.toFixed(1)} ms (CPU ${baseCpu.toFixed(1)}, GPU ${gBase.toFixed(1)}) · carregando: emissor ${chargeCpu.toFixed(2)} ms CPU (≤ 1), GPU +${(gCharge - gBase).toFixed(2)} ms (≤ 1,5) · disparo: quadro +${fireExtra.toFixed(1)} ms CPU (≤ 8; emissor ${fireF.beam.toFixed(1)}: addCut ${fireF.cut.toFixed(1)}, efeitos ${fireF.fx.toFixed(1)}) · pior quadro depois ${worst.toFixed(0)} ms · fps de volta em ${back < 0 ? '>4' : back.toFixed(1)} s (≤ 3)`,
       });
       log(`tiro:${place} quadros depois do disparo (ms): ${after.slice(0, 40).map((f) => f.iv.toFixed(0)).join(' ')}`);
+      log(`tiro:${place} o disparo por etapa (ms): ${ctx.beam.lastShot?.ms ?? '-'}`);
       log(`tiro:${place} programas novos: ${newProgs.splice(0).join(' | ') || 'nenhum'}`);
       log(`tiro:${place} quadros longos: ${after.filter((f) => f.top).map((f) => `${f.iv.toFixed(0)} ms em ${((f.t - after[0].t) / 1000).toFixed(2)} s [${f.top}]`).join(' | ') || 'nenhum'}`);
     }

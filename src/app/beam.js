@@ -174,7 +174,10 @@ export function createBeam(ctx) {
   const keyDown = { key: false, mouse: false };
   /** Os testes seguram o gatilho por aqui (dev/beamtest.js). */
   let testHeld = null;
+  /** @type {any} */
   let lastShot = null;
+  /** @type {(() => void)|null} o que fica para o quadro seguinte ao tiro (som, vibração, atenção) */
+  let afterFire = null;
   const fx = createBeamFx(ctx); // o que se vê e se ouve (app/beamfx.js)
   const _d = new THREE.Vector3();
   const _a = new THREE.Vector3();
@@ -303,6 +306,9 @@ export function createBeam(ctx) {
 
   /** O tiro de carga kk (0..1) e sobrecarga oo (0..1). */
   function fire(kk, oo = 0) {
+    // (o tempo de cada etapa — o profile mostra: dev/profile.js)
+    const T = [performance.now()];
+    const mark = () => T.push(performance.now());
     const S = shotOf(kk, oo);
     if (!free()) player.energy.value = Math.max(0, player.energy.value - S.cost);
     cool = COOLDOWN;
@@ -321,12 +327,14 @@ export function createBeam(ctx) {
     }
     const end = _a.clone().addScaledVector(_d, t);
     const a = _a.clone();
+    mark();
     if (t > 0.5) {
       const cut = { a: a.toArray(), b: end.toArray(), r: S.r };
       const keep = keepUnder(a, _d, t);
       if (keep) cut.keep = keep;
       world.addCut(cut, a);
     }
+    mark();
     // o que estava no caminho morre
     const ab = end.clone().sub(a);
     let kills = 0;
@@ -339,20 +347,30 @@ export function createBeam(ctx) {
         kills++;
       }
     }
+    mark();
     // os efeitos: o traço, a detonação correndo pela linha, a brasa, o que cai (app/beamfx.js)
     em.group.updateMatrixWorld(true);
     em.muzzle.getWorldPosition(_m);
     fx.fire(a, end, kk, S.r, _m.clone(), false, oo);
-    // som, coice, atenção
-    audio.beamShot?.(Math.min(1.6, kk + 0.6 * oo));
-    controls.rumble?.(0.45 + 0.55 * kk + oo, 0.3 + 0.4 * kk + oo, 140 + 300 * kk + 500 * oo);
+    mark();
+    // o coice agora; o som, a vibração e a atenção no próximo quadro (16 ms — ninguém nota; o
+    // quadro do tiro fica leve)
     recoil(kk, _d, oo);
-    ctx.alert?.raise(eye.x, eye.y, eye.z, 0.08 + 0.23 * kk + 0.4 * oo);
-    world.safeguards?.hear(eye.x, eye.y - 1.7, eye.z, 60 + 80 * kk + 200 * oo);
+    afterFire = () => {
+      audio.beamShot?.(Math.min(1.6, kk + 0.6 * oo));
+      controls.rumble?.(0.45 + 0.55 * kk + oo, 0.3 + 0.4 * kk + oo, 140 + 300 * kk + 500 * oo);
+      ctx.alert?.raise(eye.x, eye.y, eye.z, 0.08 + 0.23 * kk + 0.4 * oo);
+      world.safeguards?.hear(eye.x, eye.y - 1.7, eye.z, 60 + 80 * kk + 200 * oo);
+    };
+    mark();
     // além do limite, o braço que segura o emissor se desfaz
     const lost = stageOf(oo) >= ARM_LOSS_STAGE ? loseArm(_m.clone()) : null;
+    mark();
     lastShot = { k: kk, o: oo, ...S, t, stop, kills, lost };
     world.bus.emit('player:beam', { k: kk, o: oo, length: t, stop, kills, x: end.x, y: end.y, z: end.z });
+    mark();
+    const names = ['alcance', 'corte', 'mortes', 'efeitos', 'som/coice/alerta', 'braço', 'avisos'];
+    lastShot.ms = names.map((n, i) => `${n} ${(T[i + 1] - T[i]).toFixed(1)}`).join(' · ');
     return true;
   }
 
@@ -432,6 +450,11 @@ export function createBeam(ctx) {
       return fx;
     },
     update(dt) {
+      if (afterFire) {
+        const f = afterFire;
+        afterFire = null;
+        f();
+      }
       cool = Math.max(0, cool - dt);
       kick = Math.max(0, kick - dt * 6);
       // o coice da mira: sobe em ~30 ms até p, depois assenta em 45% de p em ~0,35 s

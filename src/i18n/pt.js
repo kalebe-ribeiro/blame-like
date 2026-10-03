@@ -68,7 +68,7 @@ export default {
   'worlds.new': 'NOVO MUNDO',
   'worlds.confirmNew': 'SUBSTITUIR ESTE MUNDO?',
   'worlds.copy': 'COPIAR CÓDIGO',
-  'worlds.copied': 'código copiado: seed, modo e as suas marcas',
+  'worlds.copied': 'código copiado: seed, modo e as suas marcas (não os cortes do emissor)',
   'worlds.copyFail': 'não deu para copiar',
   'worlds.paste': 'COLAR CÓDIGO',
   'worlds.badCode': 'a área de transferência não tem um código de mundo',

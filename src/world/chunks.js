@@ -277,6 +277,8 @@ export class ChunkLayer {
    * repete a cada carregamento: cutCache.js). O resultado de um pedido com cortes vai para o cache.
    */
   _request(entry, opts = {}) {
+    // (quando o chunk foi pedido pela primeira vez — a demora até chegar: dev/beamtest.js streaming)
+    if (!opts.cutJob) entry.reqT ??= performance.now();
     // perto de um corte e sem as caixas das peças: primeiro elas (do IndexedDB), para a lista
     // de cortes — e a chave do cache — ser a mesma de quando o chunk foi cortado
     if (!opts.cutJob && !entry.pieceBoxes && !this.boxMemo.has(entry.key) && this.cutsFor(entry.cx, entry.cy, entry.cz).length) {
@@ -362,6 +364,7 @@ export class ChunkLayer {
   _received(entry, data) {
     if (this.chunks.get(entry.key) !== entry) return; // já descartado
     entry.job = null;
+    if (entry.reqT && entry.loadMs === undefined) entry.loadMs = performance.now() - entry.reqT;
     entry.lights = data.lights;
     entry.emitters = data.emitters ?? [];
     entry.received = true;
