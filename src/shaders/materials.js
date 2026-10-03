@@ -297,7 +297,8 @@ void main() {
     vec3 Lv = uShotA.xyz + ab * tq - vWorldPos;
     float d2 = dot(Lv, Lv);
     float d = sqrt(d2);
-    vec3 sc = vec3(1.0, 0.9, 0.78) * uShotA.w * exp(-uFogDensity * d) / (1.0 + 0.6 * d2);
+    // (a cor pela sobrecarga — uShotB.w: 0 branco quente … 1 violeta — app/beamfx.js beamColors)
+    vec3 sc = mix(vec3(1.0, 0.9, 0.78), vec3(0.55, 0.3, 1.0), clamp(uShotB.w, 0.0, 1.0)) * uShotA.w * exp(-uFogDensity * d) / (1.0 + 0.6 * d2);
     lit += min(sc, vec3(3.0)) * max(dot(N, Lv / max(d, 1e-3)), 0.0);
   }
 
@@ -317,7 +318,8 @@ void main() {
     float on = 1.0 - smoothstep(0.2, 0.7, abs(d - A.w));
     if (on <= 0.0) continue;
     // (manchas: o metal esfria desigual — e o calor some primeiro onde a placa é fina)
-    float mott = smoothstep(-0.7, 0.45, snoise(W * 1.7 + float(i))) * (0.75 + 0.25 * snoise(W * 6.0));
+    // (variação larga e suave — o ruído fino de antes, com a cor de volta, virava pintas de onça)
+    float mott = 0.72 + 0.28 * snoise(W * 0.35 + float(i));
     // (cores puras: o filme dessatura tudo para ~38% — app/render.js — e o laranja tem de chegar quente)
     vec3 hc = age < 0.6 ? mix(vec3(1.0, 0.7, 0.35), vec3(1.0, 0.26, 0.02), age / 0.6)
                         : mix(vec3(1.0, 0.26, 0.02), vec3(0.6, 0.02, 0.0), clamp((age - 0.6) / 5.0, 0.0, 1.0));

@@ -240,6 +240,10 @@ export default {
   // ── o aparelho na mão (Peregrinação) ──
   'device.beamWeak': 'EMITTER: NEEDS {n}%',
   'device.beamJam': 'EMITTER: STRUCTURE SATURATED',
+  'device.beamOver': 'EMITTER  {n}% · OVERLOAD {lvl}',
+  'device.beamLimit': 'EMITTER  {n}% · THE ARM WILL NOT HOLD',
+  'device.beamArm': 'ARM: NO RESPONSE · {s} s',
+  'device.beamArmGone': 'ARM DESTROYED · REGENERATING {s} s',
   'device.beamCharge': 'EMITTER  {n}%',
   'device.beamCapped': 'EMITTER  {n}% · CELL LIMIT',
   'device.substation': 'SUBSTATION  [{key}]',

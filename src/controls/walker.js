@@ -77,6 +77,8 @@ export class Walker {
     /** Um empurrão de fora (o coice do emissor — app/beam.js): velocidade horizontal à parte do
      *  passo, que as paredes param e o atrito consome (no chão rápido, no ar devagar). */
     this.shove = new THREE.Vector3();
+    /** @type {((speed: number) => void)|null} bateu numa parede no empurrão (m/s contra ela) */
+    this.onSlam = null;
     this.canClimb = true; // escadas de marinheiro (os corpos dos seres de teste não sobem)
     this.canGrab = true; // agarrar quinas (os seres não: world/entities.js)
     this.ledge = null; // pendurado: { topY, edge, nrm, h }
@@ -528,6 +530,13 @@ export class Walker {
       rest.addScaledVector(nh, -rest.dot(nh));
       this.feet.add(move);
       move.copy(rest);
+      // o empurrão (shove) contra a parede também sai — forte, um baque (app/beam.js onSlam)
+      const sn = this.shove.x * nh.x + this.shove.z * nh.z;
+      if (sn < 0) {
+        if (sn < -12) this.onSlam?.(-sn);
+        this.shove.x -= nh.x * sn;
+        this.shove.z -= nh.z * sn;
+      }
       // tira da velocidade a componente contra a parede
       const vn = this.vel.x * nh.x + this.vel.z * nh.z;
       if (vn < 0) {

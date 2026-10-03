@@ -287,6 +287,7 @@ async function run(ctx) {
       controls.setMode('walk');
       ctx.inventory.equip('emitter');
       ctx.player.energy.value = 1;
+      ctx.beam.healArm?.();
       await sleep(SETTLE + 3000);
       for (let i = 0; i < 150 && ctx.wake?.active; i++) await sleep(200); // (o despertar do começo)
       controls.pitch = 0;
@@ -302,7 +303,9 @@ async function run(ctx) {
       await sleep(400);
       rec = [];
       g = gpuWin();
-      await sleep(2300);
+      // (--profhold=S: segura S s de carga do jogo — 6,8 vai até a sobrecarga máxima)
+      const H = Number(new URLSearchParams(location.search).get('profhold') || 2.7);
+      while (ctx.beam.held < H - 0.02 && ctx.beam.state === 'charging') await sleep(10);
       const charging = rec;
       const gCharge = g();
       // o disparo e os 4 s seguintes

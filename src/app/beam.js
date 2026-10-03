@@ -6,8 +6,13 @@
 //    t < 0,25 s     não atira (um estalo seco, sem gasto)
 //    u = (t − 0,25) / 2,25 (0..1, até 2,5 s) · k = 1 − (1 − u)²
 //    alcance 30 → 400 m · raio 0,6 → 2,8 m · gasto 3 → 18% da célula (5 cheios = 90%)
-//  Segurar além do cheio mantém a carga. A célula não tem o bastante: a carga para onde
-//  ela alcança. Entre tiros, 0,8 s.
+//  Segurar além do cheio: de 2,5 a 3 s a carga fica no cheio; de 3 a 6,5 s, a SOBRECARGA
+//  (o, 0..1 — 2026-10-03, pedido do usuário): alcance até 800 m, raio até 4,4 m, gasto até 35%,
+//  a luz do feixe desviando para o azul e o violeta até o limite — um traço preto que engole a
+//  luz (app/beamfx.js beamColors) — e o empurrão crescendo muito mais que a carga. E o BRAÇO
+//  paga (como o de Killy): depois de um tiro em sobrecarga ele fica sem responder (3 a 40 s);
+//  no limite é destruído — o emissor e a mão somem e se regeneram em 90 s.
+//  A célula não tem o bastante: a carga para onde ela alcança. Entre tiros, 0,8 s.
 //
 //  Ao soltar: o corte de verdade (world.addCut — gen/cut.js) até onde o feixe chega
 //  (beamReach: acaba nas camadas e nas estruturas únicas); o que estava no caminho morre;
@@ -25,11 +30,14 @@ import { bindings } from '../controls/bindings.js';
 import { t as tr } from '../i18n/index.js';
 import { buildHand } from './hands.js';
 import { beamReach } from '../gen/beamreach.js';
-import { createBeamFx } from './beamfx.js';
+import { createBeamFx, beamColors } from './beamfx.js';
 import { cutHitsBoxes } from '../gen/cut.js';
 import { CHUNK } from '../gen/field.js';
 
-export const CHARGE = { min: 0.25, full: 2.5 };
+export const CHARGE = { min: 0.25, full: 2.5, hold: 3.0, over: 6.5 };
+/** O braço depois de um tiro em sobrecarga: sem responder de lockMin a lockMax s (pela sobrecarga);
+ *  a partir de `wreck`, destruído — `regen` s para se regenerar. */
+export const ARM = { lockMin: 3, lockMax: 40, wreck: 0.95, regen: 90 };
 export const COOLDOWN = 0.8;
 /** O teto de cortes num chunk (§4.3 — inatingível jogando; atingido, o emissor engasga ali). */
 export const MAX_CUTS_PER_CHUNK = 64;
@@ -63,9 +71,14 @@ export function chargeK(t) {
   const u = Math.min(1, (t - CHARGE.min) / (CHARGE.full - CHARGE.min));
   return 1 - (1 - u) * (1 - u);
 }
-/** O tiro de carga k. */
-export function shotOf(k) {
-  return { range: 30 + 370 * k, r: 0.6 + 2.2 * k, cost: 0.03 + 0.15 * k };
+/** A sobrecarga: tempo segurando → o (0..1) — de 3 a 6,5 s. */
+export function overK(t) {
+  if (t < CHARGE.hold) return 0;
+  return Math.min(1, (t - CHARGE.hold) / (CHARGE.over - CHARGE.hold));
+}
+/** O tiro de carga k e sobrecarga o. */
+export function shotOf(k, o = 0) {
+  return { range: 30 + 370 * k + 400 * o, r: 0.6 + 2.2 * k + 1.6 * o, cost: 0.03 + 0.15 * k + 0.17 * o };
 }
 
 /** O emissor: um corpo de chapa, o cano com as cinco bobinas, o cabo. */
@@ -104,8 +117,14 @@ export function createBeam(ctx) {
   em.group.visible = false;
   camera.add(em.group);
   const grips = {};
+  // (a luva da mão do emissor: um material só dela — escurece queimada sem mexer no pano do mundo)
+  const handMat = world.materials.cloth.clone();
+  for (const k of Object.keys(ctx.shared)) handMat.uniforms[k] = ctx.shared[k];
+  handMat.uniforms.uBaseColor = { value: world.materials.cloth.uniforms.uBaseColor.value.clone() };
+  const handBase = handMat.uniforms.uBaseColor.value.clone();
+  const BURNT = new THREE.Color(0.02, 0.008, 0.006);
   for (const side of [1, -1]) {
-    const h = buildHand(world.materials.cloth, side);
+    const h = buildHand(handMat, side);
     h.group.position.set(0.026 * side, -0.07, 0.04);
     h.group.quaternion
       .setFromAxisAngle(new THREE.Vector3(0, 1, 0), (side * Math.PI) / 2)
@@ -120,6 +139,10 @@ export function createBeam(ctx) {
   let state = 'idle';
   let held = 0; // s segurando
   let k = 0; // a carga efetiva (limitada pela célula)
+  let o = 0; // a sobrecarga (0..1)
+  /** o braço: ferido (0..1), até quando não responde (s, performance), destruído? */
+  const arm = { hurt: 0, from: 0, until: 0, wrecked: false };
+  const now = () => performance.now() / 1000;
   let capped = false; // a célula limitou a carga
   let cool = 0;
   let kick = 0;
@@ -150,6 +173,7 @@ export function createBeam(ctx) {
     const w = controls.mode === 'walk' ? controls.walker : null;
     if (w?.ledgeState) return 'quina';
     if (w?.climbing) return 'escada';
+    if (now() < arm.until) return 'braco';
     if (!ctx.inventory.sideOf('emitter')) return 'mao';
     if (!free() && player.energy.value < shotOf(0).cost) return 'celula';
     return null;
@@ -160,6 +184,7 @@ export function createBeam(ctx) {
     state = 'locked';
     held = 0;
     k = 0;
+    o = 0;
     controls.charging = false;
     audio.beamCharge?.(-1);
     world.bus.emit('player:beamCancel', { why });
@@ -174,6 +199,7 @@ export function createBeam(ctx) {
     }
     if (why) {
       world.bus.emit('player:beamBlocked', { why });
+      if (why === 'braco') audio.deviceClick?.(false);
       if (why === 'celula') {
         audio.deviceClick?.(false);
         ctx.carried?.say?.(tr('device.beamWeak', { n: Math.round(shotOf(0).cost * 100) }), 2);
@@ -184,6 +210,7 @@ export function createBeam(ctx) {
     state = 'charging';
     held = 0;
     k = 0;
+    o = 0;
     capped = false;
     field = world.field;
     cancelReq = false;
@@ -199,8 +226,9 @@ export function createBeam(ctx) {
       held = 0;
       return;
     }
-    fire(k);
+    fire(k, o);
     held = 0;
+    o = 0;
   }
 
   /**
@@ -227,17 +255,18 @@ export function createBeam(ctx) {
    *   empurrão  o corpo é jogado para trás do tiro: ~1 m/s no mínimo, ~10 m/s no cheio (no chão,
    *             ~0,25 a ~2,5 m; no ar vai mais longe). Atirar para baixo empurra para cima.
    */
-  function recoil(kk, dir) {
-    const amp = 0.018 + 0.12 * kk;
-    rec = { t: 0, p: amp, y: (Math.random() - 0.5) * (0.01 + 0.05 * kk), applied: 0, appliedY: 0 };
-    kick = 0.4 + 0.6 * kk;
-    const v = 1 + 9 * kk * kk;
+  function recoil(kk, dir, oo = 0) {
+    const amp = 0.018 + 0.12 * kk + 0.22 * oo;
+    rec = { t: 0, p: amp, y: (Math.random() - 0.5) * (0.01 + 0.05 * kk + 0.12 * oo), applied: 0, appliedY: 0 };
+    kick = 0.4 + 0.6 * kk + 0.8 * oo;
+    // na sobrecarga o empurrão cresce muito mais que a carga: até ~40 m/s no limite
+    const v = 1 + 9 * kk * kk + 30 * oo * oo;
     if (controls.mode === 'walk' && controls.walker) {
       const w = controls.walker;
       const h = Math.hypot(dir.x, dir.z);
       if (h > 1e-3) w.shove.set(w.shove.x - (dir.x / h) * v * h, 0, w.shove.z - (dir.z / h) * v * h);
       // a parte vertical: para baixo empurra para cima (no máximo 7 m/s); para cima, para baixo
-      const up = Math.max(-v, Math.min(7, -dir.y * v));
+      const up = Math.max(-v, Math.min(7 + 18 * oo, -dir.y * v));
       if (up > 0.3) {
         w.vel.y = Math.max(w.vel.y, 0) + up;
         w.grounded = false;
@@ -247,9 +276,9 @@ export function createBeam(ctx) {
     }
   }
 
-  /** O tiro de carga kk (0..1). */
-  function fire(kk) {
-    const S = shotOf(kk);
+  /** O tiro de carga kk (0..1) e sobrecarga oo (0..1). */
+  function fire(kk, oo = 0) {
+    const S = shotOf(kk, oo);
     if (!free()) player.energy.value = Math.max(0, player.energy.value - S.cost);
     cool = COOLDOWN;
     kick = 1;
@@ -288,16 +317,31 @@ export function createBeam(ctx) {
     // os efeitos: o traço, a detonação correndo pela linha, a brasa, o que cai (app/beamfx.js)
     em.group.updateMatrixWorld(true);
     em.muzzle.getWorldPosition(_m);
-    fx.fire(a, end, kk, S.r, _m.clone());
+    fx.fire(a, end, kk, S.r, _m.clone(), false, oo);
     // som, coice, atenção
-    audio.beamShot?.(kk);
-    controls.rumble?.(0.45 + 0.55 * kk, 0.3 + 0.4 * kk, 140 + 300 * kk);
-    recoil(kk, _d);
-    ctx.alert?.raise(eye.x, eye.y, eye.z, 0.08 + 0.23 * kk);
-    world.safeguards?.hear(eye.x, eye.y - 1.7, eye.z, 60 + 80 * kk);
-    lastShot = { k: kk, ...S, t, stop, kills };
-    world.bus.emit('player:beam', { k: kk, length: t, stop, kills, x: end.x, y: end.y, z: end.z });
+    audio.beamShot?.(Math.min(1.6, kk + 0.6 * oo));
+    controls.rumble?.(0.45 + 0.55 * kk + oo, 0.3 + 0.4 * kk + oo, 140 + 300 * kk + 500 * oo);
+    recoil(kk, _d, oo);
+    ctx.alert?.raise(eye.x, eye.y, eye.z, 0.08 + 0.23 * kk + 0.4 * oo);
+    world.safeguards?.hear(eye.x, eye.y - 1.7, eye.z, 60 + 80 * kk + 200 * oo);
+    // o braço paga a sobrecarga (Killy: muitas vezes o braço se desfaz no tiro)
+    if (oo > 0.02) hurtArm(oo);
+    lastShot = { k: kk, o: oo, ...S, t, stop, kills };
+    world.bus.emit('player:beam', { k: kk, o: oo, length: t, stop, kills, x: end.x, y: end.y, z: end.z });
     return true;
+  }
+
+  /** O braço depois de um tiro em sobrecarga oo: sem responder um tempo; no limite, destruído. */
+  function hurtArm(oo) {
+    const wreck = oo >= ARM.wreck;
+    const t = now();
+    arm.hurt = Math.max(arm.hurt, oo);
+    arm.wrecked = arm.wrecked || wreck;
+    arm.from = t;
+    arm.until = Math.max(arm.until, t + (wreck ? ARM.regen : ARM.lockMin + (ARM.lockMax - ARM.lockMin) * oo * oo));
+    audio.impact?.(Math.min(1, 0.4 + oo * 0.6));
+    controls.rumble?.(1, 1, wreck ? 900 : 300);
+    world.bus.emit('player:arm', { o: oo, wreck, seconds: arm.until - t });
   }
 
   // teclado e mouse (o controle: controls.padFire / padCancel — controls/noclip.js)
@@ -337,6 +381,23 @@ export function createBeam(ctx) {
     set testHeld(v) {
       testHeld = v;
     },
+    get o() {
+      return o;
+    },
+    /** o tempo de carga (s de jogo) */
+    get held() {
+      return held;
+    },
+    /** o braço: { hurt, until (s, performance), wrecked } */
+    get arm() {
+      return arm;
+    },
+    /** (testes) o braço inteiro de novo */
+    healArm() {
+      arm.hurt = 0;
+      arm.until = 0;
+      arm.wrecked = false;
+    },
     cancel,
     fire,
     /** (medidas) os efeitos */
@@ -370,37 +431,71 @@ export function createBeam(ctx) {
         else {
           held += dt;
           const want = Math.max(0, chargeK(held));
+          const wantO = overK(held);
           // a célula limita: a carga para onde ela alcança
-          const kMax = free() ? 1 : Math.max(0, Math.min(1, (player.energy.value - 0.03) / 0.15));
-          capped = want > kMax;
+          const e = player.energy.value;
+          const kMax = free() ? 1 : Math.max(0, Math.min(1, (e - 0.03) / 0.15));
+          const oMax = free() ? 1 : Math.max(0, Math.min(1, (e - 0.18) / 0.17));
+          capped = want > kMax || wantO > oMax;
           k = Math.min(want, kMax);
+          o = k >= 1 ? Math.min(wantO, oMax) : 0;
           const on = chargeK(held) >= 0;
-          audio.beamCharge?.(on ? k : 0);
+          audio.beamCharge?.(on ? Math.min(1.6, k + 0.6 * o) : 0);
           rumbleT -= dt;
           if (rumbleT <= 0) {
             rumbleT = 0.1;
-            controls.rumble?.(0.05 + 0.35 * k, 0.05 + 0.25 * k, 130);
+            controls.rumble?.(0.05 + 0.35 * k + 0.6 * o, 0.05 + 0.25 * k + 0.6 * o, 130);
           }
-          // o aparelho mostra o gasto que o tiro terá
-          if (!free() && on) ctx.carried?.say?.(tr(capped ? 'device.beamCapped' : 'device.beamCharge', { n: Math.round(shotOf(k).cost * 100) }), 0.25);
+          // o aparelho mostra o gasto que o tiro terá — e a sobrecarga
+          if (on) {
+            const n = Math.round(shotOf(k, o).cost * 100);
+            const msg = o >= ARM.wreck ? tr('device.beamLimit', { n }) : o > 0 ? tr('device.beamOver', { n, lvl: '▲'.repeat(1 + Math.min(2, Math.floor(o * 3))) }) : tr(capped ? 'device.beamCapped' : 'device.beamCharge', { n });
+            if (!free() || o > 0) ctx.carried?.say?.(msg, 0.25);
+          }
         }
+      }
+
+      // o braço: sem responder (a mira treme, a luva queimada) — ou destruído, se regenerando
+      const tn = now();
+      if (arm.until && tn >= arm.until) {
+        arm.hurt = 0;
+        arm.until = 0;
+        arm.wrecked = false;
+      }
+      const left = arm.until ? (arm.until - tn) / Math.max(1e-3, arm.until - arm.from) : 0;
+      handMat.uniforms.uBaseColor.value.copy(handBase).lerp(BURNT, Math.min(1, arm.hurt * 1.4) * left);
+      if (arm.until && controls.mode !== 'fly') {
+        const a = 0.0025 * arm.hurt * left;
+        controls.yaw += Math.sin(tn * 9.1) * a * dt * 9;
+        controls.pitch += Math.sin(tn * 7.3 + 1) * a * dt * 9;
+      }
+      if (arm.until && ctx.inventory.sideOf('emitter')) ctx.carried?.say?.(tr(arm.wrecked ? 'device.beamArmGone' : 'device.beamArm', { s: Math.ceil(arm.until - tn) }), 0.3);
+      const walker = controls.walker;
+      if (walker && !walker.onSlam) {
+        // bater numa parede no empurrão: um baque
+        walker.onSlam = (v) => {
+          audio.impact?.(Math.min(1, v / 40));
+          controls.rumble?.(Math.min(1, v / 30), Math.min(1, v / 40), 250);
+        };
       }
 
       const side = ctx.inventory.sideOf('emitter');
       const busy = !!(controls.mode === 'walk' && controls.walker?.ledgeState);
-      em.group.visible = !!side && !busy && !ctx.wake?.active;
+      em.group.visible = !!side && !busy && !ctx.wake?.active && !arm.wrecked;
       if (em.group.visible) {
-        const shake = state === 'charging' ? 0.0025 * k : 0;
+        const shake = state === 'charging' ? 0.0025 * k + 0.012 * o : 0;
         em.group.position.set(0.15 * side + (Math.random() - 0.5) * shake, -0.14 + kick * 0.01 + (Math.random() - 0.5) * shake, -0.3 + kick * 0.05);
         em.group.rotation.set(kick * 0.15, 0, 0);
         const lit = state === 'charging' ? k * 5 : 0;
-        em.coils.forEach((mat, i) => mat.color.copy(DIM).lerp(LIT, Math.max(0, Math.min(1, lit - i))));
+        // (as bobinas tomam a cor da sobrecarga: branco quente → azul → violeta — beamfx.js beamColors)
+        const lc = o > 0 ? beamColors(1 + o).halo : LIT;
+        em.coils.forEach((mat, i) => mat.color.copy(DIM).lerp(lc, Math.max(0, Math.min(1, lit - i))));
       }
       for (const s of [1, -1]) grips[s].group.visible = side === s;
       if (state === 'charging' && chargeK(held) >= 0) {
         em.group.updateMatrixWorld(true);
         em.muzzle.getWorldPosition(_m);
-        fx.charge(k, _m);
+        fx.charge(k, _m, o);
       } else fx.charge(-1);
       fx.update(dt);
     },

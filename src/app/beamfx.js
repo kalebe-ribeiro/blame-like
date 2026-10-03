@@ -23,6 +23,34 @@ import * as THREE from 'three';
 import { CollisionWorld } from '../world/collision.js';
 
 const DET_SPEED = 1500; // m/s — a detonação ao longo do feixe
+
+/**
+ * As cores do feixe pela potência p = carga + sobrecarga (0..2): a luz perto de uma massa
+ * enorme desvia para o azul — branco quente (até o cheio) → branco frio → azul → violeta → no
+ * limite, um traço PRETO que engole a luz (`void`, 0..1) com um halo violeta (um horizonte de
+ * eventos). Cores lineares e puras: o filme dessatura (e a sobrecarga devolve a cor por um
+ * instante — update, uSaturation).
+ */
+/** @type {[number, number[], number[]][]} */
+const STOPS = [
+  [1.0, [1.0, 0.97, 0.92], [1.0, 0.8, 0.55]],
+  [1.33, [0.92, 0.97, 1.0], [0.55, 0.75, 1.0]],
+  [1.66, [0.72, 0.7, 1.0], [0.42, 0.3, 1.0]],
+  [2.0, [0.85, 0.6, 1.0], [0.7, 0.22, 1.0]],
+];
+export function beamColors(p) {
+  const core = new THREE.Color();
+  const halo = new THREE.Color();
+  const q = Math.max(1, Math.min(2, p));
+  let i = 0;
+  while (i < STOPS.length - 2 && q > STOPS[i + 1][0]) i++;
+  const [p0, c0, h0] = STOPS[i];
+  const [p1, c1, h1] = STOPS[i + 1];
+  const u = (q - p0) / (p1 - p0);
+  core.setRGB(c0[0] + (c1[0] - c0[0]) * u, c0[1] + (c1[1] - c0[1]) * u, c0[2] + (c1[2] - c0[2]) * u);
+  halo.setRGB(h0[0] + (h1[0] - h0[0]) * u, h0[1] + (h1[1] - h0[1]) * u, h0[2] + (h1[2] - h0[2]) * u);
+  return { core, halo, void: Math.max(0, Math.min(1, (p - 1.8) / 0.2)), tint: Math.max(0, Math.min(1, p - 1)) };
+}
 const SOUND = 340; // m/s
 const HEAT_SLOTS = 8;
 const _v = new THREE.Vector3();
@@ -160,13 +188,14 @@ void main() {
 }
 `;
 const RING_FRAG = /* glsl */ `
+uniform vec3 uTint;         // a luz do clarão (pela potência — beamColors)
 varying float vU;
 varying float vR;
 void main() {
   // um anel de poeira translúcida: mais denso na frente da onda, claro no começo (o clarão)
   float band = smoothstep(0.55, 0.92, vR) * (1.0 - smoothstep(0.96, 1.0, vR));
   float a = band * (1.0 - smoothstep(0.2, 1.0, vU)) * 0.45;
-  vec3 c = mix(vec3(0.95, 0.85, 0.7), vec3(0.2, 0.185, 0.165), smoothstep(0.0, 0.25, vU));
+  vec3 c = mix(uTint, vec3(0.2, 0.185, 0.165), smoothstep(0.0, 0.25, vU));
   gl_FragColor = vec4(c, a);
 }
 `;
@@ -182,7 +211,7 @@ class Rings {
     this.r.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('aR', this.r);
     this.mat = new THREE.ShaderMaterial({
-      uniforms: { uNow: { value: 0 } },
+      uniforms: { uNow: { value: 0 }, uTint: { value: new THREE.Color(0.95, 0.85, 0.7) } },
       vertexShader: RING_VERT,
       fragmentShader: RING_FRAG,
       transparent: true,
@@ -253,8 +282,18 @@ export function createBeamFx(ctx) {
   };
   const core = mkTrace(0xfff8ee, 1);
   const halo = mkTrace(0xffd9a8, 0.35);
+  // o limite: o núcleo vira um traço preto (luz engolida — mistura normal, não aditiva)
+  const hole = new THREE.Mesh(traceGeo, new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 1, depthWrite: false }));
+  hole.frustumCulled = false;
+  hole.visible = false;
+  hole.userData.noCollide = true;
+  hole.renderOrder = 13;
+  group.add(hole);
+  let traceOp = { core: 1, halo: 0.35, hole: 0 };
+  let satBoost = 0; // a cor do mundo voltando (a sobrecarga) — decai
+  let satBase = null;
 
-  /** @type {{ a: THREE.Vector3, b: THREE.Vector3, dir: THREE.Vector3, len: number, r: number, k: number, t0: number }[]} */
+  /** @type {{ a: THREE.Vector3, b: THREE.Vector3, dir: THREE.Vector3, len: number, r: number, k: number, o: number, t0: number }[]} */
   const shots = []; // os tiros recentes (GLOBAIS): luz, brasa, faíscas, detritos
   /** @type {{ mesh: THREE.Mesh, vx: number, vy: number, vz: number, floor: number, rest: boolean, spin: THREE.Vector3, g: THREE.Vector3, bounced: boolean }[]} */
   const falling = [];
@@ -265,6 +304,7 @@ export function createBeamFx(ctx) {
   const detonations = []; // as detonações sendo semeadas (alguns pontos por quadro)
   let charge = 0; // a carga mostrada (0..1)
   let charging = false;
+  let over = 0; // a sobrecarga carregando (0..1)
   const coil = new THREE.Vector3(); // a boca da arma (cena): as bobinas acesas iluminam em volta
   let push = 0; // a poeira empurrada no disparo (decai)
   let lineK = 0;
@@ -386,7 +426,7 @@ export function createBeamFx(ctx) {
     shots.length = 0;
     lineK = 0;
     push = 0;
-    for (const m of [core, halo]) m.visible = false;
+    for (const m of [core, halo, hole]) m.visible = false;
   }
 
   /** Distância de um ponto GLOBAL ao segmento de um tiro. */
@@ -397,9 +437,10 @@ export function createBeamFx(ctx) {
 
   const api = {
     /** Carregando (k 0..1) — ou não (k < 0). */
-    charge(k, muzzle = null) {
+    charge(k, muzzle = null, o = 0) {
       charging = k >= 0;
       charge = Math.max(0, k);
+      over = charging ? o : 0;
       if (muzzle) coil.copy(muzzle);
     },
 
@@ -407,19 +448,28 @@ export function createBeamFx(ctx) {
      * O disparo: a (GLOBAL, de onde sai), end (GLOBAL, onde acaba), carga k, raio r, a boca
      * da arma (cena).
      */
-    fire(a, end, k, r, muzzle, silent = false) {
+    fire(a, end, k, r, muzzle, silent = false, o = 0) {
       const t0 = now();
       const dir = end.clone().sub(a);
       const len = dir.length();
       dir.divideScalar(len || 1);
-      shots.push({ a: a.clone(), b: end.clone(), dir, len, r, k, t0 });
+      shots.push({ a: a.clone(), b: end.clone(), dir, len, r, k, o, t0 });
+      // as cores pela potência (o clarão, os anéis, o traço)
+      const C = beamColors(k + o);
+      core.material.color.copy(C.core);
+      halo.material.color.copy(C.halo);
+      flashes.mat.uniforms.uColorA.value.copy(C.core);
+      flashes.mat.uniforms.uColorB.value.copy(C.halo);
+      rings.mat.uniforms.uTint.value.copy(C.core).lerp(C.halo, 0.4);
+      traceOp = { core: 1 - 0.85 * C.void, halo: 0.35 + 0.5 * o, hole: C.void };
+      if (!silent) satBoost = Math.max(satBoost, 0.25 * o + 0.35 * C.void);
       if (shots.length > HEAT_SLOTS) shots.shift();
       // o traço
       const endS = end.clone().sub(world.origin);
       /** @type {[THREE.Mesh, number][]} */
-      const traces = [[core, 0.012 + 0.02 * k], [halo, 0.07 + 0.18 * k]];
+      const traces = [[core, 0.012 + 0.02 * k + 0.05 * o], [halo, 0.07 + 0.18 * k + 0.5 * o], [hole, (0.02 + 0.12 * o) * (C.void > 0 ? 1 : 0)]];
       for (const [m, w] of traces) {
-        m.visible = true;
+        m.visible = w > 0;
         m.position.copy(muzzle);
         m.quaternion.setFromUnitVectors(_v.set(0, 1, 0), _w.copy(endS).sub(muzzle).normalize());
         m.scale.set(w, Math.max(0.1, muzzle.distanceTo(endS)), w);
@@ -491,14 +541,14 @@ export function createBeamFx(ctx) {
       const pullAt = _q.copy(camera.position).addScaledVector(_v, 2.6);
       let point = 0;
       if (charging && charge > 0) {
-        point = Math.min(0.85, charge * 0.85);
-        const j = 0.0016 * charge;
+        point = Math.min(1, charge * 0.85 + 0.3 * over);
+        const j = 0.0016 * charge + 0.007 * over;
         camera.rotateX((Math.random() - 0.5) * j);
         camera.rotateY((Math.random() - 0.5) * j);
       }
       push = Math.max(0, push - dt * 2.5);
       const du = ctx.dust.material.uniforms.uAttract.value;
-      du.set(pullAt.x, pullAt.y, pullAt.z, charging ? 1.2 * charge : -1.4 * push);
+      du.set(pullAt.x, pullAt.y, pullAt.z, charging ? 1.2 * charge + 1.2 * over : -1.4 * push);
       lineK = Math.max(0, lineK - dt / 0.14);
       if (lens) {
         const on = free() && (point > 0.005 || lineK > 0.005);
@@ -512,7 +562,7 @@ export function createBeamFx(ctx) {
           const u = lens.uniforms;
           toScreen(pullAt, _p2);
           u.uPoint.value.set(_p2.x, _p2.y, point);
-          u.uRadius.value = 0.1 + 0.12 * charge;
+          u.uRadius.value = 0.1 + 0.12 * charge + 0.12 * over;
           u.uAspect.value = camera.aspect;
           u.uNear.value = camera.near;
           u.uFar.value = camera.far;
@@ -525,26 +575,35 @@ export function createBeamFx(ctx) {
         }
       }
       // ── o traço se apaga ──
-      for (const m of [core, halo]) {
+      for (const m of [core, halo, hole]) {
         if (!m.visible) continue;
         const age = t - m.userData.t0;
-        m.material.opacity = (m === core ? 1 : 0.35) * Math.max(0, 1 - age / 0.15);
-        if (age > 0.15) m.visible = false;
+        // (no limite o traço preto fica um pouco mais — 0,35 s)
+        const life = m === hole ? 0.35 : 0.15 + 0.15 * (traceOp.hole > 0 ? 1 : 0);
+        m.material.opacity = (m === core ? traceOp.core : m === halo ? traceOp.halo : traceOp.hole) * Math.max(0, 1 - age / life);
+        if (age > life) m.visible = false;
+      }
+      // a cor do mundo voltando: carregando em sobrecarga sobe; depois do tiro, decai em ~1,5 s
+      const sig = ctx.signal?.uniforms?.uSaturation;
+      if (sig) {
+        satBase ??= sig.value;
+        satBoost = Math.max(0, satBoost - dt / 1.5);
+        sig.value = satBase + Math.max(satBoost, charging ? 0.3 * over : 0);
       }
       // ── a luz do tiro (luz-linha): corre com a detonação e se apaga em ~0,6 s ──
       const last = shots[shots.length - 1];
       if (last && t - last.t0 < 0.7) {
         const age = t - last.t0;
         const front = Math.min(last.len, age * DET_SPEED);
-        sh.uShotA.value.set(last.a.x - origin.x, last.a.y - origin.y, last.a.z - origin.z, (1.5 + 4.5 * last.k) * Math.exp(-age / 0.15));
-        sh.uShotB.value.set(last.a.x + last.dir.x * front - origin.x, last.a.y + last.dir.y * front - origin.y, last.a.z + last.dir.z * front - origin.z, 0);
+        sh.uShotA.value.set(last.a.x - origin.x, last.a.y - origin.y, last.a.z - origin.z, (1.5 + 4.5 * last.k + 4 * last.o) * Math.exp(-age / 0.15));
+        sh.uShotB.value.set(last.a.x + last.dir.x * front - origin.x, last.a.y + last.dir.y * front - origin.y, last.a.z + last.dir.z * front - origin.z, last.o);
       } else if (charging && charge > 0) {
         // carregando: as bobinas acesas são uma fonte de luz fraca e quente na boca da arma —
         // ilumina o que está perto (e dá à lente o que dobrar, mesmo no escuro)
         camera.getWorldDirection(_v);
         // (um pouco à frente da boca: a mão logo atrás não estoura)
-        sh.uShotA.value.set(coil.x + _v.x * 0.35, coil.y + _v.y * 0.35, coil.z + _v.z * 0.35, 0.06 + 0.3 * charge * charge);
-        sh.uShotB.value.set(coil.x + _v.x * 0.8, coil.y + _v.y * 0.8, coil.z + _v.z * 0.8, 0);
+        sh.uShotA.value.set(coil.x + _v.x * 0.35, coil.y + _v.y * 0.35, coil.z + _v.z * 0.35, 0.06 + 0.3 * charge * charge + 0.5 * over);
+        sh.uShotB.value.set(coil.x + _v.x * 0.8, coil.y + _v.y * 0.8, coil.z + _v.z * 0.8, over);
       } else sh.uShotA.value.w = 0;
       // ── a brasa nas faces do corte ──
       const cm = world.materials.cut;
