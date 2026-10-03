@@ -34,9 +34,13 @@ export function createInventory(ctx) {
   function equip(id) {
     if (!has(id) || sideOf(id)) return sideOf(id);
     const H = player.hands;
-    if (!H.right) H.right = id;
-    else if (!H.left) H.left = id;
-    else H.right = id; // as duas ocupadas: troca a da direita
+    // (um braço perdido — o emissor além do limite, app/beam.js — não segura nada)
+    const A = player.arms ?? { right: true, left: true };
+    if (!A.right && !A.left) return 0;
+    if (A.right && !H.right) H.right = id;
+    else if (A.left && !H.left) H.left = id;
+    else if (A.right) H.right = id; // as duas ocupadas: troca a da direita
+    else H.left = id;
     world.bus.emit('player:equip', { id, side: sideOf(id) });
     ctx.audio?.deviceClick?.(true);
     return sideOf(id);
@@ -65,7 +69,9 @@ export function createInventory(ctx) {
   function render() {
     el.querySelector('.inv-title').textContent = t('inv.title');
     const H = player.hands;
-    el.querySelector('.inv-hands').textContent = t('inv.hands', { right: H.right ? toolName(H.right) : t('inv.empty'), left: H.left ? toolName(H.left) : t('inv.empty') });
+    const A = player.arms ?? { right: true, left: true };
+    const hand = (side) => (!A[side] ? t('inv.armLost') : H[side] ? toolName(H[side]) : t('inv.empty'));
+    el.querySelector('.inv-hands').textContent = t('inv.hands', { right: hand('right'), left: hand('left') });
     const rows = [];
     for (const id of tools()) {
       const s = sideOf(id);

@@ -697,10 +697,10 @@ async function runF2(ctx, report) {
     const onStage = (d) => stages.push(d.stage);
     world.bus.on('player:beamStage', onStage);
     const s0 = beam.lastShot;
-    await hold(6.8);
+    await hold(6.55); // (logo depois do limite — 6,5 s; além disso começam os estágios 5–7)
     const S = beam.lastShot;
-    const shot = S !== s0 && S.o > 0.97;
-    const lim = shot && Math.abs(S.cost - 0.35) < 0.01 && S.r > 7 && Math.abs(S.range - 1000) < 1;
+    const shot = S !== s0 && S.o > 0.99 && S.o < 1.05;
+    const lim = shot && S.cost > 0.349 && S.cost < 0.36 && S.r > 7.6 && S.range > 999 && S.range < 1050 && !S.lost;
     const seq = stages.join(',') === '1,2,3,4';
     await rest();
     en.value = 1;
@@ -712,7 +712,50 @@ async function runF2(ctx, report) {
     report({
       kind: 'sobrecarga',
       ok: shot && lim && seq && again,
-      why: `6,8 s: o ${S.o?.toFixed(2)} · gasto ${(S.cost * 100).toFixed(0)}% · raio ${S.r.toFixed(1)} m · alcance ${S.range.toFixed(0)} m · estágios anunciados ${stages.join(',') || 'nenhum'} · depois: ${again ? 'atira de novo' : 'NÃO atirou'}`,
+      why: `6,55 s: o ${S.o?.toFixed(2)} · gasto ${(S.cost * 100).toFixed(0)}% · raio ${S.r.toFixed(1)} m · alcance ${S.range.toFixed(0)} m · estágios anunciados ${stages.join(',') || 'nenhum'} · depois: ${again ? 'atira de novo' : 'NÃO atirou'}`,
+    });
+  }
+  // ── além: os estágios 5–7 (até 11 s) — o furo e o alcance maiores ainda, e o braço que
+  //    atira é perdido (o emissor volta ao inventário; o outro braço o pega) ──
+  {
+    en.value = 1;
+    beam.testHeld = null;
+    beam.restoreArms();
+    ctx.inventory.unequip('emitter');
+    ctx.inventory.equip('emitter');
+    const side0 = ctx.inventory.sideOf('emitter');
+    controls.pitch = 1.5;
+    await sleep(1000);
+    const stages = [];
+    const onStage = (d) => stages.push(d.stage);
+    world.bus.on('player:beamStage', onStage);
+    const s0 = beam.lastShot;
+    await hold(11.3);
+    const S = beam.lastShot;
+    const shot = S !== s0 && S.o > 1.97;
+    const big = shot && S.r > 18 && Math.abs(S.range - 2000) < 1 && Math.abs(S.cost - 0.5) < 0.01;
+    const armName = side0 === 1 ? 'right' : 'left';
+    const lost = shot && S.lost === armName && player.arms[armName] === false && ctx.inventory.sideOf('emitter') === 0;
+    await rest();
+    // o outro braço pega o emissor (o primeiro aperto equipa)
+    beam.testHeld = true;
+    await sleep(300);
+    beam.testHeld = false;
+    await sleep(300);
+    const other = ctx.inventory.sideOf('emitter') === -side0;
+    // sem os dois: não agarra nem sobe escada
+    player.arms.right = false;
+    player.arms.left = false;
+    await sleep(200);
+    const noArms = controls.walker.canGrab === false && controls.walker.canClimb === false;
+    beam.restoreArms();
+    ctx.inventory.equip('emitter');
+    controls.pitch = 0;
+    await rest();
+    report({
+      kind: 'alem',
+      ok: shot && big && stages.join(',') === '1,2,3,4,5,6,7' && lost && other && noArms,
+      why: `11,3 s: o ${S.o?.toFixed(2)} · gasto ${(S.cost * 100).toFixed(0)}% · raio ${S.r.toFixed(1)} m · alcance ${S.range.toFixed(0)} m · estágios ${stages.join(',')} · braço ${S.lost ?? 'nenhum'} perdido${lost ? '' : ' ✗'} · o outro pegou o emissor: ${other ? 'sim' : 'NÃO'} · sem braços, agarrar/escada: ${noArms ? 'não' : 'AINDA'}`,
     });
   }
   en.value = 1;

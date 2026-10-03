@@ -321,3 +321,4 @@ Por que as coisas estão como estão, em ordem.
 - Arma: coice da mira e empurrão do corpo, os dois crescendo com a carga (carga cheia: mira +6,5°, empurrado ~2,6 m) — `check:beam` caso `coice`.
 - Arma: sobrecarga (segurar de 3 a 6,5 s) — cores do branco quente ao violeta e um traço preto no limite, empurrão até ~40 m/s, o braço sem resposta ou destruído (90 s); a brasa sem a "estampa de onça". `check:beam` 19/19.
 - Arma: o braço não se perde mais (o custo vai para a barra de vida — planejada no cofre); a sobrecarga em estágios que se anunciam (onda na tela, baque, a cor virando), a singularidade na mira, o tiro do limite com raio 7,7 m, 1000 m e empurrão ~95 m/s (73 m no teste).
+- Arma: estágios além do limite (espaguetificação, horizonte, colapso — até 11 s; furo até 18,7 m e 2000 m; o mundo invertido); disparar neles faz perder o braço que atira — recuperar fica em aberto no cofre. `check:beam` caso `alem`.

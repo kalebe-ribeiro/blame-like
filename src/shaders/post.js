@@ -17,6 +17,7 @@ export const SignalShader = {
     uFaint: { value: 0 }, // 0..1: a vinheta fecha até sobrar só o centro
     uBlur: { value: 0 }, // 0..1: o foco se perde
     uBlack: { value: 0 }, // 0..1: escuro
+    uInvert: { value: 0 }, // 0..1: as cores do avesso (o emissor além do limite — app/beamfx.js)
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -34,6 +35,7 @@ export const SignalShader = {
     uniform float uFaint;
     uniform float uBlur;
     uniform float uBlack;
+    uniform float uInvert;
     varying vec2 vUv;
 
     float hash12(vec2 p) {
@@ -73,6 +75,7 @@ export const SignalShader = {
       // desmaio: as bordas fecham até o escuro
       if (uFaint > 0.001) col *= 1.0 - smoothstep(0.62 - uFaint * 0.62, 0.95 - uFaint * 0.7, length(c * vec2(1.25, 1.0)));
       col *= 1.0 - uBlack;
+      if (uInvert > 0.001) col = mix(col, vec3(1.0) - clamp(col, 0.0, 1.0), uInvert);
 
       gl_FragColor = vec4(max(col, 0.0), 1.0);
     }

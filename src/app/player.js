@@ -19,9 +19,10 @@ export function createPlayerState(saved) {
     carried: [],
     access: 0,
     hands: { right: null, left: null }, // as mãos começam vazias (app/inventory.js)
+    arms: { right: true, left: true }, // um braço perdido (o emissor além do limite — app/beam.js) não segura nada
   };
   if (!saved) return base;
-  const out = { ...base, ...saved, energy: { ...base.energy, ...(saved.energy ?? {}) } };
+  const out = { ...base, ...saved, energy: { ...base.energy, ...(saved.energy ?? {}) }, arms: { ...base.arms, ...(saved.arms ?? {}) } };
   delete out.beamPower; // (a potência em níveis da primeira arma, retirada — a carga é pelo tempo)
   return out;
 }

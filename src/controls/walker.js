@@ -80,7 +80,8 @@ export class Walker {
     /** @type {((speed: number) => void)|null} bateu numa parede no empurrão (m/s contra ela) */
     this.onSlam = null;
     this.canClimb = true; // escadas de marinheiro (os corpos dos seres de teste não sobem)
-    this.canGrab = true; // agarrar quinas (os seres não: world/entities.js)
+    this.canGrab = true; // agarrar quinas (os seres não: world/entities.js; sem braços também não — app/beam.js)
+    this.canClimb = true; // subir escadas de marinheiro (sem braços, não)
     this.ledge = null; // pendurado: { topY, edge, nrm, h }
     this.climb = null; // subindo: { t, dur, from, mid, to, h }
     this.hangT = 0;
@@ -158,7 +159,7 @@ export class Walker {
       _o.y += 0.35 * s;
     }
     const onLadder = this.canClimb && !!ladder && ladder.object.userData.mat === 'rungs';
-    if (onLadder && (input.f !== 0 || this.climbing) && !(this.grounded && input.f < 0)) {
+    if (onLadder && this.canClimb && (input.f !== 0 || this.climbing) && !(this.grounded && input.f < 0)) {
       if (!this.climbing) this.climbing = true;
       return this._climb(dt, camera, input, sin, cos, s, eye, ladder);
     }

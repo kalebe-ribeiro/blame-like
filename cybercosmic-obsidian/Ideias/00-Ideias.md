@@ -63,6 +63,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Quinas-e-maos]] (agarrar quinas, subir; mãos) | feita (2026-09-30) |
 | [[Arma-do-Killy]] (feixe que fura o terreno) | feita (F1–F4, 2026-10-03; sobrecarga com estágios) |
 | [[Barra-de-vida]] (o custo da sobrecarga, quedas, Safeguards) | proposta — decisões V1–V7 com o usuário |
+| [[Recuperar-o-braco]] (o braço perdido além do limite do emissor) | futuro — em aberto |
 
 ## Técnico
 

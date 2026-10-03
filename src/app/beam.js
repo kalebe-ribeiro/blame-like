@@ -11,6 +11,11 @@
 //  na lente, as bobinas mudando de cor de uma vez — `STAGES`):
 //    1 azul (o > 0) · 2 violeta (1/3) · 3 a singularidade se formando na mira (2/3) ·
 //    LIMITE (6,5 s): SINGULARIDADE — o traço preto que engole a luz
+//  E ALÉM (2026-10-03, pedido do usuário — o braço é perdido): 5 ESPAGUETIFICAÇÃO (8 s) ·
+//    6 HORIZONTE (9,5 s) · 7 COLAPSO (11 s) — o furo até ~19 m e 2000 m, o empurrão até
+//    ~175 m/s; ao disparar num desses, o BRAÇO que segura o emissor se desfaz (perdido —
+//    `player.arms`; o emissor volta ao inventário; recuperar: o cofre, Ideias/Futuro/Recuperar-o-braco).
+//    No Livre (sem custos) ele volta sozinho em 30 s.
 //  O furo vai a 7,5 m de raio e 1000 m; o empurrão cresce muito mais que a carga (~95 m/s no
 //  limite, e o corpo sai do chão). Sem perder a arma: o custo da sobrecarga vai para a barra
 //  de vida (o cofre, Ideias/Futuro/Barra-de-vida — planejada).
@@ -36,9 +41,14 @@ import { createBeamFx, beamColors } from './beamfx.js';
 import { cutHitsBoxes } from '../gen/cut.js';
 import { CHUNK } from '../gen/field.js';
 
-export const CHARGE = { min: 0.25, full: 2.5, hold: 3.0, over: 6.5 };
-/** Os estágios da sobrecarga (o): 1 azul, 2 violeta, 3 a singularidade se formando, 4 o LIMITE. */
-export const STAGES = [0, 1e-3, 1 / 3, 2 / 3, 1];
+export const CHARGE = { min: 0.25, full: 2.5, hold: 3.0, over: 6.5, beyond: 11.0 };
+/** O estágio a partir do qual o braço que atira é perdido. */
+export const ARM_LOSS_STAGE = 5;
+/** No Livre (sem custos), o braço volta sozinho depois disto (s). */
+export const ARM_REGROW_FREE = 30;
+/** Os estágios da sobrecarga (o, 0..2): 1 azul, 2 violeta, 3 a singularidade se formando, 4 o LIMITE
+ *  (singularidade) — e além: 5 espaguetificação, 6 horizonte, 7 colapso (o braço é perdido). */
+export const STAGES = [0, 1e-3, 1 / 3, 2 / 3, 1, 4 / 3, 5 / 3, 2];
 /** O estágio de uma sobrecarga o (0 = sem sobrecarga … 4 = o limite). */
 export function stageOf(o) {
   let s = 0;
@@ -81,12 +91,19 @@ export function chargeK(t) {
 /** A sobrecarga: tempo segurando → o (0..1) — de 3 a 6,5 s. */
 export function overK(t) {
   if (t < CHARGE.hold) return 0;
-  return Math.min(1, (t - CHARGE.hold) / (CHARGE.over - CHARGE.hold));
+  if (t <= CHARGE.over) return (t - CHARGE.hold) / (CHARGE.over - CHARGE.hold);
+  return 1 + Math.min(1, (t - CHARGE.over) / (CHARGE.beyond - CHARGE.over));
 }
 /** O tiro de carga k e sobrecarga o. */
 export function shotOf(k, o = 0) {
-  // (o furo cresce mais no fim: 7,5 m de raio no limite — um túnel que um prédio atravessa)
-  return { range: 30 + 370 * k + 600 * o, r: 0.6 + 2.2 * k + 2.4 * o + 2.5 * o * o * o, cost: 0.03 + 0.15 * k + 0.17 * o };
+  // (o furo cresce mais no fim: 7,7 m de raio no limite — e além, até ~19 m: um túnel que um prédio atravessa)
+  const a = Math.min(1, o);
+  const b = Math.max(0, o - 1);
+  return {
+    range: 30 + 370 * k + 600 * a + 1000 * b,
+    r: 0.6 + 2.2 * k + 2.4 * a + 2.5 * a * a * a + 5 * b + 6 * b * b,
+    cost: 0.03 + 0.15 * k + 0.17 * a + 0.15 * b,
+  };
 }
 
 /** O emissor: um corpo de chapa, o cano com as cinco bobinas, o cabo. */
@@ -143,6 +160,9 @@ export function createBeam(ctx) {
   let k = 0; // a carga efetiva (limitada pela célula)
   let o = 0; // a sobrecarga (0..1)
   let stage = 0; // o estágio da sobrecarga carregando (stageOf)
+  player.arms ??= { right: true, left: true };
+  /** no Livre: quando cada braço perdido volta (s, performance) */
+  const armRegrow = { right: 0, left: 0 };
   let capped = false; // a célula limitou a carga
   let cool = 0;
   let kick = 0;
@@ -257,19 +277,21 @@ export function createBeam(ctx) {
    *             ~0,25 a ~2,5 m; no ar vai mais longe). Atirar para baixo empurra para cima.
    */
   function recoil(kk, dir, oo = 0) {
-    const amp = 0.018 + 0.12 * kk + 0.12 * oo + 0.25 * oo ** 4;
+    const oa = Math.min(1, oo);
+    const ob = Math.max(0, oo - 1);
+    const amp = 0.018 + 0.12 * kk + 0.12 * oa + 0.25 * oa ** 4 + 0.15 * ob;
     rec = { t: 0, p: amp, y: (Math.random() - 0.5) * (0.01 + 0.05 * kk + 0.2 * oo ** 3), applied: 0, appliedY: 0 };
     kick = 0.4 + 0.6 * kk + 1.5 * oo;
     // na sobrecarga o empurrão cresce muito mais que a carga: ~95 m/s no limite
-    const v = 1 + 9 * kk * kk + 25 * oo * oo + 60 * oo ** 4;
+    const v = 1 + 9 * kk * kk + 25 * oa * oa + 60 * oa ** 4 + 80 * ob * ob; // (~175 m/s no colapso)
     if (controls.mode === 'walk' && controls.walker) {
       const w = controls.walker;
       const h = Math.hypot(dir.x, dir.z);
       if (h > 1e-3) w.shove.set(w.shove.x - (dir.x / h) * v * h, 0, w.shove.z - (dir.z / h) * v * h);
       // a parte vertical: para baixo empurra para cima (no máximo 7 m/s); para cima, para baixo
-      const up = Math.max(-v, Math.min(7 + 18 * oo, -dir.y * v));
+      const up = Math.max(-v, Math.min(7 + 18 * oa, -dir.y * v));
       // (perto do limite o corpo sai do chão — voa para trás num arco)
-      const lift = 6 * oo ** 4;
+      const lift = 6 * oa ** 4 + 2 * ob;
       if (up + lift > 0.3) {
         w.vel.y = Math.max(w.vel.y, 0) + Math.max(0, up) + lift;
         w.grounded = false;
@@ -327,9 +349,27 @@ export function createBeam(ctx) {
     recoil(kk, _d, oo);
     ctx.alert?.raise(eye.x, eye.y, eye.z, 0.08 + 0.23 * kk + 0.4 * oo);
     world.safeguards?.hear(eye.x, eye.y - 1.7, eye.z, 60 + 80 * kk + 200 * oo);
-    lastShot = { k: kk, o: oo, ...S, t, stop, kills };
+    // além do limite, o braço que segura o emissor se desfaz
+    const lost = stageOf(oo) >= ARM_LOSS_STAGE ? loseArm(_m.clone()) : null;
+    lastShot = { k: kk, o: oo, ...S, t, stop, kills, lost };
     world.bus.emit('player:beam', { k: kk, o: oo, length: t, stop, kills, x: end.x, y: end.y, z: end.z });
     return true;
+  }
+
+  /** O braço que segura o emissor se desfaz (muzzle: a boca, na cena). Devolve 'right' | 'left' | null. */
+  function loseArm(muzzle) {
+    const side = ctx.inventory.sideOf('emitter');
+    if (!side) return null;
+    const which = side === 1 ? 'right' : 'left';
+    player.arms[which] = false;
+    player.hands[which] = null; // (o emissor volta ao inventário)
+    if (free()) armRegrow[which] = performance.now() / 1000 + ARM_REGROW_FREE;
+    fx.armBurst(muzzle);
+    audio.impact?.(1);
+    controls.rumble?.(1, 1, 900);
+    ctx.carried?.say?.(tr(which === 'right' ? 'device.armLostRight' : 'device.armLostLeft'), 5);
+    world.bus.emit('player:armLost', { arm: which });
+    return which;
   }
 
   // teclado e mouse (o controle: controls.padFire / padCancel — controls/noclip.js)
@@ -376,9 +416,14 @@ export function createBeam(ctx) {
     get held() {
       return held;
     },
-    /** o estágio da sobrecarga carregando (0 … 4 = o limite) */
+    /** o estágio da sobrecarga carregando (0 … 7) */
     get stage() {
       return stage;
+    },
+    /** (testes) os dois braços de volta */
+    restoreArms() {
+      player.arms.right = true;
+      player.arms.left = true;
     },
     cancel,
     fire,
@@ -417,7 +462,7 @@ export function createBeam(ctx) {
           // a célula limita: a carga para onde ela alcança
           const e = player.energy.value;
           const kMax = free() ? 1 : Math.max(0, Math.min(1, (e - 0.03) / 0.15));
-          const oMax = free() ? 1 : Math.max(0, Math.min(1, (e - 0.18) / 0.17));
+          const oMax = free() ? 2 : e < 0.35 ? Math.max(0, (e - 0.18) / 0.17) : Math.min(2, 1 + (e - 0.35) / 0.15);
           capped = want > kMax || wantO > oMax;
           k = Math.min(want, kMax);
           o = k >= 1 ? Math.min(wantO, oMax) : 0;
@@ -431,7 +476,7 @@ export function createBeam(ctx) {
             world.bus.emit('player:beamStage', { stage: st });
           }
           const on = chargeK(held) >= 0;
-          audio.beamCharge?.(on ? Math.min(1.6, k + 0.6 * o) : 0);
+          audio.beamCharge?.(on ? Math.min(2.2, k + 0.6 * o) : 0);
           rumbleT -= dt;
           if (rumbleT <= 0) {
             rumbleT = 0.1;
@@ -440,13 +485,33 @@ export function createBeam(ctx) {
           // o aparelho mostra o gasto que o tiro terá — e a sobrecarga
           if (on) {
             const n = Math.round(shotOf(k, o).cost * 100);
-            const msg = stage >= 4 ? tr('device.beamLimit', { n }) : o > 0 ? tr('device.beamOver', { n, lvl: '▲'.repeat(Math.min(3, stage)) }) : tr(capped ? 'device.beamCapped' : 'device.beamCharge', { n });
+            const msg =
+              stage >= ARM_LOSS_STAGE
+                ? tr('device.beamBeyond', { n, name: tr(`beam.stage.${stage}`) })
+                : stage >= 4
+                  ? tr('device.beamLimit', { n })
+                  : o > 0
+                    ? tr('device.beamOver', { n, lvl: '▲'.repeat(Math.min(3, stage)) })
+                    : tr(capped ? 'device.beamCapped' : 'device.beamCharge', { n });
             if (!free() || o > 0) ctx.carried?.say?.(msg, 0.25);
           }
         }
       }
 
+      const tn = performance.now() / 1000;
+      for (const which of ['right', 'left']) {
+        if (armRegrow[which] && tn >= armRegrow[which]) {
+          armRegrow[which] = 0;
+          player.arms[which] = true;
+          ctx.carried?.say?.(tr('device.armBack'), 3);
+        }
+      }
       const walker = controls.walker;
+      if (walker) {
+        const anyArm = player.arms.right || player.arms.left;
+        walker.canGrab = anyArm;
+        walker.canClimb = anyArm;
+      }
       if (walker && !walker.onSlam) {
         // bater numa parede no empurrão: um baque
         walker.onSlam = (v) => {
@@ -459,14 +524,14 @@ export function createBeam(ctx) {
       const busy = !!(controls.mode === 'walk' && controls.walker?.ledgeState);
       em.group.visible = !!side && !busy && !ctx.wake?.active;
       if (em.group.visible) {
-        const shake = state === 'charging' ? 0.0025 * k + 0.006 * stage + 0.012 * (stage >= 4 ? 1 : 0) : 0;
+        const shake = state === 'charging' ? 0.0025 * k + 0.006 * stage + 0.012 * (stage >= 4 ? 1 : 0) + 0.01 * Math.max(0, stage - 4) : 0;
         em.group.position.set(0.15 * side + (Math.random() - 0.5) * shake, -0.14 + kick * 0.01 + (Math.random() - 0.5) * shake, -0.3 + kick * 0.05);
         em.group.rotation.set(kick * 0.15, 0, 0);
         const lit = state === 'charging' ? k * 5 : 0;
         // (as bobinas tomam a cor da sobrecarga: branco quente → azul → violeta — beamfx.js beamColors)
         const lc = o > 0 ? beamColors(1 + o).halo : LIT;
         // (no limite as bobinas pulsam — a singularidade puxando a própria luz delas)
-        const pulse = stage >= 4 ? 0.55 + 0.45 * Math.sin(performance.now() / 45) : 1;
+        const pulse = stage >= 4 ? 0.55 + 0.45 * Math.sin(performance.now() / (stage >= ARM_LOSS_STAGE ? 25 : 45)) : 1;
         em.coils.forEach((mat, i) => mat.color.copy(DIM).lerp(lc, Math.max(0, Math.min(1, lit - i)) * pulse));
       }
       for (const s of [1, -1]) grips[s].group.visible = side === s;

@@ -18,7 +18,7 @@ Separada da **célula de energia** (luz, sensor, leitor, emissor): a célula é 
 
 | fonte | hoje | com a vida |
 |---|---|---|
-| **sobrecarga do emissor** | nada (o braço se perdia — retirado) | dano pelo estágio: azul 0 · violeta 5% · a singularidade se formando 12% · **limite 30%** — o braço "se desfaz" (a mão queimada, a mira tremendo alguns segundos), mas a arma continua na mão |
+| **sobrecarga do emissor** | nada até o limite (estágio 4); **além do limite (5–7) o braço que atira é perdido** — ver [[Recuperar-o-braco]] | dano pelo estágio: azul 0 · violeta 5% · a singularidade se formando 12% · limite 30% — a mão queima, a arma continua na mão; além do limite, o braço já se perde (e talvez dano também) |
 | **quedas** | > 38 m/s: desmaio direto | dano a partir de ~14 m/s, crescendo até 100% em 38 m/s (o desmaio de hoje vira "a vida zerou") |
 | **empurrão contra a parede** (o coice do emissor) | um baque | dano acima de ~20 m/s contra a parede (`walker.onSlam` já existe) |
 | **Safeguards** | o toque = captura (desmaio, cemitério) | golpes tiram vida; a captura acontece quando zera — ou continua imediata (V3) |
