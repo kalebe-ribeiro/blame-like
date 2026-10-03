@@ -70,7 +70,7 @@ async function run(ctx) {
         swapped++;
         const ms = performance.now() - t0;
         worker += e.workMs ?? 0;
-        firstE ??= { worker: e.recutMs ?? -1, csg: e.cutStats?.ms ?? -1, pieces: e.cutStats?.cut ?? -1, slow: (e.cutStats?.slow ?? []).join(' '), layer: L.layer };
+        firstE ??= { worker: e.recutMs ?? -1, csg: e.cutStats?.ms ?? -1, pieces: e.cutStats?.cut ?? -1, memo: e.cutStats?.memo ?? 0, slow: (e.cutStats?.slow ?? []).join(' '), layer: L.layer };
         first ??= ms;
         last = ms;
       };
@@ -347,6 +347,32 @@ async function run(ctx) {
     const pa = p95(all);
     const pw = p95(work);
     report({ kind: 'tempo', ok: n >= 5 && pn <= 300 && pa <= 1500 && pw <= 800, why: `${n} tiros · furo perto p95 ${pn.toFixed(0)} ms (≤ 300) · tiro inteiro p95 ${pa.toFixed(0)} ms (≤ 1500) · worker por tiro p95 ${pw.toFixed(0)} ms (≤ 800) · ${near.map((x) => x.toFixed(0)).join('/')} · ${all.map((x) => x.toFixed(0)).join('/')} · pior: ${tags[near.indexOf(Math.max(...near))]}` });
+  }
+
+  // ── memoria: a memória das peças cortadas sobrevive a uma sessão nova (o worker de corte
+  //    trocado por um novo — world/pieceStore.js): o próximo tiro ali só subtrai o novo ──
+  {
+    ctx.ui.teleport('deposito', 'deposito');
+    controls.setMode('walk');
+    await sleep(SETTLE);
+    const d = new THREE.Vector3();
+    camera.getWorldDirection(d);
+    d.y = 0;
+    d.normalize();
+    const side = new THREE.Vector3(-d.z, 0, d.x);
+    const base = g();
+    const shots = [];
+    for (let i = 0; i < 6; i++) shots.push(await shoot(base.clone().addScaledVector(side, (i - 2.5) * 1.2), d, 120, 0.8));
+    await sleep(1500); // (a memória vai para o disco depois de cada resposta)
+    world.pool.restartCutWorker();
+    await sleep(800);
+    const s = await shoot(base.clone().addScaledVector(side, 4.5), d, 120, 0.8);
+    const fe = s.firstE;
+    report({
+      kind: 'memoria',
+      ok: !!fe && fe.memo > 0,
+      why: `6 tiros · worker trocado · o 7º: chunk perto ${fe ? `${fe.pieces} peças, ${fe.memo} da memória do disco, CSG ${fe.csg.toFixed(0)} ms, worker ${fe.worker.toFixed(0)} ms` : 'sem chunk refeito'} · antes da troca, o 6º: worker ${shots[5].firstE?.worker.toFixed(0) ?? '-'} ms`,
+    });
   }
 
   // ── teto: um chunk com 64 cortes faz o feixe engasgar na entrada dele (puro) ──

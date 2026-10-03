@@ -333,7 +333,11 @@ export function createBeam(ctx) {
         em.coils.forEach((mat, i) => mat.color.copy(DIM).lerp(LIT, Math.max(0, Math.min(1, lit - i))));
       }
       for (const s of [1, -1]) grips[s].group.visible = side === s;
-      fx.charge(state === 'charging' && chargeK(held) >= 0 ? k : -1);
+      if (state === 'charging' && chargeK(held) >= 0) {
+        em.group.updateMatrixWorld(true);
+        em.muzzle.getWorldPosition(_m);
+        fx.charge(k, _m);
+      } else fx.charge(-1);
       fx.update(dt);
     },
   };

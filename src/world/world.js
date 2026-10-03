@@ -557,6 +557,24 @@ export class World {
     return out;
   }
 
+  /**
+   * Um corte "a seco" (app/beamfx.js, no aquecimento): o caminho inteiro de addCut — o recorte
+   * de cada camada, a reação dos seres, das rondas e dos objetos — com um corte a um milhão de
+   * metros abaixo, que não atinge nada e é desfeito. O primeiro tiro de verdade não paga o
+   * código frio.
+   */
+  dryCut() {
+    const keep = this.cuts;
+    const c = { id: '_seco', a: [0, -1e6, 0], b: [0, -1e6 + 1, 0], r: 1 };
+    this.field.setCuts([...keep, c]);
+    const from = new THREE.Vector3(0, -1e6, 0);
+    for (const L of [...this.layers, this.macroLayer]) L.recut(c, from);
+    this.entities.onCut();
+    this.safeguards.onCut();
+    this.npcs.onCut();
+    this.field.setCuts(keep);
+  }
+
   /** O resto do mundo reage aos cortes novos (addCut). */
   _reactToCuts() {
     this._afterCut = 0;

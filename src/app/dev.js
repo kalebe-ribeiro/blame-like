@@ -352,9 +352,32 @@ export function setupDev(ctx) {
       const t0 = performance.now();
       /** @type {[number, string][]} */
       const when = [[30, 'fx-0.03s'], [120, 'fx-0.12s'], [500, 'fx-0.5s'], [2000, 'fx-2s'], [6000, 'fx-6s']];
-      for (const [ms, name] of when) {
+      // (--fxfar: em vez da sequência, recua 600 m e olha de volta — o túnel nos chunks de longe)
+      const far = !!params.get('fxfar');
+      const eye0 = ctx.camera.position.clone().add(ctx.world.origin);
+      const yaw0 = ctx.controls.yaw;
+      for (const [ms, name] of far ? when.slice(0, 2) : when) {
         await sleep(Math.max(0, ms - (performance.now() - t0)));
         await shot(`${name}.png`);
+      }
+      if (far) {
+        await sleep(1200);
+        const d = new THREE.Vector3(-Math.sin(yaw0), 0, -Math.cos(yaw0));
+        ctx.controls.setMode('fly');
+        ctx.controls.setView({ pos: eye0.clone().addScaledVector(d, -600).add(new THREE.Vector3(0, 20, 0)).sub(ctx.world.origin), yaw: yaw0, pitch: -0.02, scale: 1 });
+        await sleep(2500);
+        let lod = 0;
+        let lodCut = 0;
+        for (const L of ctx.world.layers) {
+          if (!L.level) continue;
+          for (const e of L.chunks.values()) {
+            if (!e.received || !L.cutsFor(e.cx, e.cy, e.cz).length) continue;
+            lod++;
+            if ((e.cutStats?.cut ?? 0) > 0) lodCut++;
+          }
+        }
+        console.warn(`FXFAR: lod ligado ${ctx.world.lod.enabled} · chunks de longe com cortes ${lod} · com peças cortadas ${lodCut}`);
+        await shot('fx-longe.png');
       }
       console.warn('FXSHOTS: pronto');
     })();

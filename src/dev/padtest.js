@@ -71,7 +71,8 @@ export async function runPadTest(ctx) {
     await sleep(3000);
   }
   // 1. tela de entrada: o foco começa em "clique para entrar" (aparece ao usar o controle); A entra
-  await press(UP);
+  // (o primeiro aperto pode chegar com a página ainda montando: insiste por até ~3 s)
+  for (let i = 0; i < 10 && !focused()?.classList.contains('gate-sub'); i++) await press(UP);
   report('pad:foco-inicial', focused()?.classList.contains('gate-sub'), `foco em ${focused()?.className}`);
   await press(A);
   report('pad:entrar', gate.classList.contains('hidden'), 'a tela de entrada não sumiu');

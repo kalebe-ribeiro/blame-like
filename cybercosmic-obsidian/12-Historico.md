@@ -316,3 +316,4 @@ Por que as coisas estão como estão, em ordem.
 - F4 (salvar do cache, teto de 64 cortes, memória das peças no worker, peças finas cortadas) e a porta: todos os checks verdes — [[Ideias/Futuro/Arma-do-Killy]].
 - O jogo às vezes rodava na GPU integrada do notebook (Iris Xe, ~25 fps): `main.js` pede a dedicada (`force_high_performance_gpu`).
 - `check:pad`: o teste da tela cheia agora compara largura, altura e posição (numa tela da largura da janela, só a altura muda).
+- Pendências da arma fechadas: a memória das peças cortadas no IndexedDB (o caso frio), corte a seco e lente aquecidos (primeiro tiro +7,3 ms), a brasa nos chunks de longe, a luz das bobinas carregando (a lente visível no escuro), o foco do `check:pad`.

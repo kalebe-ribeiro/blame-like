@@ -53,7 +53,7 @@ export class ChunkBuilder {
     /** @type {number|undefined} a aresta do chunk (m) — as partes que encostam na borda ficam (seguras pelo vizinho) */
     this.size = undefined;
     this.protect = 0; // > 0: as peças adicionadas agora não se cortam (camadas, únicas, a torre da passagem)
-    this.cutStats = { cut: 0, ms: 0, slow: [] };
+    this.cutStats = { cut: 0, ms: 0, slow: [], memo: 0 }; // (memo: peças que vieram da memória — gen/cut.js)
     this.cutPieces = []; // as peças recortadas (os fragmentos soltos são procurados no fim)
     /** @type {number[]} as caixas (GLOBAIS, 6 números cada) das peças que podem ser cortadas */
     this.boxes = [];
@@ -143,6 +143,7 @@ export class ChunkBuilder {
         const ms = performance.now() - t0;
         this.cutStats.cut++;
         this.cutStats.ms += ms;
+        if (r.mode.startsWith('memo')) this.cutStats.memo++;
         // (as peças lentas, para medir: material, triângulos, ms, modo)
         if (ms > 8) this.cutStats.slow.push(`${mat}:${(geom.index ? geom.index.count : geom.attributes.position.count) / 3}t:${ms.toFixed(0)}ms:${r.mode}`);
         if (r.kept) (this.parts[mat] ??= []).push(r.kept);
@@ -351,6 +352,38 @@ export function pieceMemo(key) {
 /** (ferramentas) esquece tudo */
 export function clearPieceMemo() {
   MEMO.clear();
+}
+/** A memória já tem este chunk? */
+export function hasPieceMemo(key) {
+  return MEMO.has(key);
+}
+/** A memória de um chunk em arrays (para o disco — world/pieceStore.js); null se vazia. */
+export function exportPieceMemo(key) {
+  const m = MEMO.get(key);
+  if (!m || !m.size) return null;
+  const flat = (g, k) => (g ? new Float32Array((g.index ? g.toNonIndexed() : g).attributes[k].array) : null);
+  const out = [];
+  for (const [pk, v] of m) out.push([pk, v.none ? { ids: v.ids, none: true } : { ids: v.ids, kp: flat(v.kept, 'position'), kn: flat(v.kept, 'normal'), cp: flat(v.caps, 'position'), cn: flat(v.caps, 'normal') }]);
+  return out;
+}
+/** Põe de volta a memória de um chunk lida do disco. */
+export function importPieceMemo(key, data) {
+  const geo = (p, n) => {
+    if (!p) return null;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(n, 3));
+    const ix = new Uint32Array(p.length / 3);
+    for (let i = 0; i < ix.length; i++) ix[i] = i;
+    g.setIndex(new THREE.BufferAttribute(ix, 1));
+    return g;
+  };
+  const m = pieceMemo(key);
+  for (const [pk, v] of data) m.set(pk, v.none ? { ids: v.ids, none: true } : { ids: v.ids, kept: geo(v.kp, v.kn), caps: geo(v.cp, v.cn) });
+}
+/** A chave da memória de um chunk (a mesma de generateChunk / generateMacro). */
+export function pieceMemoKey(layer, level, cx, cy, cz) {
+  return layer === 'macro' ? `m:${cx},${cy},${cz}` : `c${level}:${cx},${cy},${cz}`;
 }
 function pieceKey(mat, geom) {
   if (!geom.boundingBox) geom.computeBoundingBox();

@@ -5,7 +5,8 @@
 //  território (gen/patrols.js) — a busca no grafo leva até ~100 ms e travava o quadro.
 // ─────────────────────────────────────────────────────────────────────────────
 import { Field } from '../gen/field.js';
-import { generateChunk } from '../gen/chunkgen.js';
+import { generateChunk, hasPieceMemo, exportPieceMemo, importPieceMemo, pieceMemoKey } from '../gen/chunkgen.js';
+import { memoGet, memoPut } from './pieceStore.js';
 import { generateMacro } from '../gen/macrogen.js';
 import { NavGraph } from '../gen/nav.js';
 import { patrolCircuit } from '../gen/patrols.js';
@@ -21,9 +22,19 @@ let field = null;
 let fieldKey = '';
 let nav = null;
 
-self.onmessage = (e) => {
+self.onmessage = async (e) => {
   const { jobId, layer, level = 0, seed, cx, cy, cz, reserved } = e.data;
   const t0 = performance.now();
+  // um corte novo num chunk que este worker não tem na memória: a memória das peças do disco
+  // (world/pieceStore.js — só os cortes novos passam pelo CSG, mesmo numa sessão nova)
+  // (só perto e a macro: os chunks de longe — LOD — têm peças simples e são muitos; ler e gravar
+  //  a memória deles custava mais que recortá-los)
+  const memoKey = e.data.cutJob && !level ? pieceMemoKey(layer, level, cx, cy, cz) : null;
+  const diskKey = memoKey ? `${seed}|${memoKey}` : null;
+  if (memoKey && !hasPieceMemo(memoKey)) {
+    const saved = await memoGet(diskKey);
+    if (saved) importPieceMemo(memoKey, saved);
+  }
   try {
     const key = `${seed}|${JSON.stringify(reserved)}`;
     if (!field || fieldKey !== key) {
@@ -55,6 +66,11 @@ self.onmessage = (e) => {
       }
     }
     /** @type {any} */ (self).postMessage({ jobId, ...res, workMs: performance.now() - t0 }, transfer); // (o tempo de trabalho, sem a fila)
+    // a memória das peças deste chunk vai para o disco (depois da resposta — não atrasa o furo)
+    if (diskKey) {
+      const m = exportPieceMemo(memoKey);
+      if (m) memoPut(diskKey, m);
+    }
   } catch (err) {
     self.postMessage({ jobId, error: String(err && err.stack ? err.stack : err), meshes: [], lights: [] });
   }

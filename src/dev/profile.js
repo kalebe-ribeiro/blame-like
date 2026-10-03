@@ -195,10 +195,17 @@ async function run(ctx) {
   let on = false;
   /** @type {{ t: number, iv: number, cpu: number, beam: number, cut: number, fx: number, top: string }[]|null} o caso tiro: quadro a quadro */
   let rec = null;
+  /** @type {string[]} */
+  const newProgs = [];
+  /** @type {any} */
   const tick = () => {
     raf(tick);
     ctx._profFrame?.();
     const now = performance.now();
+    // (programas de shader novos neste quadro: uma compilação no meio do jogo)
+    const progs = ctx.renderer.info.programs ?? [];
+    if (rec && progs.length !== (tick.nProg ?? progs.length)) newProgs.push(`${((now - (rec[0]?.t ?? now)) / 1000).toFixed(2)} s: ${progs.slice(tick.nProg ?? 0).map((p) => p.name).join(', ')}`);
+    tick.nProg = progs.length;
     rec?.push({ t: now, iv: now - last, cpu: frameS.cur, beam: acc.get('arma (emissor)')?.cur ?? 0, cut: acc.get('arma: addCut')?.cur ?? 0, fx: acc.get('arma: efeitos do tiro')?.cur ?? 0,
       top: now - last > 40 ? [...acc.entries()].filter(([k]) => !/\(n\)|milhares|QUADRO/.test(k)).sort((x, y) => y[1].cur - x[1].cur).slice(0, 3).map(([k, v]) => `${k} ${v.cur.toFixed(0)}`).join(', ') : '' });
     if (on) {
@@ -331,6 +338,7 @@ async function run(ctx) {
         why: `regime ${baseIv.toFixed(1)} ms (CPU ${baseCpu.toFixed(1)}, GPU ${gBase.toFixed(1)}) · carregando: emissor ${chargeCpu.toFixed(2)} ms CPU (≤ 1), GPU +${(gCharge - gBase).toFixed(2)} ms (≤ 1,5) · disparo: quadro +${fireExtra.toFixed(1)} ms CPU (≤ 8; emissor ${fireF.beam.toFixed(1)}: addCut ${fireF.cut.toFixed(1)}, efeitos ${fireF.fx.toFixed(1)}) · pior quadro depois ${worst.toFixed(0)} ms · fps de volta em ${back < 0 ? '>4' : back.toFixed(1)} s (≤ 3)`,
       });
       log(`tiro:${place} quadros depois do disparo (ms): ${after.slice(0, 40).map((f) => f.iv.toFixed(0)).join(' ')}`);
+      log(`tiro:${place} programas novos: ${newProgs.splice(0).join(' | ') || 'nenhum'}`);
       log(`tiro:${place} quadros longos: ${after.filter((f) => f.top).map((f) => `${f.iv.toFixed(0)} ms em ${((f.t - after[0].t) / 1000).toFixed(2)} s [${f.top}]`).join(' | ') || 'nenhum'}`);
     }
     const mx = (a) => Math.max(...a);

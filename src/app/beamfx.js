@@ -265,6 +265,7 @@ export function createBeamFx(ctx) {
   const detonations = []; // as detonações sendo semeadas (alguns pontos por quadro)
   let charge = 0; // a carga mostrada (0..1)
   let charging = false;
+  const coil = new THREE.Vector3(); // a boca da arma (cena): as bobinas acesas iluminam em volta
   let push = 0; // a poeira empurrada no disparo (decai)
   let lineK = 0;
   const lineA = new THREE.Vector3();
@@ -344,6 +345,7 @@ export function createBeamFx(ctx) {
   // caindo), as partículas, os anéis, o traço e a lente. Sem isto, o primeiro tiro da sessão
   // travava ~1,7 s compilando. Refeito a cada mundo novo (os materiais são outros).
   let warmedFor = null;
+  let lensWarm = 0; // quadros com a lente ligada em força zero (o aquecimento)
   let warmAt = 0;
   function warm() {
     const r = ctx.renderer;
@@ -362,7 +364,8 @@ export function createBeamFx(ctx) {
       sc.add(bmFar);
     }
     for (const m of Object.values(world.materials)) sc.add(new THREE.Mesh(boxGeo, m));
-    if (ctx.lens) sc.add(new THREE.Mesh(boxGeo, ctx.lens.material));
+    // (a lente: ligada dois quadros com força zero — o passe de tela compila do jeito que desenha)
+    lensWarm = 2;
     for (const o of [...group.children]) {
       const c = o.clone();
       c.visible = true;
@@ -374,6 +377,8 @@ export function createBeamFx(ctx) {
         bm.dispose();
         bmFar?.dispose();
       });
+    // o caminho do corte (addCut — world.js dryCut) com um corte que não atinge nada
+    world.dryCut?.();
     // e um disparo mudo, longe e fora da vista: o primeiro de verdade não paga a primeira vez
     // de cada caminho (o JS ainda frio, os buffers subindo para a GPU)
     const far = world.toGlobal(camera.position, new THREE.Vector3()).add(new THREE.Vector3(0, -5000, 0));
@@ -392,9 +397,10 @@ export function createBeamFx(ctx) {
 
   const api = {
     /** Carregando (k 0..1) — ou não (k < 0). */
-    charge(k) {
+    charge(k, muzzle = null) {
       charging = k >= 0;
       charge = Math.max(0, k);
+      if (muzzle) coil.copy(muzzle);
     },
 
     /**
@@ -496,7 +502,12 @@ export function createBeamFx(ctx) {
       lineK = Math.max(0, lineK - dt / 0.14);
       if (lens) {
         const on = free() && (point > 0.005 || lineK > 0.005);
-        lens.enabled = on;
+        lens.enabled = on || lensWarm > 0;
+        if (lensWarm > 0) lensWarm--;
+        if (!on) {
+          lens.uniforms.uPoint.value.z = 0;
+          lens.uniforms.uLineK.value = 0;
+        }
         if (on) {
           const u = lens.uniforms;
           toScreen(pullAt, _p2);
@@ -527,9 +538,24 @@ export function createBeamFx(ctx) {
         const front = Math.min(last.len, age * DET_SPEED);
         sh.uShotA.value.set(last.a.x - origin.x, last.a.y - origin.y, last.a.z - origin.z, (1.5 + 4.5 * last.k) * Math.exp(-age / 0.15));
         sh.uShotB.value.set(last.a.x + last.dir.x * front - origin.x, last.a.y + last.dir.y * front - origin.y, last.a.z + last.dir.z * front - origin.z, 0);
+      } else if (charging && charge > 0) {
+        // carregando: as bobinas acesas são uma fonte de luz fraca e quente na boca da arma —
+        // ilumina o que está perto (e dá à lente o que dobrar, mesmo no escuro)
+        camera.getWorldDirection(_v);
+        // (um pouco à frente da boca: a mão logo atrás não estoura)
+        sh.uShotA.value.set(coil.x + _v.x * 0.35, coil.y + _v.y * 0.35, coil.z + _v.z * 0.35, 0.06 + 0.3 * charge * charge);
+        sh.uShotB.value.set(coil.x + _v.x * 0.8, coil.y + _v.y * 0.8, coil.z + _v.z * 0.8, 0);
       } else sh.uShotA.value.w = 0;
       // ── a brasa nas faces do corte ──
       const cm = world.materials.cut;
+      // (os chunks de longe: o mesmo material clonado — os mesmos uniforms da brasa, para o túnel
+      //  brilhar visto de longe)
+      const far = world.lodMaterials?.cut;
+      if (far && cm?.uniforms.uCutA && far.uniforms.uCutA !== cm.uniforms.uCutA) {
+        far.uniforms.uCutA = cm.uniforms.uCutA;
+        far.uniforms.uCutB = cm.uniforms.uCutB;
+        far.uniforms.uHeatNow = cm.uniforms.uHeatNow;
+      }
       if (cm?.uniforms.uCutA) {
         cm.uniforms.uHeatNow.value = t;
         for (let i = 0; i < HEAT_SLOTS; i++) {

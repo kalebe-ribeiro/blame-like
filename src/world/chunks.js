@@ -75,6 +75,18 @@ export class WorkerPool {
     }
   }
 
+  /** (testes) troca o worker de corte por um novo — sem a memória das peças, como numa sessão nova */
+  restartCutWorker() {
+    this.cutWorker.terminate();
+    const w = new Worker(new URL('./chunkWorker.js', import.meta.url), { type: 'module' });
+    w.onmessage = (e) => this._done(w, e.data);
+    w.onerror = (e) => console.error('chunkWorker:', e.message);
+    this.workers[this.workers.indexOf(this.cutWorker)] = w;
+    this.cutWorker = w;
+    this.cutIdle = true;
+    for (const [id, j] of this.inflight) if (j.payload.cutJob) this.inflight.delete(id);
+  }
+
   _done(w, data) {
     if (w === this.cutWorker) this.cutIdle = true;
     else this.idle.push(w);
