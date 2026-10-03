@@ -287,7 +287,6 @@ async function run(ctx) {
       controls.setMode('walk');
       ctx.inventory.equip('emitter');
       ctx.player.energy.value = 1;
-      ctx.beam.healArm?.();
       await sleep(SETTLE + 3000);
       for (let i = 0; i < 150 && ctx.wake?.active; i++) await sleep(200); // (o despertar do começo)
       controls.pitch = 0;

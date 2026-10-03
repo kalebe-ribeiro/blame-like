@@ -435,7 +435,6 @@ async function run(ctx) {
       await sleep(400);
       const p0 = w.feet.clone();
       ctx.player.energy.value = 1;
-      ctx.beam.healArm();
       ctx.beam.fire(kk, oo);
       let peak = 0;
       const t0 = performance.now();
@@ -445,13 +444,12 @@ async function run(ctx) {
       }
       const moved = Math.hypot(w.feet.x - p0.x, w.feet.z - p0.z);
       out.push({ kk, oo, peak, rest: controls.pitch, moved, room: best.d });
-      ctx.beam.healArm();
       for (let i = 0; i < 150 && ctx.wake?.active; i++) await sleep(200); // (um empurrão forte pode derrubar)
     }
     controls.pitch = 0;
     ctx.rules.safeguards = sgWas;
     const [lo, hi, over] = out;
-    const ok = hi.peak > lo.peak * 2.5 && hi.moved > lo.moved * 3 && hi.moved > 1.5 && hi.rest > 0.2 * hi.peak && hi.rest < 0.7 * hi.peak && over.moved > hi.moved * 2.5;
+    const ok = hi.peak > lo.peak * 2.5 && hi.moved > lo.moved * 3 && hi.moved > 1.5 && hi.rest > 0.2 * hi.peak && hi.rest < 0.7 * hi.peak && over.moved > hi.moved * 4;
     report({ kind: 'coice', ok, why: out.map((o) => `carga ${o.kk}${o.oo ? ' + sobrecarga ' + o.oo : ''}: mira +${(o.peak * 57.3).toFixed(1)}° (assentou em +${(o.rest * 57.3).toFixed(1)}°) · empurrado ${o.moved.toFixed(2)} m (livre atrás ${o.room.toFixed(0)} m)`).join(' · ') });
   }
 
@@ -688,37 +686,33 @@ async function runF2(ctx, report) {
     await sleep(300);
     report({ kind: 'controle', ok: shot && cancelled && noShot, why: `RT 1,2 s: ${shot ? `atirou (k ${s1?.k.toFixed(2)})` : `NÃO atirou (${seen})`} · RT + LT: ${cancelled && noShot ? 'cancelou sem tiro' : 'NÃO cancelou'}` });
   }
-  // ── sobrecarga: segurar além do cheio (3 a 6,5 s) — mais alcance, raio e gasto; o braço paga ──
+  // ── sobrecarga: segurar além do cheio (3 a 6,5 s) — estágios que se anunciam, o furo e o
+  //    alcance crescendo, e sem perder a arma (o custo vai para a futura barra de vida) ──
   {
     en.value = 1;
     beam.testHeld = null;
-    beam.healArm();
     controls.pitch = 1.5; // (para cima: o empurrão não joga o corpo da passarela)
     await sleep(1000);
+    const stages = [];
+    const onStage = (d) => stages.push(d.stage);
+    world.bus.on('player:beamStage', onStage);
     const s0 = beam.lastShot;
     await hold(6.8);
     const S = beam.lastShot;
     const shot = S !== s0 && S.o > 0.97;
-    const lim = shot && Math.abs(S.cost - 0.35) < 0.01 && Math.abs(S.r - 4.4) < 0.05 && Math.abs(S.range - 800) < 1;
-    const wrecked = beam.arm.wrecked && beam.arm.until - performance.now() / 1000 > 80;
-    await rest();
-    const s1 = beam.lastShot;
-    await hold(1.2);
-    const blockedArm = beam.lastShot === s1 && events.includes('bloq:braco');
-    beam.healArm();
+    const lim = shot && Math.abs(S.cost - 0.35) < 0.01 && S.r > 7 && Math.abs(S.range - 1000) < 1;
+    const seq = stages.join(',') === '1,2,3,4';
     await rest();
     en.value = 1;
-    await hold(4.75);
-    const M = beam.lastShot;
-    const lock = beam.arm.until - performance.now() / 1000;
-    const mid = M !== s1 && M.o > 0.4 && M.o < 0.6 && !beam.arm.wrecked && lock > 8 && lock < 15;
-    beam.healArm();
+    const s1 = beam.lastShot;
+    await hold(1.2);
+    const again = beam.lastShot !== s1; // (sem braço destruído: atira de novo)
     controls.pitch = 0;
     await rest();
     report({
       kind: 'sobrecarga',
-      ok: shot && lim && wrecked && blockedArm && mid,
-      why: `6,8 s: o ${S.o?.toFixed(2)} · gasto ${(S.cost * 100).toFixed(0)}% · raio ${S.r.toFixed(1)} m · alcance ${S.range.toFixed(0)} m · braço ${beam.arm ? (wrecked ? 'destruído (90 s)' : 'NÃO destruído') : '?'} · gatilho depois: ${blockedArm ? 'bloqueado' : 'ATIROU'} · 4,75 s: o ${M.o?.toFixed(2)}, braço sem resposta ${lock.toFixed(0)} s`,
+      ok: shot && lim && seq && again,
+      why: `6,8 s: o ${S.o?.toFixed(2)} · gasto ${(S.cost * 100).toFixed(0)}% · raio ${S.r.toFixed(1)} m · alcance ${S.range.toFixed(0)} m · estágios anunciados ${stages.join(',') || 'nenhum'} · depois: ${again ? 'atira de novo' : 'NÃO atirou'}`,
     });
   }
   en.value = 1;

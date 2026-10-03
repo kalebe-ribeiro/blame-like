@@ -347,7 +347,6 @@ export function setupDev(ctx) {
       // (--fxhold=S: segura S s — a sobrecarga: 3 a 6,5 s; a captura "carregando" 1,1 s antes de soltar)
       const holdS = Number(params.get('fxhold') || 2.7);
       ctx.player.energy.value = 1;
-      ctx.beam.healArm?.();
       ctx.beam.testHeld = true;
       await sleep((holdS - 1.1) * 1000);
       await shot('fx-carregando.png');

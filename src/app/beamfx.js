@@ -46,10 +46,12 @@ export function beamColors(p) {
   while (i < STOPS.length - 2 && q > STOPS[i + 1][0]) i++;
   const [p0, c0, h0] = STOPS[i];
   const [p1, c1, h1] = STOPS[i + 1];
-  const u = (q - p0) / (p1 - p0);
+  // (a cor muda nos estágios, não aos poucos: segura a de cada estágio e vira na passagem)
+  const lin = (q - p0) / (p1 - p0);
+  const u = lin < 0.82 ? 0 : (lin - 0.82) / 0.18;
   core.setRGB(c0[0] + (c1[0] - c0[0]) * u, c0[1] + (c1[1] - c0[1]) * u, c0[2] + (c1[2] - c0[2]) * u);
   halo.setRGB(h0[0] + (h1[0] - h0[0]) * u, h0[1] + (h1[1] - h0[1]) * u, h0[2] + (h1[2] - h0[2]) * u);
-  return { core, halo, void: Math.max(0, Math.min(1, (p - 1.8) / 0.2)), tint: Math.max(0, Math.min(1, p - 1)) };
+  return { core, halo, void: p >= 1.999 ? 1 : 0, tint: Math.max(0, Math.min(1, p - 1)) };
 }
 const SOUND = 340; // m/s
 const HEAT_SLOTS = 8;
@@ -283,13 +285,33 @@ export function createBeamFx(ctx) {
   const core = mkTrace(0xfff8ee, 1);
   const halo = mkTrace(0xffd9a8, 0.35);
   // o limite: o núcleo vira um traço preto (luz engolida — mistura normal, não aditiva)
-  const hole = new THREE.Mesh(traceGeo, new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 1, depthWrite: false }));
+  const hole = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 12, 1, true).translate(0, 0.5, 0), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 1, depthWrite: false }));
   hole.frustumCulled = false;
   hole.visible = false;
   hole.userData.noCollide = true;
   hole.renderOrder = 13;
   group.add(hole);
   let traceOp = { core: 1, halo: 0.35, hole: 0 };
+  // a singularidade na mira (estágio 3 em diante): uma esfera preta (a luz não sai) e o anel de
+  // acreção — a poeira caindo nela esquenta e brilha (a fonte da luz é a queda)
+  const sing = new THREE.Group();
+  sing.visible = false;
+  const singCore = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+  const singDisk = new THREE.Mesh(
+    new THREE.RingGeometry(1.15, 2.6, 48, 1),
+    new THREE.MeshBasicMaterial({ color: 0xb070ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
+  );
+  sing.add(singCore, singDisk);
+  for (const m of [singCore, singDisk]) {
+    m.userData.noCollide = true;
+    m.frustumCulled = false;
+  }
+  sing.renderOrder = 12;
+  group.add(sing);
+  /** a onda na lente: { t0, k (força), big (o tiro do limite) } */
+  let ripple = null;
+  let shakeT = 0; // o tremor forte depois do tiro do limite (s)
+  let suck = 0; // a visão se fechando depois do tiro do limite (0..1)
   let satBoost = 0; // a cor do mundo voltando (a sobrecarga) — decai
   let satBase = null;
 
@@ -437,6 +459,12 @@ export function createBeamFx(ctx) {
 
   const api = {
     /** Carregando (k 0..1) — ou não (k < 0). */
+    /** Um estágio novo da sobrecarga: a onda na lente, um tranco de poeira. */
+    stagePulse(st) {
+      ripple = { t0: now(), k: 0.35 + 0.15 * st, big: false };
+      push = Math.max(push, 0.6);
+    },
+
     charge(k, muzzle = null, o = 0) {
       charging = k >= 0;
       charge = Math.max(0, k);
@@ -463,11 +491,16 @@ export function createBeamFx(ctx) {
       rings.mat.uniforms.uTint.value.copy(C.core).lerp(C.halo, 0.4);
       traceOp = { core: 1 - 0.85 * C.void, halo: 0.35 + 0.5 * o, hole: C.void };
       if (!silent) satBoost = Math.max(satBoost, 0.25 * o + 0.35 * C.void);
+      if (!silent && o > 0) {
+        ripple = { t0, k: 0.5 + 1.5 * o, big: C.void > 0 };
+        shakeT = 0.25 + 0.6 * o * o;
+        if (C.void > 0) suck = 1;
+      }
       if (shots.length > HEAT_SLOTS) shots.shift();
       // o traço
       const endS = end.clone().sub(world.origin);
       /** @type {[THREE.Mesh, number][]} */
-      const traces = [[core, 0.012 + 0.02 * k + 0.05 * o], [halo, 0.07 + 0.18 * k + 0.5 * o], [hole, (0.02 + 0.12 * o) * (C.void > 0 ? 1 : 0)]];
+      const traces = [[core, 0.012 + 0.02 * k + 0.08 * o], [halo, 0.07 + 0.18 * k + 0.9 * o + 1.5 * C.void], [hole, C.void > 0 ? 0.22 : 0]];
       for (const [m, w] of traces) {
         m.visible = w > 0;
         m.position.copy(muzzle);
@@ -539,10 +572,33 @@ export function createBeamFx(ctx) {
       const lens = ctx.lens;
       camera.getWorldDirection(_v);
       const pullAt = _q.copy(camera.position).addScaledVector(_v, 2.6);
+      // a singularidade: aparece no estágio 3, cresce, e no limite pulsa
+      const st = over <= 0 ? 0 : over < 1 / 3 ? 1 : over < 2 / 3 ? 2 : over < 0.999 ? 3 : 4;
+      sing.visible = charging && st >= 3;
+      if (sing.visible) {
+        const grow = st >= 4 ? 0.34 * (1 + 0.1 * Math.sin(t * 22)) : 0.05 + 0.2 * ((over - 2 / 3) * 3);
+        sing.position.copy(pullAt);
+        sing.scale.setScalar(grow);
+        sing.quaternion.copy(camera.quaternion);
+        singDisk.rotation.z = t * (st >= 4 ? 9 : 4);
+        singDisk.material.color.setRGB(0.75, 0.4, 1).multiplyScalar(st >= 4 ? 2.4 : 1.3);
+      }
+      // a visão: fecha um pouco carregando no limite (a luz sendo puxada); depois do tiro, fecha e abre
+      suck = Math.max(0, suck - dt / 0.45);
+      const sigU = ctx.signal?.uniforms;
+      if (sigU && !ctx.wake?.active) sigU.uFaint.value = Math.max(charging && st >= 4 ? 0.32 : charging && st >= 3 ? 0.12 : 0, suck * 0.6);
+      // o tremor forte depois do tiro (sobrecarga)
+      if (shakeT > 0) {
+        shakeT = Math.max(0, shakeT - dt);
+        const a = 0.02 * shakeT;
+        camera.rotateX((Math.random() - 0.5) * a);
+        camera.rotateY((Math.random() - 0.5) * a);
+        camera.rotateZ((Math.random() - 0.5) * a * 0.6);
+      }
       let point = 0;
       if (charging && charge > 0) {
-        point = Math.min(1, charge * 0.85 + 0.3 * over);
-        const j = 0.0016 * charge + 0.007 * over;
+        point = Math.min(1, charge * 0.85 + 0.15 * st);
+        const j = 0.0016 * charge + 0.002 * st + (st >= 4 ? 0.006 : 0);
         camera.rotateX((Math.random() - 0.5) * j);
         camera.rotateY((Math.random() - 0.5) * j);
       }
@@ -551,18 +607,31 @@ export function createBeamFx(ctx) {
       du.set(pullAt.x, pullAt.y, pullAt.z, charging ? 1.2 * charge + 1.2 * over : -1.4 * push);
       lineK = Math.max(0, lineK - dt / 0.14);
       if (lens) {
-        const on = free() && (point > 0.005 || lineK > 0.005);
+        // a onda: corre do centro para fora (~0,7 s; a do tiro do limite atravessa a tela inteira)
+        let rip = 0;
+        let ripR = 0;
+        if (ripple) {
+          const age = t - ripple.t0;
+          const life = ripple.big ? 0.9 : 0.6;
+          if (age > life) ripple = null;
+          else {
+            ripR = age / life * (ripple.big ? 1.6 : 0.9);
+            rip = ripple.k * (1 - age / life);
+          }
+        }
+        const on = free() && (point > 0.005 || lineK > 0.005 || rip > 0.005);
         lens.enabled = on || lensWarm > 0;
         if (lensWarm > 0) lensWarm--;
         if (!on) {
           lens.uniforms.uPoint.value.z = 0;
           lens.uniforms.uLineK.value = 0;
+          lens.uniforms.uRipple.value.w = 0;
         }
         if (on) {
           const u = lens.uniforms;
           toScreen(pullAt, _p2);
           u.uPoint.value.set(_p2.x, _p2.y, point);
-          u.uRadius.value = 0.1 + 0.12 * charge + 0.12 * over;
+          u.uRadius.value = 0.1 + 0.12 * charge + 0.05 * st + (st >= 4 ? 0.1 : 0);
           u.uAspect.value = camera.aspect;
           u.uNear.value = camera.near;
           u.uFar.value = camera.far;
@@ -572,6 +641,7 @@ export function createBeamFx(ctx) {
           const far = lineA.clone().addScaledVector(_w.normalize(), Math.min(lineA.distanceTo(lineB), 60));
           toScreen(far, u.uLineB.value);
           u.uLineK.value = lineK;
+          u.uRipple.value.set(0.5, 0.5, ripR, rip);
         }
       }
       // ── o traço se apaga ──

@@ -13,6 +13,7 @@ Registradas em 2026-09-29.
 ### Arma de Killy — o que falta para fechar a F4 ([[Ideias/Futuro/Arma-do-Killy]])
 - ✔ **A porta da F4** (2026-10-03): todos os checks verdes — ver [[Ideias/Futuro/Arma-do-Killy]] (Andamento F4).
 - ✔ (2026-10-03) As pendências da arma — ver [[Ideias/Futuro/Arma-do-Killy]] (Andamento, "Pendências fechadas"): o caso frio de 50 cortes (memória das peças no IndexedDB), o primeiro tiro (corte a seco no aquecimento), o túnel de longe (a brasa nos chunks de longe; conferido em números — sem imagem), a lente no escuro (a luz das bobinas), o `check:pad` intermitente (o teste insiste no foco).
+- **Barra de vida** — planejada em [[Ideias/Futuro/Barra-de-vida]]; esperando as decisões V1–V7 do usuário.
 - **Em observação**: numa rodada do `profile --profshot` (a primeira na RTX, depois da troca de GPU) dois quadros de ~1,9 s no desenho, ~2 s depois do tiro; não se repetiram em duas rodadas seguintes. Hipótese: o cache de shaders do Chromium montado para a Intel. Se voltar, o `profile` agora lista os programas de shader novos de cada tiro.
 
 ## ✔ Feitas na fase 0 (2026-09-29)

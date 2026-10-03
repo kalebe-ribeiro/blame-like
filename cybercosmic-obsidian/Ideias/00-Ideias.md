@@ -61,7 +61,8 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 |---|---|
 | [[NPCs-e-Safeguards]] | futuro — arquitetar pensando nisso |
 | [[Quinas-e-maos]] (agarrar quinas, subir; mãos) | feita (2026-09-30) |
-| [[Arma-do-Killy]] (feixe que fura o terreno) | futuro — método decidido (buraco de shader, ~60/100); a fase 6 ficou só fuga; os seres já têm vida e morte (2026-10-01) |
+| [[Arma-do-Killy]] (feixe que fura o terreno) | feita (F1–F4, 2026-10-03; sobrecarga com estágios) |
+| [[Barra-de-vida]] (o custo da sobrecarga, quedas, Safeguards) | proposta — decisões V1–V7 com o usuário |
 
 ## Técnico
 

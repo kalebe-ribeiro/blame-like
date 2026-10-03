@@ -1062,6 +1062,26 @@ export class AudioEngine {
     c.ng.gain.setTargetAtTime(on ? 0.03 + 0.12 * kk : 0, t, on ? 0.08 : 0.03);
   }
 
+  /** Um estágio novo da sobrecarga (1..4): um baque grave que afunda e um tinido metálico, mais alto a cada estágio. */
+  beamStage(n) {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const out = this._placed(0, 0);
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(90 - 12 * n, t);
+    o.frequency.exponentialRampToValueAtTime(30, t + 0.5);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.35 + 0.12 * n, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    o.connect(g).connect(out);
+    o.start(t);
+    o.stop(t + 0.8);
+    this._clang(t + 0.02, out, 0.12 + 0.05 * n, 0.5 + 0.25 * n);
+  }
+
   /** O emissor atirando (carga k): um baque grave que suga o ar, um estalo seco e o chiado do metal se desfazendo. */
   beamShot(k = 1) {
     if (!this.ctx) return;

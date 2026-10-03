@@ -25,6 +25,7 @@ const LensShader = {
     uLineA: { value: new THREE.Vector2() }, // o traço na tela (uv)
     uLineB: { value: new THREE.Vector2() },
     uLineK: { value: 0 }, // força da dobra em linha (0..1)
+    uRipple: { value: new THREE.Vector4(0.5, 0.5, 0, 0) }, // a onda: centro (uv), raio (altura da tela), força
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -44,6 +45,7 @@ const LensShader = {
     uniform vec2 uLineA;
     uniform vec2 uLineB;
     uniform float uLineK;
+    uniform vec4 uRipple;
     varying vec2 vUv;
     float lin(float d) { float z = d * 2.0 - 1.0; return 2.0 * uNear * uFar / (uFar + uNear - z * (uFar - uNear)); }
     float near(vec2 uv) { return 1.0 - smoothstep(1.2, 1.6, lin(textureLod(tDepth, uv, 0.0).x)); }
@@ -71,6 +73,13 @@ const LensShader = {
         float dl = length(q);
         float w = 0.035;
         off += (q / max(dl, 1e-5)) / asp * uLineK * 0.022 * exp(-dl * dl / (w * w)) * (dl / w);
+      }
+      // a onda gravitacional: um anel que corre pela tela, esticando e encolhendo o espaço
+      if (uRipple.w > 0.0) {
+        vec2 d = (vUv - uRipple.xy) * asp;
+        float dl = length(d);
+        float x = (dl - uRipple.z) / 0.06;
+        off += (d / max(dl, 1e-4)) / asp * uRipple.w * 0.045 * x * exp(-x * x);
       }
       vec2 uv = clamp(vUv + off, vec2(0.001), vec2(0.999));
       // (uma amostra que cairia na mão ou na arma: fica a original)
