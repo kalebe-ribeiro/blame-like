@@ -409,6 +409,49 @@ async function run(ctx) {
     report({ kind: 'chao', ok, why: res.join(' · ') });
   }
 
+  // ── coice: a mira sobe e assenta pela metade; o corpo é empurrado para trás — os dois
+  //    crescem com a carga (app/beam.js recoil) ──
+  {
+    const sgWas = ctx.rules.safeguards;
+    ctx.rules.safeguards = false;
+    const w = controls.walker;
+    const out = [];
+    for (const kk of [0.2, 1]) {
+      ctx.ui.teleport('deposito', 'deposito');
+      controls.setMode('walk');
+      await sleep(SETTLE);
+      // (de costas para o lado mais livre: o empurrão não bate numa parede logo atrás)
+      refreshCol(w.col, camera.position.clone());
+      let best = { yaw: controls.yaw, d: -1 };
+      for (let q = 0; q < 16; q++) {
+        const yaw = (q / 16) * Math.PI * 2;
+        const back = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+        const h = w.col.ray(camera.position.clone(), back, 30);
+        const d = h ? h.distance : 30;
+        if (d > best.d) best = { yaw, d };
+      }
+      controls.yaw = best.yaw;
+      controls.pitch = 0;
+      await sleep(400);
+      const p0 = w.feet.clone();
+      ctx.player.energy.value = 1;
+      ctx.beam.fire(kk);
+      let peak = 0;
+      const t0 = performance.now();
+      while (performance.now() - t0 < 1500) {
+        peak = Math.max(peak, controls.pitch);
+        await sleep(16);
+      }
+      const moved = Math.hypot(w.feet.x - p0.x, w.feet.z - p0.z);
+      out.push({ kk, peak, rest: controls.pitch, moved, room: best.d });
+    }
+    controls.pitch = 0;
+    ctx.rules.safeguards = sgWas;
+    const [lo, hi] = out;
+    const ok = hi.peak > lo.peak * 2.5 && hi.moved > lo.moved * 3 && hi.moved > 1.5 && hi.rest > 0.2 * hi.peak && hi.rest < 0.7 * hi.peak;
+    report({ kind: 'coice', ok, why: out.map((o) => `carga ${o.kk}: mira +${(o.peak * 57.3).toFixed(1)}° (assentou em +${(o.rest * 57.3).toFixed(1)}°) · empurrado ${o.moved.toFixed(2)} m (livre atrás ${o.room.toFixed(0)} m)`).join(' · ') });
+  }
+
   // ── teto: um chunk com 64 cortes faz o feixe engasgar na entrada dele (puro) ──
   {
     const mk = (n) => ({

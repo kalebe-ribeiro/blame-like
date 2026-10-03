@@ -123,6 +123,8 @@ export function createBeam(ctx) {
   let capped = false; // a célula limitou a carga
   let cool = 0;
   let kick = 0;
+  /** @type {{ t: number, p: number, y: number, applied: number, appliedY: number }|null} o coice da mira (recoil) */
+  let rec = null;
   let field = null; // o mundo em que a carga começou
   let rumbleT = 0;
   let cancelReq = false;
@@ -218,6 +220,33 @@ export function createBeam(ctx) {
     return [feet.x, feet.y - KEEP.depth, feet.z, KEEP.r, feet.y + 0.3];
   }
 
+  /**
+   * O coice e o empurrão do tiro de carga kk (dir: para onde atirou), contínuos com a carga:
+   *   coice     a mira sobe rápido e volta pela metade (~0,5 s), com um desvio de lado ao acaso;
+   *             ~1° no mínimo, ~8° no cheio; a arma recua na mão
+   *   empurrão  o corpo é jogado para trás do tiro: ~1 m/s no mínimo, ~10 m/s no cheio (no chão,
+   *             ~0,25 a ~2,5 m; no ar vai mais longe). Atirar para baixo empurra para cima.
+   */
+  function recoil(kk, dir) {
+    const amp = 0.018 + 0.12 * kk;
+    rec = { t: 0, p: amp, y: (Math.random() - 0.5) * (0.01 + 0.05 * kk), applied: 0, appliedY: 0 };
+    kick = 0.4 + 0.6 * kk;
+    const v = 1 + 9 * kk * kk;
+    if (controls.mode === 'walk' && controls.walker) {
+      const w = controls.walker;
+      const h = Math.hypot(dir.x, dir.z);
+      if (h > 1e-3) w.shove.set(w.shove.x - (dir.x / h) * v * h, 0, w.shove.z - (dir.z / h) * v * h);
+      // a parte vertical: para baixo empurra para cima (no máximo 7 m/s); para cima, para baixo
+      const up = Math.max(-v, Math.min(7, -dir.y * v));
+      if (up > 0.3) {
+        w.vel.y = Math.max(w.vel.y, 0) + up;
+        w.grounded = false;
+      } else if (up < 0 && !w.grounded) w.vel.y += up;
+    } else if (controls.mode === 'fly') {
+      controls.velocity.addScaledVector(dir, -v * 0.6);
+    }
+  }
+
   /** O tiro de carga kk (0..1). */
   function fire(kk) {
     const S = shotOf(kk);
@@ -263,9 +292,7 @@ export function createBeam(ctx) {
     // som, coice, atenção
     audio.beamShot?.(kk);
     controls.rumble?.(0.45 + 0.55 * kk, 0.3 + 0.4 * kk, 140 + 300 * kk);
-    controls.pitch = Math.min(1.5, controls.pitch + 0.01 + 0.05 * kk);
-    // na carga cheia, o corpo recua um passo
-    if (controls.mode === 'walk' && controls.walker && kk > 0.6) controls.walker.vel.addScaledVector(_d.clone().setY(0).normalize(), -3.5 * (kk - 0.6) / 0.4);
+    recoil(kk, _d);
     ctx.alert?.raise(eye.x, eye.y, eye.z, 0.08 + 0.23 * kk);
     world.safeguards?.hear(eye.x, eye.y - 1.7, eye.z, 60 + 80 * kk);
     lastShot = { k: kk, ...S, t, stop, kills };
@@ -319,6 +346,18 @@ export function createBeam(ctx) {
     update(dt) {
       cool = Math.max(0, cool - dt);
       kick = Math.max(0, kick - dt * 6);
+      // o coice da mira: sobe em ~30 ms até p, depois assenta em 45% de p em ~0,35 s
+      if (rec) {
+        rec.t += dt;
+        const env = (1 - Math.exp(-rec.t / 0.03)) * (0.45 + 0.55 * Math.exp(-rec.t / 0.35));
+        const want = rec.p * env;
+        const wantY = rec.y * env;
+        controls.pitch = Math.max(-1.55, Math.min(1.55, controls.pitch + want - rec.applied));
+        controls.yaw += wantY - rec.appliedY;
+        rec.applied = want;
+        rec.appliedY = wantY;
+        if (rec.t > 1.5) rec = null;
+      }
       const down = pressed();
       if (controls.padCancel && state === 'charging') cancelReq = true;
       controls.padCancel = false;

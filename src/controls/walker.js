@@ -74,6 +74,9 @@ export class Walker {
     this.speedScale = 1; // < 1 dentro d'água (setores inundados)
     this.dipScale = 1; // 0 = sem afundamento no pouso
     this.carrier = new THREE.Vector3(); // velocidade herdada do chão móvel (vagão) ao sair dele
+    /** Um empurrão de fora (o coice do emissor — app/beam.js): velocidade horizontal à parte do
+     *  passo, que as paredes param e o atrito consome (no chão rápido, no ar devagar). */
+    this.shove = new THREE.Vector3();
     this.canClimb = true; // escadas de marinheiro (os corpos dos seres de teste não sobem)
     this.canGrab = true; // agarrar quinas (os seres não: world/entities.js)
     this.ledge = null; // pendurado: { topY, edge, nrm, h }
@@ -90,6 +93,7 @@ export class Walker {
   syncFromCamera(camera, scale, velocity) {
     this.feet.copy(camera.position).y -= this.eye * scale;
     this.vel.copy(velocity ?? new THREE.Vector3());
+    this.shove?.set(0, 0, 0);
     this.grounded = false;
     this.airTime = 0;
     this.fallStartY = this.feet.y;
@@ -179,7 +183,9 @@ export class Walker {
     // ── horizontal com paredes ──
     // no ar, conserva a velocidade do vagão de onde saiu (não fica para trás)
     const carry = this.grounded ? 0 : 1;
-    _move.set((this.vel.x + this.carrier.x * carry) * dt, 0, (this.vel.z + this.carrier.z * carry) * dt);
+    _move.set((this.vel.x + this.carrier.x * carry + this.shove.x) * dt, 0, (this.vel.z + this.carrier.z * carry + this.shove.z) * dt);
+    this.shove.multiplyScalar(Math.exp(-dt * (this.grounded ? 4 : 0.6)));
+    if (this.shove.lengthSq() < 1e-4) this.shove.set(0, 0, 0);
     this._slide(_move, radius, stepH, eye);
     this.feet.add(_move);
     this._pushOut(radius, stepH, eye);
