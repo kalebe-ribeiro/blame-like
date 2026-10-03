@@ -61,6 +61,10 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 // Notebook com duas GPUs (integrada + dedicada): sempre a dedicada. Sem isto o Windows às vezes
 // põe o jogo na integrada (2026-10-03: Iris Xe, 20–29 fps no lugar de ~110).
 app.commandLine.appendSwitch('force_high_performance_gpu');
+// Com a dedicada desenhando e a tela ligada na integrada, o Chromium não acha a sincronia da tela e
+// cai num relógio próprio de 60 Hz: o jogo ficava preso em ~64 fps numa tela de 165 Hz (2026-10-03:
+// 64 → 153 fps na teia). Tirar esse limite deixa a sincronia de verdade valer.
+app.commandLine.appendSwitch('disable-frame-rate-limit');
 // Janela coberta por outra (oclusão no Windows): o Chromium cai para 1 quadro/s.
 // Um mundo que continua vivo (e o teste de fumaça) não podem parar por isso.
 app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
