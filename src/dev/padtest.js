@@ -145,13 +145,16 @@ export async function runPadTest(ctx) {
   await press(B);
   report('pad:mapa-fecha', !shown('#trailmap'), 'B não fechou o mapa');
   // 9. tela cheia pelo controle
-  const fs0 = window.outerWidth;
+  // (largura, altura e posição: numa tela da largura da janela — 1536 lógicos de um 1920 a
+  //  125% — a tela cheia não muda a largura, só a altura e o canto)
+  const geo = () => `${window.outerWidth}×${window.outerHeight}@${window.screenX},${window.screenY}`;
+  const fs0 = geo();
   await press(bindings.pad('fullscreen'));
   await sleep(800);
-  const fs1 = window.outerWidth;
+  const fs1 = geo();
   await press(bindings.pad('fullscreen'));
   await sleep(600);
-  report('pad:tela-cheia', fs1 !== fs0, `a janela não mudou de tamanho (${fs0} → ${fs1}; ponte: ${!!window.cybercosmic}; botão ${bindings.pad('fullscreen')})`);
+  report('pad:tela-cheia', fs1 !== fs0, `a janela não mudou (${fs0} → ${fs1}; ponte: ${!!window.cybercosmic}; botão ${bindings.pad('fullscreen')})`);
   // 10. ler um terminal: Y abre, o direcional rola, B fecha (e volta ao jogo)
   if (ctx.ui.teleport('terminal', 'terminal')) {
     await sleep(3500);

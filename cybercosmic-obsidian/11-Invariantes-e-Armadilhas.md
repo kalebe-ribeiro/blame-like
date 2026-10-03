@@ -56,6 +56,7 @@
 | Variável local chamada `t` esconde a função de tradução `t()` (o painel de transporte quebrou assim) | nunca chamar variável de `t` num arquivo que importa `t` de `i18n` |
 | Cadeias de pistas "para a única mais próxima" fazem ciclo entre duas únicas vizinhas | de única em única, seguir a correnteza (direção por seed); elos só entre terminais que citam alguém |
 | Render por software (sem GPU) a ~1 fps | o check inteiro estoura 6 min; rodar em partes; timers de flags atrasam em relação à captura |
+| Notebook com duas GPUs: o Windows pode pôr o jogo na integrada (~25 fps; checks de tempo reprovam) | `main.js` pede a dedicada (`force_high_performance_gpu`); conferir com `nvidia-smi` (o `electron.exe` tem de aparecer nos processos) |
 | Trocar de mundo com o salvamento automático ligado grava o mundo velho por cima do novo (`beforeunload`) | desligar `ctx.saving` antes de recarregar |
 | Um raio exatamente sobre a junta de duas peças (pontos do grafo em múltiplos de 12 m) erra as duas — o corpo caía pelo chão | o Walker procura o chão em 5 pontos; o "pulo do vão" dos seres em 3 |
 | Geometria gerada atravessando caminhos verticais (duto na escada de manutenção; patamar em cima de quem sobe) | ao gerar algo perto de escada/elevador, testar SUBINDO de verdade (`check:moves`) |

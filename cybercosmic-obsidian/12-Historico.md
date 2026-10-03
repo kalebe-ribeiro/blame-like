@@ -310,3 +310,9 @@ Por que as coisas estão como estão, em ordem.
 
 - Lente gravitacional, poeira puxada, traço, luz-linha do tiro, detonação a 1500 m/s (clarões, anéis, poeira), estrondo pela distância, brasa nas faces do corte, faíscas, lascas e detritos caindo: [[Ideias/Futuro/Arma-do-Killy]] (Andamento F3). Medido no orçamento: disparo +3–4,4 ms, carregando ≤ 0,1 ms.
 - O primeiro tiro travava 1,7 s compilando shaders: compilação antecipada (`compileAsync`) por mundo.
+
+## 2026-10-03 — a arma de Killy fechada (F4); o jogo na GPU dedicada
+
+- F4 (salvar do cache, teto de 64 cortes, memória das peças no worker, peças finas cortadas) e a porta: todos os checks verdes — [[Ideias/Futuro/Arma-do-Killy]].
+- O jogo às vezes rodava na GPU integrada do notebook (Iris Xe, ~25 fps): `main.js` pede a dedicada (`force_high_performance_gpu`).
+- `check:pad`: o teste da tela cheia agora compara largura, altura e posição (numa tela da largura da janela, só a altura muda).

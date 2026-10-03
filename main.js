@@ -58,6 +58,9 @@ const distArg = argValue('dist');
 
 // O áudio precisa começar sem gesto no modo captura (e não atrapalha no normal).
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// Notebook com duas GPUs (integrada + dedicada): sempre a dedicada. Sem isto o Windows às vezes
+// põe o jogo na integrada (2026-10-03: Iris Xe, 20–29 fps no lugar de ~110).
+app.commandLine.appendSwitch('force_high_performance_gpu');
 // Janela coberta por outra (oclusão no Windows): o Chromium cai para 1 quadro/s.
 // Um mundo que continua vivo (e o teste de fumaça) não podem parar por isso.
 app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
