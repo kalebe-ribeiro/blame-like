@@ -79,7 +79,7 @@ const CIRCUIT_JOB = { priorityOf: () => -1e12 };
 
 export class World {
   constructor(scene, shared) {
-    /** @type {{ a: number[], b: number[], r: number, id?: string }[]} os cortes do emissor de feixe (addCut) */
+    /** @type {{ a: number[], b: number[], r: number, id?: string, keep?: number[] }[]} os cortes do emissor de feixe (addCut) */
     this.cuts = [];
     this._afterCut = 0; // o quadro depois do qual o resto do mundo reage aos cortes novos
     /** @type {any} o que o jogador mudou no mundo (WorldState — app.js), lido no build */

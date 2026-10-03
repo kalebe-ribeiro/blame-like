@@ -317,3 +317,4 @@ Por que as coisas estão como estão, em ordem.
 - O jogo às vezes rodava na GPU integrada do notebook (Iris Xe, ~25 fps): `main.js` pede a dedicada (`force_high_performance_gpu`).
 - `check:pad`: o teste da tela cheia agora compara largura, altura e posição (numa tela da largura da janela, só a altura muda).
 - Pendências da arma fechadas: a memória das peças cortadas no IndexedDB (o caso frio), corte a seco e lente aquecidos (primeiro tiro +7,3 ms), a brasa nos chunks de longe, a luz das bobinas carregando (a lente visível no escuro), o foco do `check:pad`.
+- Arma: o chão debaixo de quem atira fica (cilindro de pontas retas em todas as contas; coluna protegida sob os pés; só mirando para baixo ele se abre) — `check:beam` caso `chao`.

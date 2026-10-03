@@ -375,6 +375,40 @@ async function run(ctx) {
     });
   }
 
+  // ── chão: a pé, o chão debaixo de quem atira fica (tiro horizontal e inclinado — a coluna
+  //    protegida, app/beam.js keepUnder); só some mirando nele, quase reto para baixo ──
+  {
+    const sgWas = ctx.rules.safeguards;
+    ctx.rules.safeguards = false;
+    const w = controls.walker;
+    const res = [];
+    let ok = true;
+    for (const [pitch, wantFloor] of [[0, true], [-0.5, true], [-0.8, true], [-1.5, false]]) {
+      ctx.ui.teleport('deposito', 'deposito');
+      controls.setMode('walk');
+      await sleep(SETTLE);
+      const y0 = w.feet.y;
+      controls.pitch = pitch;
+      await sleep(300);
+      ctx.player.energy.value = 1;
+      ctx.beam.fire(1);
+      await sleep(2500);
+      refreshCol(w.col, camera.position.clone());
+      const eye = camera.position.clone();
+      const hit = w.col.ray(eye, new THREE.Vector3(0, -1, 0), 2.6);
+      const floor = !!hit && hit.distance < 2.2;
+      const fell = w.feet.y < y0 - 0.5;
+      const good = wantFloor ? floor && !fell : !floor || fell;
+      ok &&= good;
+      res.push(`${(-pitch * 57.3).toFixed(0)}° para baixo: ${floor ? `chão a ${hit.distance.toFixed(2)} m` : 'sem chão'}${fell ? ' · CAIU' : ''}${good ? '' : ' ✗'}`);
+    }
+    controls.pitch = 0;
+    ctx.ui.teleport('deposito', 'deposito');
+    await sleep(2000);
+    ctx.rules.safeguards = sgWas;
+    report({ kind: 'chao', ok, why: res.join(' · ') });
+  }
+
   // ── teto: um chunk com 64 cortes faz o feixe engasgar na entrada dele (puro) ──
   {
     const mk = (n) => ({

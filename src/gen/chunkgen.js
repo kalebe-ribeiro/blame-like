@@ -19,7 +19,7 @@ import { genTransit, stationNear } from './transit.js';
 import { rngAt } from './hash.js';
 import { mergeAll, place, cylinderBetween } from '../world/geometry.js';
 import { catenaryCable, plumbLine } from '../world/cables.js';
-import { cutPiece, segDist, components, keepTris } from './cut.js';
+import { cutPiece, inCut, components, keepTris } from './cut.js';
 
 import { FLUORO, SODIUM, COLD, WARN } from './colors.js';
 import { genNetwork } from './network.js';
@@ -110,12 +110,18 @@ export class ChunkBuilder {
   /** Os cortes (GLOBAIS) que tocam este chunk: as peças passam a ser recortadas por eles. */
   setCuts(list) {
     this.cutsG = list ?? [];
-    this.cutsL = this.cutsG.map((c) => ({ id: c.id, a: [c.a[0] - this.x0, c.a[1] - this.y0, c.a[2] - this.z0], b: [c.b[0] - this.x0, c.b[1] - this.y0, c.b[2] - this.z0], r: c.r }));
+    this.cutsL = this.cutsG.map((c) => ({
+      id: c.id,
+      a: [c.a[0] - this.x0, c.a[1] - this.y0, c.a[2] - this.z0],
+      b: [c.b[0] - this.x0, c.b[1] - this.y0, c.b[2] - this.z0],
+      r: c.r,
+      keep: c.keep ? [c.keep[0] - this.x0, c.keep[1] - this.y0, c.keep[2] - this.z0, c.keep[3], c.keep[4] - this.y0] : undefined,
+    }));
   }
 
   /** O ponto GLOBAL está num corte? (o que nasceria ali — uma luminária, uma gota — não nasce) */
   cutAt(x, y, z, margin = 0.3) {
-    for (const c of this.cutsG) if (segDist(x, y, z, c) < c.r + margin) return true;
+    for (const c of this.cutsG) if (inCut(x, y, z, c, margin)) return true;
     return false;
   }
 

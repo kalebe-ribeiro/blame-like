@@ -33,6 +33,9 @@ export const CHARGE = { min: 0.25, full: 2.5 };
 export const COOLDOWN = 0.8;
 /** O teto de cortes num chunk (§4.3 — inatingível jogando; atingido, o emissor engasga ali). */
 export const MAX_CUTS_PER_CHUNK = 64;
+/** A coluna protegida debaixo de quem atira: raio e profundidade (m); `aim` — o eixo do tiro
+ *  passando a menos disto dos pés, abaixo deles, é "atirar no chão debaixo de si". */
+export const KEEP = { r: 0.9, depth: 6, aim: 0.6 };
 
 /**
  * Até onde o feixe vai antes de um chunk que já tem o teto de cortes (a — GLOBAL, dir, t):
@@ -198,6 +201,23 @@ export function createBeam(ctx) {
     held = 0;
   }
 
+  /**
+   * O chão debaixo de quem atira não se destrói (o corpo cairia): uma coluna protegida em volta
+   * dos pés — [x, y0, z, raio, y1], GLOBAL (gen/cut.js inKeep). A exceção: o tiro que mira o chão
+   * logo abaixo (o eixo entra na coluna abaixo dos pés). Só a pé.
+   */
+  function keepUnder(a, dir, t) {
+    if (controls.mode !== 'walk' || !controls.walker) return null;
+    const feet = controls.walker.feet.clone().add(world.origin);
+    for (let s = 0; s <= Math.min(t, 25); s += 0.2) {
+      const px = a.x + dir.x * s;
+      const py = a.y + dir.y * s;
+      const pz = a.z + dir.z * s;
+      if (py < feet.y - 0.2 && Math.hypot(px - feet.x, pz - feet.z) < KEEP.aim) return null; // (atirando no chão debaixo de si)
+    }
+    return [feet.x, feet.y - KEEP.depth, feet.z, KEEP.r, feet.y + 0.3];
+  }
+
   /** O tiro de carga kk (0..1). */
   function fire(kk) {
     const S = shotOf(kk);
@@ -218,7 +238,12 @@ export function createBeam(ctx) {
     }
     const end = _a.clone().addScaledVector(_d, t);
     const a = _a.clone();
-    if (t > 0.5) world.addCut({ a: a.toArray(), b: end.toArray(), r: S.r }, a);
+    if (t > 0.5) {
+      const cut = { a: a.toArray(), b: end.toArray(), r: S.r };
+      const keep = keepUnder(a, _d, t);
+      if (keep) cut.keep = keep;
+      world.addCut(cut, a);
+    }
     // o que estava no caminho morre
     const ab = end.clone().sub(a);
     let kills = 0;

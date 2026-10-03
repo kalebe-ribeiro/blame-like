@@ -166,7 +166,7 @@ export class Field {
    *        caixas onde nada é gerado (keepWalkways: passarelas continuam passando)
    */
   constructor(seed, reserved = []) {
-    /** @type {{ a: number[], b: number[], r: number, id?: string }[]} os cortes do emissor (setCuts) */
+    /** @type {{ a: number[], b: number[], r: number, id?: string, keep?: number[] }[]} os cortes do emissor (setCuts) */
     this.cuts = [];
     this.cutVer = 0;
     /** @type {Map<string, any>|undefined} lugares de pistas já ancorados (memorizado — anchoredSites) */
@@ -493,8 +493,16 @@ export class Field {
       const dy = c.b[1] - c.a[1];
       const dz = c.b[2] - c.a[2];
       const L2 = dx * dx + dy * dy + dz * dz || 1;
-      const t = Math.max(0, Math.min(1, ((x - c.a[0]) * dx + (y - c.a[1]) * dy + (z - c.a[2]) * dz) / L2));
-      if (Math.hypot(c.a[0] + dx * t - x, c.a[1] + dy * t - y, c.a[2] + dz * t - z) < c.r + margin) return c;
+      // (pontas retas, como o pincel do CSG — gen/cut.js cutDist; a margem vale nas pontas também)
+      const L = Math.sqrt(L2);
+      const t = ((x - c.a[0]) * dx + (y - c.a[1]) * dy + (z - c.a[2]) * dz) / L2;
+      if (t < -margin / L || t > 1 + margin / L) continue;
+      const tc = Math.max(0, Math.min(1, t));
+      if (Math.hypot(c.a[0] + dx * tc - x, c.a[1] + dy * tc - y, c.a[2] + dz * tc - z) >= c.r + margin) continue;
+      // a coluna protegida (o chão debaixo de quem atirou)
+      const k = c.keep;
+      if (k && y > k[1] && y < k[4] && Math.hypot(x - k[0], z - k[2]) < k[3]) continue;
+      return c;
     }
     return null;
   }

@@ -41,9 +41,39 @@ export function segDist(x, y, z, c) {
   return Math.sqrt(qx * qx + qy * qy + qz * qz);
 }
 
+/**
+ * A distância do ponto ao EIXO do corte, só dentro do trecho do cilindro (pontas retas, como o
+ * pincel do CSG); fora das pontas, Infinity. (Uma cápsula — pontas redondas — tirava o chão
+ * em volta de quem atira: a ponta perto da arma tem o raio inteiro.)
+ */
+export function cutDist(x, y, z, c) {
+  const [ax, ay, az] = c.a;
+  const dx = c.b[0] - ax;
+  const dy = c.b[1] - ay;
+  const dz = c.b[2] - az;
+  const L2 = dx * dx + dy * dy + dz * dz || 1;
+  const t = ((x - ax) * dx + (y - ay) * dy + (z - az) * dz) / L2;
+  if (t < 0 || t > 1) return Infinity;
+  return Math.hypot(ax + dx * t - x, ay + dy * t - y, az + dz * t - z);
+}
+
+/**
+ * Dentro da coluna protegida do corte? (`keep`: [x, y0, z, raio, y1] — o chão debaixo de quem
+ * atirou: nenhum tiro o destrói, a não ser o que mira nele — app/beam.js keepUnder)
+ */
+export function inKeep(x, y, z, c) {
+  const k = c.keep;
+  return !!k && y > k[1] && y < k[4] && Math.hypot(x - k[0], z - k[2]) < k[3];
+}
+
+/** O ponto está dentro do corte c (mais `margin`)? — o cilindro de pontas retas, fora a coluna protegida. */
+export function inCut(x, y, z, c, margin = 0) {
+  return cutDist(x, y, z, c) < c.r + margin && !inKeep(x, y, z, c);
+}
+
 /** O ponto está dentro de algum corte? */
 export function insideCuts(x, y, z, cuts) {
-  for (const c of cuts) if (segDist(x, y, z, c) < c.r) return true;
+  for (const c of cuts) if (inCut(x, y, z, c)) return true;
   return false;
 }
 
@@ -192,6 +222,23 @@ function cylinderGeom(c, sphere) {
   // o eixo do cilindro (y) alinhado ao corte
   g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir));
   g.translate((p0.x + p1.x) / 2, (p0.y + p1.y) / 2, (p0.z + p1.z) / 2);
+  // a coluna protegida (o chão debaixo de quem atirou): sai do pincel, se a peça chega perto dela
+  const k = c.keep;
+  if (k && Math.hypot(sphere.center.x - k[0], sphere.center.z - k[2]) < k[3] + sphere.radius && sphere.center.y - sphere.radius < k[4] && sphere.center.y + sphere.radius > k[1]) {
+    const col = new THREE.CylinderGeometry(k[3], k[3], k[4] - k[1], SEGMENTS, 1, false);
+    col.deleteAttribute('uv');
+    col.translate(k[0], (k[1] + k[4]) / 2, k[2]);
+    const ev = new CSG.Evaluator();
+    ev.attributes = ['position', 'normal'];
+    ev.useGroups = false;
+    const A = new CSG.Brush(g.toNonIndexed());
+    A.updateMatrixWorld();
+    const B = new CSG.Brush(col.toNonIndexed());
+    B.updateMatrixWorld();
+    const out = ev.evaluate(A, B, CSG.SUBTRACTION).geometry;
+    out.clearGroups();
+    return out;
+  }
   return g;
 }
 
