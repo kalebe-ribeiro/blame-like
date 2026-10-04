@@ -380,7 +380,8 @@ export async function runDamage(ctx, report) {
     const car = [...E.cars.values()].find((c) => c.def.kind !== 'grand') ?? [...E.cars.values()][0];
     if (car) {
       const id = `lift:${car.def.id}`;
-      cutAt(car.group, { x: 0, y: 1, z: 0 }, { x: 1, y: 0, z: 0 }, 1.2, 6);
+      // um furo fino no meio do piso (longe dos cantos dos cabos)
+      cutAt(car.group, { x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 }, 0.5, 3);
       await sleep(300);
       const i1 = dyn.info(id);
       const alive = i1 && !i1.dead && i1.hp < 1 && !car.dead;
@@ -432,27 +433,29 @@ export async function runDamage(ctx, report) {
     if (ctx.ui.teleport('colosso', 'colosso')) {
       await sleep(8000);
       await waitFor(() => C.machines.size > 0, 10);
-      const m = [...C.machines.values()].sort((a, b) => a.pos.distanceTo(world.toGlobal(camera.position.clone())) - b.pos.distanceTo(world.toGlobal(camera.position.clone())))[0];
-      if (m) {
-        const id = `col:${m.lane.id}:${m.k}`;
-        // a plataforma de baixo, longe do núcleo (não essencial)
-        cutAt(m.group, { x: 40, y: 4, z: 95 }, { x: 0, y: 1, z: 0 }, 2.8, 12);
+      await sleep(2000);
+      const first = [...C.machines.entries()].sort((a, b) => a[1].pos.distanceTo(world.toGlobal(camera.position.clone())) - b[1].pos.distanceTo(world.toGlobal(camera.position.clone())))[0];
+      // (pela identidade a cada passo: o sistema pode refazer o objeto da máquina ao varrer as trincheiras)
+      const key = first?.[0];
+      const M = () => C.machines.get(key);
+      if (M()) {
+        const id = `col:${key}`;
+        cutAt(M().group, { x: 40, y: 4, z: 95 }, { x: 0, y: 1, z: 0 }, 2.8, 12);
         await sleep(400);
         const i1 = dyn.info(id);
         const alive = i1 && !i1.dead && i1.hp < 1;
-        const p0 = m.pos.clone();
+        const p0 = M().pos.clone();
         await sleep(1500);
-        const moving = m.pos.distanceTo(p0) > 1;
-        // o núcleo: o módulo central (world/colossi.js — o essencial)
+        const moving = M().pos.distanceTo(p0) > 1;
         const H = COLOSSUS.depth - 18 + 14;
-        cutAt(m.group, { x: 0, y: H / 2 + 2, z: -18 }, { x: 1, y: 0, z: 0 }, 2.8, 60);
+        cutAt(M().group, { x: 0, y: H / 2 + 2, z: -18 }, { x: 1, y: 0, z: 0 }, 2.8, 60);
         await sleep(400);
-        const dead = m.dead && dyn.info(id)?.dead === 'essential';
-        const p1 = m.pos.clone();
+        const dead = !!M()?.dead && dyn.info(id)?.dead === 'essential';
+        const p1 = M().pos.clone();
         await sleep(1500);
-        const stopped = m.pos.distanceTo(p1) < 0.01;
+        const stopped = M().pos.distanceTo(p1) < 0.01;
         ok = !!alive && moving && dead && stopped;
-        why = `cortado na longarina: segue ${!!alive && moving} (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) · o núcleo: ${dead ? 'parou' : 'NÃO parou'} · a trincheira parada ${stopped}`;
+        why = `cortado na plataforma: segue ${!!alive && moving} (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) · o núcleo: ${dead ? 'parou' : 'NÃO parou'} · a trincheira parada ${stopped}`;
       }
     }
     report({ kind: 'colosso', ok, why });

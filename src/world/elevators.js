@@ -136,7 +136,7 @@ export class ElevatorSystem {
         this.dyn?.attach(`lift:${id}`, {
           root: group,
           meshes: [...group.children],
-          essential: [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sz]) => ({ x: sx * hw, y: 1.5, z: sz * hd, r: 1.6 })),
+          essential: [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sz]) => ({ x: sx * hw, y: 1.5, z: sz * hd, r: 0.7 })),
           onDead: () => (car.dead = true),
         });
       }
