@@ -1,5 +1,5 @@
 ---
-status: decidida (2026-10-04, revista no mesmo dia) — dano variável por nível de Safeguard; o tiro máximo mata qualquer ser; a dificuldade vem do movimento dos inimigos
+status: decidida e confirmada (2026-10-04) — dano variável por nível (Safeguards e vida de silício); o tiro máximo (o colapso) mata qualquer ser; vilas hostis; a dificuldade vem do movimento dos inimigos
 prioridade: alta — junto da [[Barra-de-vida]] (as duas mexem em dano)
 tags: [futuro, arma, dano, safeguards, npcs, vilas]
 ---
@@ -9,6 +9,8 @@ tags: [futuro, arma, dano, safeguards, npcs, vilas]
 > Usuário (2026-10-04): "inclua variação de dano na arma também, pros inimigos não tomarem hitkill em qualquer tiro. Mas lembre que a arma é pra ser overpowered de fato."
 >
 > **Revisto (2026-10-04, usuário):** "um hit médio-fraco tem que matar um low level; um Safeguard mediano tem que tomar mais tiros médios-fracos; um high level tem que tomar vários tiros; **o tiro nível máximo tem que dar instakill em todos**. O nível de dificuldade vai se dar por conta da movimentação dos NPCs" → [[Movimento-dos-inimigos]]. E: matar um andarilho ou morador só perde a troca com ele; **ferir ou matar um morador numa vila deixa os outros hostis** (§4).
+>
+> **Confirmado (2026-10-04, usuário):** "nível máximo é o que perde o braço, o literal nível máximo" — **o colapso (estágio 7)**; e todos os detalhes do §4 (a vila hostil). **A vida de silício também tem níveis** (§3).
 
 ## Hoje (feito)
 - **Todo tiro mata** o que o feixe atravessa: `app/beam.js` (`fire`, ~l. 340) testa cada ser contra o eixo (`< r + 0,45 m` do centro do corpo, a 1,1 m dos pés) e chama `world.entities.kill(e, 'beam')`.
@@ -47,7 +49,9 @@ O centro do corpo **dentro do raio do furo** (`< r`) → **em cheio** (×1); só
 |---|---|---|---|---|---|---|
 | morador (humano) | 0,3 | morre | morre | morre | morre | morre |
 | andarilho transumano | 0,4 | 2 | morre | morre | morre | morre |
-| vida de silício | 0,8 | 3 | 2 | morre | morre | morre |
+| vida de silício baixa | 0,8 | 3 | 2 | morre | morre | morre |
+| vida de silício média | 2 | 7 | 4 | 2 | morre | morre |
+| vida de silício alta | 5 | 17 | 9–10 | 5 | 2 | **morre** |
 | **Safeguard baixo** (o de hoje) | 0,5 | 2 | **morre** | morre | morre | morre |
 | **Safeguard médio** | 1,5 | 5 | **3** | 2 | morre | morre |
 | **Safeguard alto** | 4 | 14 | **7–8** | 4 | 2 | **morre** |
@@ -55,6 +59,7 @@ O centro do corpo **dentro do raio do furo** (`< r`) → **em cheio** (×1); só
 - **Baixo**: um médio-fraco mata (pedido do usuário).
 - **Médio**: precisa de vários médio-fracos (3) ou de um tiro cheio e meio; a sobrecarga mata.
 - **Alto**: vários tiros — 4 cheios, 2 no limite; os estágios 5–6 matam de um tiro (D 4–5), mas **custam o braço** ([[Recuperar-o-braco]]).
+- **A vida de silício** tem os mesmos três níveis, um pouco mais dura que o Safeguard do mesmo nível (é a ameaça a todos — [[NPCs-e-Safeguards]]); números para ajustar jogando.
 - **O colapso mata qualquer um** — e também custa o braço. A arma continua overpowered: o preço é o braço, o tempo carregando (11 s, andando a 60%) e o risco de ser pego enquanto carrega ([[Movimento-dos-inimigos]]).
 
 ## 4. Ferido, morto — e as vilas (D4)
@@ -71,7 +76,7 @@ O centro do corpo **dentro do raio do furo** (`< r`) → **em cheio** (×1); só
 
 ## Implementação
 1. `app/beam.js` `fire`: no lugar de `kill`, `damage(e, D·onde / resist(e), 'beam')`; `D` em `shotOf(k, o)` (campo novo `dmg`; `Infinity` no estágio 7); `onde` = 1 ou 0,5 pela distância ao eixo.
-2. `resist(e)` pelo tipo e nível (tabela em `world/entities.js`, junto do `hp`); o nível do Safeguard vem de [[Movimento-dos-inimigos]] (`e.level`).
+2. `resist(e)` pelo tipo e nível (tabela em `world/entities.js`, junto do `hp`); o nível (`e.level`: baixo/médio/alto) dos Safeguards e da vida de silício vem de [[Movimento-dos-inimigos]].
 3. Ferido: a pose de recuo e as faíscas no `being:hurt` com `cause: 'beam'`; Safeguard segue na caçada; andarilho/morador foge.
 4. Vilas: `being:hurt`/`being:die` de um morador dentro de uma vila → `slot.villages[id].hostile = true`; os moradores dela passam ao estado hostil (o golpe com arremesso, −25%); a conversa recusa; o despertar pula vilas hostis.
 5. `lastShot.kills` continua; ganha `hurt`.
