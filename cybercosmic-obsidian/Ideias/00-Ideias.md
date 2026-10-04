@@ -62,8 +62,9 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[NPCs-e-Safeguards]] | futuro — arquitetar pensando nisso |
 | [[Quinas-e-maos]] (agarrar quinas, subir; mãos) | feita (2026-09-30) |
 | [[Arma-do-Killy]] (feixe que fura o terreno) | feita (F1–F4, 2026-10-03; sobrecarga com estágios) |
-| [[Barra-de-vida]] (o custo da sobrecarga, quedas, Safeguards) | proposta — decisões V1–V7 com o usuário |
+| [[Barra-de-vida]] (vida; golpe com arremesso dos hostis; quedas com dano; o custo da sobrecarga) | decidida (2026-10-03) — a implementar, a próxima |
 | [[Recuperar-o-braco]] (o braço perdido além do limite do emissor) | futuro — em aberto |
+| [[Rework-grafico]] (texturas variadas, modelos de NPCs detalhados e variados, animações variadas) | futuro — **depois de toda a gameplay** |
 
 ## Técnico
 

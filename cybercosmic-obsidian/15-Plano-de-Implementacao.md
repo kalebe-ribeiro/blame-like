@@ -199,6 +199,11 @@
 
 ---
 
+## Depois da arma de Killy (2026-10-03)
+1. **A barra de vida** — decidida: [[Barra-de-vida]] (§10, a ordem: a vida → quedas com dano → o emissor → o golpe com arremesso → `check:health`).
+2. **O resto da gameplay** — o que o usuário pedir (pendências e ideias em [[00-Ideias]]; o braço: [[Recuperar-o-braco]], em aberto).
+3. **Por último, o grande rework gráfico** — [[Rework-grafico]]: texturas variadas, modelos de NPCs detalhados e variados, animações variadas (as do golpe por ângulo e por tipo de NPC). **Só depois de toda a gameplay.**
+
 ## Contínuo (entra onde couber)
 
 - **Desempenho**: [[Ideias/Tecnico/Resolucao-dinamica]] (cedo, provavelmente junto da fase 1); cuidado com o custo das entidades nas fases 5–7.

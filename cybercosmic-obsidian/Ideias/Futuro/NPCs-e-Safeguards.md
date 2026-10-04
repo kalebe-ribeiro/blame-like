@@ -35,3 +35,5 @@ tags: [futuro, npcs, inimigos]
 - Raros. A Cidade continua sendo, na maior parte, vazia e indiferente.
 - Nada de diálogo longo; fala pouca, como em *Blame!*.
 - Nada de criaturas fora do repertório da obra ([[02-Direcao-de-Arte]]).
+
+> **O golpe com arremesso** (decidido 2026-10-03): o toque do Safeguard deixa de ser captura imediata — vira um golpe de curta distância que arremessa o jogador e tira metade da vida; a captura só quando a vida zera. Ver [[Barra-de-vida]] §3.
