@@ -14,7 +14,8 @@ const T = 3; // espessura das paredes do galpão (a mesma de buildUnique)
 
 /** A vila tem gente? (metade delas — fase 7) */
 export function villageInhabited(F, u) {
-  return u.kind === 'village' && hash4(F.seed, Math.round(u.x), u.n, Math.round(u.z), 1701) < 0.5;
+  // (a vila do portador do gene é sempre habitada — Field.geneSites)
+  return u.kind === 'village' && (!!u.inhabited || hash4(F.seed, Math.round(u.x), u.n, Math.round(u.z), 1701) < 0.5);
 }
 
 /** O quadro da única: P(a, c) → [x, z] GLOBAL, e as meias medidas. */

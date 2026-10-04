@@ -28,7 +28,7 @@ import { villageLayout, villageFrame, villageInhabited } from '../gen/villages.j
 import { territoryAt, patrolCircuit, circuitAt, circuitNearest, PATROL, WANDER, wandererOf } from '../gen/patrols.js';
 import { levelAt, MOVE, accelerate } from './levels.js';
 import { STRIKE } from './safeguards.js';
-import { villageCarrier, wandererCarrier } from '../gen/gene.js';
+import { villageCarrier } from '../gen/gene.js';
 
 const KEEP = 600; // m: vilas mantidas em volta do jogador
 const DROP = 800;
@@ -157,8 +157,8 @@ export class NpcSystem {
     const e = this.ents.spawn({ id: `wd:${t.id}`, kind: 'transhuman', feet: new THREE.Vector3(p.x, p.y, p.z), yaw: p.yaw, persist: false, brain: this });
     e.walker.speedScale = WANDER_SPEED / WALK;
     e.npc = { role: 'wanderer', silicon, thief, revealed: false, c, s: s0, state: 'walk', t: 0 };
-    // o gene de terminal (gen/gene.js): portador (no corpo) ou levando o de um depósito esquecido (um objeto)
-    e.npc.carrier = !silicon && wandererCarrier(F, t, p.x, p.z);
+    // o gene de terminal (gen/gene.js): levando o do depósito esquecido (um objeto); o portador é um morador
+    e.npc.carrier = false;
     e.npc.geneItem = silicon ? null : this.geneItemFor(t.id);
     if (silicon) e.level = levelAt(F, c.pts[0].x, c.pts[0].y, c.pts[0].z, 2);
     this.wanderers.set(t.id, e);

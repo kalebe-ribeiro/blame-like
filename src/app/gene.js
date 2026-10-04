@@ -21,7 +21,7 @@ import { t } from '../i18n/index.js';
 import { hash4 } from '../gen/hash.js';
 import { uniqueTerminal } from '../gen/sites.js';
 import { bindings } from '../controls/bindings.js';
-import { GENE, chainOf, linksOf, vaultsNear, vaultTakenBy } from '../gen/gene.js';
+import { GENE, chainOf, linksOf, vaultsNear, vaultTakenBy, geneTargets } from '../gen/gene.js';
 
 export const IMPLANT_TIME = 40; // s no berço
 export const ANALYZE_COST = 0.03;
@@ -69,7 +69,7 @@ export function createGene(ctx) {
       told = true;
     }
     if (u.kind === 'archive') {
-      for (const v of vaultsNear(f, u.x, u.y, u.z, GENE.archiveReach)) {
+      for (const v of geneTargets(f).filter((x) => Math.hypot(x.x - u.x, x.z - u.z) < GENE.archiveReach)) {
         const ch = chainOf(f, v);
         if (!ch.length || ch[0].id === u.id) continue;
         reveal(ch[0], u);

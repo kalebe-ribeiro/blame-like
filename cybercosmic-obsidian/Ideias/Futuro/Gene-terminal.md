@@ -86,3 +86,12 @@ Fiel ao mangá — **nada de mecânica artificial para punir**; o que pesa é a 
 - **Não feito**: o "outro caminho" de 2.3 (uma estrutura que sintetiza o gene a partir de amostras) — estava como "pode entrar depois".
 - **Testes**: `npm run check:gene` (novo) 9/9 — depósitos (todos a mais de 40 km, cadeias boas 48/48), levado, cadeia (o arquivo revela o começo; o elo revela o seguinte), pegar (no pedestal), guardas (3, todos altos — e pegaram o jogador), perder (de volta ao pedestal), amostra (traço 91%), implante (40 s; a escolha; os Safeguards não percebem; +210 pistas), finais (destruir e a vila, com a tela do fim).
 - **Imagens conferidas**: o pedestal com a cápsula no fundo do depósito, as colunas em volta (`--vaultcam=N --capture`); a tela do fim da vila (`--endingshow=village`).
+
+### Revisto (2026-10-04, usuário): UMA instância de cada caminho no mundo inteiro
+> "Já que tem três maneiras de encontrar o gene, só podem haver 1 instância de cada no mundo todo. Ou seja: numa seed, só pode ter um gene esquecido, só pode ter um habitante/vila portadores do gene, só pode ter uma estrutura que guarda o gene."
+
+- `Field.geneSites()` escolhe pela seed, **uma vez para o mundo inteiro**: **o depósito guardado** (150–300 km da origem), **o depósito esquecido** (100–250 km) e **a vila do único portador** (80–200 km) — cada um numa direção, numa camada perto da origem (a célula mais perto do alvo onde a estrutura cabe). Não há mais depósitos sorteados nem andarilhos portadores; o portador é **um morador só**, naquela vila (sempre habitada).
+- O gene esquecido continua podendo ter sido **levado por um andarilho** que passa perto (40%) — é o mesmo, único gene, andando com ele.
+- **As três têm cadeia de pistas** (5 elos, ~12 km): a da vila do portador também — sem ela, achar um morador entre milhares a 80–200 km seria impossível de fato (escolha de implementação).
+- `check:gene` 9/9 com a regra nova: `um-de-cada` (os três existem, nas faixas de distância, nenhum outro igual a 120 km de cada, cada um com a cadeia); medido numa seed: guardado a 260 km, esquecido a 217 km, a vila a 184 km.
+

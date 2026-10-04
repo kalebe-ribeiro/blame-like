@@ -1,9 +1,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  Teste do gene de terminal (`npm run check:gene`, na Peregrinação — o cofre, Gene-terminal):
 //
-//    depositos  há depósitos, todos a mais de 40 km da origem; guardados e esquecidos; cada um
-//               com a cadeia de 5 estruturas, chegando mais perto dele a cada elo
-//    levado     um depósito esquecido cujo gene um andarilho levou: o território dele tem andarilho
+//    um-de-cada UM depósito guardado, UM esquecido e UMA vila do portador no mundo inteiro, longe
+//               (guardado 150–300 km, esquecido 100–250, a vila 80–200); nenhum outro depósito em volta
+//               deles; cada um com a cadeia de 5 estruturas, chegando mais perto a cada elo
+//    levado     o esquecido: se um andarilho levou o gene, o território dele tem andarilho
 //    cadeia     ler um arquivo perto de uma cadeia revela o começo dela; ler um elo revela o seguinte
 //    pegar      num depósito, o gene na cápsula do pedestal: E pega (um objeto no inventário)
 //    guardas    perto de um depósito guardado, a Cidade manda Safeguards altos
@@ -14,7 +15,8 @@
 //    finais     destruir (o tremor, o escuro, a tela do fim) e entregar a uma vila (a tela do fim)
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { GENE, chainOf, vaultsNear, vaultTakenBy, villageCarrier } from '../gen/gene.js';
+import { GENE, chainOf, vaultTakenBy, villageCarrier } from '../gen/gene.js';
+import { GENE_SITES } from '../gen/field.js';
 import { villageFrame, villageLayout } from '../gen/villages.js';
 import { IMPLANT_TIME } from '../app/gene.js';
 
@@ -55,27 +57,43 @@ async function run(ctx) {
   ctx.rules = { ...ctx.rules, health: false };
   await sleep(SETTLE);
 
-  // ── depositos (puro) ──
-  const vaults = vaultsNear(F, 0, 0, 0, 160000);
-  const nearO = vaults.filter((v) => Math.hypot(v.x, v.z) < 40000).length;
-  const guarded = vaults.filter((v) => F.vaultGuarded(v)).length;
-  let chainsOk = 0;
-  for (const v of vaults) {
-    const ch = chainOf(F, v);
-    const d = ch.map((u) => Math.hypot(u.x - v.x, u.z - v.z));
-    if (ch.length >= 4 && d.every((x, i) => i === 0 || x < d[i - 1] + 3000)) chainsOk++;
+  // ── um de cada (puro) ──
+  const GS = F.geneSites();
+  const rows = [];
+  let okOne = true;
+  for (const role of ['guarded', 'forgotten', 'carrier']) {
+    const g = GS[role];
+    if (!g) {
+      okOne = false;
+      rows.push(`${role}: NENHUM`);
+      continue;
+    }
+    const u = g.site;
+    const d = Math.hypot(u.x, u.z);
+    const [d0, d1] = GENE_SITES[role];
+    const kindOk = role === 'carrier' ? u.kind === 'village' && u.carrier && villageCarrier(F, u) >= 0 : u.kind === 'vault' && F.vaultGuarded(u) === (role === 'guarded');
+    // nenhum outro do mesmo papel em volta (na camada dele, 120 km)
+    const others = F.uniquesNear(u.x, u.y, u.z, 120000).filter((x) => x.id !== u.id && (role === 'carrier' ? x.carrier : x.kind === 'vault' && F.vaultGuarded(x) === (role === 'guarded'))).length;
+    const ch = chainOf(F, u);
+    const dd = ch.map((x) => Math.hypot(x.x - u.x, x.z - u.z));
+    const chainOk = ch.length >= 4 && dd.every((x, i) => i === 0 || x < dd[i - 1] + 3000);
+    // (a margem: a célula pode ser vizinha da do alvo — até 3 células de 16 km)
+    const ok = kindOk && others === 0 && chainOk && d > d0 - 50000 && d < d1 + 50000;
+    if (!ok) okOne = false;
+    rows.push(`${role}: ${u.kind} a ${(d / 1000).toFixed(0)} km (camada ${u.n}) · outros ${others} · cadeia ${ch.length}`);
   }
-  report({ kind: 'depositos', ok: vaults.length > 0 && nearO === 0 && chainsOk === vaults.length, why: `${vaults.length} depósitos em 160 km (${guarded} guardados) · a menos de 40 km da origem: ${nearO} · cadeias boas ${chainsOk}/${vaults.length}` });
+  report({ kind: 'um-de-cada', ok: okOne, why: rows.join(' · ') });
 
   // ── levado (puro) ──
   {
-    const taken = vaults.map((v) => ({ v, t: vaultTakenBy(F, v) })).filter((x) => x.t);
-    report({ kind: 'levado', ok: taken.length > 0, why: `${taken.length} depósitos esquecidos com o gene levado por um andarilho (o território ${taken[0]?.t ?? '—'})` });
+    const fv = GS.forgotten?.site;
+    const t = fv ? vaultTakenBy(F, fv) : null;
+    const ok = !!fv;
+    report({ kind: 'levado', ok, why: fv ? (t ? `levado por um andarilho (território ${t})` : 'o gene está no pedestal (ninguém levou)') : 'sem depósito esquecido' });
   }
 
-  // o depósito do teste: o mais perto da origem com o gene no pedestal (de preferência guardado)
-  const sorted = vaults.filter((v) => !vaultTakenBy(F, v)).sort((a, b) => Math.hypot(a.x, a.z) - Math.hypot(b.x, b.z));
-  const V = sorted.find((v) => F.vaultGuarded(v)) ?? sorted[0];
+  // o depósito do teste: o guardado
+  const V = GS.guarded?.site ?? GS.forgotten?.site ?? null;
 
   // ── cadeia ──
   {
@@ -85,7 +103,7 @@ async function run(ctx) {
       const ch = chainOf(F, V);
       const leads0 = ctx.leads.list().length;
       // um arquivo perto: o começo; o primeiro elo: o seguinte
-      const arch = F.uniquesNear(V.x, V.y, V.z, GENE.archiveReach).find((u) => u.kind === 'archive' && u.id !== ch[0]?.id);
+      const arch = F.uniquesNear(V.x, V.y, V.z, GENE.archiveReach).find((u) => u.kind === 'archive' && u.id !== ch[0]?.id && Math.hypot(u.x - V.x, u.z - V.z) < GENE.archiveReach);
       if (arch) world.bus.emit('player:read', { id: `t:${arch.id}`, site: { kind: 'unique', unique: arch, id: `t:${arch.id}` } });
       const started = !!ev['gene:chainStart'];
       world.bus.emit('player:read', { id: `t:${ch[0].id}`, site: { kind: 'unique', unique: ch[0], id: `t:${ch[0].id}` } });
@@ -136,10 +154,10 @@ async function run(ctx) {
   let sampled = false;
   {
     let ok = false;
-    let why = 'nenhuma vila com portador em 160 km';
+    let why = 'sem a vila do portador';
     const g0 = here();
-    const vs = world.npcs.inhabitedNear(g0.x, g0.y, g0.z, 160000).filter((o) => villageCarrier(F, o.u) >= 0);
-    const vil = vs[0];
+    const cu = GS.carrier?.site;
+    const vil = cu ? { u: cu, d: Math.hypot(cu.x - g0.x, cu.y - g0.y, cu.z - g0.z) } : null;
     if (vil) {
       ctx.gene.giveAnalyzer('test');
       const { P: VP } = villageFrame(vil.u);

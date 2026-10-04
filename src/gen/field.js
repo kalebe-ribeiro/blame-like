@@ -116,7 +116,9 @@ export const SECTOR = { cell: 900, dark: 0.3, unstable: 0.15, salt: 910 };
 export const RESTORE_SPEED = 40;
 /** O berço da câmara de reconstrução: meias medidas (ao longo da porta, de lado) e a altura do tampo. */
 export const CHAMBER_BED = { da: 1.25, dc: 0.6, h: 0.8 };
-export const UNIQUE = { cell: 16000, prob: 0.75, kinds: ['console', 'archive', 'plant'], plantHall: 0.45, chamber: 0.3, vault: 0.12, vaultFrom: 40000 };
+/** Onde ficam os três lugares do gene (m da origem, mínimo e máximo): longe — quase impossível. */
+export const GENE_SITES = { guarded: [150000, 300000], forgotten: [100000, 250000], carrier: [80000, 200000] };
+export const UNIQUE = { cell: 16000, prob: 0.75, kinds: ['console', 'archive', 'plant'], plantHall: 0.45, chamber: 0.3 };
 export const HIVE = 48; // célula da colmeia (uma sala)
 
 export const MEGA = {
@@ -640,43 +642,115 @@ export class Field {
    * { id, kind, n, x, y (topo da camada), z, hx, hz (meias larguras), h, door (0 +x · 1 −x · 2 +z · 3 −z) }
    */
   uniqueSite(n, ui, uk) {
+    // (procurando os lugares do gene, as consultas em volta não ficam memorizadas sem eles)
+    if (this._geneBusy) return this._uniqueNormal(n, ui, uk);
     return this._memo(`U${n},${ui},${uk}`, () => {
+      // os três lugares do gene de terminal (o cofre, Gene-terminal): UM de cada no mundo inteiro
+      for (const g of Object.values(this.geneSites())) if (g && g.n === n && g.ui === ui && g.uk === uk) return g.site;
+      return this._uniqueNormal(n, ui, uk);
+    });
+  }
+
+  /** A única de uma célula, fora os lugares do gene. */
+  _uniqueNormal(n, ui, uk) {
+    {
       const b = this.barrier(n);
+      if (!b) return null;
       // a câmara de reconstrução (o cofre, Recuperar-o-braco): só nas células que ficavam VAZIAS —
       // um sorteio à parte, e as únicas dos mundos antigos continuam onde estavam
       const has = hash4(this.seed, ui, n, uk, 980) <= UNIQUE.prob;
-      // o depósito do gene de terminal (o cofre, Gene-terminal): raro, e só longe do começo — o tamanho
-      // da Cidade é a dificuldade. Também numa célula vazia, antes da câmara
-      const far = Math.hypot((ui + 0.5) * UNIQUE.cell, (uk + 0.5) * UNIQUE.cell) > UNIQUE.vaultFrom;
-      const vault = !has && far && hash4(this.seed, ui, n, uk, 986) < UNIQUE.vault;
-      const chamber = !has && !vault && hash4(this.seed, ui, n, uk, 985) < UNIQUE.chamber;
-      if (!b || (!has && !chamber && !vault)) return null;
+      const chamber = !has && hash4(this.seed, ui, n, uk, 985) < UNIQUE.chamber;
+      if (!has && !chamber) return null;
       const r = rngAt(this.seed, ui, n, uk, 981);
-      const C = UNIQUE.cell;
       let kind = UNIQUE.kinds[r.int(0, UNIQUE.kinds.length - 1)];
       // os tipos da fase 4.5 vêm de um sorteio à parte (os mundos antigos mantêm os seus)
       const alt = hash4(this.seed, ui, n, uk, 983);
-      if (vault) kind = 'vault';
-      else if (chamber) kind = 'chamber';
+      if (chamber) kind = 'chamber';
       else if (alt < 0.3) kind = alt < 0.15 ? 'builders' : 'antenna';
       else {
         // os lugares reservados para os seres (fase 5): outro sorteio à parte
         const alt2 = hash4(this.seed, ui, n, uk, 984);
         if (alt2 < 0.25) kind = alt2 < 0.1 ? 'village' : alt2 < 0.18 ? 'graveyard' : 'cradle';
       }
-      const DIMS = {
-        console: [30, 30, 22], archive: [66, 26, 26], plant: [42, 42, 34], builders: [34, 34, 18], antenna: [14, 14, 8],
-        village: [40, 40, 14], graveyard: [44, 44, 6], cradle: [26, 26, 40], chamber: [20, 16, 15], vault: [30, 30, 26],
-      };
-      const [hx, hz, h] = DIMS[kind];
-      // tenta alguns pontos da célula até achar um lugar limpo
-      for (let tries = 0; tries < 6; tries++) {
-        const x = (ui + r.float(0.25, 0.75)) * C;
-        const z = (uk + r.float(0.25, 0.75)) * C;
-        if (!this._uniqueClear(b, x, z, Math.max(hx, hz))) continue;
-        return { id: `U${n},${ui},${uk}`, kind, n, x, y: b.top, z, hx, hz, h, door: r.int(0, 3), doorOff: r.float(-0.25, 0.25) };
+      return this._placeUnique(b, n, ui, uk, kind, r);
+    }
+  }
+
+  /** A estrutura única de um tipo na célula: tenta alguns pontos até achar um lugar limpo (ou null). */
+  _placeUnique(b, n, ui, uk, kind, r) {
+    const DIMS = {
+      console: [30, 30, 22], archive: [66, 26, 26], plant: [42, 42, 34], builders: [34, 34, 18], antenna: [14, 14, 8],
+      village: [40, 40, 14], graveyard: [44, 44, 6], cradle: [26, 26, 40], chamber: [20, 16, 15], vault: [30, 30, 26],
+    };
+    const C = UNIQUE.cell;
+    const [hx, hz, h] = DIMS[kind];
+    for (let tries = 0; tries < 6; tries++) {
+      const x = (ui + r.float(0.25, 0.75)) * C;
+      const z = (uk + r.float(0.25, 0.75)) * C;
+      if (!this._uniqueClear(b, x, z, Math.max(hx, hz))) continue;
+      return { id: `U${n},${ui},${uk}`, kind, n, x, y: b.top, z, hx, hz, h, door: r.int(0, 3), doorOff: r.float(-0.25, 0.25) };
+    }
+    return null;
+  }
+
+  /**
+   * Os três lugares do gene de terminal (o cofre, Gene-terminal — decidido pelo usuário: UMA instância
+   * de cada caminho no mundo inteiro), longe do começo, cada um numa direção, pela seed:
+   *   guarded    o depósito guardado (Safeguards altos)
+   *   forgotten  o depósito esquecido (um andarilho pode ter levado o gene — gen/gene.js)
+   *   carrier    a vila habitada onde mora o único portador
+   * → { guarded, forgotten, carrier }: { n, ui, uk, site } (site: a única, com .role)
+   */
+  geneSites() {
+    return this._memo('GENE', () => {
+      this._geneBusy = true;
+      const out = {};
+      const used = new Set();
+      try {
+        /** @type {[string, string, number][]} */
+        const roles = [['guarded', 'vault', 1], ['forgotten', 'vault', 2], ['carrier', 'village', 3]];
+        for (const [role, kind, salt] of roles) {
+          const [d0, d1] = GENE_SITES[role];
+          const ang = hash4(this.seed, salt, 7, 11, 2300) * Math.PI * 2;
+          const dist = d0 + hash4(this.seed, salt, 13, 17, 2301) * (d1 - d0);
+          const tx = Math.cos(ang) * dist;
+          const tz = Math.sin(ang) * dist;
+          // a camada: uma perto da origem, pela seed (as forçadas 0 e −1 sempre existem)
+          const nn = [Math.floor(hash4(this.seed, salt, 19, 23, 2302) * 4) - 2, 0, -1].filter((n) => this.barrier(n));
+          const C = UNIQUE.cell;
+          const ci = Math.floor(tx / C);
+          const ck = Math.floor(tz / C);
+          let found = null;
+          for (const n of nn) {
+            for (let ring = 0; ring <= 3 && !found; ring++) {
+              for (let di = -ring; di <= ring && !found; di++) {
+                for (let dk = -ring; dk <= ring && !found; dk++) {
+                  if (Math.max(Math.abs(di), Math.abs(dk)) !== ring) continue;
+                  const ui = ci + di;
+                  const uk = ck + dk;
+                  if (used.has(`${n},${ui},${uk}`)) continue;
+                  const r = rngAt(this.seed, ui, n, uk, 2310 + salt);
+                  const site = this._placeUnique(this.barrier(n), n, ui, uk, kind, r);
+                  if (!site) continue;
+                  site.role = role;
+                  if (role === 'guarded') site.guarded = true;
+                  if (role === 'carrier') {
+                    site.inhabited = true;
+                    site.carrier = true;
+                  }
+                  found = { n, ui, uk, site };
+                  used.add(`${n},${ui},${uk}`);
+                }
+              }
+            }
+            if (found) break;
+          }
+          out[role] = found;
+        }
+      } finally {
+        this._geneBusy = false;
       }
-      return null;
+      return out;
     });
   }
 
@@ -766,7 +840,7 @@ export class Field {
 
   /** O depósito é guardado (Safeguards altos, luz acesa) ou esquecido (escuro, sem guarda)? */
   vaultGuarded(u) {
-    return hash4(this.seed, Math.round(u.x), u.n, Math.round(u.z), 987) < 0.6;
+    return !!u.guarded;
   }
 
   /** O pedestal do gene num depósito: { x, y (o tampo), z } — as medidas de buildUnique (macrogen.js). */
