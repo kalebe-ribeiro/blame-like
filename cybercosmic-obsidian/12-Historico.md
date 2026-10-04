@@ -363,3 +363,12 @@ Por que as coisas estão como estão, em ordem.
 - **Feito** ([[Gene-terminal]] — Andamento): os depósitos da Netsfera (raros, longe; guardados ou esquecidos), as cadeias de pistas, o analisador de genes, os portadores e a amostra, o implante na câmara, o controle da Cidade e os três finais. `check:gene` novo, 9/9. Com isso, **toda a fila de gameplay decidida está feita**; o próximo é o rework gráfico (depois de jogar e ajustar os números).
 - Regressões depois do gene: `check:gene` 9/9, `check:beam` 30/30, `check:npcs` 12/12, `check:arms` 7/7, `check:pad` 31 + 30, `check` 31/31 (120 fps), `check:pilgrimage` 31/31 (116 fps). **Instáveis, dependem do lugar sorteado** (passaram em rodadas anteriores; o mecanismo está testado): `check:safeguards` `curva` (às vezes o Safeguard contorna a mudança de alvo devagar — curva suave não conta — ou nem vira; o teste agora confere a regra pelo ângulo de fato virado), `check:health` `choque` (o coice real precisa de uma parede a 0,8–2,6 m) e `golpe:borda` (uma borda com o chão de baixo carregado). Ver [[Pendencias]] (em observação).
 - **Revisto pelo usuário**: um de cada caminho do gene no mundo inteiro — `Field.geneSites()` (o depósito guardado, o esquecido, a vila do único portador, longe); `check:gene` 9/9.
+
+## 2026-10-04 — as pendências antes do playtest
+
+- **Os testes que dependiam do lugar sorteado**: a vida numa arena preparada (`dev/arena.js`); o arranque e a curva dos Safeguards numa simulação determinística; o "parede" dos Safeguards com o jogador a pé antes. `check:health` 12/12, `check:safeguards` 11/11.
+- **A prótese nos depósitos do maciço** (rara, 15%): `check:arms` 8/8.
+- **As faíscas de um ser ferido conferidas em imagem** (`--sparkshot=N`): um leque de pontos quentes saindo do impacto. (A captura antes saía cedo demais.)
+- Um detalhe para o playtest: o arremesso vai de 12 a 16 m/s e o choque conta de 12 m/s — os arremessos mais fracos perdem força no voo e nunca chegam a bater forte numa parede.
+- Fora: a distinção visual dos níveis dos inimigos (é do [[Rework-grafico]]).
+

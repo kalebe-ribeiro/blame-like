@@ -15,7 +15,7 @@ Reorganizada em 2026-10-03. Três listas: **a implementar** (decidido, na ordem)
 | 1 | **Barra de vida** — a vida, quedas com dano **pela altura** (a partir de 10 m; zera em 38 m/s ≈ 48 m), o golpe com arremesso dos hostis, o dano da sobrecarga, `check:health` | [[Barra-de-vida]] §10 | **feita** (2026-10-04): `check:health` 12/12, `check:safeguards` 9/9 — ver o Andamento da nota |
 | 2 | **Dano variável do emissor + níveis (Safeguards e vida de silício)** — médio-fraco mata o baixo, o médio pede vários, o alto muitos; o colapso (o nível máximo, que custa o braço) mata qualquer um; ferir/matar um morador numa vila deixa a vila hostil | [[Dano-do-emissor]] | **feita** (2026-10-04) — ver o Andamento da nota |
 | 2b | **Movimento dos inimigos** — arranque com aceleração até uma velocidade terminal (o médio e o alto mais rápidos que a sua corrida); curvas custam velocidade | [[Movimento-dos-inimigos]] | **feita** (2026-10-04) |
-| 3 | **Recuperar o braço** — câmara de reconstrução (única nova), prótese (loot), moradores das vilas (troca), a saída garantida sem braços e o aviso de um braço só | [[Recuperar-o-braco]] | **feita** (2026-10-04) — falta só a prótese nos depósitos |
+| 3 | **Recuperar o braço** — câmara de reconstrução (única nova), prótese (loot), moradores das vilas (troca), a saída garantida sem braços e o aviso de um braço só | [[Recuperar-o-braco]] | **feita** (2026-10-04) — inclusive a prótese nos depósitos |
 | 4 | **Gene de terminal** — o objetivo final: pistas longas até onde está guardado (protegido ou esquecido; NPCs podem pegá-lo), um humano com o gene (amostra com ele vivo) e o analisador de genes; implantar na câmara de reconstrução; o controle da Cidade; três finais | [[Gene-terminal]] | **feito** (2026-10-04) — `check:gene` 9/9 |
 | 5 | **Rework gráfico** — texturas, modelos de NPCs, animações variadas (as do golpe por ângulo e tipo de NPC; design e animação de cada hostil pelo nível, com variações no mesmo nível) | [[Rework-grafico]] | só **depois de toda a gameplay** |
 
@@ -31,7 +31,7 @@ Reorganizada em 2026-10-03. Três listas: **a implementar** (decidido, na ordem)
 (nada — tudo decidido em 2026-10-03; as credenciais de acesso foram descartadas)
 
 ## 3. Em observação
-- **Casos de teste que dependem do lugar sorteado** (2026-10-04): `check:safeguards` `curva`, `check:health` `choque` e `golpe:borda` — às vezes reprovam por não achar a geometria certa (ou o Safeguard contornar devagar); rodar de novo a parte (`--sgpart=arranque`, `--healthpart=choque,borda`). Melhorar: lugares preparados em vez de procurados.
+- ✔ **Casos de teste que dependiam do lugar sorteado** — resolvidos (2026-10-04): a vida usa uma **arena preparada** (`dev/arena.js`: plataforma, parede, borda, piso 70 m abaixo, no vão de um poço); o arranque e a curva dos Safeguards conferem a regra numa **simulação determinística** do mesmo `accelerate()` (no mundo, só que o corpo chega à terminal).
 - **Travadas de ~1,9 s** numa rodada do `profile --profshot` (a primeira na RTX, depois da troca de GPU), ~2 s depois do tiro; não se repetiram em duas rodadas. Hipótese: o cache de shaders do Chromium montado para a Intel. Se voltar, o `profile` lista os programas de shader novos de cada tiro.
 - **O código de mundo não leva os cortes do emissor** — aceito e avisado ao copiar ([[Seeds-compartilhaveis]]); só muda se o usuário quiser.
 

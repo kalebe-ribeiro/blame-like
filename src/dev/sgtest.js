@@ -169,10 +169,19 @@ export async function runSafeguardTest(ctx) {
         const at = r.samples.find((s) => s.v >= r.M.vt - 0.05);
         const exp = (r.M.vt - r.M.v0) / r.M.a;
         const top = Math.max(...r.samples.map((s) => s.sp));
-        // (um desvio no caminho conta como curva e custa velocidade: até 0,8 s de folga)
-        const ok = !!first && first.v < r.M.v0 + 0.5 && !!at && at.t - first.t > exp - 0.35 && at.t - first.t < exp + (r.turns ? 1.2 : 0.4) && top > 0.85 * r.M.vt;
+        // o perfil exato: a regra simulada em linha reta (determinística — no mundo, perder e reachar o
+        // alvo ou desviar recomeça o arranque); no mundo: o corpo de verdade chega perto da terminal
+        const e = { walker: { vel: { x: 0, z: 0 }, speedScale: 1 }, vert: null, staggerT: 0 };
+        const S = {};
+        let tSim = null;
+        for (let t = 0; t < 4 && tSim === null; t += 1 / 60) {
+          accelerate(e, S, r.M, 1 / 60);
+          e.walker.vel.z = S.huntV;
+          if (S.huntV >= r.M.vt - 0.01) tSim = t;
+        }
+        const ok = tSim !== null && Math.abs(tSim - exp) < 0.05 && !!first && first.v < r.M.v0 + 0.5 && top > 0.85 * r.M.vt;
         if (!ok) okA = false;
-        rows.push(`${level}: ${first ? first.v.toFixed(1) : '?'} → ${r.M.vt} m/s em ${at ? (at.t - first.t).toFixed(2) : '—'} s (esperado ${exp.toFixed(2)}) · o corpo a ${top.toFixed(1)} · ${r.turns} curva(s)`);
+        rows.push(`${level}: a regra ${r.M.v0} → ${r.M.vt} m/s em ${tSim?.toFixed(2)} s (esperado ${exp.toFixed(2)}) · no mundo ${first ? first.v.toFixed(1) : '?'} → ${top.toFixed(1)} m/s${at ? ` em ${(at.t - first.t).toFixed(2)} s` : ''}`);
       }
       report({ kind: 'arranque', ok: okA, why: `${rows.join(' · ')} (${spot.place})` });
       // a curva (M2): a regra simulada no mesmo accelerate() dos corpos — determinística (no mundo, o
@@ -304,6 +313,8 @@ export async function runSafeguardTest(ctx) {
   // ── parede ──
   ctx.ui.teleport('colmeia', 'colmeia');
   await sleep(SETTLE);
+  controls.setMode('walk'); // (a pé: voando ninguém percebe — os caçadores voltariam)
+  await waitFor(() => controls.walker.grounded && !ctx.wake.active, 20);
   lantern(true);
   const made = sg.emerge(here(), world.origin, 2);
   const hunters = [...sg.hunters];

@@ -1,5 +1,5 @@
 ---
-status: feita (2026-10-04) — os três caminhos e R1–R7; falta só a prótese nos depósitos (R3, raro)
+status: feita (2026-10-04) — os três caminhos e R1–R7, inclusive a prótese nos depósitos
 prioridade: alta — depois da [[Barra-de-vida]] (hoje a Peregrinação pode ficar presa sem os dois braços)
 tags: [futuro, gameplay, corpo, arma, estruturas-unicas, loot, npcs]
 ---
@@ -89,6 +89,6 @@ Para o jogador ficar precavido antes de perder a mobilidade:
   - **Os moradores** (R5): na conversa, "refazer um braço" — entregar a carga que se leva, ou 30% da célula → um braço de carne. A vila hostil não refaz nada.
   - **R6b**: sem os dois braços, o mapa ganha como pista a câmara ou a vila habitada (não hostil) mais perto, e o aparelho avisa.
   - **R7**: perdido o primeiro, "UM BRAÇO SÓ · SEM ELE, NADA DE QUINAS NEM ESCADAS"; com um braço só, o estágio 5 pisca "ÚLTIMO BRAÇO" com um tom grave e quadrado, duas vezes (`audio.beamStage(n, last)`); no inventário, "(braço perdido — o outro é o último)". Só na Peregrinação.
-- **Falta**: a prótese nos **depósitos** (os ocos do maciço — R3 "raro"): não feita; os cemitérios e os andarilhos já cobrem o caminho.
+- **A prótese nos depósitos** (R3 "raro", 2026-10-04): 15% dos depósitos do maciço (os ocos `deposito`) têm uma, no mezanino do 1º nível junto da porta oeste. `check:arms` caso `deposito` (8/8).
 - **Testes**: `npm run check:arms` (novo) 7/7 — um-braço, último, sem-braços (a pista), vila (30%, de carne), andarilho (40%, instalada em 5 s, de metal), cemitério (a prótese no chão, pega), câmara (o tampo do berço exato na colisão; os dois braços em 20,3 s; −50%).
 - **Imagem conferida**: a câmara por dentro (`--gounique=chamber --chambercam=N --capture`): o berço com a cabeceira, os braços mecânicos chegando à altura dele, os cabos, o tanque, o painel.

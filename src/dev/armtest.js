@@ -226,12 +226,19 @@ async function run(ctx) {
         stand(p.x + 1, p.y, p.z, Math.atan2(1, 0));
         await sleep(SETTLE + 2000);
         const shown = await waitFor(() => ctx.arms.items.has(p.id), 5);
-        const floor = (await waitFor(() => controls.walker.grounded, 4)) && Math.abs(controls.walker.feet.y + world.origin.y - p.y) < 0.6;
+        // o piso do mezanino na colisão, logo abaixo da prótese
+        const wc = controls.walker.col;
+        wc._t = -1e9;
+        wc.buildsPerFrame = 600;
+        wc.refresh(new THREE.Vector3(p.x, p.y, p.z).sub(world.origin), 20);
+        wc.buildsPerFrame = 2;
+        const fh = wc.ray(new THREE.Vector3(p.x, p.y + 1, p.z).sub(world.origin), new THREE.Vector3(0, -1, 0), 3);
+        const floor = !!fh && Math.abs(fh.point.y + world.origin.y - p.y) < 0.3;
         const n0 = P.carried.filter((c) => c.kind === 'prosthesis').length;
         const used = ctx.arms.tryUse();
         const n1 = P.carried.filter((c) => c.kind === 'prosthesis').length;
         ok = shown && floor && used && n1 === n0 + 1;
-        why = `${list.length} em 3 km · no mezanino ${floor} (pés a ${(controls.walker.feet.y + world.origin.y - p.y).toFixed(2)} m) · em cena ${shown} · pegou ${n1 > n0}`;
+        why = `${list.length} em 3 km · o piso do mezanino ${floor ? `a ${(fh.point.y + world.origin.y - p.y).toFixed(2)} m` : 'NÃO achado'} · em cena ${shown} · pegou ${n1 > n0}`;
       }
     }
     report({ kind: 'deposito', ok, why });
