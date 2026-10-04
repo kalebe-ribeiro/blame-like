@@ -29,7 +29,7 @@ Reorganizada em 2026-10-04. Três listas: **a implementar** (decidido, na ordem)
 
 | o quê | o que falta | nota |
 |---|---|---|
-| **Gene de terminal** — o objetivo final (mecânica decidida em 2026-10-04: pistas longas até onde está guardado, um humano com o gene + analisador de genes, a dificuldade pelo tamanho da Cidade, o controle da Cidade e três finais) | os detalhes G1–G5 | [[Gene-terminal]] |
+| **Gene de terminal** — o objetivo final (mecânica decidida em 2026-10-04: pistas longas até onde está guardado, um humano com o gene + analisador de genes, a dificuldade pelo tamanho da Cidade, o controle da Cidade e três finais) | G6: o lugar do implante (proposta: a câmara de reconstrução ou uma única própria) | [[Gene-terminal]] |
 | **Credenciais de acesso** | se existem acessos intermediários antes do gene | [[Credenciais-de-acesso]] |
 
 ## 3. Em observação

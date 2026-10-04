@@ -1,5 +1,5 @@
 ---
-status: decidida (2026-10-04) — o objetivo final; vários caminhos até ele; a dificuldade é o tamanho da Cidade; ao obter, o controle da Cidade e a escolha do final. Detalhes G1–G5 em aberto
+status: decidida (2026-10-04) — o objetivo final; vários caminhos até ele; implantar num lugar próprio; a dificuldade é o tamanho da Cidade; o controle da Cidade e a escolha do final. G1–G5 respondidas; G6 (o lugar do implante) proposta
 prioridade: o objetivo de longo prazo — depois da barra de vida, do dano, do movimento e do braço
 tags: [futuro, gameplay, objetivo, progressao, netsfera, safeguards, vilas, ferramentas, final]
 ---
@@ -12,7 +12,7 @@ tags: [futuro, gameplay, objetivo, progressao, netsfera, safeguards, vilas, ferr
 
 ## 1. O que é
 - **O gene de terminal da rede** (*net terminal gene* — [[14-Universo-Blame]]): o que Killy procura por toda a obra, e o que a humanidade perdeu. **O objetivo final e máximo**: a maior parte das travessias nunca chega lá.
-- **No jogo, um item**: o "gene" existe como objeto no mundo (pode estar no chão, guardado, ou num humano), e é carregado por você até ser usado.
+- **No jogo, um item até ser implantado** (G1): o gene (ou a amostra tirada de um humano — G2) é **um objeto normal**, carregado no inventário, que **pode ser perdido como qualquer outro** — no desmaio (os custos de sempre: Safeguards e NPCs ficam com o que você carregava), largado, pego por um NPC. **Para valer, tem de ser implantado em você, num lugar próprio** (§5) — achar esse lugar é a última travessia.
 
 ## 2. Os caminhos até ele (vários)
 
@@ -26,7 +26,7 @@ tags: [futuro, gameplay, objetivo, progressao, netsfera, safeguards, vilas, ferr
 ### 2.2 Um humano com o gene
 - **Um humano raro carrega o gene**: um **morador de uma vila** ou um **andarilho** (em *Blame!*, os humanos que ainda têm traços do gene).
 - **Uma ferramenta nova — o analisador de genes** (ver §3) — é como você sabe quem tem. Sem ela, ninguém parece diferente.
-- Como se obtém dele: em aberto (G2).
+- **Como se obtém dele** (G2): **uma amostra, com ele vivo** — o analisador colhe (perto, alguns segundos, com ele parado: numa conversa, ou dormindo/distraído). A amostra é o item (§1). Ele continua vivo e com o gene; morto, o corpo não serve (o gene se degrada) — matar o portador perde esse caminho.
 
 ### 2.3 Outros caminhos
 "Várias formas": estas duas são as decididas; outras podem entrar depois (ex.: uma estrutura única que sintetiza o gene a partir de amostras).
@@ -34,7 +34,7 @@ tags: [futuro, gameplay, objetivo, progressao, netsfera, safeguards, vilas, ferr
 ## 3. A ferramenta nova — o analisador de genes
 - **Exceção consciente** à regra das ferramentas ("só o sensor e o leitor" — [[Ferramentas]]), pedida pelo usuário (2026-10-04).
 - **O que faz**: analisa o material genético de um ser perto (um humano, uma amostra, um corpo) e diz se há traço do gene — e quanto. Diegético, no aparelho, como o sensor; gasta a célula.
-- **Onde se acha**: a decidir (G3) — como o sensor, num lugar no meio do caminho (fim de uma pista, uma única).
+- **Onde se acha** (G3): **em estruturas** (únicas — junto do console, como o sensor) **ou em trocas** (moradores e andarilhos que trocam).
 
 ## 4. A dificuldade: o tamanho da Cidade
 Fiel ao mangá — **nada de mecânica artificial para punir**; o que pesa é a escala.
@@ -43,27 +43,30 @@ Fiel ao mangá — **nada de mecânica artificial para punir**; o que pesa é a 
 - **O gene no chão pode ir embora** (2.1) — a Cidade não espera você.
 - A célula, a vida, o braço, os Safeguards: tudo o que já existe pesa mais quando a viagem é enorme.
 
-## 5. Ao obter: o controle da Cidade
-Usar o gene (G4: onde e como) dá **o controle da Cidade**:
-- **A Netsfera**: os terminais respondem — tudo legível, sem tradução parcial.
-- **O mapa**: a Cidade inteira aparece (o que a Netsfera sabe).
-- **Os Safeguards**: deixam de caçar você — e passam a obedecer (G5: até onde vai o comando).
+## 5. O implante e o controle da Cidade
+- **Implantar** (G1/G4): com o gene (ou a amostra) no inventário, achar **um lugar de implante** e ficar nele — o gene passa a ser seu e **não se perde mais** (nem no desmaio).
+- **O lugar** (G6, proposta): a **câmara de reconstrução** ([[Recuperar-o-braco]] — a máquina que refaz corpos já é o lugar onde a Cidade mexe no seu corpo) **ou** um tipo próprio, mais raro; achado por pistas como o resto.
+- **Implantado, o controle da Cidade**:
+  - **A Netsfera**: os terminais respondem — tudo legível, sem tradução parcial.
+  - **O mapa**: a Cidade inteira aparece (o que a Netsfera sabe).
+  - **Os Safeguards: só param de caçar você** (G5) — não obedecem nem lutam do seu lado.
 
 ## 6. O final — uma escolha
 | escolha | o que acontece |
 |---|---|
-| **manter a Cidade como está** | o mundo segue; você continua nele com o controle (Safeguards do seu lado, a Netsfera aberta) — o jogo vira exploração livre |
+| **manter a Cidade como está** | o mundo segue; você continua nele com o controle (Safeguards sem caçar você, a Netsfera aberta) — o jogo vira exploração livre |
 | **destruí-la** | uma **cutscene**: a Cidade desaba/se desfaz (o colapso em escala de mundo); fim |
 | **entregar a uma vila** | o gene vai para os humanos de uma vila, para tentar **reconstruir a humanidade**; uma cena de fim na vila |
 
-## 7. Em aberto (G1–G5)
-| # | pergunta |
-|---|---|
-| G1 | o gene carregado: o que acontece se você desmaiar com ele? (Safeguards e NPCs "ficam com o que você carregava" — perde-se o gene? fica no chão, no lugar do desmaio?) |
-| G2 | o humano com o gene: como se obtém dele — troca, missão, uma amostra (ele vive), ou só morto? E se ele morrer longe de você? |
-| G3 | onde se acha o analisador de genes |
-| G4 | onde e como se usa o gene para tomar o controle (qualquer terminal ativo? uma estrutura única própria?) |
-| G5 | o controle dos Safeguards: só param de caçar, ou dá para comandá-los? |
+## 7. Decisões (2026-10-04)
+| # | pergunta | decidido |
+|---|---|---|
+| G1 | desmaiar com o gene | até ser **implantado num lugar próprio**, o gene é um objeto normal — **perde-se como qualquer outro** |
+| G2 | o humano com o gene | **uma amostra, com ele vivo** |
+| G3 | o analisador de genes | **em estruturas ou em trocas** |
+| G4 | onde se usa | o **lugar de implante** (G1) |
+| G5 | os Safeguards depois | **só param de caçar** |
+| G6 | qual é o lugar de implante | **proposta**: a câmara de reconstrução, ou um tipo de única próprio, mais raro — a confirmar |
 
 ## O que já existe e se liga a isto
 - [[Terminais-com-conteudo]], [[Traducao-como-progresso]], [[Pistas]], [[Diario-como-arquivo]] — a cadeia longa.

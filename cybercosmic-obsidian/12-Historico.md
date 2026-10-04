@@ -335,3 +335,4 @@ Por que as coisas estão como estão, em ordem.
 - Depois: o [[Dano-do-emissor]] revisto (três níveis de Safeguard; o colapso mata qualquer um; vila hostil ao ferir um morador) e o [[Movimento-dos-inimigos]] planejado (aceleração e velocidade terminal — a dificuldade).
 - Depois: confirmados o colapso como o tiro que mata qualquer ser, a queda pelo próprio empurrão, a vila hostil e M1–M4; a vida de silício em três níveis; o design e a animação de cada hostil pelo nível no [[Rework-grafico]].
 - Depois: a mecânica do [[Gene-terminal]] decidida (vários caminhos, o analisador de genes, a dificuldade pelo tamanho da Cidade, o controle da Cidade, três finais); G1–G5 em aberto.
+- Depois: [[Gene-terminal]] G1–G5 respondidas (o implante num lugar próprio, a amostra com o portador vivo, o analisador em estruturas ou trocas, os Safeguards só param de caçar).
