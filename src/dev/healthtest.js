@@ -123,6 +123,8 @@ async function run(ctx) {
         if (dist < d0 || dist > d1) continue;
         const nrm = w.col.ray(c.clone().setY(y + 1.3), d, d1 + 0.5);
         if (!nrm?.face || Math.abs(nrm.face.normal.y) > 0.3) continue;
+        // alta: o arremesso joga para cima (4–6 m/s) — um obstáculo baixo o corpo passa por cima
+        if (![2.2, 3.0].every((hh) => w.col.ray(c.clone().setY(y + hh), d, d1 + 0.6))) continue;
         if (floorBelow(c.x - d.x * 1.2, y + 1, c.z - d.z * 1.2, 2) === null) continue;
         return { c, d, dist };
       }
@@ -386,10 +388,20 @@ async function run(ctx) {
             break;
           }
           if (edge === null || edge < 1.5) continue;
+          // o vazio por 4 m além da borda, e lá embaixo (53–120 m) um chão JÁ CARREGADO — numa área
+          // ainda sem chunks o corpo fica pairando e desce sem impacto (controls/walker.js)
           let open = true;
-          for (let r = edge; r <= edge + 10 && open; r += 1) {
-            const h = w.col.ray(new THREE.Vector3(c.x + d.x * r, y + 1, c.z + d.z * r), DOWN, 70);
+          for (let r = edge; r <= edge + 4 && open; r += 1) {
+            const h = w.col.ray(new THREE.Vector3(c.x + d.x * r, y + 1, c.z + d.z * r), DOWN, 50);
             if (h) open = false;
+          }
+          if (open) {
+            const px = c.x + d.x * (edge + 4);
+            const pz = c.z + d.z * (edge + 4);
+            refreshCol(new THREE.Vector3(px, y - 75, pz), 46);
+            const h = w.col.ray(new THREE.Vector3(px, y + 1, pz), DOWN, 120);
+            if (!h || h.distance < 53 || !w.col.ready) open = false;
+            refreshCol(camera.position.clone(), 60);
           }
           if (!open || clearH(c, d, edge + 10) !== Infinity) continue;
           // e chão atrás (onde ele fica)
@@ -444,7 +456,7 @@ async function run(ctx) {
     for (const place of ['colmeia', 'macico', 'deposito', 'maquinas', 'galeria']) {
       const feet = await go(place);
       if (!feet || !sg.byTerritory.size) continue;
-      const wl = wallNear(feet, 1.5, 3.5);
+      const wl = wallNear(feet, 1.2, 2.2); // (perto: o arremesso mais fraco, 12 m/s, ainda bate acima de 12)
       if (wl) spot = { place, ...wl };
       if (spot) break;
     }

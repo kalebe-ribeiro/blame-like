@@ -1,5 +1,5 @@
 ---
-status: decidida (2026-10-03) — aceleração e velocidade terminal, mais rápidos que hoje; M1–M4 e a distribuição dos níveis aprovados (números para ajustar jogando)
+status: feita (2026-10-04) — decidida em 2026-10-03 — aceleração e velocidade terminal, mais rápidos que hoje; M1–M4 e a distribuição dos níveis aprovados (números para ajustar jogando)
 prioridade: alta — junto do [[Dano-do-emissor]] (é o que equilibra a arma)
 tags: [futuro, safeguards, npcs, movimento, dificuldade]
 ---
@@ -57,3 +57,11 @@ A arma é overpowered de propósito ([[Dano-do-emissor]]): de perto, quase tudo 
 
 ## Desempenho
 A caçada roda só nos perto (`tier 'near'`); os de longe continuam abstratos. A aceleração é uma conta a mais por ser por quadro — desprezível.
+
+## Andamento
+
+- **Feito (2026-10-04)** — `world/levels.js` `accelerate` (os Safeguards caçando, a vida de silício revelada caçando, os moradores de uma vila hostil):
+  - **M1** pela velocidade de comando (o `speedScale` do Walker sobe com a aceleração do nível até a terminal) — **escolha de implementação**: em vez de um `maxAccel` no `Walker`, o arranque é do cérebro de quem persegue (o Walker continua o mesmo do jogador).
+  - **M2**: a curva é medida inteira — o rumo amostrado a cada 0,1 s; quando volta a ficar reto, o ângulo total virado; acima de 30° `v ← v·(0,5 + 0,5·cos θ)`. Curvas suaves (abaixo de ~57°/s) não contam. Escada, elevador, ferido, depois de um golpe e ao perder de vista: recomeça de v0.
+  - **M4**: moradores 2,3 → 7 m/s (2 m/s²); a vida de silício pelo nível dela (os números do Safeguard do mesmo nível).
+- **Medido** (`check:safeguards` `arranque`/`curva`, `--sgpart=arranque`): baixo 3 → 8 m/s em 2,15 s · médio 3 → 11 em 2,2 s · alto 4 → 14 em 1,41 s (esperados 2 / 2 / 1,43); o alto a 14 m/s, o alvo 90° de lado → 8,9 m/s.

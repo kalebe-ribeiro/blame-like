@@ -1,5 +1,5 @@
 ---
-status: decidida e confirmada (2026-10-03) — dano variável por nível (Safeguards e vida de silício); o tiro máximo (o colapso) mata qualquer ser; vilas hostis; a dificuldade vem do movimento dos inimigos
+status: feita (2026-10-04) — decidida e confirmada em 2026-10-03 — dano variável por nível (Safeguards e vida de silício); o tiro máximo (o colapso) mata qualquer ser; vilas hostis; a dificuldade vem do movimento dos inimigos
 prioridade: alta — junto da [[Barra-de-vida]] (as duas mexem em dano)
 tags: [futuro, arma, dano, safeguards, npcs, vilas]
 ---
@@ -81,3 +81,14 @@ O centro do corpo **dentro do raio do furo** (`< r`) → **em cheio** (×1); só
 4. Vilas: `being:hurt`/`being:die` de um morador dentro de uma vila → `slot.villages[id].hostile = true`; os moradores dela passam ao estado hostil (o golpe com arremesso, −25%); a conversa recusa; o despertar pula vilas hostis.
 5. `lastShot.kills` continua; ganha `hurt`.
 6. **Testes** — `check:beam` caso `dano`: Safeguard baixo morre com médio-fraco (0,7 s); médio sobrevive a 2 médio-fracos e morre no 3º; alto sobrevive ao cheio (sobra 75%); colapso de raspão mata o alto; raspão ×0,5. `check:npcs`: ferir um morador numa vila → a vila hostil, a conversa recusa, o despertar não vai para ela; matar um andarilho → nada além.
+
+## Andamento
+
+- **Feito (2026-10-04)**:
+  - `app/beam.js` `shotOf().dmg` (D1) — o colapso é `Infinity`; em cheio ×1, de raspão ×0,5 (D2); `entities.damage(e, D·onde / resistOf(e))`.
+  - `world/levels.js`: a resistência (D3) e o nível de cada um (`e.level`). **Escolha de implementação**: o Safeguard baixo com resistência **0,48** (não 0,5) — o médio-fraco mais curto (0,6 s) dá D 0,501, no fio; assim o "médio-fraco mata o baixo" não depende de arredondamento.
+  - **A distribuição** (aprovada: só baixos perto do começo; médios e altos longe, fundo, perto das únicas): `levelAt` — uma nota `s = distância do começo da travessia / 4 km + 0,9 × camadas abaixo + 0,8 se a < 600 m de uma única`; abaixo de 0,5 só baixos; depois, P(alto) = (s − 1)·0,2 até 35%, P(médio) = (s − 0,5)·0,4 até 55%. Pelo hash do lugar: o mesmo lugar, o mesmo nível. Números para ajustar jogando.
+  - Ferido (D4): cambaleia 0,6 s (`world/bodies.js` `stagger`); faíscas nos Safeguards e na vida de silício, um baque nos humanos; o andarilho foge; a vida de silício disfarçada se mostra; Safeguard ferido segue caçando (e o arranque recomeça de baixo).
+  - **Vila hostil** (§4): `slot.villages[id].hostile` ao ferir ou matar um morador com o emissor; "A VILA VIU" no aparelho; os moradores vêm e golpeiam (−25%, o arremesso — `app/health.js` `struck`, o mesmo golpe dos Safeguards); sem conversa, fora das vilas habitadas (sem carga para ela, sem despertar nela). Zerou por eles: o desmaio com taker `npc` — acorda noutra vila. No Livre sem a vida, o golpe deles só arremessa.
+  - **Ainda não**: o jogador não distingue os níveis de longe — o corpo é o mesmo; o design por nível é do [[Rework-grafico]] (decidido). Se pesar jogando, dá para adiantar uma diferença simples (tamanho, uma luz).
+- **Testes**: `check:beam` parte `dano` (`--beampart=dano`): baixo morre com médio-fraco · médio 63% → 26% → morre · alto sobra 75% no cheio · colapso de raspão mata o alto · raspão ×0,5 · silício baixo morre no 2º médio-fraco · **fuga**: o baixo a 13 m, andando para trás, dá um cheio e morre; o médio chega em ~1,9 s (antes do cheio). `check:npcs`: `hostil` (salvo, fora das vilas, sem conversa, golpe de humano −25%) e `andarilho` (ferido foge; morto, nada além).
