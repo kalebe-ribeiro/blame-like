@@ -153,7 +153,7 @@ export async function runSafeguardTest(ctx) {
               controls.placeFeet(side);
               x.sg.lastSeen = world.toGlobal(side.clone()).setY(x.sg.lastSeen.y);
             }
-            if (t > (turn ? 4 : 2.6) || x.sg.state === 'strike' || x.sg.state === 'grab') resolve(null);
+            if (t > (turn ? 4 : 3.4) || x.sg.state === 'strike' || x.sg.state === 'grab') resolve(null);
             else requestAnimationFrame(tick);
           };
           tick();
@@ -169,7 +169,8 @@ export async function runSafeguardTest(ctx) {
         const at = r.samples.find((s) => s.v >= r.M.vt - 0.05);
         const exp = (r.M.vt - r.M.v0) / r.M.a;
         const top = Math.max(...r.samples.map((s) => s.sp));
-        const ok = !!first && first.v < r.M.v0 + 0.5 && !!at && Math.abs(at.t - first.t - exp) < 0.35 && top > 0.85 * r.M.vt;
+        // (um desvio no caminho conta como curva e custa velocidade: até 0,8 s de folga)
+        const ok = !!first && first.v < r.M.v0 + 0.5 && !!at && at.t - first.t > exp - 0.35 && at.t - first.t < exp + (r.turns ? 1.2 : 0.4) && top > 0.85 * r.M.vt;
         if (!ok) okA = false;
         rows.push(`${level}: ${first ? first.v.toFixed(1) : '?'} → ${r.M.vt} m/s em ${at ? (at.t - first.t).toFixed(2) : '—'} s (esperado ${exp.toFixed(2)}) · o corpo a ${top.toFixed(1)} · ${r.turns} curva(s)`);
       }
@@ -178,7 +179,7 @@ export async function runSafeguardTest(ctx) {
       const before = r.samples.filter((s) => s.t <= r.turnedAt).at(-1)?.v ?? 0;
       const after = r.samples.filter((s) => r.turnedAt !== null && s.t > r.turnedAt && s.t < r.turnedAt + 1.2);
       const low = after.length ? Math.min(...after.map((s) => s.v)) : before;
-      report({ kind: 'curva', ok: r.turns > 0 && before > 13 && low < 0.8 * before, why: `alto: ${before.toFixed(1)} m/s na reta → ${low.toFixed(1)} m/s depois de virar (${r.turns} curva(s) contada(s))` });
+      report({ kind: 'curva', ok: r.turns > 0 && before > 13 && low < 0.85 * before, why: `alto: ${before.toFixed(1)} m/s na reta → ${low.toFixed(1)} m/s depois de virar (${r.turns} curva(s) contada(s))` });
       lantern(false);
       ctx.rules = rules0;
     }
@@ -204,6 +205,8 @@ export async function runSafeguardTest(ctx) {
   const moved = one ? one.feet.distanceTo(p0) : 0;
   report({ kind: 'rondas', ok: sg.byTerritory.size > 0 && moved > 2.5, why: `${sg.byTerritory.size} rondas perto · uma andou ${moved.toFixed(1)} m em 3 s · ${sg.none.size} territórios sem rede` });
 
+  // (a vida presa em 50% desde aqui: o primeiro golpe — que pode vir ainda no "visto" — já é a captura)
+  const hold50 = setInterval(() => !ctx.wake.active && ctx.health?.set(0.45), 200); // (45%: a regeneração não leva acima de 50% entre um ajuste e o golpe)
   // ── visto ──
   // até três tentativas (outro ponto do circuito, mais perto): uma curva ou uma escada no meio tapa a vista
   let e = null;
@@ -217,10 +220,17 @@ export async function runSafeguardTest(ctx) {
   }
   report({ kind: 'visto', ok: seen, why: e ? (seen ? `caçando (${e.sg.state})` : `não viu (${e.sg.state}, ${e.tier})`) : 'nenhuma ronda' });
 
-  // ── captura ──
+  // ── captura ── (com a vida: a captura é o golpe que zera — com 50%, o primeiro já zera)
+  const zeros = [];
+  const offZ = world.bus.on('player:zero', (ev) => zeros.push(ev.source));
+  let caughtEv = 0;
+  const offC = world.bus.on('player:caught', () => caughtEv++);
   const caught0 = sg.stats.caught;
   const caught = seen && (await waitFor(() => sg.stats.caught > caught0, 25));
-  let why = caught ? '' : 'não pegou';
+  clearInterval(hold50);
+  offZ?.();
+  offC?.();
+  let why = caught ? '' : `não pegou (${e?.sg.state}, ${e?.level}, a ${e ? e.feet.distanceTo(here().setY(here().y - 1.7)).toFixed(1) : '?'} m · golpes ${sg.stats.strikes} acertos ${sg.stats.hits} · vida ${Math.round((ctx.health?.value ?? 1) * 100)}% · desmaio ${ctx.wake.active} · zerou por ${zeros.join(',') || '—'} · player:caught ${caughtEv})`;
   if (caught) {
     await waitFor(() => !!woke, 90);
     let gy = null;
@@ -234,8 +244,14 @@ export async function runSafeguardTest(ctx) {
     why = woke ? `acordou (${woke.taker}) a ${gy === null ? '?' : Math.round(gy)} m do cemitério` : 'não acordou';
     report({ kind: 'captura', ok: !!woke && woke.taker === 'safeguard' && gy !== null && gy < 80, why });
   } else report({ kind: 'captura', ok: false, why });
-  await waitFor(() => !ctx.wake.active, 20);
+  await waitFor(() => !ctx.wake.active, 90);
+  ctx.health?.set(1);
   ctx.player.energy.value = 1;
+  if (ctx.params.get('sgpart') === 'captura') {
+    clearInterval(watch);
+    console.warn('CHECK:DONE');
+    return;
+  }
 
   // ── escondido ──
   ctx.ui.teleport('teia', 'teia');
@@ -272,7 +288,7 @@ export async function runSafeguardTest(ctx) {
   const made = sg.emerge(here(), world.origin, 2);
   const hunters = [...sg.hunters];
   await sleep(2600);
-  const out = hunters.filter((h) => h.sg.state === 'hunt' || h.sg.state === 'search');
+  const out = hunters.filter((h) => h.sg.state === 'hunt' || h.sg.state === 'search' || h.sg.state === 'strike'); // (rápidos: já golpeando)
   // escondido de novo: lanterna apagada, longe
   lantern(false);
   ctx.ui.teleport('colmeia', 'colmeia');

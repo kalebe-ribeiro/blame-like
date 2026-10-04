@@ -27,6 +27,10 @@ export async function runDamage(ctx, report) {
     while (!cond() && performance.now() - t0 < s * 1000) await sleep(50);
     return cond();
   };
+  // ninguém percebe o jogador enquanto o teste prepara (uma captura no meio estragaria tudo)
+  const senses0 = sg.senses;
+  sg.senses = () => null;
+  await waitFor(() => !ctx.wake.active, 90);
   const dirOf = (a) => new THREE.Vector3(Math.sin(a), 0, Math.cos(a));
   const floorBelow = (x, y, z, far = 3) => {
     const h = w.col.ray(new THREE.Vector3(x, y, z), DOWN, far);
@@ -82,6 +86,100 @@ export async function runDamage(ctx, report) {
   const home = () => controls.placeFeet(spot.c);
   home();
   await sleep(800);
+
+  // (a fuga antes dos tiros de dano: as valas deles ficariam no caminho do Safeguard)
+  // ── fuga ──
+  const chase = async (level, back, charge = true) => {
+    // a ronda mais perto, trazida para 13 m à frente, caçando
+    await waitFor(() => !ctx.wake.active, 90);
+    controls.setMode('walk'); // (o caso 'salvar' do check:beam deixa voando — voando não há golpe)
+    home();
+    await sleep(600);
+    await waitFor(() => sg.byTerritory.size > 0, 20); // (as rondas voltam quando os Safeguards religam)
+    const g = world.toGlobal(camera.position.clone());
+    let x = null;
+    for (const e of sg.byTerritory.values()) if (!x || e.feet.distanceTo(g) < x.feet.distanceTo(g)) x = e;
+    if (!x) return null;
+    for (const e of sg.all()) if (e !== x && e.sg.state !== 'patrol') sg._lose(e);
+    const yaw = 0.3;
+    const p = world.toGlobal(spot.c.clone().addScaledVector(dirOf(yaw), 13));
+    x.feet.copy(p);
+    world.entities.toNear(x, world.origin);
+    x.walker.vel.set(0, 0, 0);
+    x.level = level;
+    x.yaw = yaw;
+    controls.yaw = Math.atan2(-(p.x - g.x), -(p.z - g.z));
+    controls.pitch = -0.05;
+    sg.senses = senses0;
+    Object.assign(x.sg, { state: 'hunt', sees: true, unseen: 0, lastSeen: g.clone().setY(g.y - 1.7), prey: null, bestD: Infinity, stuckT: 0, waitT: 0, huntV: undefined });
+    ctx.player.energy.value = 1; // (os tiros de antes gastaram a célula)
+    ctx.health.set(1); // (a vida pode vir baixa dos casos de antes: o golpe zeraria)
+    const zeros = [];
+    const offZ = world.bus.on('player:zero', (ev) => zeros.push(ev.source));
+    const catches = [];
+    const onCatch0 = sg.onCatch;
+    sg.onCatch = (e) => {
+      catches.push(`toque de ${e === x ? 'o do teste' : 'outro'} (${e.level}, ${e.sg.state}) · modo ${controls.mode} · vida ligada ${ctx.health.enabled} · rules ${ctx.rules.health} · strikes() ${sg.strikes?.()}`);
+      return onCatch0?.(e);
+    };
+    const wakes = [];
+    const wakeStart = ctx.wake.start;
+    ctx.wake.start = (cause, taker, opts) => {
+      wakes.push(`${cause}/${taker ?? '-'}`);
+      return wakeStart(cause, taker, opts);
+    };
+    const blocks = [];
+    const offB = world.bus.on('player:beamBlocked', (ev) => blocks.length < 6 && blocks.push(ev.why));
+    const st0 = sg.stats.strikes;
+    const shot0 = ctx.beam.lastShot;
+    const t0 = performance.now();
+    ctx.beam.testHeld = charge;
+    let holding = charge;
+    if (back) controls.forceInput = { f: -1 };
+    let tStrike = null;
+    let tShot = null;
+    await waitFor(() => {
+      // mira nele (o peito)
+      const c = x.feet.clone().sub(world.origin);
+      c.y += 1.1;
+      const d = c.sub(camera.position);
+      controls.yaw = Math.atan2(-d.x, -d.z);
+      controls.pitch = Math.atan2(d.y, Math.hypot(d.x, d.z));
+      if (tStrike === null && sg.stats.strikes > st0) tStrike = (performance.now() - t0) / 1000;
+      if (holding && ctx.beam.held >= 2.55) {
+        holding = false;
+        ctx.beam.testHeld = false; // solta: o tiro cheio
+      }
+      if (tShot === null && ctx.beam.lastShot !== shot0) tShot = (performance.now() - t0) / 1000;
+      return tShot !== null || tStrike !== null;
+    }, 8);
+    ctx.beam.testHeld = null;
+    controls.forceInput = null;
+    const res = { tStrike, tShot, k: ctx.beam.lastShot !== shot0 ? ctx.beam.lastShot.k : null, dead: x.dead, hp: x.hp, diag: `arma ${ctx.beam.state} (bloqueios ${blocks.join(',') || '—'}) · ele ${x.sg.state} ${x.tier} a ${x.feet.distanceTo(world.toGlobal(camera.position.clone()).setY(camera.position.y + world.origin.y - 1.7)).toFixed(1)} m · ${controls.mode} · desmaio ${ctx.wake.active}${zeros.length ? ` (zerou por ${zeros.join(',')})` : ''}${wakes.length ? ` [desmaio: ${wakes.join(',')}]` : ''}${catches.length ? ` {${catches.join(' | ')}}` : ''} · sg ligados ${sg.enabled}` };
+    offB?.();
+    offZ?.();
+    ctx.wake.start = wakeStart;
+    sg.onCatch = onCatch0;
+    sg.senses = () => null;
+    if (!x.dead) sg._lose(x);
+    return res;
+  };
+  // (a fuga é contra o golpe: a vida ligada, só aqui — o resto do check:beam a desliga)
+  const rules0 = ctx.rules;
+  ctx.rules = { ...rules0, health: true, safeguards: true };
+  ctx.beam.restoreArms(); // (o caso 'alem' do check:beam leva um braço)
+  ctx.inventory.equip('emitter');
+  await sleep(300);
+  sg.senses = () => null;
+  // o médio (sem carregar, você parado): quanto leva para chegar e golpear — o cheio (2,5 s) fica no limite
+  // (antes do baixo: o tiro dele abre uma vala no chão entre os dois)
+  const mid = await chase('mid', false, false);
+  report({ kind: 'fuga:medio', ok: !!mid && mid.tStrike !== null && mid.tStrike < 3.2, why: mid ? `médio a 13 m, você parado: ${mid.tStrike !== null ? `golpe aos ${mid.tStrike.toFixed(2)} s (o cheio leva 2,5 s + soltar)` : `não chegou em 8 s · ${mid.diag}`}` : 'sem ronda' });
+  const lo = await chase('low', true);
+  report({ kind: 'fuga', ok: !!lo && lo.tShot !== null && lo.tStrike === null && lo.k > 0.99 && lo.dead, why: lo ? `baixo, andando para trás: ${lo.tShot !== null ? `atirou um cheio (k ${lo.k?.toFixed(2)}) aos ${lo.tShot.toFixed(2)} s · ${lo.dead ? 'morreu' : `sobrou ${(lo.hp * 100).toFixed(0)}%`}` : `golpeado aos ${lo.tStrike?.toFixed(2)} s`} · ${lo.diag}` : 'sem ronda' });
+  sg.senses = senses0;
+  ctx.rules = rules0;
+  ctx.health.set(1);
 
   let n = 0;
   /** Um corpo de teste parado a D m na direção yaw (de frente para o jogador). */
@@ -146,72 +244,4 @@ export async function runDamage(ctx, report) {
   clean();
   await sleep(1500);
 
-  // ── fuga ──
-  const senses0 = sg.senses;
-  const chase = async (level, back, charge = true) => {
-    // a ronda mais perto, trazida para 13 m à frente, caçando
-    home();
-    await sleep(600);
-    const g = world.toGlobal(camera.position.clone());
-    let x = null;
-    for (const e of sg.byTerritory.values()) if (!x || e.feet.distanceTo(g) < x.feet.distanceTo(g)) x = e;
-    if (!x) return null;
-    for (const e of sg.all()) if (e !== x && e.sg.state !== 'patrol') sg._lose(e);
-    const yaw = 0.3;
-    const p = world.toGlobal(spot.c.clone().addScaledVector(dirOf(yaw), 13));
-    x.feet.copy(p);
-    world.entities.toNear(x, world.origin);
-    x.walker.vel.set(0, 0, 0);
-    x.level = level;
-    x.yaw = yaw;
-    controls.yaw = Math.atan2(-(p.x - g.x), -(p.z - g.z));
-    controls.pitch = -0.05;
-    sg.senses = senses0;
-    Object.assign(x.sg, { state: 'hunt', sees: true, unseen: 0, lastSeen: g.clone().setY(g.y - 1.7), prey: null, bestD: Infinity, stuckT: 0, waitT: 0, huntV: undefined });
-    ctx.player.energy.value = 1; // (os tiros de antes gastaram a célula)
-    const st0 = sg.stats.strikes;
-    const shot0 = ctx.beam.lastShot;
-    const t0 = performance.now();
-    ctx.beam.testHeld = charge;
-    let holding = charge;
-    if (back) controls.forceInput = { f: -1 };
-    let tStrike = null;
-    let tShot = null;
-    await waitFor(() => {
-      // mira nele (o peito)
-      const c = x.feet.clone().sub(world.origin);
-      c.y += 1.1;
-      const d = c.sub(camera.position);
-      controls.yaw = Math.atan2(-d.x, -d.z);
-      controls.pitch = Math.atan2(d.y, Math.hypot(d.x, d.z));
-      if (tStrike === null && sg.stats.strikes > st0) tStrike = (performance.now() - t0) / 1000;
-      if (holding && ctx.beam.held >= 2.55) {
-        holding = false;
-        ctx.beam.testHeld = false; // solta: o tiro cheio
-      }
-      if (tShot === null && ctx.beam.lastShot !== shot0) tShot = (performance.now() - t0) / 1000;
-      return tShot !== null || tStrike !== null;
-    }, 8);
-    ctx.beam.testHeld = null;
-    controls.forceInput = null;
-    const res = { tStrike, tShot, k: ctx.beam.lastShot !== shot0 ? ctx.beam.lastShot.k : null, dead: x.dead, hp: x.hp };
-    sg.senses = () => null;
-    if (!x.dead) sg._lose(x);
-    return res;
-  };
-  // (a fuga é contra o golpe: a vida ligada, só aqui — o resto do check:beam a desliga)
-  const rules0 = ctx.rules;
-  ctx.rules = { ...rules0, health: true };
-  ctx.inventory.equip('emitter');
-  await sleep(300);
-  sg.senses = () => null;
-  // o médio (sem carregar, você parado): quanto leva para chegar e golpear — o cheio (2,5 s) fica no limite
-  // (antes do baixo: o tiro dele abre uma vala no chão entre os dois)
-  const mid = await chase('mid', false, false);
-  report({ kind: 'fuga:medio', ok: !!mid && mid.tStrike !== null && mid.tStrike < 3.2, why: mid ? `médio a 13 m, você parado: ${mid.tStrike !== null ? `golpe aos ${mid.tStrike.toFixed(2)} s (o cheio leva 2,5 s + soltar)` : 'não chegou em 8 s'}` : 'sem ronda' });
-  const lo = await chase('low', true);
-  report({ kind: 'fuga', ok: !!lo && lo.tShot !== null && lo.tStrike === null && lo.k > 0.99 && lo.dead, why: lo ? `baixo, andando para trás: ${lo.tShot !== null ? `atirou um cheio (k ${lo.k?.toFixed(2)}) aos ${lo.tShot.toFixed(2)} s · ${lo.dead ? 'morreu' : `sobrou ${(lo.hp * 100).toFixed(0)}%`}` : `golpeado aos ${lo.tStrike?.toFixed(2)} s`}` : 'sem ronda' });
-  sg.senses = senses0;
-  ctx.rules = rules0;
-  ctx.health.set(1);
 }

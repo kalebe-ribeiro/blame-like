@@ -72,6 +72,7 @@ export class SafeguardSystem {
     /** () => { lantern, running, alertAt(x,y,z) } — o que o corpo do jogador está fazendo (app) */
     this.senses = null;
     this.onCatch = null;
+    this.wired = false; // (app/safeguards.js ligou os sentidos, a captura e o golpe)
     /** () => boolean — o golpe no lugar do toque? (com a vida ligada — app/safeguards.js) */
     this.strikes = null;
     /** (e, hit) — o braço chegou: hit = o jogador ainda ao alcance */

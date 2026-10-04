@@ -46,8 +46,9 @@ export async function runBeamTest(ctx) {
 
 async function run(ctx) {
   const { world, camera, controls } = ctx;
-  // (a vida tem o teste dela — check:health; aqui os tiros em sobrecarga zerariam o corpo no meio)
-  ctx.rules = { ...ctx.rules, health: false };
+  // (a vida tem o teste dela — check:health; aqui os tiros em sobrecarga zerariam o corpo no meio.
+  //  E os Safeguards, agora rápidos, pegariam o jogador no meio dos casos — só a fuga os liga)
+  ctx.rules = { ...ctx.rules, health: false, safeguards: false };
   const F = world.field;
   const report = (o) => console.warn('CHECK:' + JSON.stringify(o));
   window.addEventListener('error', (e) => console.error('CHECK-ERR ' + e.message));
@@ -94,9 +95,9 @@ async function run(ctx) {
 
   await sleep(SETTLE);
   const part = ctx.params.get('beampart');
-  // o dano nos seres e a fuga (dev/damagetest.js — --beampart=dano só isso)
-  if (!part || part === 'dano') await (await import('./damagetest.js')).runDamage(ctx, report);
-  if (part === 'dano') return;
+  // o dano nos seres e a fuga (dev/damagetest.js): no fim — os Safeguards da fuga caçam depois dele;
+  // --beampart=dano roda só isso
+  if (part === 'dano') return (await import('./damagetest.js')).runDamage(ctx, report);
   if (part !== 'f1') await runF2(ctx, report);
   if (part === 'f2') return;
 
@@ -595,6 +596,7 @@ async function run(ctx) {
       why: `${world.cuts.length} cortes de volta (ids ${ids0 === ids1 ? 'iguais' : 'DIFERENTES'}) · ${cut} chunks com cortes em volta · ${cached} do cache · ${jobs} cortados de novo (CSG) · ${cut - cached - jobs} sem peça atingida`,
     });
   }
+  if (!part) await (await import('./damagetest.js')).runDamage(ctx, report);
 }
 
 /** F2: a carga, o andar, os cancelamentos e o controle (app/beam.js). */

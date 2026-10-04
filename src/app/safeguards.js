@@ -32,6 +32,7 @@ export function createSafeguards(ctx) {
 
   function wire() {
     const sg = world.safeguards;
+    sg.wired = true; // (um mundo novo traz um sistema novo: update() liga de novo)
     sg.senses = () => {
       if (ctx.wake?.active || controls.mode !== 'walk') return null;
       return {
@@ -115,7 +116,7 @@ export function createSafeguards(ctx) {
     update() {
       const sg = world.safeguards;
       if (!sg) return;
-      if (sg.senses === null) wire();
+      if (!sg.wired) wire(); // (um mundo novo: um sistema novo, ainda sem os sentidos nem o golpe)
       sg.enabled = on();
       // o zumbido de quem caça mais perto
       let best = null;
