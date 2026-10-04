@@ -22,6 +22,7 @@ export const MODES = {
     deathWake: false, // queda fatal → desmaio e despertar (app/wake.js)
     leads: false, // pistas: os endereços lidos viram rastros a seguir (app/leads.js)
     safeguards: 'setting', // Safeguards (fase 6): a opção nas configurações, desligada por padrão
+    health: 'setting', // a vida (app/health.js): a opção nas configurações, desligada por padrão (V5)
   },
   pilgrimage: {
     id: 'pilgrimage',
@@ -36,6 +37,7 @@ export const MODES = {
     deathWake: true,
     leads: true,
     safeguards: true,
+    health: true,
   },
 };
 

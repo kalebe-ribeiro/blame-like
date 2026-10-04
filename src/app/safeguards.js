@@ -11,10 +11,17 @@
 //    alerta     alert:rise 2 (0,5) → um sai da parede; 3 (0,75) → dois (no aberto, sem
 //               parede perto: vem o de ronda mais perto, pelo grafo)
 //    captura    o toque → desmaio → acorda no cemitério de vítimas (app/wake.js)
+//    o golpe    com a vida ligada (app/health.js), no lugar do toque: o braço vem, −50% e o
+//               ARREMESSO (o Walker sem comando até pousar e levantar — controls/walker.js
+//               throwBody); a captura de antes só quando a vida zera (o cofre, Barra-de-vida §3)
 //    sons       passos secos de onde ele está; um tom quando te vê; a placa da
 //               parede se abrindo; o zumbido de quem caça
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { STRIKE_DAMAGE } from './health.js';
+
+/** O arremesso do golpe (m/s): horizontal, para longe dele; e para cima. */
+export const THROW = { h: [12, 16], up: [4, 6] };
 
 export function createSafeguards(ctx) {
   const { world, audio, controls } = ctx;
@@ -36,11 +43,55 @@ export function createSafeguards(ctx) {
         alertAt: (x, y, z) => ctx.alert?.level(x, y, z) ?? 0,
       };
     };
-    sg.onCatch = (e) => {
+    const caught = (e) => {
       bus.emit('player:caught', {});
       // ele segura: parado, os braços em volta de você (app/wake.js — a animação de ser pego)
-      if (e?.sg) e.sg.state = 'grab';
+      if (e?.sg) {
+        e.sg.state = 'grab';
+        e.strikePose = null;
+      }
+      for (const o of sg.all()) if (o !== e && (o.sg.state === 'hunt' || o.sg.state === 'search' || o.sg.state === 'strike')) sg._lose(o);
       ctx.wake.start('caught', 'safeguard', { by: e });
+    };
+    sg.onCatch = caught;
+    // com a vida: o golpe no lugar do toque (a pé — voando ninguém percebe mesmo)
+    sg.strikes = () => !!ctx.health?.enabled && controls.mode === 'walk';
+    sg.onStrike = (e, hit) => {
+      if (ctx.wake?.active) return;
+      const [pan, dist] = ctx.placeOf(e.feet.x, e.feet.y + 1.2, e.feet.z);
+      if (!hit) {
+        audio.sgStepAt?.(pan, dist, true); // errou: o braço passa no ar, o pé bate
+        return;
+      }
+      const w = controls.walker;
+      const p = here();
+      let dx = p.x - e.feet.x;
+      let dz = p.z - e.feet.z;
+      const h = Math.hypot(dx, dz);
+      if (h < 1e-3) {
+        dx = -Math.sin(e.yaw);
+        dz = -Math.cos(e.yaw);
+      } else {
+        dx /= h;
+        dz /= h;
+      }
+      audio.impact?.(28);
+      bus.emit('player:struck', { x: e.feet.x, y: e.feet.y, z: e.feet.z });
+      const left = ctx.health.damage('strike', STRIKE_DAMAGE, {
+        by: e,
+        catch: (x) => {
+          sg.stats.caught++;
+          caught(x);
+        },
+      });
+      if (left === null || left <= 0 || ctx.wake?.active) return; // zerou: a captura
+      ctx.beam?.cancel?.('golpe');
+      const r = Math.random();
+      const v = THROW.h[0] + r * (THROW.h[1] - THROW.h[0]);
+      const up = THROW.up[0] + r * (THROW.up[1] - THROW.up[0]);
+      w.throwBody(dx * v * controls.scale, dz * v * controls.scale, up * controls.scale);
+      // a cabeça vai para trás com o golpe
+      controls.pitch = Math.min(1.2, controls.pitch + 0.3);
     };
   }
   wire();
@@ -80,6 +131,11 @@ export function createSafeguards(ctx) {
   bus.on('safeguard:spot', (ev) => {
     audio.sgSpot(...ctx.placeOf(ev.x, ev.y, ev.z));
     controls.rumble?.(0.3, 0.2, 250);
+  });
+  // o golpe: o zumbido sobe enquanto ele recolhe o braço
+  bus.on('safeguard:strike', (ev) => {
+    audio.sgSpot(...ctx.placeOf(ev.x, ev.y + 1.2, ev.z));
+    controls.rumble?.(0.25, 0.15, 150);
   });
   bus.on('safeguard:emerge', (ev) => {
     const [pan, dist] = ctx.placeOf(ev.x, ev.y, ev.z);

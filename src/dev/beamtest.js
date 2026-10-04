@@ -46,6 +46,8 @@ export async function runBeamTest(ctx) {
 
 async function run(ctx) {
   const { world, camera, controls } = ctx;
+  // (a vida tem o teste dela — check:health; aqui os tiros em sobrecarga zerariam o corpo no meio)
+  ctx.rules = { ...ctx.rules, health: false };
   const F = world.field;
   const report = (o) => console.warn('CHECK:' + JSON.stringify(o));
   window.addEventListener('error', (e) => console.error('CHECK-ERR ' + e.message));

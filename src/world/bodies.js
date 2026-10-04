@@ -213,6 +213,7 @@ function buildBody(material, D, slitMat = null, dress = null) {
       }
       root.position.y = 0.04 + reach;
       spine.rotation.x = 0.08 + 0.06 * a;
+      spine.rotation.y = 0; // (o golpe torce o tronco — strike)
       neck.rotation.x = 0;
     },
     /** Agarrando (k 0..1): os dois braços erguidos para a frente, o tronco e a cabeça inclinados para quem é pego. */
@@ -224,6 +225,24 @@ function buildBody(material, D, slitMat = null, dress = null) {
       }
       spine.rotation.x += 0.3 * k;
       neck.rotation.x = 0.25 * k;
+    },
+    /** O golpe: w (0..1) recolhe o braço direito para trás e torce o tronco; s (0..1) o braço vem
+     *  para a frente, de lado, na altura do peito (o arremesso). */
+    strike(w, s) {
+      const A = arms.find((a) => a.s > 0);
+      const B = arms.find((a) => a.s < 0);
+      if (A) {
+        A.sh.rotation.x = 0.9 * w * (1 - s) - 1.5 * s;
+        A.sh.rotation.z = A.s * (0.06 + 0.5 * w * (1 - s) - 0.25 * s);
+        A.el.rotation.x = -1.2 * w * (1 - s) - 0.15 * s;
+      }
+      if (B) {
+        B.sh.rotation.x = -0.5 * w;
+        B.el.rotation.x = -0.8 * w;
+      }
+      spine.rotation.y = 0.45 * w * (1 - s) - 0.35 * s;
+      spine.rotation.x += 0.2 * w;
+      neck.rotation.x = 0.15 * w;
     },
     dispose() {
       for (const m of meshes) m.geometry.dispose();

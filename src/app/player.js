@@ -9,7 +9,7 @@
 //    access     o equivalente ao gene de terminal da rede: 0 = nenhum. No
 //               futuro decide como os Safeguards reagem (fase 5 em diante)
 //
-//  Vida e dano entram só quando houver Safeguards, sem reescrever isto.
+//    health     a vida, 0..1 (app/health.js — o cofre, Barra-de-vida)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function createPlayerState(saved) {
@@ -19,10 +19,11 @@ export function createPlayerState(saved) {
     carried: [],
     access: 0,
     hands: { right: null, left: null }, // as mãos começam vazias (app/inventory.js)
+    health: { value: 1, max: 1 }, // a vida (app/health.js)
     arms: { right: true, left: true }, // um braço perdido (o emissor além do limite — app/beam.js) não segura nada
   };
   if (!saved) return base;
-  const out = { ...base, ...saved, energy: { ...base.energy, ...(saved.energy ?? {}) }, arms: { ...base.arms, ...(saved.arms ?? {}) } };
+  const out = { ...base, ...saved, energy: { ...base.energy, ...(saved.energy ?? {}) }, arms: { ...base.arms, ...(saved.arms ?? {}) }, health: { ...base.health, ...(saved.health ?? {}) } };
   delete out.beamPower; // (a potência em níveis da primeira arma, retirada — a carga é pelo tempo)
   return out;
 }

@@ -37,6 +37,7 @@ import { createTravel } from './app/travel.js';
 import { createUI } from './app/ui.js';
 import { setupDev } from './app/dev.js';
 import { createWake } from './app/wake.js';
+import { createHealth } from './app/health.js';
 import { createCarried } from './app/carried.js';
 import { createReading } from './app/reading.js';
 import { createLeads } from './app/leads.js';
@@ -174,6 +175,7 @@ ctx.body = createBody(ctx);
 ctx.sound = createWorldSound(ctx);
 ctx.ui = createUI(ctx);
 ctx.wake = createWake(ctx);
+ctx.health = createHealth(ctx); // a vida (o cofre, Barra-de-vida)
 ctx.inventory = createInventory(ctx); // o inventário e as mãos (antes do que se carrega)
 ctx.carried = createCarried(ctx);
 ctx.beam = createBeam(ctx); // o emissor de feixe gravitacional (a arma de Killy)
@@ -218,6 +220,7 @@ function frame() {
   ctx.carried.update(dt, time); // a lanterna na mão (Peregrinação)
   ctx.marks.update(dt); // as marcas pintadas perto
   ctx.beam.update(dt);
+  ctx.health.update(dt); // (depois do emissor: soma às bordas que ele fecha)
   ctx.alert.update(dt);
   ctx.safeguards.update();
   ctx.people.update(dt);

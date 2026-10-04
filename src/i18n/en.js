@@ -102,6 +102,7 @@ export default {
   'settings.outages': 'sector power outages',
   'settings.collapses': 'distant collapses',
   'settings.safeguards': 'Safeguards in free mode',
+  'settings.health': 'health in free mode',
   'settings.fallRescue': 'relocate after falling too long',
 
   // ── transporte ──
@@ -120,6 +121,7 @@ export default {
   'dest.silicio': 'Silicon life',
   'dest.safeguard': 'Safeguard on patrol',
   'hud.safeguardsOn': 'SAFEGUARDS ON (settings)',
+  'hud.health': 'HEALTH {n}%',
   'dest.teia': 'Web',
   'dest.colmeia': 'Hive',
   'dest.macico': 'Massif',

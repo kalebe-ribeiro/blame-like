@@ -102,6 +102,7 @@ export default {
   'settings.outages': 'apagões de setor',
   'settings.collapses': 'colapsos distantes',
   'settings.safeguards': 'Safeguards no modo Livre',
+  'settings.health': 'vida no modo Livre',
   'settings.fallRescue': 'realocar ao cair por muito tempo',
 
   // ── transporte ──
@@ -120,6 +121,7 @@ export default {
   'dest.silicio': 'Vida de silício',
   'dest.safeguard': 'Safeguard de ronda',
   'hud.safeguardsOn': 'SAFEGUARDS LIGADOS (configurações)',
+  'hud.health': 'VIDA {n}%',
   'dest.teia': 'Teia',
   'dest.colmeia': 'Colmeia',
   'dest.macico': 'Maciço',

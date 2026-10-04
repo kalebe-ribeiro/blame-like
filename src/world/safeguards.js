@@ -15,6 +15,10 @@
 //    desiste → volta ao circuito. Não sobe escadas de marinheiro nem pula de
 //    beiradas (o desvio local não pisa onde não há chão).
 //  CAPTURA (6.5): o toque — this.onCatch (app/safeguards.js → desmaio → cemitério).
+//  O GOLPE (com a vida — o cofre, Barra-de-vida §3): a ~1,5 m, no lugar do toque, se
+//    this.strikes() diz que sim: para, gira para você e recolhe o braço (0,35 s); o braço
+//    vem (this.onStrike — app/safeguards.js: −50% e o arremesso; longe demais no impacto,
+//    errou); recolhe e ESPERA (1,5–2 s) antes de vir de novo. A captura só quando a vida zera.
 //  SURGIMENTO (6.6): alerta:rise no setor do jogador (0,5 → um; 0,75 → dois):
 //    uma placa de parede perto se abre (escuro dentro) e um caçador sai; quem
 //    desiste volta à placa, entra, e ela fecha. Nunca mais de 3 caçando.
@@ -37,6 +41,8 @@ const SCAN = 600; // m: territórios mantidos em volta do jogador
 const DROP = 900; // m: longe assim, a ronda sai da memória
 const SIGHT_MAX = 105; // m: ninguém vê além disso (a névoa, a poeira)
 const CATCH = 1.0; // m (horizontal)
+/** O golpe: alcance para começar, alcance no impacto (você pode sair na preparação), os tempos (s). */
+export const STRIKE = { reach: 1.5, hit: 2.3, windup: 0.35, swing: 0.15, recover: 0.4, waitMin: 1.5, waitMax: 2 };
 const LOST_AFTER = 1.5; // s sem ver → vai ao último ponto visto
 const SEARCH_TIME = 7; // s procurando em volta
 const MAX_HUNTERS = 3;
@@ -61,6 +67,10 @@ export class SafeguardSystem {
     /** () => { lantern, running, alertAt(x,y,z) } — o que o corpo do jogador está fazendo (app) */
     this.senses = null;
     this.onCatch = null;
+    /** () => boolean — o golpe no lugar do toque? (com a vida ligada — app/safeguards.js) */
+    this.strikes = null;
+    /** (e, hit) — o braço chegou: hit = o jogador ainda ao alcance */
+    this.onStrike = null;
     this.byTerritory = new Map(); // território → entidade de ronda
     this.pending = new Set(); // territórios com o circuito sendo calculado (num worker)
     this.none = new Set(); // territórios sem ronda (sem rede andável)
@@ -72,7 +82,7 @@ export class SafeguardSystem {
     this.noise = null; // { x, y, z, r, t } o último barulho do jogador
     this.time = 0;
     this.clock = () => Date.now() / 1000; // o relógio do mundo (as rondas andam com o jogo fechado)
-    this.stats = { spotted: 0, caught: 0, emerged: 0, lost: 0 };
+    this.stats = { spotted: 0, caught: 0, emerged: 0, lost: 0, strikes: 0, hits: 0 };
     this._circ = circ; // (para as flags de desenvolvimento)
   }
 
@@ -179,6 +189,9 @@ export class SafeguardSystem {
       case 'grab':
         e.speed = 0; // segurando quem pegou (app/wake.js solta)
         break;
+      case 'strike':
+        this._strike(e, dt, g);
+        break;
       case 'summon':
         // chamado pelo alerta: vem pelo grafo; perto, procura onde foi
         if (e.tier === 'far') {
@@ -262,6 +275,16 @@ export class SafeguardSystem {
     }
     const feet = _a.set(g.x, g.y - 1.7, g.z);
     if (S.unseen < 0) S.lastSeen.copy(feet); // recém-saído da parede: ainda sabe onde você está
+    // depois de um golpe, espera antes de vir de novo (a chance de fugir ferido)
+    if (S.waitT > 0) {
+      S.waitT -= dt;
+      e.speed = 0;
+      e.walker.vel.x = 0;
+      e.walker.vel.z = 0;
+      this._face(e, feet);
+      if (S.sees && S.lastSeen) S.lastSeen.copy(feet);
+      return;
+    }
     const target = S.sees ? feet : S.lastSeen;
     const hd = this.ents.walkToward(e, target, dt, origin, time);
     // vê, mas não chega (outro nível, uma beirada no meio): desiste depois de um tempo —
@@ -274,8 +297,18 @@ export class SafeguardSystem {
       this._lose(e);
       return;
     }
+    // o golpe (com a vida): a ~1,5 m, para e golpeia
+    const hdist = Math.hypot(feet.x - e.feet.x, feet.z - e.feet.z);
+    if (S.sees && hdist < STRIKE.reach && Math.abs(feet.y - e.feet.y) < 1.8 && this.strikes?.()) {
+      this.stats.strikes++;
+      S.state = 'strike';
+      S.strikeT = 0;
+      S.struck = false;
+      this.bus?.emit('safeguard:strike', { x: e.feet.x, y: e.feet.y, z: e.feet.z });
+      return;
+    }
     // o toque
-    if (S.sees && Math.hypot(feet.x - e.feet.x, feet.z - e.feet.z) < CATCH && Math.abs(feet.y - e.feet.y) < 1.8) {
+    if (S.sees && hdist < CATCH && Math.abs(feet.y - e.feet.y) < 1.8) {
       this.stats.caught++;
       for (const o of this.all()) if (o.sg.state === 'hunt' || o.sg.state === 'search') this._lose(o);
       this.onCatch?.(e);
@@ -284,6 +317,46 @@ export class SafeguardSystem {
     if (!S.sees && (S.unseen += dt) > LOST_AFTER) {
       S.state = 'search';
       S.searchT = 0;
+    }
+  }
+
+  /** Vira o corpo para o ponto (GLOBAL). */
+  _face(e, p) {
+    const want = Math.atan2(-(p.x - e.feet.x), -(p.z - e.feet.z));
+    let d = want - e.yaw;
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    e.yaw += d * 0.35;
+  }
+
+  /** O golpe: preparar (gira e recolhe o braço) → o braço vem → recolhe → espera. */
+  _strike(e, dt, g) {
+    const S = e.sg;
+    S.strikeT += dt;
+    const t = S.strikeT;
+    e.speed = 0;
+    e.walker.vel.x = 0;
+    e.walker.vel.z = 0;
+    const feet = _b.set(g.x, g.y - 1.7, g.z);
+    if (t < STRIKE.windup) this._face(e, feet);
+    const w = Math.min(1, t / STRIKE.windup);
+    const sw = Math.max(0, Math.min(1, (t - STRIKE.windup) / STRIKE.swing));
+    const back = Math.max(0, Math.min(1, (t - STRIKE.windup - STRIKE.swing) / STRIKE.recover));
+    e.strikePose = { w: w * (1 - back), s: sw * (1 - back) };
+    if (!S.struck && t >= STRIKE.windup + STRIKE.swing * 0.6) {
+      S.struck = true;
+      const hit = Math.hypot(feet.x - e.feet.x, feet.z - e.feet.z) < STRIKE.hit && Math.abs(feet.y - e.feet.y) < 2;
+      if (hit) this.stats.hits++;
+      this.onStrike?.(e, hit);
+      if (S.state !== 'strike') return; // (a vida zerou: a captura levou ele)
+    }
+    if (t >= STRIKE.windup + STRIKE.swing + STRIKE.recover) {
+      e.strikePose = null;
+      S.state = 'hunt';
+      S.lastSeen = feet.clone(); // (arremessado longe da vista: ele vai ver onde você caiu)
+      S.waitT = STRIKE.waitMin + Math.random() * (STRIKE.waitMax - STRIKE.waitMin);
+      S.unseen = 0;
+      S.stuckT = 0;
+      S.bestD = Infinity;
     }
   }
 
@@ -308,6 +381,8 @@ export class SafeguardSystem {
       this.bus?.emit('safeguard:lost', { x: e.feet.x, y: e.feet.y, z: e.feet.z });
     }
     S.state = 'return';
+    e.strikePose = null;
+    S.waitT = 0;
     S.sees = false;
     S.unseen = 0;
     S.stuckT = 0;
@@ -350,6 +425,7 @@ export class SafeguardSystem {
   /** Vê ou ouve o jogador? (5 Hz) */
   _perceive(e, g, origin, time) {
     const S = e.sg;
+    if (S.state === 'strike') return; // (golpeando: nada o interrompe)
     S.sees = false;
     if (S.state === 'emerge' || S.state === 'enter' || e.tier !== 'near') return;
     // a vida de silício revelada vem antes de tudo (a terceira força)

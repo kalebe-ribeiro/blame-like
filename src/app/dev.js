@@ -131,6 +131,40 @@ export function setupDev(ctx) {
       console.warn(`SGNEAR: posto a ${D} m de ${e.id}`);
     }, Number(params.get('sgnear')) * 1000);
   }
+  // --strikepose=w,s: o Safeguard mais perto fica na pose do golpe (para capturas — world/bodies.js strike)
+  // (--strikepose=cycle,N: aos N s ele para e as três poses — parado, preparando, golpeando — são
+  //  capturadas lado a lado no mesmo lugar: strike-rest/wind/swing.png ao lado da --capture)
+  if (params.get('strikepose')?.startsWith('cycle')) {
+    const at = Number(params.get('strikepose').split(',')[1] ?? 14);
+    const shot = (name) => /** @type {any} */ (window).cybercosmic?.devCapture?.(name);
+    setTimeout(async () => {
+      const g0 = world.toGlobal(camera.position);
+      let near = null;
+      for (const e of world.safeguards.all()) if (!near || e.feet.distanceTo(g0) < near.feet.distanceTo(g0)) near = e;
+      if (!near) return console.warn('STRIKEPOSE: nenhum');
+      near.sg.state = 'grab'; // (parado: o 'grab' só zera a velocidade)
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      for (const [n, pose] of [['rest', null], ['wind', { w: 1, s: 0 }], ['swing', { w: 1, s: 1 }]]) {
+        near.strikePose = pose;
+        await wait(700);
+        await shot(`strike-${n}.png`);
+      }
+      near.strikePose = null;
+      near.sg.state = 'patrol';
+    }, at * 1000);
+  } else if (params.get('strikepose')) {
+    const [pw, ps] = params.get('strikepose').split(',').map(Number);
+    const tick = () => {
+      requestAnimationFrame(tick);
+      const g0 = world.toGlobal(camera.position);
+      let near = null;
+      for (const e of world.safeguards.all()) if (!near || e.feet.distanceTo(g0) < near.feet.distanceTo(g0)) near = e;
+      if (near) near.strikePose = { w: pw, s: ps };
+    };
+    tick();
+  }
+  // --hurt=v: aos 5 s a vida vai a v (o aparelho mostra — app/health.js)
+  if (params.get('hurt')) setTimeout(() => ctx.health.set(Number(params.get('hurt'))), 5000);
   // --sgcam=N: dos N s em diante, a câmera (voando: ninguém percebe) acompanha o Safeguard
   // mais perto de frente, a --sgdist m (padrão 4,5), na altura do peito
   if (params.get('sgcam')) {
@@ -488,6 +522,7 @@ export function setupDev(ctx) {
   else if (params.get('check') === 'beam') import('../dev/beamtest.js').then((m) => m.runBeamTest(ctx));
   else if (params.get('check') === 'profile') import('../dev/profile.js').then((m) => m.runProfile(ctx));
   else if (params.get('check') === 'moves') import('../dev/movetest.js').then((m) => m.runMoveTest(ctx));
+  else if (params.get('check') === 'health') import('../dev/healthtest.js').then((m) => m.runHealthTest(ctx));
   else if (params.get('check') === 'safeguards') import('../dev/sgtest.js').then((m) => m.runSafeguardTest(ctx));
   else if (params.get('check')) {
     import('../dev/check.js').then((m) => m.runCheck({ teleport: ctx.ui.teleport, world, controls: ctx.controls, camera, THREE, getTime: () => ctx.time, only: params.get('check') }));

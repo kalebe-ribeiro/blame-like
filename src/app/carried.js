@@ -204,6 +204,17 @@ export function createCarried(ctx) {
       if (on) g2.fillRect(8 + i * 11.3, 4, 8.5, 6);
       else g2.fillRect(8 + i * 11.3, 10, 8.5, 18);
     }
+    // a vida, ao lado da carga (V1 — app/health.js): um traço contínuo, só quando muda (V2)
+    const hl = ctx.health;
+    if (hl?.visible) {
+      const v = hl.value;
+      const y = on ? 11 : 31;
+      const hh = on ? 2 : 3;
+      g2.fillStyle = '#1c211d';
+      g2.fillRect(8, y, 110, hh);
+      g2.fillStyle = v < 0.35 ? (Math.floor(time * 3) % 2 ? '#c8603c' : '#7a3a26') : '#c9a08a';
+      g2.fillRect(8, y, 110 * v, hh);
+    }
     g2.textBaseline = 'top';
     g2.fillStyle = '#9fae9f';
     let line = '';

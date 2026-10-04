@@ -79,6 +79,11 @@ export class Walker {
     this.shove = new THREE.Vector3();
     /** @type {((speed: number) => void)|null} bateu numa parede no empurrão (m/s contra ela) */
     this.onSlam = null;
+    /** Arremessado por um hostil (app/safeguards.js — o golpe): o controle sai até pousar e
+     *  levantar; o choque contra um obstáculo tira vida só assim (app/health.js). */
+    this.thrown = false;
+    this.downT = 0; // s caído depois de pousar arremessado
+    this.thrownSlam = 0; // m/s do choque contra um obstáculo no arremesso (0 = não bateu)
     this.canClimb = true; // escadas de marinheiro (os corpos dos seres de teste não sobem)
     this.canGrab = true; // agarrar quinas (os seres não: world/entities.js; sem braços também não — app/beam.js)
     this.canClimb = true; // subir escadas de marinheiro (sem braços, não)
@@ -92,11 +97,26 @@ export class Walker {
     this.onMantle = null; // (altura) — começou a subir
   }
 
+  /** O arremesso de um golpe: velocidade horizontal (hx, hz) e para cima (up), em m/s. */
+  throwBody(hx, hz, up) {
+    this.ledge = null;
+    this.climb = null;
+    this.climbing = false;
+    this.shove.set(hx, 0, hz);
+    this.vel.set(0, up, 0);
+    this.grounded = false;
+    this.thrown = true;
+    this.downT = 0;
+    this.thrownSlam = 0;
+  }
+
   /** Posiciona o corpo a partir da câmera (ao entrar no modo andar). */
   syncFromCamera(camera, scale, velocity) {
     this.feet.copy(camera.position).y -= this.eye * scale;
     this.vel.copy(velocity ?? new THREE.Vector3());
     this.shove?.set(0, 0, 0);
+    this.thrown = false;
+    this.downT = 0;
     this.grounded = false;
     this.airTime = 0;
     this.fallStartY = this.feet.y;
@@ -108,6 +128,16 @@ export class Walker {
    * @returns {boolean} false se o mundo ao redor não estava pronto (pairando)
    */
   step(dt, camera, input, yaw, s, time) {
+    // arremessado: o corpo vai, sem comando; pousou, fica caído ~1 s e se levanta
+    if (this.thrown) {
+      input = { f: 0, r: 0, run: false, jump: false };
+      if (this.downT > 0) {
+        this.downT -= dt;
+        // os olhos rente ao chão; ao acabar, o afundamento solta e o corpo se levanta
+        this.dip = Math.max(this.dip, (this.eye - 0.5) * s);
+        if (this.downT <= 0) this.thrown = false;
+      }
+    }
     const eye = this.eye * s;
     const radius = 0.38 * s;
     const stepH = 0.55 * s;
@@ -141,7 +171,7 @@ export class Walker {
     this.grabCooldown = Math.max(0, this.grabCooldown - dt);
     if (this.climb) return this._mantleStep(dt, camera, eye);
     if (this.ledge) return this._hangStep(dt, camera, input, sin, cos, s, eye);
-    if (this.canGrab && this._tryLedge(input, sin, cos, s, eye)) {
+    if (this.canGrab && !this.thrown && this._tryLedge(input, sin, cos, s, eye)) {
       this._apply(camera, eye);
       return true;
     }
@@ -229,6 +259,7 @@ export class Walker {
         // pouso pesado: a câmera afunda proporcionalmente ao impacto
         this.dip = Math.max(this.dip, Math.min(0.95, Math.max(0, -impact / s - 7) * 0.022) * s * this.dipScale);
         this.onLand?.(-impact / s, this.fallStartY - this.feet.y);
+        if (this.thrown && this.downT <= 0) this.downT = 1; // caído ~1 s (o cofre, Barra-de-vida §3.2)
       }
     } else {
       this.grounded = false;

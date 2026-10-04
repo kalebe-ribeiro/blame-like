@@ -11,6 +11,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { t, fmtNum } from '../i18n/index.js';
+import { fallDamage } from './health.js';
 
 /** Velocidade de impacto (m/s) que seria fatal: acima disso, desmaio (Peregrinação). */
 const LETHAL_IMPACT = 38;
@@ -50,8 +51,11 @@ export function createBody(ctx) {
     audio.impact(impact);
     controls.rumble(Math.min(1, Math.max(0, impact - 6) / 40), Math.min(1, impact / 30), 120 + Math.min(500, impact * 10));
     world.bus.emit('player:fall', { height });
-    // Peregrinação: um impacto que seria fatal vira desmaio (app/wake.js)
-    if (ctx.rules.deathWake && impact > LETHAL_IMPACT) ctx.wake.start('impact');
+    // com a vida (app/health.js): o dano pela altura — de 10 m; zera (o desmaio) em 38 m/s.
+    // (o impacto, não a altura: a altura é zerada por escadas e quinas e não vê o empurrão do emissor)
+    if (ctx.health?.enabled) ctx.health.damage('fall', fallDamage(impact));
+    // sem a vida, a Peregrinação de antes: um impacto que seria fatal vira desmaio (app/wake.js)
+    else if (ctx.rules.deathWake && impact > LETHAL_IMPACT) ctx.wake.start('impact');
     if (height > 80) hud.push(t('hud.fall', { m: fmtNum(Math.round(height)) }));
   };
   controls.onModeChange = (mode) => {

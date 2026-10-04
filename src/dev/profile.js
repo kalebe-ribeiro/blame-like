@@ -282,6 +282,7 @@ async function run(ctx) {
     const avg = (arr, f) => arr.reduce((q, x) => q + f(x), 0) / Math.max(1, arr.length);
     const all = { charge: [], gpu: [], fire: [], worst: [], back: [] };
     ctx.rules.safeguards = false; // (uma captura no meio estraga a medida)
+    ctx.rules.health = false; // (nem um desmaio pelos tiros em sobrecarga)
     for (const place of PLACES) {
       if (!ctx.ui.teleport(place, place)) continue;
       controls.setMode('walk');

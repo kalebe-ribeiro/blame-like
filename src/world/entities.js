@@ -247,6 +247,7 @@ export class EntitySystem {
         e.rig.group.rotation.y = e.yaw + Math.PI;
         e.rig.animate(dt, e.speed, e.tier === 'far' || e.walker.grounded);
         if (e.grabPose) e.rig.grab?.(e.grabPose); // agarrando alguém (app/wake.js)
+        else if (e.strikePose) e.rig.strike?.(e.strikePose.w, e.strikePose.s); // o golpe (world/safeguards.js)
       }
     }
   }

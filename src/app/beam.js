@@ -17,8 +17,8 @@
 //    `player.arms`; o emissor volta ao inventário; recuperar: o cofre, Ideias/Futuro/Recuperar-o-braco).
 //    No Livre (sem custos) ele volta sozinho em 30 s.
 //  O furo vai a 7,5 m de raio e 1000 m; o empurrão cresce muito mais que a carga (~95 m/s no
-//  limite, e o corpo sai do chão). Sem perder a arma: o custo da sobrecarga vai para a barra
-//  de vida (o cofre, Ideias/Futuro/Barra-de-vida — planejada).
+//  limite, e o corpo sai do chão). Sem perder a arma: o custo da sobrecarga vai para a vida
+//  (app/health.js — BEAM_DAMAGE: violeta 5%, a singularidade se formando 12%, o limite e além 30%).
 //  A célula não tem o bastante: a carga para onde ela alcança. Entre tiros, 0,8 s.
 //
 //  Ao soltar: o corte de verdade (world.addCut — gen/cut.js) até onde o feixe chega
@@ -40,6 +40,7 @@ import { beamReach } from '../gen/beamreach.js';
 import { createBeamFx, beamColors } from './beamfx.js';
 import { cutHitsBoxes } from '../gen/cut.js';
 import { CHUNK } from '../gen/field.js';
+import { BEAM_DAMAGE, slamDamage } from './health.js';
 
 export const CHARGE = { min: 0.25, full: 2.5, hold: 3.0, over: 6.5, beyond: 11.0 };
 /** O estágio a partir do qual o braço que atira é perdido. */
@@ -196,6 +197,7 @@ export function createBeam(ctx) {
     const w = controls.mode === 'walk' ? controls.walker : null;
     if (w?.ledgeState) return 'quina';
     if (w?.climbing) return 'escada';
+    if (w?.thrown) return 'arremesso';
     if (!ctx.inventory.sideOf('emitter')) return 'mao';
     if (!free() && player.energy.value < shotOf(0).cost) return 'celula';
     return null;
@@ -365,8 +367,11 @@ export function createBeam(ctx) {
     mark();
     // além do limite, o braço que segura o emissor se desfaz
     const lost = stageOf(oo) >= ARM_LOSS_STAGE ? loseArm(_m.clone()) : null;
+    // a sobrecarga cobra do corpo (app/health.js): a mão queima, a mira treme — pode zerar (V6)
+    const hurt = BEAM_DAMAGE[stageOf(oo)];
+    if (hurt > 0) ctx.health?.damage('beam', hurt);
     mark();
-    lastShot = { k: kk, o: oo, ...S, t, stop, kills, lost };
+    lastShot = { k: kk, o: oo, ...S, t, stop, kills, lost, hurt };
     world.bus.emit('player:beam', { k: kk, o: oo, length: t, stop, kills, x: end.x, y: end.y, z: end.z });
     mark();
     const names = ['alcance', 'corte', 'mortes', 'efeitos', 'som/coice/alerta', 'braço', 'avisos'];
@@ -536,10 +541,15 @@ export function createBeam(ctx) {
         walker.canClimb = anyArm;
       }
       if (walker && !walker.onSlam) {
-        // bater numa parede no empurrão: um baque
+        // bater numa parede no empurrão: um baque. Só arremessado por um hostil (walker.thrown)
+        // o choque tira vida — o próprio coice do emissor, não (o cofre, Barra-de-vida §2)
         walker.onSlam = (v) => {
           audio.impact?.(Math.min(1, v / 40));
           controls.rumble?.(Math.min(1, v / 30), Math.min(1, v / 40), 250);
+          if (walker.thrown) {
+            walker.thrownSlam = v;
+            ctx.health?.damage('slam', slamDamage(v));
+          }
         };
       }
 
