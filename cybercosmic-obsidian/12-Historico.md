@@ -332,3 +332,4 @@ Por que as coisas estão como estão, em ordem.
 - [[Barra-de-vida]] revista: sem dano de choque no próprio coice do emissor; a queda pela altura (a conta antiga usava g = 9,8 — o jogo usa 15).
 - [[Recuperar-o-braco]]: escolhidos os três caminhos (câmara de reconstrução, prótese, moradores das vilas), com as propostas R1–R6 e a saída garantida sem os dois braços — o risco de travar a Peregrinação, que já existe no jogo.
 - Depois: [[Recuperar-o-braco]] decidida (R1–R7: preços alinhados, sem a garantia de caminho sem escada, o aviso de um braço só); planejado o [[Dano-do-emissor]] (dano variável nos seres, a arma continua overpowered).
+- Depois: o [[Dano-do-emissor]] revisto (três níveis de Safeguard; o colapso mata qualquer um; vila hostil ao ferir um morador) e o [[Movimento-dos-inimigos]] planejado (aceleração e velocidade terminal — a dificuldade).

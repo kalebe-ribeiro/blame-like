@@ -13,7 +13,8 @@ Reorganizada em 2026-10-04. Três listas: **a implementar** (decidido, na ordem)
 | # | o quê | nota | estado |
 |---|---|---|---|
 | 1 | **Barra de vida** — a vida, quedas com dano **pela altura** (a partir de 10 m; zera em 38 m/s ≈ 48 m), o golpe com arremesso dos hostis, o dano da sobrecarga, `check:health` | [[Barra-de-vida]] §10 | decidida (V1–V7; revista em 2026-10-04) — **a próxima** |
-| 2 | **Dano variável do emissor** — o tiro fraco fere, o cheio mata tudo de hoje, a sobrecarga mata até de raspão (a arma continua overpowered) | [[Dano-do-emissor]] | princípio decidido (2026-10-04); **D1–D5 a confirmar** — pode ir junto da barra de vida |
+| 2 | **Dano variável do emissor + níveis de Safeguard** — médio-fraco mata o baixo, o médio pede vários, o alto muitos; o colapso mata qualquer um; ferir/matar um morador numa vila deixa a vila hostil | [[Dano-do-emissor]] | decidida (2026-10-04) — junto da barra de vida |
+| 2b | **Movimento dos inimigos** — arranque com aceleração até uma velocidade terminal (o médio e o alto mais rápidos que a sua corrida); curvas custam velocidade | [[Movimento-dos-inimigos]] | princípio decidido; **M1–M4 a confirmar** — junto do dano (é o que equilibra a arma) |
 | 3 | **Recuperar o braço** — câmara de reconstrução (única nova), prótese (loot), moradores das vilas (troca), a saída garantida sem braços e o aviso de um braço só | [[Recuperar-o-braco]] | decidida (R1–R7, 2026-10-04) |
 | 4 | **Rework gráfico** — texturas, modelos de NPCs, animações variadas (as do golpe por ângulo e tipo de NPC) | [[Rework-grafico]] | só **depois de toda a gameplay** |
 
@@ -30,7 +31,7 @@ Reorganizada em 2026-10-04. Três listas: **a implementar** (decidido, na ordem)
 |---|---|---|
 | **Gene de terminal** — o objetivo final, quase impossível | a mecânica (as 4 perguntas da nota) | [[Gene-terminal]] |
 | **Credenciais de acesso** | depende do gene (acessos intermediários?) | [[Credenciais-de-acesso]] |
-| **Dano do emissor — D1–D5** | confirmar os números (a fórmula do dano, o raspão, a resistência de cada ser, o ferido) | [[Dano-do-emissor]] |
+| **Movimento dos inimigos — M1–M4** | confirmar os números (aceleração e terminal por nível, a perda nas curvas, os moradores hostis) | [[Movimento-dos-inimigos]] |
 
 ## 3. Em observação
 - **Travadas de ~1,9 s** numa rodada do `profile --profshot` (a primeira na RTX, depois da troca de GPU), ~2 s depois do tiro; não se repetiram em duas rodadas. Hipótese: o cache de shaders do Chromium montado para a Intel. Se voltar, o `profile` lista os programas de shader novos de cada tiro.

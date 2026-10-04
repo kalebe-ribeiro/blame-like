@@ -60,7 +60,8 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | ordem | ideia | status |
 |---|---|---|
 | 1 | [[Barra-de-vida]] (vida; golpe com arremesso dos hostis; quedas com dano pela altura; o custo da sobrecarga) | decidida (2026-10-03, revista 2026-10-04) — **a próxima** |
-| 2 | [[Dano-do-emissor]] (o tiro fraco fere, o cheio mata; overpowered) | princípio decidido (2026-10-04); D1–D5 a confirmar |
+| 2 | [[Dano-do-emissor]] (dano por nível de Safeguard; o colapso mata qualquer um; vilas hostis) | decidida (2026-10-04) |
+| 2b | [[Movimento-dos-inimigos]] (aceleração e velocidade terminal — a dificuldade) | princípio decidido (2026-10-04); M1–M4 a confirmar |
 | 3 | [[Recuperar-o-braco]] (câmara de reconstrução, prótese, moradores das vilas; aviso de um braço só) | decidida (R1–R7, 2026-10-04) |
 | — | [[Gene-terminal]] (o gene de terminal da rede) | **o objetivo final, máximo — quase impossível**; esperando a mecânica do usuário |
 | último | [[Rework-grafico]] (texturas, modelos de NPCs, animações variadas) | **depois de toda a gameplay** |

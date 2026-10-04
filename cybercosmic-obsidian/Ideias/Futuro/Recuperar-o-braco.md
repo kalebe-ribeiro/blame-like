@@ -41,6 +41,7 @@ Em *Blame!*, a Cidade ainda tem máquinas que fazem e consertam corpos ([[14-Uni
 - **O preço** (R5): uma carga entregue, ou 30% da célula — como as trocas de hoje, pela conversa curta. Refazem **um** braço.
 - **Andarilhos transumanos**: não refazem, mas podem **vender uma prótese** (o loot do caminho 2) por 40% da célula — os que roubam, não.
 - **O despertar numa vila** (desmaio arrastado por NPCs, fase 7): acordar lá dá a chance de pedir na hora.
+- **Vila hostil** (você feriu ou matou um morador dela — [[Dano-do-emissor]] §4): ali não se refaz nada, para sempre.
 
 ## Decisões (aprovadas em 2026-10-04)
 

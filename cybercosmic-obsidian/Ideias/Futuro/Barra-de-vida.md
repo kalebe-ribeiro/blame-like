@@ -33,7 +33,7 @@ Separada da **célula de energia** (luz, sensor, leitor, emissor): a célula é 
 
 > Usuário: "o golpe (curta distância por enquanto, sem mecânica de tiro inimigo) deverá iniciar uma animação, onde o NPC hostil vai atacar o usuário e arremessar ele. Isso deve arrancar metade da vida do jogador. A partir desse arremesso, devem [haver] alguns caminhos: ele cair da estrutura, e acabar sofrendo o desmaio da queda; ele cair no chão normalmente, no mesmo plano, sem ter caído de uma estrutura; ele colidir com um obstáculo."
 
-**Hostis**: hoje os Safeguards (a caçada da fase 6); no futuro, os outros que forem hostis (ver [[NPCs-e-Safeguards]]). **Só curta distância** — nada de tiro inimigo por enquanto.
+**Hostis**: hoje os Safeguards (a caçada da fase 6); **os moradores de uma vila que você feriu** (golpe de humano: **−25%**, não 50% — [[Dano-do-emissor]] §4); no futuro, os outros que forem hostis (ver [[NPCs-e-Safeguards]]). A velocidade com que chegam: [[Movimento-dos-inimigos]]. **Só curta distância** — nada de tiro inimigo por enquanto.
 
 ### 3.1 O golpe (a animação)
 1. **Alcance**: o hostil em caçada chega a ~1,5 m (a distância do toque de hoje). No lugar da captura imediata, começa o **golpe**.
