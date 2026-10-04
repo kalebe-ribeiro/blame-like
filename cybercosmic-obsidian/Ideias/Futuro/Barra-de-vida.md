@@ -1,5 +1,5 @@
 ---
-status: decidida (2026-10-03) — V1–V7 aprovadas pelo usuário, com o golpe dos hostis detalhado (§3); a implementar
+status: decidida (2026-10-03; revista em 2026-10-04 — quedas pela altura, sem dano de choque no próprio coice) — V1–V7 aprovadas, o golpe dos hostis detalhado (§3); a implementar
 prioridade: alta (a próxima feature de gameplay)
 tags: [futuro, gameplay, vida, arma, safeguards, quedas, animacao]
 ---
@@ -9,6 +9,8 @@ tags: [futuro, gameplay, vida, arma, safeguards, quedas, animacao]
 > Pedido do usuário (2026-10-03): "a arma não é pra se perder na potência máxima. Se for pra ter um drawback, vai ser numa futura barra de vida. Planeje essa barra de vida no cofre." — o custo da sobrecarga do emissor ([[Arma-do-Killy]]) sai do braço (que se perdia por 90 s) e vem para cá.
 >
 > **Decidido (2026-10-03, usuário):** "gostei de todas" (V1–V7, §9) — "altere e adicione somente alguns detalhes aos ataques dos NPCs" (§3) · "com a adição da barra de vida, a queda agora tem dano, a partir de certa altura, até o limiar do desmaio" (§4) · as animações por enquanto únicas, com as variações registradas para depois (§5) · e o grande rework gráfico depois de toda a gameplay ([[Rework-grafico]]).
+>
+> **Revisto (2026-10-04, usuário):** (1) **o choque contra um obstáculo pelo próprio coice do emissor não tira vida** — só o arremesso de um hostil (§2); (2) **a queda corrigida** (§4): a nota dizia "14 m/s ≈ 10 m de queda", mas a gravidade do jogo é **15 m/s²** (`controls/walker.js`), não 9,8 — 14 m/s seriam ~6,5 m. Agora a regra é **pela altura**: dano a partir de 10 m de queda.
 
 ## 1. A ideia
 
@@ -21,8 +23,9 @@ Separada da **célula de energia** (luz, sensor, leitor, emissor): a célula é 
 | fonte | hoje | com a vida |
 |---|---|---|
 | **o golpe de um hostil** (hoje: Safeguards — §3) | o toque = captura (desmaio, cemitério) | **um golpe de curta distância com arremesso: tira METADE da vida** (50%) e joga o corpo longe; o que acontece depois depende de onde ele cai (§3) |
-| **quedas** (§4) | > 38 m/s: desmaio direto | **dano a partir de ~14 m/s de impacto** (≈ 10 m de queda), crescendo até **100% em 38 m/s** — o limiar do desmaio de hoje |
-| **bater num obstáculo** (arremessado, ou o coice do emissor) | um baque (`walker.onSlam`) | dano acima de ~12 m/s contra o obstáculo, crescendo com a velocidade (~25% a 30 m/s) |
+| **quedas** (§4) | > 38 m/s: desmaio direto | **dano a partir de 10 m de queda** (17,3 m/s de impacto), crescendo com a altura até **100% em 38 m/s** (~48 m) — o limiar do desmaio de hoje |
+| **bater num obstáculo — só arremessado por um hostil** (§3) | um baque (`walker.onSlam`) | dano acima de ~12 m/s contra o obstáculo, crescendo com a velocidade (~25% a 30 m/s) |
+| **bater num obstáculo pelo próprio coice do emissor** | um baque | **sem dano** (decidido 2026-10-04) — o baque, o tremor e o som continuam. Se o empurrão te tira de uma plataforma, **a queda** conta (§4) |
 | **sobrecarga do emissor** | nada até o limite; além do limite (5–7) o braço que atira é perdido — [[Recuperar-o-braco]] | dano pelo estágio: azul 0 · violeta 5% · a singularidade se formando 12% · limite 30%; a mão queima, a mira treme uns segundos, **a arma continua na mão**; além do limite o braço se perde (como hoje) e o dano é o do limite |
 | **o feixe de outro** (futuro: hostis armados) | — | (sem tiro inimigo por enquanto — ver §3) |
 
@@ -51,10 +54,28 @@ A física decide (o arremesso é um impulso de verdade no `Walker` — o mesmo e
 - **Zerou** (o segundo golpe, ou golpe + queda, ou golpe + obstáculo): o desmaio. Se foi um hostil que zerou, é **a captura de hoje** (a animação de ser agarrado — `wake 'caught'` — e o cemitério de vítimas, com os custos dos Safeguards). Se foi uma queda, a sequência da queda.
 - Com 100%, **dois golpes zeram** (50% + 50%) — menos, se a queda ou o obstáculo ajudarem.
 
-## 4. Quedas com dano
+## 4. Quedas com dano — pela altura
 - Hoje: impacto > 38 m/s (`app/body.js` `LETHAL_IMPACT`) → desmaio direto; abaixo disso, só tremor e som.
-- **Com a vida**: **abaixo de ~14 m/s** (≈ 10 m de queda) nada; **de 14 a 38 m/s** o dano cresce (proposta: linear, ~4%/m/s → ~100% em 38); **acima de 38 m/s** zera — o desmaio de sempre. Uma queda média com a vida já baixa também zera.
+- **A física do jogo**: gravidade **15 m/s²** e queda máxima de **60 m/s** (`controls/walker.js`, `vel.y - 15·s·dt`, teto `-60·s`). Então impacto `v` ↔ altura `h = v² / 30` (até o teto, ~120 m).
+- **A regra** (decidida 2026-10-04): o dano é proporcional à **energia** do impacto (`v²` — a altura caída), não à velocidade:
+  - **abaixo de 10 m** (v < 17,3 m/s): nada;
+  - **de 10 m a ~48 m** (17,3 → 38 m/s): `dano = (v² − 300) / (1444 − 300)`;
+  - **acima de 38 m/s**: zera — o desmaio de sempre (o `LETHAL_IMPACT` não muda).
+
+| queda | impacto | dano |
+|---|---|---|
+| 6,5 m | 14 m/s | 0 |
+| 10 m | 17,3 m/s | 0 (o limiar) |
+| 20 m | 24,5 m/s | 26% |
+| 30 m | 30 m/s | 52% |
+| 40 m | 34,6 m/s | 79% |
+| 48 m | 38 m/s | 100% — desmaio |
+
+- Na conta entra só a componente **vertical** do impacto (`vel.y` no pouso) — o empurrão do emissor é horizontal e decai à parte (`walker.shove`), não vira dano de queda por si.
+- Uma queda média com a vida já baixa também zera.
+- O pulo normal (5,4 m/s → ~1 m) e o arremesso de um hostil no mesmo plano (4–6 m/s para cima → ~1,2 m) ficam bem abaixo do limiar — conferido com a gravidade de 15.
 - O que já existe continua: o som do pouso, o tremor, o "afundar" da câmera (`motionFx`).
+- **De onde vem o número**: o `Walker` já entrega os dois no pouso — `onLand(impact, height)`, com o impacto **já dividido pela escala** `s` do corpo (`walker.js` ~l. 231). Usar o **impacto** (`v²/30` = a altura equivalente), não o `height` (`fallStartY − feet.y`): o `height` é zerado por escadas, quinas e vagões e não vê o empurrão para cima do emissor (atirar para baixo joga até 7 m/s para cima); o impacto mede a energia que de fato chegou ao chão.
 
 ## 5. As animações — por enquanto uma só, as variações registradas
 > Usuário: "as animações devem ser default única por enquanto, mas deixe registrado que deverão haver variações, tanto por ângulo do ataque (por trás, de frente, de baixo, lateral, com pelo menos 2 variações de cada ângulo), tipo de NPC etc."
@@ -96,7 +117,7 @@ A física decide (o arremesso é um impulso de verdade no `Walker` — o mesmo e
 
 ## 10. Implementação (ordem proposta)
 1. **A vida** — `ctx.player.health = { value: 1, max: 1 }` (salva no slot — `app/player.js`); `app/health.js`: `damage(fonte, quanto)`, `heal`, a regeneração, eventos `player:hurt` / `player:healed`; ao zerar, o desmaio (`ctx.wake.start(...)` com a causa certa) e a vida cheia no despertar; o aparelho mostra (V1/V2); os sinais do corpo (§7).
-2. **Quedas com dano** (§4) — `app/body.js` `onLand`; e o obstáculo — `walker.onSlam`.
+2. **Quedas com dano** (§4) — `app/body.js` `onLand`, pela altura (`v²`); e o obstáculo — `walker.onSlam` **só durante o arremesso de um hostil** (uma marca no `Walker` enquanto o controle está fora; o empurrão do emissor nunca a liga).
 3. **O emissor** (§2, §8) — o dano por estágio no disparo.
 4. **O golpe e o arremesso** (§3) — o estado novo do Safeguard (`world/safeguards.js`: em vez de `onCatch` no toque, o golpe; a pose nova do corpo em `world/bodies.js`); o arremesso no `Walker` (impulso + controle fora até pousar; caído ~1 s); a captura só ao zerar; o hostil esperando depois do golpe.
-5. **Testes** — `npm run check:health` (novo): dano por queda em alturas conhecidas (abaixo do limiar nada; a meio; acima zera), o choque no obstáculo, a sobrecarga por estágio, a regeneração no tempo, zerar → desmaio → acorda cheio; **o golpe**: um Safeguard de teste golpeia o jogador em três lugares preparados — no meio de uma plataforma larga (cai no mesmo plano: 50%), perto de uma borda alta (cai da estrutura: zera e desmaia), de costas para uma parede próxima (bate: 50% + o choque); e o segundo golpe zera → a captura. Mais `check:safeguards` (as rondas e a caçada continuam), `check:beam`, `check:pad` (o aparelho).
+5. **Testes** — `npm run check:health` (novo): dano por queda em alturas conhecidas (9 m nada; 20 m ≈ 26%; 30 m ≈ 52%; 50 m zera), o choque no obstáculo arremessado (com dano) **e pelo coice do emissor contra uma parede (sem dano)**, a sobrecarga por estágio, a regeneração no tempo, zerar → desmaio → acorda cheio; **o golpe**: um Safeguard de teste golpeia o jogador em três lugares preparados — no meio de uma plataforma larga (cai no mesmo plano: 50%), perto de uma borda alta (cai da estrutura: zera e desmaia), de costas para uma parede próxima (bate: 50% + o choque); e o segundo golpe zera → a captura. Mais `check:safeguards` (as rondas e a caçada continuam), `check:beam`, `check:pad` (o aparelho).

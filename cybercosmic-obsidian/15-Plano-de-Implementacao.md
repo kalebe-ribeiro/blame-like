@@ -200,9 +200,10 @@
 ---
 
 ## Depois da arma de Killy (2026-10-03)
-1. **A barra de vida** — decidida: [[Barra-de-vida]] (§10, a ordem: a vida → quedas com dano → o emissor → o golpe com arremesso → `check:health`).
-2. **O resto da gameplay** — o que o usuário pedir (ideias em [[00-Ideias]]; os Safeguards em níveis e a reação à arma; o braço: [[Recuperar-o-braco]], em aberto) — rumo ao **objetivo final: o gene de terminal** ([[Gene-terminal]] — quase impossível; a mecânica, o usuário elabora).
-3. **Por último, o grande rework gráfico** — [[Rework-grafico]]: texturas variadas, modelos de NPCs detalhados e variados, animações variadas (as do golpe por ângulo e por tipo de NPC). **Só depois de toda a gameplay.**
+1. **A barra de vida** — decidida: [[Barra-de-vida]] (§10, a ordem: a vida → quedas com dano pela altura → o emissor → o golpe com arremesso → `check:health`). Sem dano de choque no próprio coice (2026-10-04).
+2. **Recuperar o braço** — [[Recuperar-o-braco]]: câmara de reconstrução (única nova), prótese (loot), moradores das vilas; R1–R6 a confirmar. Fecha o risco de travar a Peregrinação sem os dois braços.
+3. **O resto da gameplay** — o que o usuário pedir (ideias em [[00-Ideias]]; os Safeguards em níveis e a reação à arma) — rumo ao **objetivo final: o gene de terminal** ([[Gene-terminal]] — quase impossível; a mecânica, o usuário elabora).
+4. **Por último, o grande rework gráfico** — [[Rework-grafico]]: texturas variadas, modelos de NPCs detalhados e variados, animações variadas (as do golpe por ângulo e por tipo de NPC). **Só depois de toda a gameplay.**
 
 ## Contínuo (entra onde couber)
 

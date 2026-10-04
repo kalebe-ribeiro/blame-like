@@ -1,6 +1,6 @@
 ---
-status: futuro
-prioridade: futura
+status: feita (fases 6 e 7) — o golpe com arremesso vem com a barra de vida
+prioridade: —
 tags: [futuro, npcs, inimigos]
 ---
 
@@ -25,7 +25,7 @@ tags: [futuro, npcs, inimigos]
 - **Energia e luz** ([[Luz-como-recurso]], [[Religar-setores]]): usar e religar pode chamar atenção.
 - **Estruturas únicas reservadas**: vilas abandonadas, berço de Safeguards lacrado ([[Estruturas-unicas]]).
 - **Cargas** em standby até existirem NPCs.
-- A arma (emissor de feixe gravitacional) só entra com os Safeguards ([[Ferramentas]]).
+- A arma (emissor de feixe gravitacional) entrou depois dos Safeguards, nos dois modos ([[Arma-do-Killy]]); atirar sobe o alerta e os Safeguards perto ouvem.
 
 ## Quando você "morre" ([[Queda-e-despertar]])
 - Arrastado por **Safeguards** → acorda num **cemitério de vítimas**, sem energia e sem o que carregava (ferramentas ficam).

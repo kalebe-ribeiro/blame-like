@@ -10,7 +10,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 
 **Status**: `escolhida` (o usuário quer) · `decidida` · `proposta` · `standby` · `futuro` · `feita`. Ver também [[Descartadas]], [[Pendencias]] e as decisões em [[13-Decisoes]].
 
-**Estado (2026-09-29): fases 0–3 do [[15-Plano-de-Implementacao]] feitas.** Plano: [[Plano-de-Gameplay]].
+**Estado (2026-10-04): o [[15-Plano-de-Implementacao]] inteiro (fases 0–7) e a [[Arma-do-Killy]] feitos.** A fila do que vem: [[Pendencias]] — **1. [[Barra-de-vida]] → 2. [[Recuperar-o-braco]] → … → por último o [[Rework-grafico]]**, rumo ao objetivo final, o [[Gene-terminal]]. Plano original: [[Plano-de-Gameplay]].
 
 ## Gameplay
 
@@ -35,7 +35,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Marcas-do-jogador]] | ✔ feita (fase 4.3) | baixa |
 | [[Cargas]] | feita (fase 7; contexto e recompensa em 2026-10-01) | — |
 | [[Copiar-inscricoes]] | ✗ descartada (2026-10-03) | — |
-| [[Credenciais-de-acesso]] | proposta — a relação com o gene fica para a mecânica dele | média |
+| [[Credenciais-de-acesso]] | proposta — **esperando a mecânica do [[Gene-terminal]]** | média |
 | [[Elevadores-e-trens-como-quebra-cabeca]] | ✗ descartada (2026-10-03) | — |
 | [[Modo-expedicao]] | ✗ descartado (2026-10-03) | — |
 
@@ -55,17 +55,17 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Vento]] | proposta | baixa |
 | [[Neblina-em-faixas]] | proposta (cuidado) | baixa |
 
-## Futuro
+## Futuro — na ordem de trabalho
 
-| ideia | status |
-|---|---|
-| [[NPCs-e-Safeguards]] | futuro — arquitetar pensando nisso |
-| [[Quinas-e-maos]] (agarrar quinas, subir; mãos) | feita (2026-09-30) |
-| [[Arma-do-Killy]] (feixe que fura o terreno) | feita (F1–F4, 2026-10-03; sobrecarga com estágios) |
-| [[Barra-de-vida]] (vida; golpe com arremesso dos hostis; quedas com dano; o custo da sobrecarga) | decidida (2026-10-03) — a implementar, a próxima |
-| [[Recuperar-o-braco]] (o braço perdido além do limite do emissor) | futuro — em aberto |
-| [[Gene-terminal]] (o gene de terminal da rede) | **o objetivo final, máximo — quase impossível** (2026-10-03); a mecânica: o usuário elabora |
-| [[Rework-grafico]] (texturas variadas, modelos de NPCs detalhados e variados, animações variadas) | futuro — **depois de toda a gameplay** |
+| ordem | ideia | status |
+|---|---|---|
+| 1 | [[Barra-de-vida]] (vida; golpe com arremesso dos hostis; quedas com dano pela altura; o custo da sobrecarga) | decidida (2026-10-03, revista 2026-10-04) — **a próxima** |
+| 2 | [[Recuperar-o-braco]] (câmara de reconstrução, prótese, moradores das vilas) | caminhos decididos (2026-10-04); R1–R6 a confirmar |
+| — | [[Gene-terminal]] (o gene de terminal da rede) | **o objetivo final, máximo — quase impossível**; esperando a mecânica do usuário |
+| último | [[Rework-grafico]] (texturas, modelos de NPCs, animações variadas) | **depois de toda a gameplay** |
+| ✔ | [[Arma-do-Killy]] (feixe que fura o terreno) | feita (F1–F4, 2026-10-03; sobrecarga com 7 estágios) — revisão: [[Arma-do-Killy-revisao]] |
+| ✔ | [[NPCs-e-Safeguards]] | feita nas fases 6 e 7; o golpe com arremesso vem com a barra de vida |
+| ✔ | [[Quinas-e-maos]] (agarrar quinas, subir; mãos) | feita (2026-09-30) |
 
 ## Técnico
 

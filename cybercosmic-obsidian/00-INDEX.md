@@ -31,9 +31,9 @@
 | "o que o usuário já decidiu?" | [[13-Decisoes]] — **sempre, antes de propor algo** |
 | qualquer decisão de conteúdo, lore, inimigos, NPCs | [[14-Universo-Blame]] — *Blame!* é a referência direta |
 | **o que fazer a seguir** | [[15-Plano-de-Implementacao]] (fases 0 → 7, até os NPCs) → [[Ideias/00-Ideias]] |
-| mudanças decididas e ainda não feitas | [[Ideias/Pendencias]] |
+| mudanças decididas e ainda não feitas (a fila, na ordem) | [[Ideias/Pendencias]] |
 
-> **Estado (2026-09-30): fases 0 a 7 feitas — o plano inteiro.** Nas fases 3 a 7, várias escolhas foram feitas por padrão e **esperam confirmação** — ver [[13-Decisoes]]. Daqui em diante, o que o usuário pedir (ideias em [[Ideias/00-Ideias]], o contínuo do plano). Registrar todo o contexto novo neste cofre.
+> **Estado (2026-10-04): fases 0 a 7 feitas (o plano inteiro) e a arma de Killy fechada (F1–F4).** As escolhas por padrão das fases 3–7 foram respondidas pelo usuário ([[13-Decisoes]]). **O que vem, na ordem: [[Ideias/Pendencias]]** — a barra de vida, depois recuperar o braço; o objetivo final é o gene de terminal; o rework gráfico por último. Registrar todo o contexto novo neste cofre.
 
 ## Mapa do cofre
 
@@ -44,6 +44,6 @@
   - `Ideias/Gameplay/` — dar ao jogo motivos e meios, sem perder a contemplação;
   - `Ideias/Mundo/` — mais coisas no mundo;
   - `Ideias/Tecnico/` — desempenho, distribuição, ferramentas, arquitetura para o futuro;
-  - `Ideias/Futuro/` — NPCs e Safeguards;
+  - `Ideias/Futuro/` — as features grandes: barra de vida, recuperar o braço, o gene de terminal (objetivo final), o rework gráfico; e as feitas (arma de Killy, NPCs e Safeguards, quinas);
   - [[Ideias/Pendencias]] — decidido, mas ainda não feito no código;
   - [[Ideias/Descartadas]] — o que foi removido ou recusado, e por quê (não repetir).

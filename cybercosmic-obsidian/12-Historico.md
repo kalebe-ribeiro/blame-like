@@ -325,3 +325,9 @@ Por que as coisas estão como estão, em ordem.
 - Pendências resolvidas antes da barra de vida: o disparo dos estágios 5–7 mais leve (≤ +6,7 ms), o carregamento e a memória de vídeo medidos com tiros, o aviso de que o código de mundo não leva os cortes, o túnel visto de dentro; e o jogo saiu do teto de ~64 fps (a RTX desenhando para a tela da Intel: o Chromium num relógio de 60 Hz — `disable-frame-rate-limit`): `check` 114 fps. Todos os checks verdes.
 - **Planejado** (só o cofre): a [[Barra-de-vida]] decidida — V1–V7 aprovadas, o golpe dos hostis com animação e arremesso (−50%, três caminhos: cair da estrutura, cair no mesmo plano, bater num obstáculo), quedas com dano até o limiar do desmaio, animações únicas agora e variações registradas; o [[Rework-grafico]] depois de toda a gameplay.
 - **Decidido** (só o cofre): o **gene de terminal** é o objetivo final e máximo do jogo — quase impossível; a mecânica, o usuário elabora ([[Gene-terminal]]). Descartados: quebra-cabeças de transporte, copiar inscrições, modo expedição.
+
+## 2026-10-04 — o cofre reorganizado (só o cofre)
+
+- [[Ideias/Pendencias]] virou a fila: a implementar (na ordem), esperando o usuário, em observação, fechadas (só o ponteiro). [[Ideias/00-Ideias]] e [[00-INDEX]] com o estado de hoje; a tabela do Futuro na ordem de trabalho; notas velhas acertadas (a arma não é mais "a próxima", os NPCs e Safeguards estão feitos, a "porta da F1" no lugar certo).
+- [[Barra-de-vida]] revista: sem dano de choque no próprio coice do emissor; a queda pela altura (a conta antiga usava g = 9,8 — o jogo usa 15).
+- [[Recuperar-o-braco]]: escolhidos os três caminhos (câmara de reconstrução, prótese, moradores das vilas), com as propostas R1–R6 e a saída garantida sem os dois braços — o risco de travar a Peregrinação, que já existe no jogo.

@@ -4,34 +4,38 @@ prioridade: alta
 tags: [pendencias]
 ---
 
-# Pendências (mudanças já decididas, ainda não feitas no código)
+# Pendências — decidido, ainda não feito no código
 
-Registradas em 2026-09-29.
+Reorganizada em 2026-10-04. Três listas: **a implementar** (decidido, na ordem), **esperando o usuário** (não implementar antes), **em observação**. O que foi fechado fica no fim, só com o ponteiro para o detalhe.
 
-## Em aberto (2026-10-02)
+## 1. A implementar — nesta ordem
 
-### Arma de Killy — o que falta para fechar a F4 ([[Ideias/Futuro/Arma-do-Killy]])
-- ✔ **A porta da F4** (2026-10-03): todos os checks verdes — ver [[Ideias/Futuro/Arma-do-Killy]] (Andamento F4).
-- ✔ (2026-10-03) As pendências da arma — ver [[Ideias/Futuro/Arma-do-Killy]] (Andamento, "Pendências fechadas"): o caso frio de 50 cortes (memória das peças no IndexedDB), o primeiro tiro (corte a seco no aquecimento), o túnel de longe (a brasa nos chunks de longe; conferido em números — sem imagem), a lente no escuro (a luz das bobinas), o `check:pad` intermitente (o teste insiste no foco).
-- ✔ (2026-10-03) **Todas as pendências da arma resolvidas** antes da barra de vida (pedido do usuário): os checks depois das mudanças no corpo e nos menus (todos verdes: `check` 31/31 a 114 fps, `check:pilgrimage` 31/31, `check:pad` 31 + 30, `check:beings` 5/5, `check:climb` 8/8, `check:moves` 6/6, `check:beam` 22/22, `check:safeguards` 9/9, `check:npcs` 10/10), o carregamento enquanto se atira (`streaming`), a memória de vídeo (`lotes`), o aviso do código de mundo, o disparo nos estágios 5–7 (≤ +6,7 ms), o túnel de longe em imagem (de dentro), e o teto de 64 fps (o Chromium no relógio de 60 Hz com a RTX desenhando — `disable-frame-rate-limit`).
-- **Barra de vida** — **decidida** (2026-10-03, V1–V7 + o golpe com arremesso + quedas com dano): [[Ideias/Futuro/Barra-de-vida]] — a implementar (a próxima).
-- **Rework gráfico** — depois de toda a gameplay: [[Ideias/Futuro/Rework-grafico]].
-- **Em observação**: numa rodada do `profile --profshot` (a primeira na RTX, depois da troca de GPU) dois quadros de ~1,9 s no desenho, ~2 s depois do tiro; não se repetiram em duas rodadas seguintes. Hipótese: o cache de shaders do Chromium montado para a Intel. Se voltar, o `profile` agora lista os programas de shader novos de cada tiro.
+| # | o quê | nota | estado |
+|---|---|---|---|
+| 1 | **Barra de vida** — a vida, quedas com dano **pela altura** (a partir de 10 m; zera em 38 m/s ≈ 48 m), o golpe com arremesso dos hostis, o dano da sobrecarga, `check:health` | [[Barra-de-vida]] §10 | decidida (V1–V7; revista em 2026-10-04) — **a próxima** |
+| 2 | **Recuperar o braço** — câmara de reconstrução (única nova), prótese (loot), moradores das vilas (troca) e a saída garantida sem braços | [[Recuperar-o-braco]] | caminhos decididos (2026-10-04); **R1–R6 a confirmar antes de começar** |
+| 3 | **Rework gráfico** — texturas, modelos de NPCs, animações variadas (as do golpe por ângulo e tipo de NPC) | [[Rework-grafico]] | só **depois de toda a gameplay** |
 
-## ✔ Feitas na fase 0 (2026-09-29)
+### Regras novas que a barra de vida tem de respeitar (2026-10-04)
+- **O próprio coice do emissor contra uma parede não tira vida** — o baque, o tremor e o som ficam. Só o **arremesso de um hostil** contra um obstáculo tira vida. Se o empurrão do emissor te tira de uma plataforma, a **queda** conta.
+- **A queda é pela altura** (energia, `v²`), com a gravidade real do jogo (15 m/s², `controls/walker.js`) — a conta antiga ("14 m/s ≈ 10 m") estava errada: dava ~6,5 m.
 
-### Tirar todo o caráter alienígena
-- HUD "interface alienígena" (`ui/hud.js`): mensagens, nome, tom.
-- **Glifos alienígenas** (`ui/glyphs.js`): na tela de entrada, no HUD, no mapa.
-- Mensagens do tipo "tradução 34% · o resto é fome", "CARNE/CÓDIGO…", "THE SIGNAL IS NOT FOR YOU" — revisar todas à luz de [[14-Universo-Blame]].
-- README (seções "Direção de arte", "interface alienígena").
-- Substituir pela **língua antiga humana** ([[Traducao-como-progresso]]).
+### Risco já no jogo, resolvido pelo item 2
+- **Peregrinação sem os dois braços = preso para sempre**: atirar além do limite com um braço só perde o segundo; sem braços não há quinas nem escadas, e nada devolve o braço (o despertar também não). Até o item 2 existir, um mundo salvo pode travar. A regra R6 de [[Recuperar-o-braco]] é a saída garantida.
 
-### Inglês como idioma padrão
-- Toda a interface (tela de entrada, configurações, transporte, diário, mapa, HUD) em inglês.
-- **Português continua como opção de idioma** (decidido 2026-09-29) → precisa de um sistema de idiomas (textos fora do código, um arquivo por idioma).
-- Nomes da obra em todo lugar: Safeguard, Netsphere/Netsfera, Authority/Autoridade, Builders/Construtores, net terminal gene.
+## 2. Esperando o usuário (não implementar antes)
 
-## Ainda pendente
+| o quê | o que falta | nota |
+|---|---|---|
+| **Gene de terminal** — o objetivo final, quase impossível | a mecânica (as 4 perguntas da nota) | [[Gene-terminal]] |
+| **Credenciais de acesso** | depende do gene (acessos intermediários?) | [[Credenciais-de-acesso]] |
+| **Recuperar o braço — R1–R6** | confirmar as propostas (os dois braços na câmara, preços, onde a prótese aparece, a saída garantida) | [[Recuperar-o-braco]] |
 
-(nada — os materiais sem uso `organic`/`anomaly`, `buildTendril` e `lsystem.js` foram apagados em 2026-09-30)
+## 3. Em observação
+- **Travadas de ~1,9 s** numa rodada do `profile --profshot` (a primeira na RTX, depois da troca de GPU), ~2 s depois do tiro; não se repetiram em duas rodadas. Hipótese: o cache de shaders do Chromium montado para a Intel. Se voltar, o `profile` lista os programas de shader novos de cada tiro.
+- **O código de mundo não leva os cortes do emissor** — aceito e avisado ao copiar ([[Seeds-compartilhaveis]]); só muda se o usuário quiser.
+
+## Fechadas (só o ponteiro)
+- **Arma de Killy** — F1–F4, sobrecarga com 7 estágios, o braço além do limite, coice, o chão sob os pés e as duas rodadas de pendências (todos os checks verdes, 2026-10-03): [[Arma-do-Killy]] (Andamento) e [[12-Historico]].
+- **Fase 0** (2026-09-29) — tirar todo o caráter alienígena (HUD, glifos, mensagens, README → a língua antiga humana) e inglês como padrão com português opcional: [[15-Plano-de-Implementacao]] fase 0.
+- **Limpeza** (2026-09-30) — materiais sem uso `organic`/`anomaly`, `buildTendril`, `lsystem.js` apagados.

@@ -209,3 +209,9 @@ O perfil (`npm run profile`) mudou o plano: a física (Walker) custa ~1,3 ms —
 - **Rework gráfico depois de toda a gameplay** (usuário, 2026-10-03): texturas variadas, modelos de NPCs detalhados e variados, animações diversas — [[Rework-grafico]].
 - **O gene de terminal é o objetivo final** (usuário, 2026-10-03): o objetivo máximo do jogo, quase impossível; a mecânica será elaborada pelo usuário — [[Gene-terminal]].
 - **Descartados** (usuário, 2026-10-03): quebra-cabeças de elevadores e trens, copiar inscrições, modo expedição — [[Descartadas]].
+
+### Barra de vida revista e o braço (2026-10-04)
+
+- **O próprio coice do emissor não dá dano de choque**: bater numa parede pelo empurrão do tiro é só o baque. O dano por obstáculo fica só para o **arremesso de um hostil**. Cair de uma plataforma pelo empurrão continua sendo uma queda (com dano) — [[Barra-de-vida]] §2.
+- **A queda com dano é pela altura**: a partir de **10 m** (17,3 m/s com a gravidade do jogo, 15 m/s²), crescendo com a energia (`v²`) até **38 m/s ≈ 48 m**, o desmaio de sempre. A nota antiga dizia "14 m/s ≈ 10 m" — a conta usava 9,8 m/s² — [[Barra-de-vida]] §4.
+- **Recuperar o braço**: três caminhos — **uma estrutura única nova** (a câmara de reconstrução), **loot** (a prótese) e **NPCs** (os moradores das vilas refazem). Fora: a regeneração lenta. Os detalhes (R1–R6) são propostas a confirmar — [[Recuperar-o-braco]].
