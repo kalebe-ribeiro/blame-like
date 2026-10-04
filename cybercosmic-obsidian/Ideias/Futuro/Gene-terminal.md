@@ -71,5 +71,5 @@ Fiel ao mangá — **nada de mecânica artificial para punir**; o que pesa é a 
 ## O que já existe e se liga a isto
 - [[Terminais-com-conteudo]], [[Traducao-como-progresso]], [[Pistas]], [[Diario-como-arquivo]] — a cadeia longa.
 - [[NPCs-e-Safeguards]] (vilas, andarilhos — quem carrega ou pega o gene), [[Dano-do-emissor]] (as vilas hostis), [[Movimento-dos-inimigos]] (os guardas).
-- [[Credenciais-de-acesso]] — se houver acessos intermediários, a relação com o gene se decide junto (em aberto).
+- **Sem acessos intermediários**: as [[Credenciais-de-acesso]] foram descartadas (2026-10-04) — o gene é o único acesso, como na obra.
 - [[Estruturas-unicas]], [[Barra-de-vida]], [[Recuperar-o-braco]] — o custo do caminho.

@@ -35,7 +35,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Marcas-do-jogador]] | ✔ feita (fase 4.3) | baixa |
 | [[Cargas]] | feita (fase 7; contexto e recompensa em 2026-10-01) | — |
 | [[Copiar-inscricoes]] | ✗ descartada (2026-10-03) | — |
-| [[Credenciais-de-acesso]] | proposta — acessos intermediários antes do [[Gene-terminal]]? | média |
+| [[Credenciais-de-acesso]] | ✗ descartada (2026-10-04) — o gene é o único acesso | — |
 | [[Elevadores-e-trens-como-quebra-cabeca]] | ✗ descartada (2026-10-03) | — |
 | [[Modo-expedicao]] | ✗ descartado (2026-10-03) | — |
 

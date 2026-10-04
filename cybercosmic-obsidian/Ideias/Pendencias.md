@@ -26,11 +26,9 @@ Reorganizada em 2026-10-04. Três listas: **a implementar** (decidido, na ordem)
 ### Risco já no jogo, resolvido pelo item 3
 - **Peregrinação sem os dois braços = preso para sempre**: atirar além do limite com um braço só perde o segundo; sem braços não há quinas nem escadas, e nada devolve o braço (o despertar também não). Até o item 3 existir, um mundo salvo pode travar. As regras R6 (a saída) e R7 (o aviso de um braço só) de [[Recuperar-o-braco]] resolvem.
 
-## 2. Esperando o usuário (não implementar antes)
+## 2. Esperando o usuário
 
-| o quê | o que falta | nota |
-|---|---|---|
-| **Credenciais de acesso** | se existem acessos intermediários antes do gene | [[Credenciais-de-acesso]] |
+(nada — tudo decidido em 2026-10-04; as credenciais de acesso foram descartadas)
 
 ## 3. Em observação
 - **Travadas de ~1,9 s** numa rodada do `profile --profshot` (a primeira na RTX, depois da troca de GPU), ~2 s depois do tiro; não se repetiram em duas rodadas. Hipótese: o cache de shaders do Chromium montado para a Intel. Se voltar, o `profile` lista os programas de shader novos de cada tiro.

@@ -21,7 +21,7 @@ tags: [futuro, npcs, inimigos]
 > **NPCs feitos na fase 7 (2026-09-30)**: moradores das vilas (conversa curta, trocas, cargas), andarilhos transumanos (trocam ou roubam), vida de silício disfarçada (drena a célula; os Safeguards a caçam — a terceira força), despertar numa vila. Escolhas por padrão em [[13-Decisoes]].
 
 ## Como o que existe hoje prepara isso
-- **Acesso / credencial** ([[Credenciais-de-acesso]]): o análogo do gene de terminal — decide a hostilidade dos Safeguards.
+- **Acesso**: só o [[Gene-terminal]] — implantado, os Safeguards param de caçar. Sem credenciais intermediárias (descartadas 2026-10-04).
 - **Energia e luz** ([[Luz-como-recurso]], [[Religar-setores]]): usar e religar pode chamar atenção.
 - **Estruturas únicas reservadas**: vilas abandonadas, berço de Safeguards lacrado ([[Estruturas-unicas]]).
 - **Cargas** em standby até existirem NPCs.

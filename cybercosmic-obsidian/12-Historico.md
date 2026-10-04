@@ -337,3 +337,4 @@ Por que as coisas estão como estão, em ordem.
 - Depois: a mecânica do [[Gene-terminal]] decidida (vários caminhos, o analisador de genes, a dificuldade pelo tamanho da Cidade, o controle da Cidade, três finais); G1–G5 em aberto.
 - Depois: [[Gene-terminal]] G1–G5 respondidas (o implante num lugar próprio, a amostra com o portador vivo, o analisador em estruturas ou trocas, os Safeguards só param de caçar).
 - Depois: G6 — o gene se implanta na câmara de reconstrução; o gene entrou na fila de [[Ideias/Pendencias]] (nada mais esperando o usuário além das credenciais).
+- Depois: credenciais de acesso descartadas — nada mais esperando o usuário; o planejamento está fechado.
