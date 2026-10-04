@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import * as CSGLIB from '../lib/three-bvh-csg.js';
 import { cutPiece, setCSG } from '../gen/cut.js';
 import { movingMaterial } from '../shaders/materials.js';
+import { mergeAll } from './geometry.js';
 
 setCSG(CSGLIB); // (aqui, no jogo: os workers têm a sua cópia)
 
@@ -26,6 +27,60 @@ const _inv = new THREE.Matrix4();
 const _a = new THREE.Vector3();
 const _b = new THREE.Vector3();
 const _c = new THREE.Vector3();
+
+/** Triângulos×3 de uma geometria (0 sem ela). */
+function count(g) {
+  return g ? (g.index?.count ?? g.attributes.position.count) : 0;
+}
+
+/** As peças de uma malha fundida (world/geometry.js mergeAll guarda o primeiro vértice de cada uma):
+ *  cada triângulo vai para a peça dos seus vértices. Sem isso, a malha toda. */
+function piecesOf(geom) {
+  const at = geom.userData?.parts;
+  const one = () => [{ geo: geom, memo: new Map(), n: -1, kept: null, caps: null, cut: false }];
+  if (!at || at.length < 3 || !geom.index) return one();
+  const P = geom.attributes.position;
+  const N = geom.attributes.normal;
+  const ix = geom.index;
+  // a peça de um vértice (busca binária nos inícios)
+  const of = (v) => {
+    let lo = 0;
+    let hi = at.length - 2;
+    while (lo < hi) {
+      const m = (lo + hi + 1) >> 1;
+      if (at[m] <= v) lo = m;
+      else hi = m - 1;
+    }
+    return lo;
+  };
+  const tris = at.slice(0, -1).map(() => []);
+  for (let t = 0; t < ix.count; t += 3) tris[of(ix.getX(t))].push(t);
+  const out = [];
+  for (const list of tris) {
+    if (!list.length) continue;
+    const n = list.length * 3;
+    const p = new Float32Array(n * 3);
+    const nn = new Float32Array(n * 3);
+    let o = 0;
+    for (const t of list) {
+      for (let j = 0; j < 3; j++, o++) {
+        const v = ix.getX(t + j);
+        p[o * 3] = P.getX(v);
+        p[o * 3 + 1] = P.getY(v);
+        p[o * 3 + 2] = P.getZ(v);
+        nn[o * 3] = N.getX(v);
+        nn[o * 3 + 1] = N.getY(v);
+        nn[o * 3 + 2] = N.getZ(v);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(nn, 3));
+    g.computeBoundingSphere();
+    out.push({ geo: g, memo: new Map(), n: -1, kept: null, caps: null, cut: false });
+  }
+  return out;
+}
 
 /** Distância de p ao segmento ab. */
 function segPoint(p, a, b) {
@@ -113,11 +168,20 @@ export class DynamicCuts {
     }
   }
 
-  /** Corta as malhas do objeto pelos cortes (no frame do root). true = alguma malha mudou. */
+  /**
+   * Corta as malhas do objeto pelos cortes NOVOS (no frame do root). true = alguma malha mudou.
+   * Sempre a partir da geometria ORIGINAL de cada malha e de TODOS os cortes dela, com a memória da
+   * peça (gen/cut.js: o resultado de antes, malha + faces, volta a ser um sólido fechado e só o corte
+   * novo passa pelo CSG). Cortar a malha já cortada não serve: ela é aberta (as faces ficam à parte)
+   * e o corte seguinte sairia oco — sem faces, o vazio de dentro à mostra.
+   */
   _apply(o, cuts) {
     let changed = false;
     _inv.copy(o.root.matrixWorld).invert();
+    o.cut ??= new Map(); // malha → { pieces: [{ geo, memo, n, kept, caps }], cuts (no frame dela), caps }
     for (const mesh of o.meshes) {
+      let st = o.cut.get(mesh);
+      if (!st) o.cut.set(mesh, (st = { base: mesh.geometry, pieces: piecesOf(mesh.geometry), cuts: [], caps: null }));
       // o frame da malha a partir do do root
       mesh.updateMatrixWorld(true);
       _m.copy(_inv).multiply(mesh.matrixWorld); // malha → root
@@ -128,17 +192,47 @@ export class DynamicCuts {
         b: _b.fromArray(c.b).applyMatrix4(toMesh).toArray(),
         r: c.r,
       }));
-      const g = mesh.geometry;
-      const r = cutPiece(g, local, { maxEdge: 1.2 });
-      if (r.mode === 'none') continue;
+      const all = [...st.cuts, ...local];
+      st.cuts = all;
+      // peça a peça (cada caixa, cada tubo: um sólido fechado — fundidas, as que se tocam nos cantos
+      // deixam de parecer fechadas e o corte sairia sem faces)
+      let mine = false;
+      for (const pc of st.pieces) {
+        const r = cutPiece(pc.geo, all, { maxEdge: 1.2, memo: pc.memo, key: 'p' });
+        if (r.mode === 'none') continue;
+        // mudou? (o corte novo pode passar ao lado: a memória devolve o mesmo resultado)
+        const n = count(r.kept) * 7 + count(r.caps);
+        if (n === pc.n) {
+          r.kept?.dispose();
+          r.caps?.dispose();
+          continue;
+        }
+        pc.n = n;
+        pc.kept?.dispose();
+        pc.caps?.dispose();
+        pc.kept = r.kept;
+        pc.caps = r.caps;
+        pc.cut = true;
+        mine = true;
+      }
+      if (!mine) continue;
       changed = true;
-      mesh.geometry = r.kept ?? new THREE.BufferGeometry();
-      if (r.caps) {
-        // as faces do corte: em brasa, presas à malha (andam com ela)
-        const caps = new THREE.Mesh(r.caps, movingMaterial(this.world.materials.cut));
-        caps.userData.noCollide = true;
-        caps.userData.cutCaps = true;
-        mesh.add(caps);
+      if (mesh.geometry !== st.base) mesh.geometry.dispose();
+      const kept = st.pieces.map((pc) => (pc.cut ? pc.kept : pc.geo)).filter(Boolean);
+      mesh.geometry = (kept.length && mergeAll(kept.map((g) => g.clone()))) || new THREE.BufferGeometry();
+      // as faces do corte (de todos os cortes da malha): em brasa, presas a ela (andam com ela)
+      if (st.caps) {
+        st.caps.geometry.dispose();
+        st.caps.removeFromParent();
+        st.caps = null;
+      }
+      const caps = st.pieces.map((pc) => pc.cut && pc.caps).filter(Boolean);
+      if (caps.length) {
+        const cm = new THREE.Mesh(mergeAll(caps.map((g) => g.clone())), movingMaterial(this.world.materials.cut));
+        cm.userData.noCollide = true;
+        cm.userData.cutCaps = true;
+        mesh.add(cm);
+        st.caps = cm;
       }
     }
     return changed;

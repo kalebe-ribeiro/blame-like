@@ -298,6 +298,8 @@ export async function runDamage(ctx, report) {
     world.addCut({ a: a.toArray(), b: b.toArray(), r }, a, { now: true });
   };
   const capsOf = (mesh) => mesh.children.filter((m) => m.userData.cutCaps).length;
+  /** Peças cortadas SEM faces (o furo oco, o vazio de dentro à mostra) — tem de ser 0. */
+  const hollow = (id) => [...(world.dyn.objs.get(id)?.cut?.values() ?? [])].reduce((n, st) => n + st.pieces.filter((pc) => pc.cut && pc.kept && !pc.caps).length, 0);
   const dyn = world.dyn;
 
   // construtor: a obra e os trilhos cortados como a Cidade; o pórtico ativo
@@ -361,8 +363,9 @@ export async function runDamage(ctx, report) {
           await sleep(300);
           ess = s2.dead && dyn.info(`bg:${s2.def.id}`)?.dead === 'essential' ? 'a base da perna: caiu de um tiro' : `não caiu (${dyn.info(`bg:${s2.def.id}`)?.dead})`;
         }
-        ok = solid && blockCut && railCut && alive && worn && !ess.startsWith('não');
-        why = `perna sólida ${solid} · bloco: furo ${blockCut} · trilho: furo ${railCut} · perna no meio: segue trabalhando ${!!alive} (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) · +${n} cortes: ${worn ? 'gasto, caiu' : 'NÃO caiu'} · ${ess}`;
+        const oco = hollow(`bg:${d.id}`);
+        ok = solid && blockCut && railCut && alive && worn && !ess.startsWith('não') && !oco;
+        why = `perna sólida ${solid} · bloco: furo ${blockCut} · trilho: furo ${railCut} · perna no meio: segue trabalhando ${!!alive} (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) · +${n} cortes: ${worn ? 'gasto, caiu' : 'NÃO caiu'} · ${ess} · peças ocas ${oco}`;
       } else why = 'nenhum canteiro vivo perto';
     }
     report({ kind: 'construtor', ok, why });
@@ -394,8 +397,9 @@ export async function runDamage(ctx, report) {
       const y0 = car.y;
       await sleep(2000);
       const stopped = Math.abs(car.y - y0) < 0.01;
-      ok = !!alive && dead && stopped;
-      why = `${car.def.kind}: cortado no meio, segue (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) ${!!alive} · o canto dos cabos: ${dead ? 'parou' : 'NÃO parou'} · parado de fato ${stopped}`;
+      const oco = hollow(id);
+      ok = !!alive && dead && stopped && !oco;
+      why = `${car.def.kind}: cortado no meio, segue (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) ${!!alive} · o canto dos cabos: ${dead ? 'parou' : 'NÃO parou'} · parado de fato ${stopped} · peças ocas ${oco}`;
     }
     report({ kind: 'elevador', ok, why });
   }
@@ -419,8 +423,9 @@ export async function runDamage(ctx, report) {
       cutAt(car.group, { x: 0, y: -0.7, z: 7 }, { x: 1, y: 0, z: 0 }, 1.5, 6);
       await sleep(300);
       const dead = car.dead && dyn.info(id)?.dead === 'essential' && !!world.worldState?.get(`transitDead:${car.line.id}`);
-      ok = !!alive && dead;
-      why = `cortado no meio, segue (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) ${!!alive} · o truque: ${dead ? 'parou a linha' : 'NÃO parou'}`;
+      const oco = hollow(id);
+      ok = !!alive && dead && !oco;
+      why = `cortado no meio, segue (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) ${!!alive} · o truque: ${dead ? 'parou a linha' : 'NÃO parou'} · peças ocas ${oco}`;
     }
     report({ kind: 'vagao', ok, why });
   }
@@ -451,11 +456,13 @@ export async function runDamage(ctx, report) {
         cutAt(M().group, { x: 0, y: H / 2 + 2, z: -18 }, { x: 1, y: 0, z: 0 }, 2.8, 60);
         await sleep(400);
         const dead = !!M()?.dead && dyn.info(id)?.dead === 'essential';
-        const p1 = M().pos.clone();
+        const p1 = M()?.pos.clone();
         await sleep(1500);
-        const stopped = M().pos.distanceTo(p1) < 0.01;
-        ok = !!alive && moving && dead && stopped;
-        why = `cortado na plataforma: segue ${!!alive && moving} (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) · o núcleo: ${dead ? 'parou' : 'NÃO parou'} · a trincheira parada ${stopped}`;
+        const stopped = !!p1 && !!M() && M().pos.distanceTo(p1) < 0.01;
+        if (!p1 || !M()) console.warn('DANO colosso: a máquina saiu do mapa', key, C.machines.size, [...C.machines.keys()].join(','));
+        const oco = hollow(id);
+        ok = !!alive && moving && dead && stopped && !oco;
+        why = `cortado na plataforma: segue ${!!alive && moving} (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) · o núcleo: ${dead ? 'parou' : 'NÃO parou'} · a trincheira parada ${stopped} · peças ocas ${oco}`;
       }
     }
     report({ kind: 'colosso', ok, why });

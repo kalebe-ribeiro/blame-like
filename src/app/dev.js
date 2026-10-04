@@ -309,6 +309,71 @@ export function setupDev(ctx) {
       console.warn('CUTCAR: o vagão andou ' + Math.abs(car.t - t0).toFixed(1) + ' m');
     }, Number(params.get('cutcar')) * 1000);
   }
+  // --cutobj=col|car|lift|gantry: uma estrutura ativa recebe TRÊS cortes encavalados (fora do essencial) e a
+  // câmera, presa a ela, olha o furo de viés: cutobj-<tipo>.png — as faces em brasa em todos (nada oco)
+  if (params.get('cutobj')) {
+    const kind = params.get('cutobj');
+    const place = { col: 'colosso', car: 'transportador', lift: 'poco', gantry: 'construtores' }[kind];
+    setTimeout(() => ctx.ui.teleport(place, place), 2000);
+    setTimeout(async () => {
+      const shot = (name) => /** @type {any} */ (window).cybercosmic?.devCapture?.(name);
+      const g0 = world.toGlobal(camera.position.clone());
+      const near = (list, pos) => list.sort((a, b) => pos(a).distanceTo(g0) - pos(b).distanceTo(g0))[0];
+      // o objeto: a raiz, o id, o ponto (local) do furo, a direção do corte, o raio, e a câmera (local)
+      let o = null;
+      if (kind === 'col') {
+        const m = near([...world.colossi.machines.values()], (x) => x.pos);
+        if (m) o = { root: m.group, id: `col:${m.lane.id}:${m.k}`, p: [40, 4, 95], dir: [0, 1, 0], r: 2.8, cam: [40, 10, 103], half: 20 };
+      } else if (kind === 'car') {
+        const c = [...world.transit.cars.values()][0];
+        if (c) o = { root: c.group, id: `car:${c.line.id}:${c.k}`, p: [2, 2, 2], dir: [1, 0, 0], r: 1.2, cam: [8, 3.2, 5], half: 4 };
+      } else if (kind === 'lift') {
+        const c = [...world.elevators.cars.values()][0];
+        if (c) o = { root: c.group, id: `lift:${c.def.id}`, p: [0, -0.4, 0], dir: [0, 1, 0], r: 0.9, cam: [2.5, 3, 3.5], half: 4 };
+      } else if (kind === 'gantry') {
+        const s = [...world.builders.sites.values()].find((x) => !x.dead);
+        if (s) {
+          const ax = s.def.axis === 'x';
+          o = { root: s.gantry, id: `bg:${s.def.id}`, p: ax ? [75, 30, 0] : [0, 30, 75], dir: ax ? [0, 0, 1] : [1, 0, 0], r: 1.4, cam: ax ? [72, 33, 8] : [8, 33, 72], half: 6 };
+        }
+      }
+      if (!o) return console.warn('CUTOBJ: nenhum ' + kind);
+      ctx.controls.canFly = true;
+      ctx.controls.setMode('fly');
+      ctx.player.energy.value = 1;
+      if (!ctx.carried.lanternOn) ctx.carried.toggleLantern();
+      const V = (a) => new THREE.Vector3(a[0], a[1], a[2]);
+      const offs = [[0, 0, 0], [0.9 * o.r, 0, 0.5 * o.r], [-0.4 * o.r, 0, 1.1 * o.r]];
+      for (const off of offs) {
+        o.root.updateMatrixWorld(true);
+        // (o desvio de lado: perpendicular à direção do corte)
+        const d = V(o.dir);
+        const side = Math.abs(d.y) > 0.5 ? V(off) : new THREE.Vector3(0, off[2], off[0]);
+        const c = V(o.p).add(side).applyMatrix4(o.root.matrixWorld).add(world.origin);
+        const dw = d.clone().transformDirection(o.root.matrixWorld);
+        const a = c.clone().addScaledVector(dw, -o.half);
+        const b = c.clone().addScaledVector(dw, o.half);
+        world.addCut({ a: a.toArray(), b: b.toArray(), r: o.r }, a, { now: true });
+      }
+      const caps = [];
+      o.root.traverse((m) => m.userData.cutCaps && caps.push(m.geometry.index?.count ?? m.geometry.attributes.position.count));
+      const tick = () => {
+        requestAnimationFrame(tick);
+        o.root.updateMatrixWorld(true);
+        const p = V(o.cam).applyMatrix4(o.root.matrixWorld);
+        const t = V(o.p).applyMatrix4(o.root.matrixWorld);
+        camera.position.copy(p);
+        const d = t.sub(p);
+        ctx.controls.yaw = Math.atan2(-d.x, -d.z);
+        ctx.controls.pitch = Math.atan2(d.y, Math.hypot(d.x, d.z));
+      };
+      tick();
+      const dbg = [...(world.dyn.objs.get(o.id)?.cut?.values() ?? [])].map((st) => st.pieces.map((pc) => (pc.cut ? (pc.caps ? 'F' : 'O') : '-')).join('')); // F: cortada, com faces · O: cortada, oca
+      console.warn('CUTOBJ: ' + o.id + ' ' + JSON.stringify(world.dyn.info(o.id)) + ' faces=' + JSON.stringify(caps) + ' peças=' + JSON.stringify(dbg));
+      await new Promise((r) => setTimeout(r, 1500));
+      await shot(`cutobj-${kind}.png`);
+    }, 14000);
+  }
   // --hurt=v: aos 5 s a vida vai a v (o aparelho mostra — app/health.js)
   if (params.get('hurt')) setTimeout(() => ctx.health.set(Number(params.get('hurt'))), 5000);
   // --sgcam=N: dos N s em diante, a câmera (voando: ninguém percebe) acompanha o Safeguard

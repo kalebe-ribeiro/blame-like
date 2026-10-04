@@ -389,3 +389,12 @@ Por que as coisas estão como estão, em ordem.
 - **Construtores**: o pórtico é estrutura ativa (essencial: a base das pernas e o meio da viga; gasto, cai — vira cemitério). **A obra e os trilhos são cortados como a Cidade** (bloco a bloco, memorizado; a obra que cresce já vem cortada).
 - Testes (`check:beam` parte `dano`): `construtor` (furo no bloco e no trilho; a perna no meio: segue com 71%; +3 cortes: cai; a base da perna: cai de um tiro), `elevador`, `vagao`, `colosso` (cortado: segue; o essencial: para — e a linha/trincheira parada). Imagem: o furo na parede de um vagão (`--cutcar=N`).
 - Regressões: `check` 31/31 (119 fps), `check:pilgrimage` 31/31 (111 fps — uma rodada antes deu 81, o estado da máquina; repetida, normal), `check:moves` 6/6, `check:beings` 5/5, `check:beam` parte `dano` 13/13 (o elevador: o essencial dos cantos dos cabos com raio menor — num carro estreito um corte no meio já os pegava).
+
+## 2026-10-04 — O corte oco nas estruturas ativas
+
+Fotos do usuário: o furo na máquina colossal saía **oco** (sem as faces do corte; o vazio de dentro à mostra). Duas causas em `world/dynamic.js`:
+1. **O 2º corte em diante**: a malha já cortada é aberta (as faces ficam numa malha à parte), e o corte seguinte caía no recorte sem faces (`clipOpen`). Agora o corte parte sempre da geometria **original** com **todos** os cortes, usando a memória da peça (`gen/cut.js`: o resultado anterior, malha + faces, volta a ser um sólido fechado e só o corte novo passa pelo CSG). As faces de todos os cortes formam uma malha só, trocada a cada corte.
+2. **Caixas que se tocam nos cantos** (o vagão): fundidas, deixam de parecer fechadas, e até o 1º corte saía oco. O `mergeAll` (`world/geometry.js`) agora guarda o primeiro vértice de cada peça (`userData.parts`). Usa vértices e não o índice porque **a BVH da colisão reordena o índice** da geometria compartilhada. O corte dinâmico corta **peça a peça** (cada caixa ou tubo é um sólido fechado), como a Cidade.
+- Os blocos e trilhos dos Construtores já eram cortados peça a peça a partir do original: sem o problema.
+- Imagens: `--cutobj=col|car|lift|gantry` (três cortes encavalados fora do essencial; a câmera presa ao objeto olha o furo de viés) gera `cutobj-<tipo>.png`. Nas quatro: as paredes do furo aparecem.
+- Testes (`dano`): `construtor`, `elevador`, `vagao` e `colosso` também exigem **0 peças ocas** — 13/13; `check:moves` 6/6. (Uma rodada perdeu o colosso do mapa logo depois do corte no núcleo: instável, a seguinte passou; o teste agora diz quando isso acontece.)

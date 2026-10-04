@@ -85,7 +85,8 @@ export function buildTaperedTube(points, radii, { radialSegments = 6, smooth = 3
 
 /**
  * Junta várias geometrias em uma (um draw call). Mantém só position e normal
- * (os shaders não usam uv) e sempre produz índice Uint32.
+ * (os shaders não usam uv) e sempre produz índice Uint32. Guarda onde cada peça começa no índice
+ * (userData.parts: o primeiro vértice de cada uma, e o fim — por vértice: a BVH da colisão reordena o índice): o emissor nas estruturas ativas corta peça a peça (world/dynamic.js).
  */
 export function mergeAll(geoms) {
   const list = geoms.filter(Boolean);
@@ -101,7 +102,9 @@ export function mergeAll(geoms) {
   const idx = new Uint32Array(iCount);
   let vo = 0;
   let io = 0;
+  const parts = [];
   for (const g of list) {
+    parts.push(vo);
     const p = g.attributes.position;
     if (!g.attributes.normal) g.computeVertexNormals();
     pos.set(p.array.subarray(0, p.count * 3), vo * 3);
@@ -121,6 +124,8 @@ export function mergeAll(geoms) {
   out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   out.setIndex(new THREE.BufferAttribute(idx, 1));
+  parts.push(vo);
+  out.userData.parts = parts;
   return out;
 }
 
