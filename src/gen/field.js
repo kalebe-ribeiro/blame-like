@@ -116,7 +116,7 @@ export const SECTOR = { cell: 900, dark: 0.3, unstable: 0.15, salt: 910 };
 export const RESTORE_SPEED = 40;
 /** O berço da câmara de reconstrução: meias medidas (ao longo da porta, de lado) e a altura do tampo. */
 export const CHAMBER_BED = { da: 1.25, dc: 0.6, h: 0.8 };
-export const UNIQUE = { cell: 16000, prob: 0.75, kinds: ['console', 'archive', 'plant'], plantHall: 0.45, chamber: 0.3 };
+export const UNIQUE = { cell: 16000, prob: 0.75, kinds: ['console', 'archive', 'plant'], plantHall: 0.45, chamber: 0.3, vault: 0.12, vaultFrom: 40000 };
 export const HIVE = 48; // célula da colmeia (uma sala)
 
 export const MEGA = {
@@ -645,14 +645,19 @@ export class Field {
       // a câmara de reconstrução (o cofre, Recuperar-o-braco): só nas células que ficavam VAZIAS —
       // um sorteio à parte, e as únicas dos mundos antigos continuam onde estavam
       const has = hash4(this.seed, ui, n, uk, 980) <= UNIQUE.prob;
-      const chamber = !has && hash4(this.seed, ui, n, uk, 985) < UNIQUE.chamber;
-      if (!b || (!has && !chamber)) return null;
+      // o depósito do gene de terminal (o cofre, Gene-terminal): raro, e só longe do começo — o tamanho
+      // da Cidade é a dificuldade. Também numa célula vazia, antes da câmara
+      const far = Math.hypot((ui + 0.5) * UNIQUE.cell, (uk + 0.5) * UNIQUE.cell) > UNIQUE.vaultFrom;
+      const vault = !has && far && hash4(this.seed, ui, n, uk, 986) < UNIQUE.vault;
+      const chamber = !has && !vault && hash4(this.seed, ui, n, uk, 985) < UNIQUE.chamber;
+      if (!b || (!has && !chamber && !vault)) return null;
       const r = rngAt(this.seed, ui, n, uk, 981);
       const C = UNIQUE.cell;
       let kind = UNIQUE.kinds[r.int(0, UNIQUE.kinds.length - 1)];
       // os tipos da fase 4.5 vêm de um sorteio à parte (os mundos antigos mantêm os seus)
       const alt = hash4(this.seed, ui, n, uk, 983);
-      if (chamber) kind = 'chamber';
+      if (vault) kind = 'vault';
+      else if (chamber) kind = 'chamber';
       else if (alt < 0.3) kind = alt < 0.15 ? 'builders' : 'antenna';
       else {
         // os lugares reservados para os seres (fase 5): outro sorteio à parte
@@ -661,7 +666,7 @@ export class Field {
       }
       const DIMS = {
         console: [30, 30, 22], archive: [66, 26, 26], plant: [42, 42, 34], builders: [34, 34, 18], antenna: [14, 14, 8],
-        village: [40, 40, 14], graveyard: [44, 44, 6], cradle: [26, 26, 40], chamber: [20, 16, 15],
+        village: [40, 40, 14], graveyard: [44, 44, 6], cradle: [26, 26, 40], chamber: [20, 16, 15], vault: [30, 30, 26],
       };
       const [hx, hz, h] = DIMS[kind];
       // tenta alguns pontos da célula até achar um lugar limpo
@@ -736,6 +741,9 @@ export class Field {
     } else if (u.kind === 'chamber') {
       a = ha - 5; // logo depois da porta, de lado
       c = u.doorOff * hc + 4;
+    } else if (u.kind === 'vault') {
+      a = ha - 6; // na antecâmara, junto da porta
+      c = u.doorOff * hc + 4;
     } else {
       a = ha - 2 * ha * UNIQUE.plantHall + 3 + 4;
     }
@@ -754,6 +762,20 @@ export class Field {
     const a = -ha * 0.25;
     const c = 0;
     return { x: u.x + ax[0] * a + cx[0] * c, y: u.y + 1.2 + CHAMBER_BED.h, z: u.z + ax[1] * a + cx[1] * c, yaw: Math.atan2(ax[0], ax[1]), a, c };
+  }
+
+  /** O depósito é guardado (Safeguards altos, luz acesa) ou esquecido (escuro, sem guarda)? */
+  vaultGuarded(u) {
+    return hash4(this.seed, Math.round(u.x), u.n, Math.round(u.z), 987) < 0.6;
+  }
+
+  /** O pedestal do gene num depósito: { x, y (o tampo), z } — as medidas de buildUnique (macrogen.js). */
+  vaultPedestal(u) {
+    const d = u.door;
+    const ax = d === 0 ? [1, 0] : d === 1 ? [-1, 0] : d === 2 ? [0, 1] : [0, -1];
+    const ha = d < 2 ? u.hx : u.hz;
+    const a = -ha * 0.45;
+    return { x: u.x + ax[0] * a, y: u.y + 1.2 + 1.1, z: u.z + ax[1] * a, a };
   }
 
   /** Estruturas únicas perto de (x,y,z) — nas camadas perto de y. */

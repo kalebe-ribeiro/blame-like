@@ -34,7 +34,8 @@ export function createSafeguards(ctx) {
     const sg = world.safeguards;
     sg.wired = true; // (um mundo novo traz um sistema novo: update() liga de novo)
     sg.senses = () => {
-      if (ctx.wake?.active || controls.mode !== 'walk') return null;
+      // implantado o gene de terminal, os Safeguards não caçam mais você (o cofre, Gene-terminal G5)
+      if (ctx.wake?.active || controls.mode !== 'walk' || ctx.player.gene) return null;
       return {
         lantern: !!ctx.carried?.lanternOn,
         running: Math.hypot(controls.walker.vel.x, controls.walker.vel.z) > 6,

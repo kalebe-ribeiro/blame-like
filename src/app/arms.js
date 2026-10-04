@@ -22,6 +22,7 @@ import { hash4 } from '../gen/hash.js';
 import { uniqueTerminal } from '../gen/sites.js';
 import { villageInhabited } from '../gen/villages.js';
 import { bindings } from '../controls/bindings.js';
+import { IMPLANT_TIME } from './gene.js';
 
 export const ARM_COST = { chamber: 0.5, wanderer: 0.4, villager: 0.3 };
 export const CHAMBER_TIME = 20; // s no berço
@@ -204,6 +205,22 @@ export function createArms(ctx) {
   let bedNear = null;
 
   function startChamber(nb) {
+    // o gene de terminal (app/gene.js — G6): com o gene ou a amostra, o berço implanta (~40 s, sem custo);
+    // com o gene já implantado, o berço repete a escolha do final
+    if (ctx.gene?.canImplant()) {
+      ctx.beam?.cancel?.('camara');
+      seq = { t: 0, bed: nb.b, u: nb.u, nextSpark: 1, nextClang: 0.5, implant: true };
+      controls.forceInput = { f: 0, r: 0, run: false, jump: false };
+      controls.setMode('walk');
+      controls.placeFeet(new THREE.Vector3(nb.b.x, nb.b.y, nb.b.z).sub(world.origin));
+      audio.powerUp?.(0, 4, 600);
+      bus.emit('player:implantStart', { id: nb.u.id });
+      return;
+    }
+    if (!missing().length && ctx.player.gene && ctx.slot.ending !== 'destroy' && ctx.slot.ending !== 'village') {
+      ctx.gene?.chooseEnding();
+      return;
+    }
     if (!missing().length) {
       tell(t('device.chamberNothing'), 3);
       return;
@@ -320,8 +337,14 @@ export function createArms(ctx) {
           audio.clangAt?.((Math.random() - 0.5) * 0.6, 2);
           controls.rumble?.(0.2, 0.15, 120);
         }
-        ctx.carried?.say?.(t('device.chamberWork', { n: Math.min(100, Math.round((seq.t / CHAMBER_TIME) * 100)) }), 0.3);
-        if (seq.t >= CHAMBER_TIME) {
+        const T = seq.implant ? IMPLANT_TIME : CHAMBER_TIME;
+        ctx.carried?.say?.(t(seq.implant ? 'device.implanting' : 'device.chamberWork', { n: Math.min(100, Math.round((seq.t / T) * 100)) }), 0.3);
+        if (seq.implant && seq.t >= T) {
+          seq = null;
+          endSeq();
+          audio.powerDown?.(0, 3, 400);
+          ctx.gene?.implantDone();
+        } else if (seq.t >= T) {
           for (const side of missing()) restore(side, 'flesh');
           const id = seq.u.id;
           seq = null;

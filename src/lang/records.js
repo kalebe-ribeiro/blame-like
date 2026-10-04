@@ -114,6 +114,10 @@ export function terminalRecords(field, site) {
       // o berço de Safeguards, lacrado
       lines.push([W('SAFEGUARD'), W('CONSTRUCTION'), code, P('·'), W('STATUS'), P(':'), W('SUSPENDED')]);
       lines.push([W('ACCESS'), W('NO'), W('AUTHORIZED'), P('·'), W('WARNING'), P('·'), W('NET'), W('GENE'), W('REQUEST')]);
+    } else if (u.kind === 'vault') {
+      // o depósito: o registro que a Netsfera ainda guarda
+      lines.push([W('NET'), W('TERMINAL'), W('GENE'), P('·'), W('RECORD'), code, P('·'), W('ACCESS'), W('NO'), W('AUTHORIZED')]);
+      lines.push([W('SAFEGUARD'), W('WORK'), P(':'), W('ALWAYS'), P('·'), W('WARNING')]);
     } else if (u.kind === 'chamber') {
       // a câmara de reconstrução: a máquina que ainda refaz corpos
       lines.push([W('HUMAN'), W('CONSTRUCTION'), code, P('·'), W('STATUS'), P(':'), W('ACTIVE')]);

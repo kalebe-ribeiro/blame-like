@@ -196,6 +196,7 @@ function kindWords(lead) {
   if (lead.uniqueKind === 'graveyard') return [W('RESIDENT'), W('ILLEGAL'), W('SITE')];
   if (lead.uniqueKind === 'cradle') return [W('SAFEGUARD'), W('CONSTRUCTION')];
   if (lead.uniqueKind === 'chamber') return [W('HUMAN'), W('CONSTRUCTION')];
+  if (lead.uniqueKind === 'vault') return [W('NET'), W('GENE'), W('RECORD')];
   return [W('TERMINAL'), W('ACTIVE')];
 }
 

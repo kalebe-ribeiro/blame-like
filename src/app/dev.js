@@ -188,6 +188,27 @@ export function setupDev(ctx) {
       console.warn('CHAMBERCAM: ' + u.id);
     }, Number(params.get('chambercam')) * 1000);
   }
+  // --vaultcam=N: aos N s, a câmera no depósito do gene mais perto da origem, olhando o pedestal (capturas);
+  // --endingshow=destroy|village: aos 6 s, a tela do fim
+  if (params.get('vaultcam')) {
+    setTimeout(async () => {
+      const { vaultsNear } = await import('../gen/gene.js');
+      const vs = vaultsNear(world.field, 0, 0, 0, 160000).sort((a, b) => Math.hypot(a.x, a.z) - Math.hypot(b.x, b.z));
+      const v = vs.find((x) => world.field.vaultGuarded(x)) ?? vs[0];
+      if (!v) return console.warn('VAULTCAM: nenhum');
+      const ped = world.field.vaultPedestal(v);
+      const d = v.door;
+      const ax = d === 0 ? [1, 0] : d === 1 ? [-1, 0] : d === 2 ? [0, 1] : [0, -1];
+      const p = new THREE.Vector3(ped.x + ax[0] * 3, v.y + 1.2 + 1.6, ped.z + ax[1] * 3);
+      ctx.controls.setMode('fly');
+      const yaw = Math.atan2(-(ped.x - p.x), -(ped.z - p.z));
+      ctx.controls.setView({ pos: p.sub(world.origin), yaw, pitch: -0.2, scale: 1 });
+      world.safeguards.senses = () => null;
+      ctx.rules = { ...ctx.rules, safeguards: false }; // (ninguém na frente da câmera)
+      console.warn('VAULTCAM: ' + v.id);
+    }, Number(params.get('vaultcam')) * 1000);
+  }
+  if (params.get('endingshow')) setTimeout(() => ctx.gene.showEnding(params.get('endingshow')), 6000);
   // --hurt=v: aos 5 s a vida vai a v (o aparelho mostra — app/health.js)
   if (params.get('hurt')) setTimeout(() => ctx.health.set(Number(params.get('hurt'))), 5000);
   // --sgcam=N: dos N s em diante, a câmera (voando: ninguém percebe) acompanha o Safeguard
@@ -548,6 +569,7 @@ export function setupDev(ctx) {
   else if (params.get('check') === 'profile') import('../dev/profile.js').then((m) => m.runProfile(ctx));
   else if (params.get('check') === 'moves') import('../dev/movetest.js').then((m) => m.runMoveTest(ctx));
   else if (params.get('check') === 'arms') import('../dev/armtest.js').then((m) => m.runArmTest(ctx));
+  else if (params.get('check') === 'gene') import('../dev/genetest.js').then((m) => m.runGeneTest(ctx));
   else if (params.get('check') === 'health') import('../dev/healthtest.js').then((m) => m.runHealthTest(ctx));
   else if (params.get('check') === 'safeguards') import('../dev/sgtest.js').then((m) => m.runSafeguardTest(ctx));
   else if (params.get('check')) {

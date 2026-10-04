@@ -81,6 +81,10 @@ export function createInventory(ctx) {
       rows.push({ name: toolName(id), desc: t(`inv.desc.${id}`), act: s ? 'unequip' : 'equip', id, label: s ? t('inv.unequip') : t('inv.equip'), where: s ? t(s > 0 ? 'inv.inRight' : 'inv.inLeft') : '' });
     }
     if (player.inventory.includes('sensor')) rows.push({ name: t('inv.tool.sensor'), desc: t('inv.desc.sensor'), act: null });
+    if (player.inventory.includes('analyzer')) rows.push({ name: t('inv.tool.analyzer'), desc: t('inv.desc.analyzer'), act: null });
+    if (player.gene) rows.push({ name: t('inv.geneImplanted'), desc: t('inv.geneImplantedDesc'), act: null });
+    // o gene de terminal e a amostra (app/gene.js): até o implante, objetos que se perdem
+    for (const c of player.carried) if (c.kind === 'gene' || c.kind === 'sample') rows.push({ name: t(`inv.${c.kind}`), desc: t(`inv.${c.kind}Desc`), act: null });
     const g = world.toGlobal(ctx.camera.position);
     for (const c of player.carried) {
       if (c.kind !== 'cargo') continue;

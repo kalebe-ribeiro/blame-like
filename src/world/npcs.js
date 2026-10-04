@@ -28,6 +28,7 @@ import { villageLayout, villageFrame, villageInhabited } from '../gen/villages.j
 import { territoryAt, patrolCircuit, circuitAt, circuitNearest, PATROL, WANDER, wandererOf } from '../gen/patrols.js';
 import { levelAt, MOVE, accelerate } from './levels.js';
 import { STRIKE } from './safeguards.js';
+import { villageCarrier, wandererCarrier } from '../gen/gene.js';
 
 const KEEP = 600; // m: vilas mantidas em volta do jogador
 const DROP = 800;
@@ -57,6 +58,8 @@ export class NpcSystem {
     this.hostile = (_id) => false;
     /** (e, hit) — o golpe de um morador hostil chegou (app/people.js) */
     this.onStrike = null;
+    /** @type {(territoryId: string) => string|null} o gene levado de um depósito esquecido, se este andarilho o carrega (app/gene.js) */
+    this.geneItemFor = (_id) => null;
   }
 
   /** Todas as pessoas em cena (moradores e andarilhos). */
@@ -154,6 +157,9 @@ export class NpcSystem {
     const e = this.ents.spawn({ id: `wd:${t.id}`, kind: 'transhuman', feet: new THREE.Vector3(p.x, p.y, p.z), yaw: p.yaw, persist: false, brain: this });
     e.walker.speedScale = WANDER_SPEED / WALK;
     e.npc = { role: 'wanderer', silicon, thief, revealed: false, c, s: s0, state: 'walk', t: 0 };
+    // o gene de terminal (gen/gene.js): portador (no corpo) ou levando o de um depósito esquecido (um objeto)
+    e.npc.carrier = !silicon && wandererCarrier(F, t, p.x, p.z);
+    e.npc.geneItem = silicon ? null : this.geneItemFor(t.id);
     if (silicon) e.level = levelAt(F, c.pts[0].x, c.pts[0].y, c.pts[0].z, 2);
     this.wanderers.set(t.id, e);
   }
@@ -186,6 +192,7 @@ export class NpcSystem {
     const n = 4 + Math.floor(hash4(F.seed, Math.round(u.x), u.n, Math.round(u.z), 1703) * 4);
     const people = [];
     const used = new Set();
+    const carrier = villageCarrier(F, u); // (o morador k que carrega o gene — gen/gene.js)
     for (let k = 0; k < n && L.spots.length; k++) {
       let i = Math.floor(hash4(F.seed, Math.round(u.x), k, Math.round(u.z), 1704) * L.spots.length);
       while (used.has(i) && used.size < L.spots.length) i = (i + 1) % L.spots.length;
@@ -194,7 +201,7 @@ export class NpcSystem {
       const [x, z] = P(sp.a, sp.c);
       const e = this.ents.spawn({ id: `vl:${u.id}:${k}`, kind: 'human', feet: new THREE.Vector3(x, L.y0, z), yaw: hash4(F.seed, k, u.n, 3, 1705) * Math.PI * 2, persist: false, brain: this });
       e.walker.speedScale = 1.2 / WALK;
-      e.npc = { role: 'villager', village: u, layout: L, P, target: null, wait: 1 + hash4(F.seed, k, u.n, 5, 1706) * 6, face: null };
+      e.npc = { role: 'villager', village: u, layout: L, P, target: null, wait: 1 + hash4(F.seed, k, u.n, 5, 1706) * 6, face: null, carrier: k === carrier };
       people.push(e);
     }
     this.villages.set(u.id, { u, layout: L, people });

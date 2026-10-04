@@ -319,7 +319,7 @@ export function createUI(ctx) {
     if (name === 'hud' && rules.hud) hud.toggle();
     if (name === 'lantern' || name === 'torch') ctx.carried.toggleLantern();
     if (name === 'sensor') ctx.carried.cycleSensor();
-    if (name === 'use') ctx.arms.tryUse() || ctx.people.tryUse() || ctx.reading.tryUse() || ctx.power.tryUse() || ctx.carried.togglePlug();
+    if (name === 'use') ctx.gene.tryUse() || ctx.arms.tryUse() || ctx.people.tryUse() || ctx.reading.tryUse() || ctx.power.tryUse() || ctx.carried.togglePlug();
     if (name === 'map') toggleMap();
     if (name === 'inventory') ctx.inventory.toggle();
     if (name === 'transport' && rules.teleport) openTransport();
@@ -349,7 +349,7 @@ export function createUI(ctx) {
     // usar: ler o terminal em frente (ou fechar a leitura); senão, a tomada
     // (a conversa e o inventário tratam as próprias teclas: E confirma, Esc fecha — ui/talk.js)
     if (ctx.people.isOpen || ctx.inventory?.isOpen) return;
-    if (is('use') && (controls.locked || ctx.reading.isOpen)) ctx.arms.tryUse() || ctx.people.tryUse() || ctx.reading.tryUse() || ctx.power.tryUse() || ctx.carried.togglePlug();
+    if (is('use') && (controls.locked || ctx.reading.isOpen)) ctx.gene.tryUse() || ctx.arms.tryUse() || ctx.people.tryUse() || ctx.reading.tryUse() || ctx.power.tryUse() || ctx.carried.togglePlug();
     if (e.code === 'Escape' && ctx.reading.isOpen) ctx.reading.close();
   });
 

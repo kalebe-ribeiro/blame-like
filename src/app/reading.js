@@ -27,7 +27,8 @@ export function createReading(ctx) {
   const { world, controls, camera, audio } = ctx;
   const panel = new ReaderPanel();
   const _g = new THREE.Vector3();
-  const known = (w) => ctx.lexicon.known(w);
+  // (com o gene de terminal implantado, a Netsfera responde: tudo legível — o cofre, Gene-terminal §5)
+  const known = (w) => !!ctx.player.gene || ctx.lexicon.known(w);
   const word = (w) => t(`word.${w}`);
 
   // o sensor (ver o cofre, Ferramentas): achado no fim da primeira pista e junto do console

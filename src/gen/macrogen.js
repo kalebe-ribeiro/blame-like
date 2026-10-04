@@ -478,6 +478,38 @@ function buildUniqueInner(F, B, u) {
     const [px, pz] = P(ha - 8, off + 5);
     block(B, 'frame', px, y0 + 3.2, pz, 0.3, 6.4, 0.3);
     B.lamp(px + 0.6, y0 + 5.8, pz, FLUORO, 35, 'faulty', { to: [px, y0 + 6.2, pz], size: 1, grid: false });
+  } else if (u.kind === 'vault') {
+    // o depósito da Netsfera (o cofre, Gene-terminal): um bloco maciço, paredes grossas; a porta dá numa
+    // antecâmara e num corredor comprido até o fundo, onde um pedestal guarda o gene. Guardado: a luz
+    // fria acesa ao longo do corredor. Esquecido: tudo apagado, uma lâmpada só, falhando, sobre o pedestal
+    const guarded = F.vaultGuarded(u);
+    off = shell(B, f, y0, u.h, T * 2, 4, 5, r);
+    box(B, 'barrier', 0, y0 + u.h, 0, ha + 1.5, 2.4, hc + 1.5);
+    const ped = F.vaultPedestal(u);
+    // o corredor: duas paredes internas da antecâmara até a sala do fundo (que começa 9 m antes do pedestal)
+    const cw = 3.2;
+    box(B, 'wall', (ped.a + 9 + ha - 12) / 2, y0, off - cw - 0.4, (ha - 12 - ped.a - 9) / 2, u.h - 4, 0.4);
+    box(B, 'wall', (ped.a + 9 + ha - 12) / 2, y0, off + cw + 0.4, (ha - 12 - ped.a - 9) / 2, u.h - 4, 0.4);
+    // o fundo: uma sala alta; o pedestal no meio, de chapa, com a tampa onde fica a cápsula
+    const [pa, pc] = [ped.a, 0];
+    box(B, 'machine', pa, y0, pc, 0.7, 1.1, 0.7);
+    box(B, 'frame', pa, y0 + 1.1, pc, 0.75, 0.06, 0.75);
+    // colunas de máquinas mortas em volta (a Netsfera que ainda guarda)
+    for (let q = 0; q < 8; q++) {
+      const ang = (q / 8) * Math.PI * 2;
+      box(B, 'machine', pa + Math.cos(ang) * 7, y0, pc + Math.sin(ang) * 7, 0.8, u.h - 6 - r.float(0, 6), 0.8);
+    }
+    if (guarded) {
+      for (let q = 0; q < 4; q++) {
+        const [lx, lz] = P(ha - 14 - q * ((ha - 14 - pa) / 4), off);
+        B.lamp(lx, y0 + u.h - 5, lz, FLUORO, 60, 'steady', { to: [lx, y0 + u.h - 4, lz], size: 1.2, grid: false });
+      }
+      const [qx, qz] = P(pa, pc);
+      B.lamp(qx, y0 + 6, qz, FLUORO, 90, 'steady', { to: [qx, y0 + 7, qz], size: 1.4, grid: false });
+    } else {
+      const [qx, qz] = P(pa, pc);
+      B.lamp(qx, y0 + 6, qz, FLUORO, 40, 'faulty', { to: [qx, y0 + 7, qz], size: 1.2, grid: false });
+    }
   } else if (u.kind === 'chamber') {
     // a câmara de reconstrução (o cofre, Recuperar-o-braco): uma sala fechada; no meio, o berço de
     // montagem — um tampo baixo de chapa —, um trilho no teto com braços mecânicos descendo até ele,
@@ -549,7 +581,7 @@ function buildUniqueInner(F, B, u) {
   // luz de sinal no telhado, vista de longe (a Cidade ainda sabe que isto existe) —
   // a haste desce até o topo do telhado de cada tipo (o cemitério não tem teto: um mastro)
   const [sx, sz] = P(ha - 4, hc - 4);
-  const ROOF = { plant: 13.5 - u.h, antenna: 1, builders: 1.4, village: 1.4, cradle: 1.2, graveyard: 0, chamber: 1.4 };
+  const ROOF = { plant: 13.5 - u.h, antenna: 1, builders: 1.4, village: 1.4, cradle: 1.2, graveyard: 0, chamber: 1.4, vault: 2.4 };
   const top = y0 + u.h + (ROOF[u.kind] ?? 1.6);
   if (u.kind === 'graveyard') block(B, 'frame', sx, y0 + (u.h + 8) / 2, sz, 0.4, u.h + 8, 0.4);
   B.lamp(sx, top + 2, sz, SODIUM, r.float(500, 900), 'steady', { to: [sx, top, sz], size: 2.5, far: true, grid: false });

@@ -39,6 +39,7 @@ import { setupDev } from './app/dev.js';
 import { createWake } from './app/wake.js';
 import { createHealth } from './app/health.js';
 import { createArms } from './app/arms.js';
+import { createGene } from './app/gene.js';
 import { createCarried } from './app/carried.js';
 import { createReading } from './app/reading.js';
 import { createLeads } from './app/leads.js';
@@ -189,6 +190,7 @@ ctx.alert = createAlert(ctx); // percepção: o alerta de cada setor (fase 5)
 ctx.beings = createBeings(ctx); // os corpos dos seres no mundo salvo (fase 5)
 ctx.safeguards = createSafeguards(ctx); // rondas, caçadas, captura (fase 6)
 ctx.people = createPeople(ctx); // conversa, trocas, cargas (fase 7)
+ctx.gene = createGene(ctx); // o gene de terminal: o objetivo final (o cofre, Gene-terminal)
 setupDev(ctx);
 
 // ─── loop ───────────────────────────────────────────────────────────────────
@@ -224,6 +226,7 @@ function frame() {
   ctx.beam.update(dt);
   ctx.health.update(dt); // (depois do emissor: soma às bordas que ele fecha)
   ctx.arms.update(dt);
+  ctx.gene.update(dt);
   ctx.alert.update(dt);
   ctx.safeguards.update();
   ctx.people.update(dt);

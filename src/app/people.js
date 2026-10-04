@@ -34,6 +34,7 @@ import { uniqueTerminal } from '../gen/sites.js';
 import { hash4 } from '../gen/hash.js';
 import { HUMAN_STRIKE_DAMAGE } from './health.js';
 import { ARM_COST } from './arms.js';
+import { ANALYZE_COST, PRICE as GENE_PRICE } from './gene.js';
 import { bindings } from '../controls/bindings.js';
 
 const RECHARGE_EVERY = 20 * 60 * 1000; // ms
@@ -145,6 +146,37 @@ export function createPeople(ctx) {
 
   // ── a conversa ──
 
+  const pay = (n) => {
+    if (ctx.rules.resources) ctx.player.energy.value = Math.max(0, ctx.player.energy.value - n);
+  };
+  const canPay = (n) => !ctx.rules.resources || ctx.player.energy.value >= n;
+  /** As opções do gene de terminal (app/gene.js), para moradores e andarilhos. */
+  function geneOptions(e) {
+    const opts = [];
+    const G = ctx.gene;
+    if (!G) return opts;
+    if (G.hasAnalyzer && !e.npc.analyzed && canPay(ANALYZE_COST)) opts.push({ id: 'analyze', label: t('talk.opt.analyze', { n: Math.round(ANALYZE_COST * 100) }) });
+    if (G.hasAnalyzer && e.npc.analyzed && e.npc.carrier && !e.npc.sampled && !G.implanted) opts.push({ id: 'sample', label: t('talk.opt.sample') });
+    return opts;
+  }
+  /** As escolhas do gene: devolve a fala, ou null (não era uma delas). */
+  function geneAnswer(e, id) {
+    if (id === 'analyze') {
+      pay(ANALYZE_COST);
+      e.npc.analyzed = true;
+      const tr = ctx.gene.traceOf(e);
+      world.bus.emit('player:analyze', { id: e.id, trace: tr });
+      return t(tr > 0.5 ? 'talk.analyzeYes' : 'talk.analyzeNo', { n: Math.round(tr * 100) });
+    }
+    if (id === 'sample') {
+      e.npc.sampled = true;
+      ctx.player.carried.push({ kind: 'sample', from: e.id });
+      world.bus.emit('player:sample', { id: e.id });
+      return t('talk.sample');
+    }
+    return null;
+  }
+
   function options(e) {
     if (e.npc.role === 'wanderer') {
       const opts = [];
@@ -154,6 +186,10 @@ export function createPeople(ctx) {
       }
       if ((e.npc.lore ?? 0) < 2) opts.push({ id: 'lore', label: t('talk.opt.lore') });
       if (!e.npc.thief && !e.npc.whence) opts.push({ id: 'whence', label: t('talk.opt.whence') });
+      opts.push(...geneOptions(e));
+      // o analisador e o gene levado de um depósito esquecido: os que trocam vendem
+      if (!e.npc.thief && ctx.gene && !ctx.gene.hasAnalyzer && canPay(GENE_PRICE.analyzer)) opts.push({ id: 'buyAnalyzer', label: t('talk.opt.buyAnalyzer', { n: Math.round(GENE_PRICE.analyzer * 100) }) });
+      if (!e.npc.thief && e.npc.geneItem && canPay(GENE_PRICE.gene)) opts.push({ id: 'buyGene', label: t('talk.opt.buyGene', { n: Math.round(GENE_PRICE.gene * 100) }) });
       // R3: os que trocam vendem uma prótese (só a quem falta um braço)
       if (!e.npc.thief && ctx.arms?.missing.length && !ctx.player.carried.some((c) => c.kind === 'prosthesis') && (!ctx.rules.resources || ctx.player.energy.value >= ARM_COST.wanderer))
         opts.push({ id: 'prosthesis', label: t('talk.opt.prosthesis', { n: Math.round(ARM_COST.wanderer * 100) }) });
@@ -167,6 +203,9 @@ export function createPeople(ctx) {
     if (c && c.to === u.id) opts.push({ id: 'deliver', label: t('talk.opt.deliver') });
     if (ctx.rules.resources && ctx.player.energy.value < 0.95 && !(st.recharged && Date.now() - st.recharged < RECHARGE_EVERY)) opts.push({ id: 'recharge', label: t('talk.opt.recharge') });
     if (ctx.rules.translation && !st.taught) opts.push({ id: 'teach', label: t('talk.opt.teach') });
+    opts.push(...geneOptions(e));
+    // o final (o cofre, Gene-terminal §6): entregar o gene implantado a esta vila
+    if (ctx.player.gene && slot.ending === 'pending-village') opts.push({ id: 'giveGene', label: t('talk.opt.giveGene') });
     // R5: refazer o braço — uma carga entregue, ou 30% da célula; um braço
     if (ctx.arms?.missing.length) {
       if (c) opts.push({ id: 'armCargo', label: t('talk.opt.armCargo') });
@@ -207,8 +246,20 @@ export function createPeople(ctx) {
     controls.lock();
   }
 
-  panel.onClose = () => close();
+  /** uma escolha avulsa, fora de uma conversa (o final do gene — app/gene.js) */
+  let custom = null;
+  panel.onClose = () => {
+    custom = null;
+    close();
+  };
   panel.onPick = (id) => {
+    if (custom) {
+      const f = custom;
+      custom = null;
+      close();
+      f(id);
+      return;
+    }
     const e = with_;
     if (!e) return;
     if (id === 'leave') return close();
@@ -227,6 +278,20 @@ export function createPeople(ctx) {
       } else if (id === 'whence') {
         e.npc.whence = true;
         wl = t(`talk.wander.whence.${Math.floor(hash4(world.field.seed, e.id.length, 3, e.id.charCodeAt(6) || 3, 1724) * 4)}`);
+      } else if (id === 'analyze' || id === 'sample') {
+        wl = geneAnswer(e, id) ?? '';
+      } else if (id === 'buyAnalyzer') {
+        pay(GENE_PRICE.analyzer);
+        ctx.gene.giveAnalyzer('trade');
+        wl = t('talk.analyzer');
+      } else if (id === 'buyGene') {
+        pay(GENE_PRICE.gene);
+        const from = e.npc.geneItem;
+        e.npc.geneItem = null;
+        (slot.loot ??= {})[`gene:${from}`] = 'taken';
+        ctx.player.carried.push({ kind: 'gene', from });
+        world.bus.emit('player:gene', { from, by: e.id });
+        wl = t('talk.gene');
       } else if (id === 'prosthesis') {
         if (ctx.rules.resources) ctx.player.energy.value = Math.max(0, ctx.player.energy.value - ARM_COST.wanderer);
         ctx.player.carried.push({ kind: 'prosthesis', from: e.id });
@@ -261,6 +326,15 @@ export function createPeople(ctx) {
         reveal(o.u, u);
         line = t('talk.way', { dist: fmt(o.d) });
       }
+    } else if (id === 'analyze' || id === 'sample') {
+      line = geneAnswer(e, id) ?? '';
+    } else if (id === 'giveGene') {
+      slot.ending = 'village';
+      slot.endingVillage = u.id;
+      world.bus.emit('ending', { kind: 'village', village: u.id });
+      close();
+      ctx.gene.showEnding('village');
+      return;
     } else if (id === 'armCargo' || id === 'armCell') {
       if (id === 'armCargo') {
         const cg = cargo();
@@ -347,6 +421,15 @@ export function createPeople(ctx) {
   return {
     get isOpen() {
       return panel.isOpen;
+    },
+    /** Uma escolha avulsa no painel da conversa: who, line, options [{id,label}], pick(id). */
+    choice(who, line, options, pick) {
+      if (panel.isOpen) close();
+      custom = pick;
+      with_ = null;
+      document.exitPointerLock?.();
+      panel.open(who, line, options);
+      ctx.audio?.deviceClick?.(true);
     },
     el: panel.el,
     close,

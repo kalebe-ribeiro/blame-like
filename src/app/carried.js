@@ -221,6 +221,7 @@ export function createCarried(ctx) {
     if (plugged) line = socketPowered(plugged, time) ? t('device.charging') : t('device.noPower');
     else if (note && time < note.until) line = note.text;
     else if (ctx.arms?.hint) line = ctx.arms.hint;
+    else if (ctx.gene?.hint) line = ctx.gene.hint;
     else if (nearSub) line = world.substations.isLive(nearSub.site) ? t('device.substationLive') : t('device.substation', { key: bindings.label('use') });
     else if (near) line = t('device.socket', { key: bindings.label('use') });
     else if (ctx.people?.near) line = t('device.talk', { key: bindings.label('use') });
