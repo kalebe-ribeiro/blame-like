@@ -19,6 +19,7 @@
 //  linha param juntos, então o horário continua contínuo e ninguém bate.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { movingMaterial } from '../shaders/materials.js';
 import { TRANSIT } from '../gen/field.js';
 import { stationT } from '../gen/transit.js';
 import { mergeAll, place } from './geometry.js';
@@ -90,8 +91,9 @@ export class TransitCars {
   _create(line, k) {
     const { body, floor } = this._parts();
     const g = new THREE.Group();
-    const mb = new THREE.Mesh(body, this.materials.machine);
-    const mf = new THREE.Mesh(floor, this.materials.bridge);
+    // (o vagão anda: o desenho preso a ele)
+    const mb = new THREE.Mesh(body, movingMaterial(this.materials.machine));
+    const mf = new THREE.Mesh(floor, movingMaterial(this.materials.bridge));
     for (const m of [mb, mf]) {
       m.userData.transit = true;
       m.userData.mat = m === mf ? 'bridge' : 'machine';

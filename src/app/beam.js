@@ -416,6 +416,15 @@ export function createBeam(ctx) {
     } else audio.impact?.(Math.min(14, 6 + 8 * (ev.amount ?? 0)));
   });
 
+  // um Construtor derrubado pelo corte (world/builders.js): o estrondo do pórtico, faíscas
+  world.bus.on('builder:destroyed', (ev) => {
+    const [pan, dist] = ctx.placeOf(ev.x, ev.y, ev.z);
+    audio.clangAt?.(pan, Math.max(1, dist));
+    audio.impact?.(Math.max(8, 40 - dist / 20));
+    fx.hitSparks(new THREE.Vector3(ev.x, ev.y, ev.z), 60);
+    controls.rumble?.(0.6, 0.5, 500);
+  });
+
   // teclado e mouse (o controle: controls.padFire / padCancel — controls/noclip.js)
   document.addEventListener('keydown', (e) => {
     if (e.repeat) return;

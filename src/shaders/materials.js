@@ -80,6 +80,8 @@ uniform float uSeed;
 
 varying vec3 vWorldPos;
 varying vec3 vNormalW;
+varying vec3 vPatPos;   // onde o desenho (placas, ferrugem, escorridos) é calculado
+varying vec3 vPatN;
 
 #include <clipping_planes_pars_vertex>
 #include <batching_pars_vertex>
@@ -101,6 +103,15 @@ void main() {
   vec4 wp = modelMatrix * vec4(p, 1.0);
   vWorldPos = wp.xyz;
   vNormalW = normalize(mat3(modelMatrix) * n);
+  #ifdef USE_OBJECT_PATTERN
+    // o que se move (elevadores, vagões, os Construtores, os colossos, o que cai): o desenho
+    // preso ao objeto — senão as placas deslizam por ele enquanto anda
+    vPatPos = p;
+    vPatN = n;
+  #else
+    vPatPos = wp.xyz + uOriginMod;   // posição "global": os padrões contínuos na origem flutuante
+    vPatN = vNormalW;
+  #endif
   vec4 mvPosition = viewMatrix * wp;
   gl_Position = projectionMatrix * mvPosition;
   #include <clipping_planes_vertex>
@@ -141,6 +152,8 @@ uniform float uHeatNow;
 
 varying vec3 vWorldPos;
 varying vec3 vNormalW;
+varying vec3 vPatPos;
+varying vec3 vPatN;
 
 #include <clipping_planes_pars_fragment>
 
@@ -155,11 +168,11 @@ void main() {
   vec3 N = normalize(mix(Ng, Nd, 0.1));
 
   float t = uTime;
-  vec3 W = vWorldPos + uOriginMod;   // posição "global" para os padrões
+  vec3 W = vPatPos;   // a posição para os padrões (global; ou do objeto, no que se move)
   vec3 P = W * uNoiseScale + uSeed;
 
-  // projeção pela normal dominante
-  vec3 an = abs(Ng);
+  // projeção pela normal dominante (a do desenho: a do objeto, no que se move)
+  vec3 an = abs(normalize(vPatN));
   bool onX = an.x > an.y && an.x > an.z;
   bool onY = !onX && an.y > an.z;
   vec2 uvP = onX ? W.zy : (onY ? W.xz : W.xy);
@@ -413,6 +426,29 @@ export function createSurfaceMaterial(shared, params = {}) {
     side: p.side,
     clipping: true,
   });
+}
+
+/**
+ * A variante "presa ao objeto" de um material de superfície: o mesmo programa e os MESMOS uniforms
+ * (a luz, a névoa, o tempo continuam vindo de um lugar só), com o desenho calculado nas coordenadas do
+ * próprio objeto (USE_OBJECT_PATTERN). Para o que se move. Outros materiais voltam como estão.
+ */
+const _moving = new WeakMap();
+export function movingMaterial(m) {
+  if (!m || m.vertexShader !== SURF_VERT) return m;
+  let v = _moving.get(m);
+  if (!v) {
+    v = new THREE.ShaderMaterial({
+      defines: { ...m.defines, USE_OBJECT_PATTERN: 1 },
+      uniforms: m.uniforms,
+      vertexShader: m.vertexShader,
+      fragmentShader: m.fragmentShader,
+      side: m.side,
+      clipping: true,
+    });
+    _moving.set(m, v);
+  }
+  return v;
 }
 
 // ─── Feixes de luz volumétricos ─────────────────────────────────────────────

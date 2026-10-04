@@ -227,6 +227,8 @@ export class EntitySystem {
           this.remove(e.id);
           continue;
         }
+        // sem chão debaixo (o emissor levou o piso): cai — nada fica no ar
+        if (dist < NEAR) this._settleCorpse(e, dt, origin);
         const r = e.rig.group;
         r.visible = dist < VISIBLE;
         r.position.set(e.feet.x - origin.x, e.feet.y - origin.y + 0.16, e.feet.z - origin.z);
@@ -253,6 +255,33 @@ export class EntitySystem {
         if (e.grabPose) e.rig.grab?.(e.grabPose); // agarrando alguém (app/wake.js)
         else if (e.strikePose) e.rig.strike?.(e.strikePose.w, e.strikePose.s); // o golpe (world/safeguards.js)
       }
+    }
+  }
+
+  /** O corpo morto: confere o chão (a cada 0,4 s parado; a cada quadro caindo) e cai com a gravidade. */
+  _settleCorpse(e, dt, origin) {
+    e.fallV ??= 0;
+    if (!e.fallV && (e.settleT = (e.settleT ?? 0) - dt) > 0) return;
+    e.settleT = 0.4;
+    const col = e.walker.col;
+    _o.set(e.feet.x - origin.x, e.feet.y - origin.y + 0.6, e.feet.z - origin.z);
+    col.refresh(_o, 12);
+    if (!col.ready) return;
+    const reach = 0.6 + 0.25 + Math.max(0, e.fallV * dt) + 0.3;
+    const hit = col.ray(_o, DOWN, reach);
+    const floor = hit && hit.face && hit.face.normal.y > 0.4 ? hit.point.y + origin.y : null;
+    if (floor !== null && e.feet.y - floor < 0.25 + Math.max(0, e.fallV * dt)) {
+      if (e.fallV) this.bus?.emit('being:corpseLand', { id: e.id, v: e.fallV, x: e.feet.x, y: floor, z: e.feet.z });
+      e.feet.y = floor;
+      e.fallV = 0;
+      return;
+    }
+    // no ar: cai (a mesma gravidade do Walker)
+    e.fallV = Math.min(60, e.fallV + 15 * dt);
+    e.feet.y -= e.fallV * dt;
+    if (floor !== null && e.feet.y < floor) {
+      e.feet.y = floor;
+      e.fallV = 0;
     }
   }
 

@@ -7,6 +7,7 @@
 //  num deles e ser carregado (o Walker lê userData.dy do chão onde pisa).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { movingMaterial } from '../shaders/materials.js';
 import { mergeAll, place } from './geometry.js';
 
 const PAUSE = 12; // s parado em cada ponta
@@ -87,7 +88,7 @@ export class ElevatorSystem {
     }
     for (const mat of ['grate', 'machine']) {
       const g = mergeAll(parts.filter((p) => p.mat === mat).map((p) => p.g));
-      const mesh = new THREE.Mesh(g, this.materials[mat]);
+      const mesh = new THREE.Mesh(g, movingMaterial(this.materials[mat])); // (o carro anda: o desenho vai junto)
       mesh.userData.mat = mat;
       mesh.userData.elevator = true;
       mesh.userData.dy = 0;

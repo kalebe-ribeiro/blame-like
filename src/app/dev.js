@@ -222,6 +222,55 @@ export function setupDev(ctx) {
       setInterval(tick, 150);
     }, Number(params.get('sparkshot')) * 1000);
   }
+  // --buildercam=N: vai aos Construtores; aos N s, a câmera presa ao pórtico de um canteiro que anda
+  // (olhando uma perna, de perto) e duas capturas com 1,5 s de diferença: builder-a.png, builder-b.png —
+  // com o desenho preso ao objeto, as placas não andam pela perna (shaders/materials.js movingMaterial)
+  if (params.get('buildercam')) {
+    setTimeout(() => ctx.ui.teleport('construtores', 'construtores'), 2000);
+    setTimeout(async () => {
+      const B = world.builders;
+      // um pórtico que ainda vai andar um bom trecho (o alvo longe de onde ele está)
+      const far = (x) => {
+        const t = x.task?.cell && B._cellPos(x, x.task.cell);
+        return t ? Math.abs((x.def.axis === 'x' ? t.z : t.x) - (x.gx ?? 0)) : 0;
+      };
+      const live = [...B.sites.values()].filter((x) => !x.dead && x.task?.phase === 'move').sort((a, b) => far(b) - far(a));
+      const site = live[0] ?? [...B.sites.values()].find((x) => !x.dead);
+      if (!site) return console.warn('BUILDERCAM: nenhum');
+      const shot = (name) => /** @type {any} */ (window).cybercosmic?.devCapture?.(name);
+      // (o pórtico 25 m para trás: ele volta andando a 3 m/s enquanto as capturas são feitas)
+      site.gx = (site.gx ?? 0) - 25;
+      if (site.task) site.task.phase = 'move';
+      ctx.controls.canFly = true; // (voando: o corpo não cai — a câmera fica presa ao pórtico)
+      ctx.controls.setMode('fly');
+      ctx.player.energy.value = 1;
+      if (!ctx.carried.lanternOn) ctx.carried.toggleLantern(); // (a lanterna: a perna iluminada de perto)
+      let on = true;
+      const tick = () => {
+        if (!on) return;
+        requestAnimationFrame(tick);
+        // a perna +SPAN/2 do pórtico, no mundo; a câmera 9 m ao lado dela, 25 m acima do chão
+        const leg = new THREE.Vector3(0, 25, 0);
+        if (site.def.axis === 'x') leg.x = 75;
+        else leg.z = 75;
+        site.gantry.updateMatrixWorld(true);
+        const wpos = leg.clone().applyMatrix4(site.gantry.matrixWorld);
+        const off = site.def.axis === 'x' ? new THREE.Vector3(0, 0, 5) : new THREE.Vector3(5, 0, 0);
+        camera.position.copy(wpos).add(off);
+        const d = off.clone().negate();
+        ctx.controls.yaw = Math.atan2(-d.x, -d.z);
+        ctx.controls.pitch = 0;
+      };
+      tick();
+      console.warn('BUILDERCAM: ' + site.def.id + ' ' + site.task?.phase);
+      await new Promise((r) => setTimeout(r, 2500));
+      const g0 = site.gx ?? 0;
+      await shot('builder-a.png');
+      await new Promise((r) => setTimeout(r, 2000));
+      await shot('builder-b.png');
+      console.warn('BUILDERCAM: o pórtico andou ' + ((site.gx ?? 0) - g0).toFixed(2) + ' m entre as capturas (faltava ' + far(site).toFixed(1) + ')');
+    }, Number(params.get('buildercam')) * 1000);
+  }
   // --hurt=v: aos 5 s a vida vai a v (o aparelho mostra — app/health.js)
   if (params.get('hurt')) setTimeout(() => ctx.health.set(Number(params.get('hurt'))), 5000);
   // --sgcam=N: dos N s em diante, a câmera (voando: ninguém percebe) acompanha o Safeguard

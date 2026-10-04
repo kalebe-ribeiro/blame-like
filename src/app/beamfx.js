@@ -20,6 +20,7 @@
 //  flutuante anda; o grupo anda junto).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { movingMaterial } from '../shaders/materials.js';
 import { CollisionWorld } from '../world/collision.js';
 
 const DET_SPEED = 1500; // m/s — a detonação ao longo do feixe
@@ -366,7 +367,7 @@ export function createBeamFx(ctx) {
       const old = falling.shift();
       group.remove(old.mesh);
     }
-    const mesh = new THREE.Mesh(boxGeo, world.materials[mat] ?? world.materials.cut);
+    const mesh = new THREE.Mesh(boxGeo, movingMaterial(world.materials[mat] ?? world.materials.cut)); // (cai girando: o desenho preso ao pedaço)
     mesh.scale.set(Math.max(0.04, sx), Math.max(0.04, sy), Math.max(0.04, sz));
     mesh.userData.noCollide = true;
     mesh.position.copy(g).sub(world.origin);
@@ -442,6 +443,11 @@ export function createBeamFx(ctx) {
       sc.add(bmFar);
     }
     for (const m of Object.values(world.materials)) sc.add(new THREE.Mesh(boxGeo, m));
+    // (e as variantes presas ao objeto — o que se move e os pedaços que caem: shaders/materials.js movingMaterial)
+    for (const m of Object.values(world.materials)) {
+      const v = movingMaterial(m);
+      if (v !== m) sc.add(new THREE.Mesh(boxGeo, v));
+    }
     // (a lente: ligada dois quadros com força zero — o passe de tela compila do jeito que desenha)
     lensWarm = 2;
     for (const o of [...group.children]) {

@@ -14,6 +14,7 @@
 //  perto do observador. Não são entidades: são máquinas cumprindo uma rotina.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { movingMaterial } from '../shaders/materials.js';
 import { COLOSSUS } from '../gen/field.js';
 import { hash4 } from '../gen/hash.js';
 import { beamGeometry } from '../gen/beams.js';
@@ -81,7 +82,7 @@ export class ColossusSystem {
   _create(lane, k) {
     const { hull, glow } = this._parts();
     const g = new THREE.Group();
-    const mh = new THREE.Mesh(hull, this.materials.colossus);
+    const mh = new THREE.Mesh(hull, movingMaterial(this.materials.colossus)); // (anda: o desenho vai junto)
     mh.userData.mat = 'machine';
     mh.userData.dx = mh.userData.dy = mh.userData.dz = 0;
     const mg = new THREE.Mesh(glow, this.materials.colossusBeam);

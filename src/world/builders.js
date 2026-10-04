@@ -13,15 +13,24 @@
 //  parou torto sobre uma perna que cedeu, o gancho caiu com a carga, a obra
 //  ficou pela metade com falhas, blocos espalhados pelo chão; às vezes
 //  pórticos mais antigos já tombados ao lado. Só uma lâmpada de aviso resta.
+//
+//  O EMISSOR (a arma de Killy): os blocos que o corte atravessa somem; um corte que pega o pórtico (uma
+//  perna, a viga) derruba o canteiro — vira um cemitério como os outros. Os cortes ficam no mundo
+//  salvo: o canteiro recriado já nasce assim (onCut / _applyCuts). Tudo do canteiro é sólido para o
+//  corpo (world/collision.js).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { movingMaterial } from '../shaders/materials.js';
 import { mergeAll, place } from './geometry.js';
 import { RNG } from '../core/rng.js';
+import { inCut, segDist } from '../gen/cut.js';
 
 const SPAN = 150; // vão do pórtico
 const LEG_H = 70; // altura das pernas
 const _beacon = new THREE.Vector3();
 const BLOCK = { w: 12, h: 8 };
+/** (testes) as medidas do pórtico */
+export const BUILDER = { SPAN, LEG_H, BLOCK };
 const MOVE_SPEED = 3; // m/s do pórtico nos trilhos
 const LOWER_T = 9;
 const WELD_T = 7;
@@ -38,6 +47,7 @@ export class BuilderSystem {
     this.bus = null; // evento builder:work { kind: 'clang'|'weld', x, y, z }
     this.field = null;
     this._scanTimer = 0;
+    this.stats = { destroyed: 0 };
   }
 
   _createSite(def) {
@@ -58,11 +68,12 @@ export class BuilderSystem {
     site.rails = new THREE.Mesh(mergeAll(railParts), this.materials.machine);
     site.group.add(site.rails);
     // pórtico (móvel)
-    site.gantry = new THREE.Mesh(mergeAll(this._gantryParts(def)), this.materials.machine);
+    // (o pórtico, o gancho e a carga andam: o desenho preso a eles)
+    site.gantry = new THREE.Mesh(mergeAll(this._gantryParts(def)), movingMaterial(this.materials.machine));
     site.group.add(site.gantry);
     // gancho + bloco pendurado
-    site.hook = new THREE.Mesh(mergeAll([place(new THREE.BoxGeometry(3, 1.5, 3), {}), place(new THREE.CylinderGeometry(0.15, 0.15, 60, 4, 1, true), { y: 30 })]), this.materials.machine);
-    site.load = new THREE.Mesh(new THREE.BoxGeometry(BLOCK.w, BLOCK.h, BLOCK.w), this.materials.block);
+    site.hook = new THREE.Mesh(mergeAll([place(new THREE.BoxGeometry(3, 1.5, 3), {}), place(new THREE.CylinderGeometry(0.15, 0.15, 60, 4, 1, true), { y: 30 })]), movingMaterial(this.materials.machine));
+    site.load = new THREE.Mesh(new THREE.BoxGeometry(BLOCK.w, BLOCK.h, BLOCK.w), movingMaterial(this.materials.block));
     site.group.add(site.hook, site.load);
     site.builtMesh = null;
     if (def.dead) {
@@ -71,7 +82,38 @@ export class BuilderSystem {
     }
     this._rebuildBuilt(site);
     this._nextTask(site, 0);
+    this._applyCuts(site, this.field?.cuts);
     return site;
+  }
+
+  /** Os cortes do emissor (world.js _reactToCuts): os blocos atravessados somem; o pórtico atingido cai. */
+  onCut(cuts) {
+    for (const site of this.sites.values()) this._applyCuts(site, cuts);
+  }
+
+  _applyCuts(site, cuts) {
+    const d = site.def;
+    const near = (cuts ?? []).filter((c) => segDist(d.x, d.y + LEG_H / 2, d.z, c) < SPAN + c.r);
+    if (!near.length) return;
+    const hit = (x, y, z, m) => near.some((c) => inCut(d.x + x, d.y + y, d.z + z, c, m));
+    const before = site.built.length;
+    site.built = site.built.filter((cell) => {
+      const p = this._cellPos(site, cell);
+      return !hit(p.x, p.y, p.z, BLOCK.w / 4);
+    });
+    if (site.built.length !== before) this._rebuildBuilt(site);
+    if (site.dead) return;
+    // o pórtico: as pernas e a viga, onde ele está agora
+    const across = d.axis === 'x' ? 'x' : 'z';
+    const gpos = site.gx ?? 0;
+    const pts = [];
+    for (const s of [-1, 1]) for (let y = 2; y < LEG_H; y += 4) pts.push(across === 'x' ? [(s * SPAN) / 2, y, gpos] : [gpos, y, (s * SPAN) / 2]);
+    for (let t = -SPAN / 2; t <= SPAN / 2; t += 4) pts.push(across === 'x' ? [t, LEG_H + 4, gpos] : [gpos, LEG_H + 4, t]);
+    if (pts.some(([x, y, z]) => hit(x, y, z, 2.5))) {
+      this._wreck(site, new RNG((d.seed ^ 0x9e3779b9) >>> 0));
+      this.stats.destroyed++;
+      this.bus?.emit('builder:destroyed', { id: d.id, x: d.x, y: d.y + LEG_H / 2, z: d.z });
+    }
   }
 
   /** Transforma o canteiro num cemitério: nada se move mais. */
@@ -195,7 +237,7 @@ export class BuilderSystem {
     this._scanTimer -= dt;
     if (this._scanTimer <= 0) {
       this._scanTimer = 2;
-      const want = new Map(this.field.builderSitesNear(g.x, g.y, g.z, 2200).filter((s) => !this.field.cutAt(s.x, s.y + 1, s.z, 0.5)).map((s) => [s.id, s])); // (num corte do emissor: não existe)
+      const want = new Map(this.field.builderSitesNear(g.x, g.y, g.z, 2200).map((s) => [s.id, s]));
       for (const [id, site] of this.sites) {
         if (!want.has(id)) {
           site.group.traverse((o) => o.geometry?.dispose());

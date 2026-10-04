@@ -591,7 +591,7 @@ export class World {
     this.safeguards.onCut();
     this.npcs.onCut();
     for (const sys of [this.terminals, this.inscriptions, this.substations]) if (sys) sys._scan = 0;
-    if (this.builders) this.builders._scanTimer = 0;
+    if (this.builders) this.builders.onCut(this.field.cuts);
   }
 
   update(time, dt, camera, observerScale) {

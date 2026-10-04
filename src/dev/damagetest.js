@@ -9,11 +9,15 @@
 //    dano:colapso  o colapso de raspão mata o alto
 //    dano:raspao   de raspão, metade (um corpo de resistência 1, tiro cheio: sobra 50%)
 //    dano:silicio  a vida de silício baixa: o médio-fraco não mata, o segundo mata
+//    construtor    um canteiro dos Construtores: a perna do pórtico é sólida para o corpo; um corte num
+//                  bloco o tira; um corte na perna derruba o canteiro (vira cemitério)
+//    cadaver       um corpo morto no chão: o corte leva o piso debaixo dele — ele cai
 //    fuga          um Safeguard baixo caçando a 13 m: andando para trás, dá para carregar um
 //                  cheio e atirar antes do golpe (e ele morre); o médio chega em ~2–3 s (o cheio no limite)
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { chargeK, shotOf } from '../app/beam.js';
+import { BUILDER } from '../world/builders.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const DOWN = new THREE.Vector3(0, -1, 0);
@@ -244,4 +248,86 @@ export async function runDamage(ctx, report) {
   clean();
   await sleep(1500);
 
+
+  // ── cadaver: o piso some debaixo de um corpo morto ──
+  {
+    // num piso que o emissor corta (não a laje de uma camada — intransponível por decisão)
+    let p = null;
+    for (const place of ['teia', 'trelica', 'escadaria', 'maquinas']) {
+      if (!ctx.ui.teleport(place, place)) continue;
+      controls.setMode('walk');
+      await sleep(7000);
+      await waitFor(() => w.grounded, 5);
+      const mat = w.groundObj?.userData.mat;
+      if (w.grounded && !['barrier', 'beam', 'colossusBeam'].includes(mat)) {
+        p = world.toGlobal(w.feet.clone());
+        break;
+      }
+    }
+    if (!p) p = world.toGlobal(spot.c.clone());
+    // o jogador sai de cima (o corte não leva o chão debaixo dele) e o corpo fica onde ele estava
+    controls.placeFeet(new THREE.Vector3(p.x, p.y, p.z).sub(world.origin).add(new THREE.Vector3(0, 0, 0)));
+    const e = world.entities.spawn({ id: 't:dano:corpo', kind: 'test', feet: p, persist: false });
+    controls.setMode('fly');
+    controls.setView({ pos: new THREE.Vector3(p.x + 6, p.y + 4, p.z).sub(world.origin), yaw: Math.PI / 2, pitch: -0.4, scale: 1 });
+    await sleep(1500);
+    const y0 = e.feet.y;
+    world.entities.kill(e, 'beam');
+    await sleep(800);
+    world.addCut({ a: [e.feet.x, e.feet.y + 0.6, e.feet.z], b: [e.feet.x, e.feet.y - 12, e.feet.z], r: 2.2 }, new THREE.Vector3(e.feet.x, e.feet.y + 0.6, e.feet.z), { now: true });
+    await waitFor(() => e.feet.y < y0 - 2, 8);
+    // (diagnóstico: o piso ainda está lá, na colisão do próprio corpo?)
+    const ec = e.walker.col;
+    const o = new THREE.Vector3(e.feet.x, e.feet.y + 0.6, e.feet.z).sub(world.origin);
+    ec._t = -1e9;
+    ec.refresh(o, 12);
+    const fh = ec.ray(o, new THREE.Vector3(0, -1, 0), 20);
+    report({ kind: 'cadaver', ok: e.feet.y < y0 - 2, why: `o corpo desceu ${(y0 - e.feet.y).toFixed(1)} m depois do corte no piso · chão abaixo dele ${fh ? `a ${fh.distance.toFixed(1)} m (${fh.object.userData.mat ?? '?'})` : 'nenhum'} · col pronta ${ec.ready} · tier ${e.tier} · fallV ${e.fallV}` });
+    world.entities.remove(e.id);
+  }
+
+  // ── construtor ──
+  {
+    const here = () => world.toGlobal(camera.position.clone());
+    let ok = false;
+    let why = 'nenhum canteiro';
+    const B = world.builders;
+    if (ctx.ui.teleport('construtores', 'construtores')) {
+      controls.setMode('walk');
+      await sleep(7000);
+      await waitFor(() => [...B.sites.values()].some((s) => !s.dead), 15);
+      const site = [...B.sites.values()].filter((s) => !s.dead).sort((a, b) => Math.hypot(a.def.x - here().x, a.def.z - here().z) - Math.hypot(b.def.x - here().x, b.def.z - here().z))[0];
+      if (site) {
+        const d = site.def;
+        const across = d.axis === 'x' ? 'x' : 'z';
+        const gpos = site.gx ?? 0;
+        const leg = across === 'x' ? new THREE.Vector3(d.x + BUILDER.SPAN / 2, d.y + 20, d.z + gpos) : new THREE.Vector3(d.x + gpos, d.y + 20, d.z + BUILDER.SPAN / 2);
+        // sólido: um raio de colisão de fora até a perna bate nela
+        const col = w.col;
+        const from = leg.clone().add(across === 'x' ? new THREE.Vector3(8, 0, 0) : new THREE.Vector3(0, 0, 8)).sub(world.origin);
+        col._t = -1e9;
+        col.buildsPerFrame = 600;
+        col.refresh(from, 30);
+        col.buildsPerFrame = 2;
+        const dir = across === 'x' ? new THREE.Vector3(-1, 0, 0) : new THREE.Vector3(0, 0, -1);
+        const hitLeg = col.ray(from, dir, 12);
+        const solid = !!hitLeg && hitLeg.distance < 7;
+        // um bloco da obra
+        const n0 = site.built.length;
+        const bp = B._cellPos(site, site.built[0]).add(new THREE.Vector3(d.x, d.y, d.z));
+        world.addCut({ a: [bp.x - 10, bp.y, bp.z - 10], b: [bp.x + 10, bp.y, bp.z + 10], r: 2.5 }, bp, { now: true });
+        await waitFor(() => site.built.length < n0, 4);
+        const blockGone = site.built.length < n0;
+        // a perna
+        const d0 = B.stats.destroyed;
+        const a = leg.clone().addScaledVector(across === 'x' ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0), -12);
+        const b = leg.clone().addScaledVector(across === 'x' ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0), 12);
+        world.addCut({ a: a.toArray(), b: b.toArray(), r: 2.8 }, a, { now: true });
+        await waitFor(() => site.dead, 4);
+        ok = solid && blockGone && site.dead && B.stats.destroyed > d0;
+        why = `perna sólida ${solid}${hitLeg ? ` (a ${hitLeg.distance.toFixed(1)} m)` : ''} · bloco cortado sumiu ${blockGone} (${n0} → ${site.built.length}) · perna cortada: ${site.dead ? 'o canteiro caiu' : 'NADA'}`;
+      } else why = 'nenhum canteiro vivo perto';
+    }
+    report({ kind: 'construtor', ok, why });
+  }
 }

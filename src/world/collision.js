@@ -95,8 +95,9 @@ export class CollisionWorld {
     for (const m of w.terminals?.meshes ?? []) consider(m);
     for (const m of w.substations?.meshes ?? []) consider(m);
     for (const m of w.colossi?.meshes ?? []) consider(m);
+    // os Construtores: tudo do canteiro é sólido — a obra, os trilhos, o pórtico, o gancho, a carga, os destroços
     for (const s of w.builders?.sites.values() ?? []) {
-      if (s.builtMesh) consider(s.builtMesh);
+      for (const m of s.group.children) consider(m);
     }
     this.ready = ready;
   }
