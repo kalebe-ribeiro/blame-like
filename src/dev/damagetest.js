@@ -18,6 +18,7 @@
 import * as THREE from 'three';
 import { chargeK, shotOf } from '../app/beam.js';
 import { BUILDER } from '../world/builders.js';
+import { COLOSSUS } from '../gen/field.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const DOWN = new THREE.Vector3(0, -1, 0);
@@ -286,48 +287,174 @@ export async function runDamage(ctx, report) {
     world.entities.remove(e.id);
   }
 
-  // ── construtor ──
+  // ── as estruturas ativas (world/dynamic.js): cortes de verdade, o essencial, a resistência ──
+  /** Um corte (raio r) que atravessa o objeto root no ponto local p, na direção local dir. */
+  const cutAt = (root, p, dir, r = 2.8, half = 14) => {
+    root.updateMatrixWorld(true);
+    const c = new THREE.Vector3(p.x, p.y, p.z).applyMatrix4(root.matrixWorld).add(world.origin);
+    const dw = new THREE.Vector3(dir.x, dir.y, dir.z).transformDirection(root.matrixWorld);
+    const a = c.clone().addScaledVector(dw, -half);
+    const b = c.clone().addScaledVector(dw, half);
+    world.addCut({ a: a.toArray(), b: b.toArray(), r }, a, { now: true });
+  };
+  const capsOf = (mesh) => mesh.children.filter((m) => m.userData.cutCaps).length;
+  const dyn = world.dyn;
+
+  // construtor: a obra e os trilhos cortados como a Cidade; o pórtico ativo
   {
-    const here = () => world.toGlobal(camera.position.clone());
     let ok = false;
     let why = 'nenhum canteiro';
     const B = world.builders;
+    const here = () => world.toGlobal(camera.position.clone());
     if (ctx.ui.teleport('construtores', 'construtores')) {
       controls.setMode('walk');
       await sleep(7000);
-      await waitFor(() => [...B.sites.values()].some((s) => !s.dead), 15);
-      const site = [...B.sites.values()].filter((s) => !s.dead).sort((a, b) => Math.hypot(a.def.x - here().x, a.def.z - here().z) - Math.hypot(b.def.x - here().x, b.def.z - here().z))[0];
+      await waitFor(() => [...B.sites.values()].filter((s) => !s.dead).length > 0, 15);
+      const live = [...B.sites.values()].filter((s) => !s.dead).sort((a, b) => Math.hypot(a.def.x - here().x, a.def.z - here().z) - Math.hypot(b.def.x - here().x, b.def.z - here().z));
+      const site = live[0];
       if (site) {
         const d = site.def;
         const across = d.axis === 'x' ? 'x' : 'z';
         const gpos = site.gx ?? 0;
         const leg = across === 'x' ? new THREE.Vector3(d.x + BUILDER.SPAN / 2, d.y + 20, d.z + gpos) : new THREE.Vector3(d.x + gpos, d.y + 20, d.z + BUILDER.SPAN / 2);
-        // sólido: um raio de colisão de fora até a perna bate nela
+        // sólido
         const col = w.col;
         const from = leg.clone().add(across === 'x' ? new THREE.Vector3(8, 0, 0) : new THREE.Vector3(0, 0, 8)).sub(world.origin);
         col._t = -1e9;
         col.buildsPerFrame = 600;
         col.refresh(from, 30);
         col.buildsPerFrame = 2;
-        const dir = across === 'x' ? new THREE.Vector3(-1, 0, 0) : new THREE.Vector3(0, 0, -1);
-        const hitLeg = col.ray(from, dir, 12);
+        const hitLeg = col.ray(from, across === 'x' ? new THREE.Vector3(-1, 0, 0) : new THREE.Vector3(0, 0, -1), 12);
         const solid = !!hitLeg && hitLeg.distance < 7;
-        // um bloco da obra
+        // um bloco: o furo (faces em brasa), o bloco continua lá
         const n0 = site.built.length;
         const bp = B._cellPos(site, site.built[0]).add(new THREE.Vector3(d.x, d.y, d.z));
         world.addCut({ a: [bp.x - 10, bp.y, bp.z - 10], b: [bp.x + 10, bp.y, bp.z + 10], r: 2.5 }, bp, { now: true });
-        await waitFor(() => site.built.length < n0, 4);
-        const blockGone = site.built.length < n0;
-        // a perna
-        const d0 = B.stats.destroyed;
-        const a = leg.clone().addScaledVector(across === 'x' ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0), -12);
-        const b = leg.clone().addScaledVector(across === 'x' ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0), 12);
-        world.addCut({ a: a.toArray(), b: b.toArray(), r: 2.8 }, a, { now: true });
-        await waitFor(() => site.dead, 4);
-        ok = solid && blockGone && site.dead && B.stats.destroyed > d0;
-        why = `perna sólida ${solid}${hitLeg ? ` (a ${hitLeg.distance.toFixed(1)} m)` : ''} · bloco cortado sumiu ${blockGone} (${n0} → ${site.built.length}) · perna cortada: ${site.dead ? 'o canteiro caiu' : 'NADA'}`;
+        await waitFor(() => !!site.builtCaps, 4);
+        const blockCut = !!site.builtCaps && site.built.length === n0;
+        // um trilho
+        const rp = across === 'x' ? new THREE.Vector3(d.x + BUILDER.SPAN / 2, d.y + 0.5, d.z + 20) : new THREE.Vector3(d.x + 20, d.y + 0.5, d.z + BUILDER.SPAN / 2);
+        world.addCut({ a: [rp.x, rp.y + 8, rp.z], b: [rp.x, rp.y - 3, rp.z], r: 2 }, rp, { now: true });
+        await waitFor(() => !!site.railCaps, 4);
+        const railCut = !!site.railCaps;
+        // o pórtico: a perna no meio (não essencial) — continua; a resistência cai
+        const lp = across === 'x' ? { x: BUILDER.SPAN / 2, y: 20, z: 0 } : { x: 0, y: 20, z: BUILDER.SPAN / 2 };
+        const ldir = across === 'x' ? { x: 0, y: 0, z: 1 } : { x: 1, y: 0, z: 0 };
+        cutAt(site.gantry, lp, ldir);
+        await sleep(400);
+        const i1 = dyn.info(`bg:${d.id}`);
+        const alive = !site.dead && i1 && i1.hp < 1 && capsOf(site.gantry) > 0;
+        // mais cortes em pontos não essenciais: a resistência acaba — o canteiro cai
+        let n = 0;
+        while (!site.dead && n < 8) {
+          cutAt(site.gantry, { ...lp, y: 28 + n * 7 }, ldir);
+          n++;
+          await sleep(200);
+        }
+        const worn = site.dead && dyn.info(`bg:${d.id}`)?.dead === 'worn';
+        // o essencial: noutro canteiro, a perna embaixo — cai de um tiro
+        let ess = 'sem segundo canteiro';
+        const s2 = live[1];
+        if (s2) {
+          const a2 = s2.def.axis === 'x' ? 'x' : 'z';
+          cutAt(s2.gantry, a2 === 'x' ? { x: -BUILDER.SPAN / 2, y: 4, z: 0 } : { x: 0, y: 4, z: -BUILDER.SPAN / 2 }, a2 === 'x' ? { x: 0, y: 0, z: 1 } : { x: 1, y: 0, z: 0 });
+          await sleep(300);
+          ess = s2.dead && dyn.info(`bg:${s2.def.id}`)?.dead === 'essential' ? 'a base da perna: caiu de um tiro' : `não caiu (${dyn.info(`bg:${s2.def.id}`)?.dead})`;
+        }
+        ok = solid && blockCut && railCut && alive && worn && !ess.startsWith('não');
+        why = `perna sólida ${solid} · bloco: furo ${blockCut} · trilho: furo ${railCut} · perna no meio: segue trabalhando ${!!alive} (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) · +${n} cortes: ${worn ? 'gasto, caiu' : 'NÃO caiu'} · ${ess}`;
       } else why = 'nenhum canteiro vivo perto';
     }
     report({ kind: 'construtor', ok, why });
+  }
+
+  // elevador: o carro cortado continua; o canto dos cabos (essencial) o para
+  {
+    let ok = false;
+    let why = 'nenhum elevador perto';
+    const E = world.elevators;
+    for (const place of ['camada', 'poco', 'macico']) {
+      if ([...E.cars.values()].length) break;
+      if (ctx.ui.teleport(place, place)) await sleep(7000);
+    }
+    const car = [...E.cars.values()].find((c) => c.def.kind !== 'grand') ?? [...E.cars.values()][0];
+    if (car) {
+      const id = `lift:${car.def.id}`;
+      cutAt(car.group, { x: 0, y: 1, z: 0 }, { x: 1, y: 0, z: 0 }, 1.2, 6);
+      await sleep(300);
+      const i1 = dyn.info(id);
+      const alive = i1 && !i1.dead && i1.hp < 1 && !car.dead;
+      const hw = car.def.w / 2 - 1;
+      const hd = car.def.d / 2 - 1;
+      cutAt(car.group, { x: hw, y: 1.5, z: hd }, { x: 0, y: 1, z: 0 }, 1.5, 6);
+      await sleep(300);
+      const dead = car.dead && dyn.info(id)?.dead === 'essential';
+      await sleep(5000);
+      const y0 = car.y;
+      await sleep(2000);
+      const stopped = Math.abs(car.y - y0) < 0.01;
+      ok = !!alive && dead && stopped;
+      why = `${car.def.kind}: cortado no meio, segue (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) ${!!alive} · o canto dos cabos: ${dead ? 'parou' : 'NÃO parou'} · parado de fato ${stopped}`;
+    }
+    report({ kind: 'elevador', ok, why });
+  }
+
+  // vagão: cortado continua; um truque (essencial) para a linha
+  {
+    let ok = false;
+    let why = 'nenhum vagão perto';
+    const T = world.transit;
+    if (ctx.ui.teleport('transportador', 'transportador')) {
+      await sleep(8000);
+    }
+    await waitFor(() => T.cars.size > 0, 10);
+    const car = [...T.cars.values()][0];
+    if (car) {
+      const id = `car:${car.line.id}:${car.k}`;
+      cutAt(car.group, { x: 0, y: 2.5, z: 0 }, { x: 1, y: 0, z: 0 }, 1.2, 6);
+      await sleep(300);
+      const i1 = dyn.info(id);
+      const alive = i1 && !i1.dead && i1.hp < 1;
+      cutAt(car.group, { x: 0, y: -0.7, z: 7 }, { x: 1, y: 0, z: 0 }, 1.5, 6);
+      await sleep(300);
+      const dead = car.dead && dyn.info(id)?.dead === 'essential' && !!world.worldState?.get(`transitDead:${car.line.id}`);
+      ok = !!alive && dead;
+      why = `cortado no meio, segue (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) ${!!alive} · o truque: ${dead ? 'parou a linha' : 'NÃO parou'}`;
+    }
+    report({ kind: 'vagao', ok, why });
+  }
+
+  // colosso: cortado continua; o núcleo (essencial) para a trincheira
+  {
+    let ok = false;
+    let why = 'nenhum colosso perto';
+    const C = world.colossi;
+    if (ctx.ui.teleport('colosso', 'colosso')) {
+      await sleep(8000);
+      await waitFor(() => C.machines.size > 0, 10);
+      const m = [...C.machines.values()].sort((a, b) => a.pos.distanceTo(world.toGlobal(camera.position.clone())) - b.pos.distanceTo(world.toGlobal(camera.position.clone())))[0];
+      if (m) {
+        const id = `col:${m.lane.id}:${m.k}`;
+        // a plataforma de baixo, longe do núcleo (não essencial)
+        cutAt(m.group, { x: 40, y: 4, z: 95 }, { x: 0, y: 1, z: 0 }, 2.8, 12);
+        await sleep(400);
+        const i1 = dyn.info(id);
+        const alive = i1 && !i1.dead && i1.hp < 1;
+        const p0 = m.pos.clone();
+        await sleep(1500);
+        const moving = m.pos.distanceTo(p0) > 1;
+        // o núcleo: o módulo central (world/colossi.js — o essencial)
+        const H = COLOSSUS.depth - 18 + 14;
+        cutAt(m.group, { x: 0, y: H / 2 + 2, z: -18 }, { x: 1, y: 0, z: 0 }, 2.8, 60);
+        await sleep(400);
+        const dead = m.dead && dyn.info(id)?.dead === 'essential';
+        const p1 = m.pos.clone();
+        await sleep(1500);
+        const stopped = m.pos.distanceTo(p1) < 0.01;
+        ok = !!alive && moving && dead && stopped;
+        why = `cortado na longarina: segue ${!!alive && moving} (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) · o núcleo: ${dead ? 'parou' : 'NÃO parou'} · a trincheira parada ${stopped}`;
+      }
+    }
+    report({ kind: 'colosso', ok, why });
   }
 }

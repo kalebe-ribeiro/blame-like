@@ -19,6 +19,7 @@
 //  Para expandir a geração, veja src/gen/chunkgen.js (e macrogen.js).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { DynamicCuts } from './dynamic.js';
 import { RNG } from '../core/rng.js';
 import { PALETTE, createSurfaceMaterial, createSkyMaterial, createBeamMaterial, createCascadeMaterial, linearColor } from '../shaders/materials.js';
 import { ElevatorSystem } from './elevators.js';
@@ -157,6 +158,8 @@ export class World {
     for (const L of [this.chunkLayer, this.macroLayer]) L.onSwap = (e) => this.bus.emit('cut:swap', { entry: e, layer: L.layer });
 
     // ── coisas que se movem: elevadores, construtores, água ──
+    // (o emissor nelas: cortes de verdade, pontos essenciais, a resistência — world/dynamic.js)
+    this.dyn = new DynamicCuts(this);
     this.elevators = new ElevatorSystem(this.streamGroup, m);
     this.elevators.field = this.field;
     this.builders = new BuilderSystem(this.streamGroup, m);
@@ -169,6 +172,7 @@ export class World {
     this.colossi.field = this.field;
     this.colossi.bus = this.bus;
     this.elevators.outages = this.outages;
+    for (const s of [this.elevators, this.builders, this.transit, this.colossi]) s.dyn = this.dyn;
     this.terminals = new TerminalSystem(this.streamGroup, m, this.seed);
     Object.assign(this.terminals, { field: this.field, transit: this.transit, outages: this.outages, world: this });
     // subestações: religar setores apagados (fase 4); o que foi religado vem do mundo salvo
@@ -551,6 +555,8 @@ export class World {
     cut.id ??= `C${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
     this.cuts.push(cut);
     this.field.setCuts(this.cuts);
+    // as estruturas ativas, agora (elas andam: no quadro do tiro, onde estão)
+    this.dyn?.onCut(cut);
     const out = {};
     // a camada de perto agora (o furo que se vê primeiro); as de longe e a macro no próximo
     // quadro — um corte de 2000 m cruza muitos chunks, e agendar todos de uma vez pesava no

@@ -41,6 +41,15 @@ export class ColossusSystem {
     this.bus = null; // evento colossus:clamp { x, y, z }
     this._scan = 0;
     this._geo = null;
+    /** @type {any} os cortes do emissor nas máquinas (world/dynamic.js) */
+    this.dyn = null;
+    this.now = 0;
+  }
+
+  /** O tempo de uma trincheira: parado no instante em que uma máquina dela foi destruída (salvo no mundo). */
+  _laneTime(lane, time) {
+    const f = this.dyn?.world.worldState?.get(`colLane:${lane.id}`);
+    return f === undefined ? time : f;
   }
 
   /** Geometria (uma só, compartilhada): z local ao longo da trincheira, y = 0 no pé. */
@@ -93,7 +102,8 @@ export class ColossusSystem {
     }
     if (lane.axis === 'x') g.rotation.y = Math.PI / 2;
     this.group.add(g);
-    return {
+    const H = COLOSSUS.depth - 18 + DROP;
+    const mach = {
       group: g,
       lane,
       k,
@@ -101,6 +111,21 @@ export class ColossusSystem {
       clamp: hash4(this.field.seed, lane.b.n, k, lane.lat, 712) * CLAMP,
       light: { x: 0, y: 0, z: 0, color: SODIUM, intensity: 900, mode: 'steady', phase: k * 3.1, grid: false }, // energia própria
     };
+    // o emissor: o módulo central (o núcleo) é o essencial; destruída, a máquina apaga e a trincheira
+    // inteira para (as outras não a atravessam) — no instante do fim, salvo no mundo
+    this.dyn?.attach(`col:${lane.id}:${k}`, {
+      root: g,
+      meshes: [mh],
+      essential: [{ x: 0, y: H / 2 + 2, z: -18, r: 22 }],
+      onDead: (_why, replay) => {
+        mach.dead = true;
+        mg.visible = false;
+        mach.light.intensity = 0;
+        const ws = this.dyn.world.worldState;
+        if (!replay && ws?.get(`colLane:${lane.id}`) === undefined) ws?.set(`colLane:${lane.id}`, this._laneTime(lane, this.now));
+      },
+    });
+    return mach;
   }
 
   /** Sentido, fase e se a máquina k existe — tudo pelo hash da trincheira. */
@@ -153,6 +178,7 @@ export class ColossusSystem {
 
   update(time, dt, g, origin) {
     if (!this.field) return;
+    this.now = time;
     this._scan -= dt;
     if (this._scan <= 0) {
       this._scan = 1;
@@ -163,7 +189,7 @@ export class ColossusSystem {
       const lateral = lane.axis === 'x' ? g.z - lane.lat : g.x - lane.lat;
       if (Math.abs(lateral) > RANGE) continue;
       const u = lane.axis === 'x' ? g.x : g.z;
-      const base = this.posT(lane, 0, time);
+      const base = this.posT(lane, 0, this._laneTime(lane, time));
       const reach = Math.sqrt(Math.max(0, RANGE * RANGE - lateral * lateral));
       for (let k = Math.floor((u - reach - base) / COLOSSUS.spacing); k <= Math.ceil((u + reach - base) / COLOSSUS.spacing); k++) {
         if (!this.exists(lane, k)) continue;
@@ -176,13 +202,14 @@ export class ColossusSystem {
       if (want.has(id)) continue;
       m.group.removeFromParent();
       this.machines.delete(id);
+      this.dyn?.detach(`col:${id}`);
     }
 
     this.lights.length = 0;
     this.meshes.length = 0;
     for (const m of this.machines.values()) {
       const L = m.lane;
-      const t = this.posT(L, m.k, time);
+      const t = this.posT(L, m.k, this._laneTime(L, time));
       const x = L.axis === 'x' ? t : L.lat;
       const z = L.axis === 'x' ? L.lat : t;
       const y = L.b.bottom - DROP;

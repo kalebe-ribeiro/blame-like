@@ -57,6 +57,13 @@ export class TransitCars {
     this._geo = null;
     this.outages = null; // OutageSystem
     this.clocks = new Map(); // id da linha → { c: relógio, rate: 0..1, seen }
+    /** @type {any} os cortes do emissor nos vagões (world/dynamic.js) */
+    this.dyn = null;
+  }
+
+  /** A linha parou de vez (um vagão dela destruído pelo emissor — salvo no mundo)? */
+  _lineDead(line) {
+    return !!this.dyn?.world.worldState?.get(`transitDead:${line.id}`);
   }
 
   /** Relógio da linha (criado na hora certa: começa igual ao tempo global). */
@@ -106,7 +113,20 @@ export class TransitCars {
     if (line.axis === 'z') g.rotation.y = toWalk < 0 ? 0 : Math.PI;
     else g.rotation.y = toWalk < 0 ? -Math.PI / 2 : Math.PI / 2;
     this.group.add(g);
-    return { group: g, line, k, t: null, light: { x: 0, y: 0, z: 0, color: [0.66, 0.78, 0.7], intensity: 28, mode: 'steady', phase: k * 1.7 } };
+    const car = { group: g, line, k, t: null, light: { x: 0, y: 0, z: 0, color: [0.66, 0.78, 0.7], intensity: 28, mode: 'steady', phase: k * 1.7 } };
+    // o emissor: os truques (sobre o trilho) são o essencial; destruído, a linha inteira para (ninguém
+    // atravessa o vagão parado — como o trilho cortado) e ele apaga
+    this.dyn?.attach(`car:${line.id}:${k}`, {
+      root: g,
+      meshes: [mb, mf],
+      essential: [-7, 7].map((z) => ({ x: 0, y: -0.7, z, r: 1.8 })),
+      onDead: () => {
+        car.dead = true;
+        car.light.intensity = 0;
+        this.dyn.world.worldState?.set(`transitDead:${line.id}`, true);
+      },
+    });
+    return car;
   }
 
   /** O horário da estação s (terminais), em tokens da língua antiga (lang/ancient.js). */
@@ -156,6 +176,7 @@ export class TransitCars {
       if (!want.has(id) && !this._rider(car)) {
         car.group.removeFromParent();
         this.cars.delete(id);
+        this.dyn?.detach(`car:${id}`);
       }
     }
 
@@ -171,6 +192,8 @@ export class TransitCars {
         if (this.outages.power(x, L.y + 3, z, 7.7, time) < 0.5) dark.add(L.id);
       }
     }
+    // um vagão destruído pelo emissor: a linha para de vez
+    for (const L of this.lines) if (this._lineDead(L)) dark.add(L.id);
     // um trilho cortado pelo emissor: a linha para (os vagões não entram num trecho cortado)
     const F = this.field;
     if (F.cuts?.length) {

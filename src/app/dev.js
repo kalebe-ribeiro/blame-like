@@ -271,6 +271,44 @@ export function setupDev(ctx) {
       console.warn('BUILDERCAM: o pórtico andou ' + ((site.gx ?? 0) - g0).toFixed(2) + ' m entre as capturas (faltava ' + far(site).toFixed(1) + ')');
     }, Number(params.get('buildercam')) * 1000);
   }
+  // --cutcar=N: vai a um transportador; aos N s corta a parede cega de um vagão (não essencial) e a câmera
+  // o acompanha de lado — duas capturas com 2 s: cutcar-a.png, cutcar-b.png (o furo anda com o vagão)
+  if (params.get('cutcar')) {
+    setTimeout(() => ctx.ui.teleport('transportador', 'transportador'), 2000);
+    setTimeout(async () => {
+      const T = world.transit;
+      const car = [...T.cars.values()].sort((a, b) => (b.speed ?? 0) - (a.speed ?? 0))[0];
+      if (!car) return console.warn('CUTCAR: nenhum');
+      const shot = (name) => /** @type {any} */ (window).cybercosmic?.devCapture?.(name);
+      car.group.updateMatrixWorld(true);
+      const W = 4; // (a largura do vagão, mais ou menos: o corte atravessa a parede cega, x > 0)
+      const c = new THREE.Vector3(W / 2, 2, 0).applyMatrix4(car.group.matrixWorld).add(world.origin);
+      const dw = new THREE.Vector3(1, 0, 0).transformDirection(car.group.matrixWorld);
+      const a = c.clone().addScaledVector(dw, -3);
+      const b = c.clone().addScaledVector(dw, 3);
+      world.addCut({ a: a.toArray(), b: b.toArray(), r: 1.4 }, a, { now: true });
+      ctx.controls.canFly = true;
+      ctx.controls.setMode('fly');
+      const tick = () => {
+        requestAnimationFrame(tick);
+        car.group.updateMatrixWorld(true);
+        const p = new THREE.Vector3(W / 2 + 9, 2.2, 0).applyMatrix4(car.group.matrixWorld);
+        const t = new THREE.Vector3(W / 2, 2, 0).applyMatrix4(car.group.matrixWorld);
+        camera.position.copy(p);
+        const d = t.sub(p);
+        ctx.controls.yaw = Math.atan2(-d.x, -d.z);
+        ctx.controls.pitch = Math.atan2(d.y, Math.hypot(d.x, d.z));
+      };
+      tick();
+      console.warn('CUTCAR: ' + car.line.id + ':' + car.k + ' ' + JSON.stringify(world.dyn.info('car:' + car.line.id + ':' + car.k)));
+      await new Promise((r) => setTimeout(r, 1500));
+      const t0 = car.t;
+      await shot('cutcar-a.png');
+      await new Promise((r) => setTimeout(r, 2000));
+      await shot('cutcar-b.png');
+      console.warn('CUTCAR: o vagão andou ' + Math.abs(car.t - t0).toFixed(1) + ' m');
+    }, Number(params.get('cutcar')) * 1000);
+  }
   // --hurt=v: aos 5 s a vida vai a v (o aparelho mostra — app/health.js)
   if (params.get('hurt')) setTimeout(() => ctx.health.set(Number(params.get('hurt'))), 5000);
   // --sgcam=N: dos N s em diante, a câmera (voando: ninguém percebe) acompanha o Safeguard

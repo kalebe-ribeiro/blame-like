@@ -24,6 +24,8 @@ export class ElevatorSystem {
     this.group.name = 'elevators';
     parent.add(this.group);
     this.materials = materials;
+    /** @type {any} os cortes do emissor nos carros (world/dynamic.js) */
+    this.dyn = null;
     this.cars = new Map(); // id → { def, mesh, y }
     this.meshes = [];
     this.lights = [];
@@ -117,6 +119,7 @@ export class ElevatorSystem {
             m?.removeFromParent();
           }
           this.cars.delete(id);
+          this.dyn?.detach(`lift:${id}`);
         }
       }
       for (const [id, def] of want) {
@@ -124,7 +127,18 @@ export class ElevatorSystem {
         def.phase = (Math.abs(Math.sin(def.x * 0.013 + def.z * 0.029)) * 1000) % 300;
         const group = this._buildCar(def);
         this.group.add(group);
-        this.cars.set(id, { def, group, y: ElevatorSystem.heightAt(def, time), clock: time, rate: 1 });
+        const car = { def, group, y: ElevatorSystem.heightAt(def, time), clock: time, rate: 1, dead: false };
+        this.cars.set(id, car);
+        // o emissor: os pontos dos cabos (os cantos de cima) são o essencial; destruído, o carro para onde está
+        const hw = (def.w ?? 8) / 2 - 1;
+        const hd = (def.d ?? 8) / 2 - 1;
+        group.position.set(def.x - origin.x, car.y - origin.y, def.z - origin.z);
+        this.dyn?.attach(`lift:${id}`, {
+          root: group,
+          meshes: [...group.children],
+          essential: [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sz]) => ({ x: sx * hw, y: 1.5, z: sz * hd, r: 1.6 })),
+          onDead: () => (car.dead = true),
+        });
       }
       this.meshes = [];
       for (const c of this.cars.values()) this.meshes.push(...c.group.children);
@@ -145,6 +159,7 @@ export class ElevatorSystem {
         }
         if (car.cut) powered = false;
       }
+      if (car.dead) powered = false; // (destruído pelo emissor: parado de vez)
       car.rate = powered ? Math.min(1, car.rate + dt / 8) : Math.max(0, car.rate - dt / 4);
       car.clock += car.rate * dt;
       const y = ElevatorSystem.heightAt(car.def, car.clock);
