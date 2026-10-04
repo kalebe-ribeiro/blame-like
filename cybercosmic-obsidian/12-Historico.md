@@ -372,3 +372,9 @@ Por que as coisas estão como estão, em ordem.
 - Um detalhe para o playtest: o arremesso vai de 12 a 16 m/s e o choque conta de 12 m/s — os arremessos mais fracos perdem força no voo e nunca chegam a bater forte numa parede.
 - Fora: a distinção visual dos níveis dos inimigos (é do [[Rework-grafico]]).
 
+## 2026-10-04 — três correções pedidas pelo usuário
+
+- **Os Construtores** (`world/builders.js`): eram atravessáveis (a colisão só via a obra — o pórtico, os trilhos, o gancho, a carga e os destroços passavam pelo corpo) e o tiro não os destruía (o canteiro só sumia se o corte pegasse o centro dele). Agora **tudo do canteiro é sólido** (`world/collision.js`), **os blocos que o corte atravessa somem**, e **um corte numa perna ou na viga derruba o canteiro** — vira um cemitério como os outros, com estrondo e faíscas. Como os cortes ficam no mundo salvo, o canteiro recriado já nasce assim. `check:beam` caso `construtor`.
+- **A textura não acompanhava o que se move** (as placas deslizavam pelos elevadores, vagões, colossos, o pórtico dos Construtores, os pedaços que caem): o desenho era calculado na posição do mundo. Agora há a variante "presa ao objeto" do material de superfície (`shaders/materials.js` `movingMaterial`, `USE_OBJECT_PATTERN` — os mesmos uniforms), usada nessas peças; pré-compilada com as outras no aquecimento do emissor. **Conferido em imagem** (`--buildercam=N`): o pórtico andou 14,9 m entre duas capturas e as juntas das placas ficaram no mesmo lugar da perna.
+- **O corpo morto flutuava** quando o tiro levava o piso debaixo dele (o morto não tinha física): agora ele confere o chão a cada 0,4 s e cai com a gravidade do Walker até o próximo piso (`world/entities.js` `_settleCorpse`). `check:beam` caso `cadaver`.
+
