@@ -159,7 +159,7 @@ export async function runSafeguardTest(ctx) {
           tick();
         });
         sg._lose(x);
-        return { M, samples, turnedAt, turns: x.sg.turns ?? 0 };
+        return { M, samples, turnedAt, turns: x.sg.turns ?? 0, last: x.sg.lastTurn ?? null };
       };
       const rows = [];
       let okA = true;
@@ -179,7 +179,10 @@ export async function runSafeguardTest(ctx) {
       const before = r.samples.filter((s) => s.t <= r.turnedAt).at(-1)?.v ?? 0;
       const after = r.samples.filter((s) => r.turnedAt !== null && s.t > r.turnedAt && s.t < r.turnedAt + 1.8);
       const low = after.length ? Math.min(...after.map((s) => s.v)) : before;
-      report({ kind: 'curva', ok: r.turns > 0 && before > 13 && low < 0.85 * before, why: `alto: ${before.toFixed(1)} m/s na reta → ${low.toFixed(1)} m/s depois de virar (${r.turns} curva(s) contada(s))` });
+      // a regra (M2): a velocidade cai pelo ângulo que ele de fato virou — v · (0,5 + 0,5·cos θ)
+      const L = r.last;
+      const want = L ? L.from * (0.5 + 0.5 * Math.cos(L.th)) : 0;
+      report({ kind: 'curva', ok: r.turns > 0 && before > 13 && !!L && L.th > Math.PI / 6 && Math.abs(L.to - want) < 0.05 && low < before - 0.5, why: `alto: ${before.toFixed(1)} m/s na reta → ${low.toFixed(1)} m/s depois de virar (${r.turns} curva(s) contada(s); a última: ${L ? `${Math.round((L.th * 180) / Math.PI)}°, ${L.from.toFixed(1)} → ${L.to.toFixed(1)} m/s` : '—'})` });
       lantern(false);
       ctx.rules = rules0;
     }

@@ -101,7 +101,9 @@ export function accelerate(e, S, M, dt) {
       if (S.straightT >= TURN.settle) {
         const th = Math.abs(wrap(ang - S.turnRef));
         if (th > TURN.min) {
+          S.lastTurn = { th, from: S.huntV };
           S.huntV = Math.max(1, S.huntV * (0.5 + 0.5 * Math.cos(th)));
+          S.lastTurn.to = S.huntV;
           S.turns = (S.turns ?? 0) + 1;
         }
         S.turnRef = ang;

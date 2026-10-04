@@ -31,6 +31,7 @@ Reorganizada em 2026-10-03. Três listas: **a implementar** (decidido, na ordem)
 (nada — tudo decidido em 2026-10-03; as credenciais de acesso foram descartadas)
 
 ## 3. Em observação
+- **Casos de teste que dependem do lugar sorteado** (2026-10-04): `check:safeguards` `curva`, `check:health` `choque` e `golpe:borda` — às vezes reprovam por não achar a geometria certa (ou o Safeguard contornar devagar); rodar de novo a parte (`--sgpart=arranque`, `--healthpart=choque,borda`). Melhorar: lugares preparados em vez de procurados.
 - **Travadas de ~1,9 s** numa rodada do `profile --profshot` (a primeira na RTX, depois da troca de GPU), ~2 s depois do tiro; não se repetiram em duas rodadas. Hipótese: o cache de shaders do Chromium montado para a Intel. Se voltar, o `profile` lista os programas de shader novos de cada tiro.
 - **O código de mundo não leva os cortes do emissor** — aceito e avisado ao copiar ([[Seeds-compartilhaveis]]); só muda se o usuário quiser.
 
