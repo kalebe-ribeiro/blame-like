@@ -25,7 +25,7 @@ Separada da **célula de energia** (luz, sensor, leitor, emissor): a célula é 
 | **o golpe de um hostil** (hoje: Safeguards — §3) | o toque = captura (desmaio, cemitério) | **um golpe de curta distância com arremesso: tira METADE da vida** (50%) e joga o corpo longe; o que acontece depois depende de onde ele cai (§3) |
 | **quedas** (§4) | > 38 m/s: desmaio direto | **dano a partir de 10 m de queda** (17,3 m/s de impacto), crescendo com a altura até **100% em 38 m/s** (~48 m) — o limiar do desmaio de hoje |
 | **bater num obstáculo — só arremessado por um hostil** (§3) | um baque (`walker.onSlam`) | dano acima de ~12 m/s contra o obstáculo, crescendo com a velocidade (~25% a 30 m/s) |
-| **bater num obstáculo pelo próprio coice do emissor** | um baque | **sem dano** (decidido 2026-10-04) — o baque, o tremor e o som continuam. Se o empurrão te tira de uma plataforma, **a queda** conta (§4) |
+| **bater num obstáculo pelo próprio coice do emissor** | um baque | **sem dano** (decidido 2026-10-04) — o baque, o tremor e o som continuam. Se o empurrão te tira de uma plataforma, **a queda** conta (§4) — **confirmado pelo usuário (2026-10-04)** |
 | **sobrecarga do emissor** | nada até o limite; além do limite (5–7) o braço que atira é perdido — [[Recuperar-o-braco]] | dano pelo estágio: azul 0 · violeta 5% · a singularidade se formando 12% · limite 30%; a mão queima, a mira treme uns segundos, **a arma continua na mão**; além do limite o braço se perde (como hoje) e o dano é o do limite |
 | **o feixe de outro** (futuro: hostis armados) | — | (sem tiro inimigo por enquanto — ver §3) |
 
@@ -82,7 +82,7 @@ A física decide (o arremesso é um impulso de verdade no `Walker` — o mesmo e
 
 **Agora**: um golpe e um arremesso padrão (o hostil de frente para você; o arremesso para longe dele, qualquer que seja o ângulo).
 
-**Depois** (registrado — entra com o [[Rework-grafico]] ou antes, se a gameplay pedir):
+**Depois** (registrado — entra com o [[Rework-grafico]] ou antes, se a gameplay pedir; o design e a animação de cada hostil também variam **pelo nível** e dentro do mesmo nível — ver lá):
 | eixo | variações (mínimo) |
 |---|---|
 | **ângulo do ataque** | **por trás** (2+) · **de frente** (2+) · **de baixo** (2+ — de um nível abaixo, agarrando a borda, por um vão) · **lateral** (2+, esquerda e direita) |

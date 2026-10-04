@@ -1,5 +1,5 @@
 ---
-status: decidida em princípio (2026-10-04) — aceleração e velocidade terminal, mais rápidos que hoje; os números M1–M4 são propostas a confirmar
+status: decidida (2026-10-04) — aceleração e velocidade terminal, mais rápidos que hoje; M1–M4 e a distribuição dos níveis aprovados (números para ajustar jogando)
 prioridade: alta — junto do [[Dano-do-emissor]] (é o que equilibra a arma)
 tags: [futuro, safeguards, npcs, movimento, dificuldade]
 ---
@@ -7,6 +7,8 @@ tags: [futuro, safeguards, npcs, movimento, dificuldade]
 # O movimento dos inimigos — a dificuldade
 
 > Usuário (2026-10-04): "o nível de dificuldade vai se dar por conta da movimentação dos NPCs. Faça uma nota que os inimigos têm que se mover mais rápido, com uma aceleração e velocidade terminal, e não velocidade constante desde o início. Então vai ser mais difícil ficar atirando sem ser pego."
+>
+> **Aprovado (2026-10-04, usuário):** M1–M4 e a distribuição dos níveis como propostos; **a vida de silício também em três níveis** (M4).
 
 ## Por quê
 A arma é overpowered de propósito ([[Dano-do-emissor]]): de perto, quase tudo morre. O que deixa o jogo difícil é **não ter tempo de carregar**: carregando você anda a 60% (C2 — [[Arma-do-Killy]]), sem correr nem pular, e um tiro forte pede segundos. Inimigos que ganham velocidade transformam cada segundo de carga numa aposta.
@@ -23,7 +25,7 @@ A arma é overpowered de propósito ([[Dano-do-emissor]]): de perto, quase tudo 
 - **Curvas custam**: virar forte faz o inimigo perder velocidade (tem de acelerar de novo). Isso é o que dá ao jogador uma saída — e é o "jogo" da fuga.
 - **Parar, perder a vista**: desacelera até a ronda; o próximo arranque começa de baixo de novo.
 
-## Os números (propostas)
+## Os números (aprovados — para ajustar jogando)
 
 **M1 — por nível de Safeguard** (os níveis são os mesmos do [[Dano-do-emissor]]):
 
@@ -45,11 +47,11 @@ A arma é overpowered de propósito ([[Dano-do-emissor]]): de perto, quase tudo 
 
 (Simulado em linha reta, alcance do golpe 1,5 m, sem curvas — o teste mede de verdade.) Ou seja: contra o alto, **ou** um tiro cheio de longe, **ou** vários médio-fracos rápidos, **ou** quebrar a corrida antes de carregar.
 
-**M4 — os outros hostis**: **moradores de uma vila hostil** ([[Dano-do-emissor]] §4) — humanos: inicial 2,3, aceleração 2 m/s², terminal **7 m/s** (correndo, você escapa). **Vida de silício** (quando atacar — hoje drena a célula): como o Safeguard baixo.
+**M4 — os outros hostis**: **moradores de uma vila hostil** ([[Dano-do-emissor]] §4) — humanos: inicial 2,3, aceleração 2 m/s², terminal **7 m/s** (correndo, você escapa). **Vida de silício** (quando atacar — hoje drena a célula): **três níveis também** — baixa, média e alta, com o movimento do Safeguard do mesmo nível (M1) e a resistência própria ([[Dano-do-emissor]] §3).
 
 ## Onde entra no código
 - `controls/walker.js`: hoje a velocidade alvo é atingida a 12/s — para os seres, uma **aceleração limitada** (`maxAccel` no `Walker`, só dos seres; o jogador não muda) e a terminal por `speedScale`.
-- `world/safeguards.js`: a caçada sobe `speedScale` com o tempo em linha (`e.huntV`), cai nas curvas (M2), recomeça em escadas/elevadores; `e.level` (baixo/médio/alto) com a terminal e a aceleração; a distribuição dos níveis (proposta: perto do começo só baixos; médios e altos mais longe, nas camadas fundas e perto das únicas — a decidir com o mapa).
+- `world/safeguards.js`: a caçada sobe `speedScale` com o tempo em linha (`e.huntV`), cai nas curvas (M2), recomeça em escadas/elevadores; `e.level` (baixo/médio/alto) com a terminal e a aceleração — o mesmo `e.level` na vida de silício (`world/npcs.js`); **a distribuição dos níveis (aprovada)**: perto do começo só baixos; médios e altos mais longe, nas camadas fundas e perto das únicas (o limiar exato se ajusta com o mapa).
 - Os corpos (`world/bodies.js`): a animação de correr acompanha a velocidade (já é por `e.speed`).
 - **Testes**: `check:safeguards` ganha `arranque` (o perfil de velocidade de cada nível em linha reta: inicial, terminal, tempo até ela) e `curva` (perde velocidade ao virar 90°); `check:beam` caso `fuga` (um médio a 15 m: carregar um cheio e atirar antes de ser pego).
 

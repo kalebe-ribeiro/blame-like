@@ -60,11 +60,11 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | ordem | ideia | status |
 |---|---|---|
 | 1 | [[Barra-de-vida]] (vida; golpe com arremesso dos hostis; quedas com dano pela altura; o custo da sobrecarga) | decidida (2026-10-03, revista 2026-10-04) — **a próxima** |
-| 2 | [[Dano-do-emissor]] (dano por nível de Safeguard; o colapso mata qualquer um; vilas hostis) | decidida (2026-10-04) |
-| 2b | [[Movimento-dos-inimigos]] (aceleração e velocidade terminal — a dificuldade) | princípio decidido (2026-10-04); M1–M4 a confirmar |
+| 2 | [[Dano-do-emissor]] (dano por nível — Safeguards e vida de silício; o colapso mata qualquer um; vilas hostis) | decidida (2026-10-04) |
+| 2b | [[Movimento-dos-inimigos]] (aceleração e velocidade terminal — a dificuldade) | decidida (M1–M4, 2026-10-04) |
 | 3 | [[Recuperar-o-braco]] (câmara de reconstrução, prótese, moradores das vilas; aviso de um braço só) | decidida (R1–R7, 2026-10-04) |
 | — | [[Gene-terminal]] (o gene de terminal da rede) | **o objetivo final, máximo — quase impossível**; esperando a mecânica do usuário |
-| último | [[Rework-grafico]] (texturas, modelos de NPCs, animações variadas) | **depois de toda a gameplay** |
+| último | [[Rework-grafico]] (texturas, modelos de NPCs, animações variadas; cada hostil pelo nível, com variações) | **depois de toda a gameplay** |
 | ✔ | [[Arma-do-Killy]] (feixe que fura o terreno) | feita (F1–F4, 2026-10-03; sobrecarga com 7 estágios) — revisão: [[Arma-do-Killy-revisao]] |
 | ✔ | [[NPCs-e-Safeguards]] | feita nas fases 6 e 7; o golpe com arremesso vem com a barra de vida |
 | ✔ | [[Quinas-e-maos]] (agarrar quinas, subir; mãos) | feita (2026-09-30) |

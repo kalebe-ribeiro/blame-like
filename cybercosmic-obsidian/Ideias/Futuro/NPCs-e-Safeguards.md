@@ -36,6 +36,6 @@ tags: [futuro, npcs, inimigos]
 - Nada de diálogo longo; fala pouca, como em *Blame!*.
 - Nada de criaturas fora do repertório da obra ([[02-Direcao-de-Arte]]).
 
-> **Níveis, dano e movimento** (decidido 2026-10-04): Safeguards em três níveis (baixo, médio, alto), com resistência ao emissor ([[Dano-do-emissor]]) e arranque com aceleração até uma velocidade terminal ([[Movimento-dos-inimigos]]) — a dificuldade vem do movimento. Ferir ou matar um morador numa vila deixa a vila hostil para sempre.
+> **Níveis, dano e movimento** (decidido 2026-10-04): Safeguards **e vida de silício** em três níveis (baixo, médio, alto) — design e animação por nível, com variações no mesmo nível ([[Rework-grafico]]), com resistência ao emissor ([[Dano-do-emissor]]) e arranque com aceleração até uma velocidade terminal ([[Movimento-dos-inimigos]]) — a dificuldade vem do movimento. Ferir ou matar um morador numa vila deixa a vila hostil para sempre.
 
 > **O golpe com arremesso** (decidido 2026-10-03): o toque do Safeguard deixa de ser captura imediata — vira um golpe de curta distância que arremessa o jogador e tira metade da vida; a captura só quando a vida zera. Ver [[Barra-de-vida]] §3.
