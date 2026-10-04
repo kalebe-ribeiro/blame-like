@@ -343,4 +343,4 @@ Por que as coisas estão como estão, em ordem.
 ## 2026-10-04 — a barra de vida
 
 - **Feita** ([[Barra-de-vida]] §11): a vida (salva, no aparelho só quando muda, regeneração pelo tempo), quedas com dano pela altura, o dano do emissor por estágio, o golpe dos Safeguards com arremesso (três caminhos: o mesmo plano, cair da estrutura, bater num obstáculo) e a captura só ao zerar. `check:health` novo, 12/12; `check:safeguards` 9/9. Achado no caminho: depois de um golpe que arremessa para longe da vista, o Safeguard ficava sem o último ponto visto (erro a cada quadro) — corrigido.
-
+- Regressões depois da vida, todas verdes: `check` 31/31 (116 fps), `check:pilgrimage` 31/31, `check:pad` 31 + 30, `check:beam` 22/22, `check:climb` 8/8, `check:moves` 6/6, `check:npcs` 10/10, `check:beings` 5/5. O `check:pilgrimage` tem média de ~80 fps e mínimo de ~30 (início, ponte, vila) — **o mesmo do código de antes da vida** (b20928f, no mesmo momento: 77 fps, mín 31): não é regressão. Uma rodada fora do carregador deu 19 fps na ponte.
