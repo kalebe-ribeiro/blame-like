@@ -15,7 +15,7 @@ Reorganizada em 2026-10-03. Três listas: **a implementar** (decidido, na ordem)
 | 1 | **Barra de vida** — a vida, quedas com dano **pela altura** (a partir de 10 m; zera em 38 m/s ≈ 48 m), o golpe com arremesso dos hostis, o dano da sobrecarga, `check:health` | [[Barra-de-vida]] §10 | **feita** (2026-10-04): `check:health` 12/12, `check:safeguards` 9/9 — ver o Andamento da nota |
 | 2 | **Dano variável do emissor + níveis (Safeguards e vida de silício)** — médio-fraco mata o baixo, o médio pede vários, o alto muitos; o colapso (o nível máximo, que custa o braço) mata qualquer um; ferir/matar um morador numa vila deixa a vila hostil | [[Dano-do-emissor]] | **feita** (2026-10-04) — ver o Andamento da nota |
 | 2b | **Movimento dos inimigos** — arranque com aceleração até uma velocidade terminal (o médio e o alto mais rápidos que a sua corrida); curvas custam velocidade | [[Movimento-dos-inimigos]] | **feita** (2026-10-04) |
-| 3 | **Recuperar o braço** — câmara de reconstrução (única nova), prótese (loot), moradores das vilas (troca), a saída garantida sem braços e o aviso de um braço só | [[Recuperar-o-braco]] | decidida (R1–R7, 2026-10-03) |
+| 3 | **Recuperar o braço** — câmara de reconstrução (única nova), prótese (loot), moradores das vilas (troca), a saída garantida sem braços e o aviso de um braço só | [[Recuperar-o-braco]] | **feita** (2026-10-04) — falta só a prótese nos depósitos |
 | 4 | **Gene de terminal** — o objetivo final: pistas longas até onde está guardado (protegido ou esquecido; NPCs podem pegá-lo), um humano com o gene (amostra com ele vivo) e o analisador de genes; implantar na câmara de reconstrução; o controle da Cidade; três finais | [[Gene-terminal]] | decidida (G1–G6, 2026-10-03) — depende da câmara (item 3) |
 | 5 | **Rework gráfico** — texturas, modelos de NPCs, animações variadas (as do golpe por ângulo e tipo de NPC; design e animação de cada hostil pelo nível, com variações no mesmo nível) | [[Rework-grafico]] | só **depois de toda a gameplay** |
 
@@ -23,7 +23,7 @@ Reorganizada em 2026-10-03. Três listas: **a implementar** (decidido, na ordem)
 - **O próprio coice do emissor contra uma parede não tira vida** — o baque, o tremor e o som ficam. Só o **arremesso de um hostil** contra um obstáculo tira vida. Se o empurrão do emissor te tira de uma plataforma, a **queda** conta.
 - **A queda é pela altura** (energia, `v²`), com a gravidade real do jogo (15 m/s², `controls/walker.js`) — a conta antiga ("14 m/s ≈ 10 m") estava errada: dava ~6,5 m.
 
-### Risco já no jogo, resolvido pelo item 3
+### ✔ Risco resolvido pelo item 3 (2026-10-04)
 - **Peregrinação sem os dois braços = preso para sempre**: atirar além do limite com um braço só perde o segundo; sem braços não há quinas nem escadas, e nada devolve o braço (o despertar também não). Até o item 3 existir, um mundo salvo pode travar. As regras R6 (a saída) e R7 (o aviso de um braço só) de [[Recuperar-o-braco]] resolvem.
 
 ## 2. Esperando o usuário

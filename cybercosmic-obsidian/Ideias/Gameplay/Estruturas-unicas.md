@@ -23,6 +23,6 @@ Construções muito raras por seed (uma a cada dezenas de km). Achar uma é um e
 | **terminal de transmissão / antena** | amplia o alcance do [[Ferramentas|sensor]] |
 | **vila abandonada** | onde viveram humanos — **reservada para os NPCs futuros** ([[NPCs-e-Safeguards]]) |
 | **berço de Safeguards** (lacrado) | **reservado para o futuro**: hoje só uma estrutura lacrada e inquietante |
-| **câmara de reconstrução** (planejada, 2026-10-03) | refaz os braços perdidos pelo emissor — serve sempre, com custo; sorteio à parte — [[Recuperar-o-braco]] |
+| **câmara de reconstrução** (feita, 2026-10-04) | refaz os braços perdidos pelo emissor — serve sempre, com custo; sorteio à parte — [[Recuperar-o-braco]] |
 
 Implementação futura: grade enorme no `Field`, geometria própria na macro, fora do teletransporte do modo livre? (Decidir.)

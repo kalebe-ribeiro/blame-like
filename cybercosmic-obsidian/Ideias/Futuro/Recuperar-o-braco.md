@@ -1,5 +1,5 @@
 ---
-status: decidida (2026-10-03) — os três caminhos (estrutura única nova, loot, NPCs) e R1–R7
+status: feita (2026-10-04) — os três caminhos e R1–R7; falta só a prótese nos depósitos (R3, raro)
 prioridade: alta — depois da [[Barra-de-vida]] (hoje a Peregrinação pode ficar presa sem os dois braços)
 tags: [futuro, gameplay, corpo, arma, estruturas-unicas, loot, npcs]
 ---
@@ -80,3 +80,15 @@ Para o jogador ficar precavido antes de perder a mobilidade:
 4. **A câmara** — o tipo novo de única (sorteio à parte), a geometria, a sequência no berço.
 5. **R6** — a pista automática sem braços; **R7** — os avisos de um braço só.
 6. **Testes**: `check:beam` caso `alem` ganha a volta (perder os dois → cada caminho devolve o certo); um mundo de teste sem braços chega a uma vila sem escada.
+
+## Andamento
+
+- **Feita (2026-10-04)** — `app/arms.js` (e `gen/field.js` / `gen/macrogen.js` para a câmara):
+  - **A câmara de reconstrução**: a única nova `chamber`, sorteada **só nas células que ficavam vazias** (hash 985, 30% delas) — as únicas dos mundos antigos não mudam. Uma sala fechada de 40 × 32 m: o **berço de montagem** no meio (`Field.chamberBed` — o mesmo lugar para a geometria e para o jogo), um trilho no teto com quatro braços mecânicos dobrados descendo até o berço, cabos pendurados, um tanque, um painel; uma lâmpada fria sobre o berço; protegida do emissor como as outras. O console (pistas, mapa) junto da porta. **E** perto do berço: deitado, olhando o teto, ~20 s de faíscas e baques (os braços trabalhando), **os dois braços de volta, de carne**; −50% da célula (R1, R2). Sem braço faltando: "NADA A REFAZER".
+  - **A prótese**: nos **cemitérios de vítimas** (1 em 3 tem uma, no chão do pátio — salva em `slot.loot` ao pegar) e **vendida pelos andarilhos que trocam** (40%, só a quem falta um braço). Vai com o que se carrega (`player.carried` — os Safeguards levam junto, como as cargas); **instala-se pelo inventário**, parado, 5 s (sem precisar de mão — R6a) → **um** braço **de metal** (`player.armKind`; a mão e o braço em primeira pessoa com o material de máquina — R4).
+  - **Os moradores** (R5): na conversa, "refazer um braço" — entregar a carga que se leva, ou 30% da célula → um braço de carne. A vila hostil não refaz nada.
+  - **R6b**: sem os dois braços, o mapa ganha como pista a câmara ou a vila habitada (não hostil) mais perto, e o aparelho avisa.
+  - **R7**: perdido o primeiro, "UM BRAÇO SÓ · SEM ELE, NADA DE QUINAS NEM ESCADAS"; com um braço só, o estágio 5 pisca "ÚLTIMO BRAÇO" com um tom grave e quadrado, duas vezes (`audio.beamStage(n, last)`); no inventário, "(braço perdido — o outro é o último)". Só na Peregrinação.
+- **Falta**: a prótese nos **depósitos** (os ocos do maciço — R3 "raro"): não feita; os cemitérios e os andarilhos já cobrem o caminho.
+- **Testes**: `npm run check:arms` (novo) 7/7 — um-braço, último, sem-braços (a pista), vila (30%, de carne), andarilho (40%, instalada em 5 s, de metal), cemitério (a prótese no chão, pega), câmara (o tampo do berço exato na colisão; os dois braços em 20,3 s; −50%).
+- **Imagem conferida**: a câmara por dentro (`--gounique=chamber --chambercam=N --capture`): o berço com a cabeceira, os braços mecânicos chegando à altura dele, os cabos, o tanque, o painel.

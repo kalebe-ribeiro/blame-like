@@ -353,3 +353,7 @@ Por que as coisas estão como estão, em ordem.
 - Regressões, todas verdes no fim: `check:beam` 30/30 (com a parte `dano` no fim — o check desliga os Safeguards, só a fuga os liga), `check:safeguards` 11/11, `check:npcs` 12/12, `check` 31/31 (121 fps), `check:pilgrimage` 31/31 (118 fps, mín 58), `check:pad` 31 + 30, `check:climb` 8/8, `check:moves` 6/6, `check:beings` 5/5; `check:health`: 12/12 com os casos `borda`/`parede` passando depois de exigir uma borda com o chão de baixo já carregado e uma parede alta (o arremesso joga para cima). **Ainda depende do lugar sorteado**: `golpe:borda` pode reprovar com "nenhuma borda alta" numa rodada em que nenhum lugar tem a borda certa — rodar `--healthpart=borda` de novo.
 - Imagem conferida: a pose de ferido (braços abertos, cabeça para trás) ao lado da parada (`--strikepose=cycle,N`). As faíscas do ferido **não** ficaram visíveis na captura — não conferidas em imagem.
 
+## 2026-10-04 — recuperar o braço
+
+- **Feito** ([[Recuperar-o-braco]] — Andamento): a câmara de reconstrução (a única nova, só em células antes vazias), a prótese (cemitérios, andarilhos; instalada do inventário; o braço de metal), os moradores refazendo um braço, os avisos de um braço só e do último braço, e a pista para onde refazer sem os dois. `check:arms` novo, 7/7. Fica a prótese nos depósitos.
+- Regressões depois do braço, todas verdes: `check:arms` 7/7, `check:beam` 30/30, `check:npcs` 12/12, `check:pad` 31 + 30, `check` 31/31 (115 fps), `check:pilgrimage` 31/31 (118 fps). Imagem conferida: a câmara por dentro.
