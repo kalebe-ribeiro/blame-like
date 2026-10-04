@@ -1,5 +1,5 @@
 ---
-status: decidida (2026-10-03) — o objetivo final; vários caminhos até ele; implantar num lugar próprio; a dificuldade é o tamanho da Cidade; o controle da Cidade e a escolha do final. G1–G6 decididas (o implante na câmara de reconstrução)
+status: feita (2026-10-04) — o objetivo final no jogo: depósitos, cadeias, analisador, portadores, implante, controle da Cidade, três finais (check:gene 9/9)
 prioridade: o objetivo de longo prazo — depois da barra de vida, do dano, do movimento e do braço
 tags: [futuro, gameplay, objetivo, progressao, netsfera, safeguards, vilas, ferramentas, final]
 ---
@@ -73,3 +73,16 @@ Fiel ao mangá — **nada de mecânica artificial para punir**; o que pesa é a 
 - [[NPCs-e-Safeguards]] (vilas, andarilhos — quem carrega ou pega o gene), [[Dano-do-emissor]] (as vilas hostis), [[Movimento-dos-inimigos]] (os guardas).
 - **Sem acessos intermediários**: as [[Credenciais-de-acesso]] foram descartadas (2026-10-03) — o gene é o único acesso, como na obra.
 - [[Estruturas-unicas]], [[Barra-de-vida]], [[Recuperar-o-braco]] — o custo do caminho.
+
+## Andamento
+
+- **Feito (2026-10-04)** — `gen/gene.js` (o puro), `app/gene.js` (o jogo), `gen/field.js`/`gen/macrogen.js` (o depósito). Escolhas de implementação (números para ajustar jogando):
+  - **O depósito** (`vault`): uma estrutura única nova, só em células antes vazias e **a mais de 40 km da origem** (12% delas) — medido: 48 depósitos em 160 km da origem, 26 guardados. Um bloco maciço; a porta dá numa antecâmara e num corredor até a sala do fundo, com o **pedestal** e a **cápsula** do gene, cercado de colunas de máquinas. **Guardado** (60%): luz fria acesa; chegando a 160 m, a Cidade manda **três Safeguards altos** (pelas paredes perto ou pela fachada do depósito), de novo a cada 90 s. **Esquecido**: escuro, uma lâmpada falhando; em 40% deles o pedestal está vazio — **um andarilho que passa ali perto levou o gene** (ele vende por 60% da célula; morto, o gene cai no chão e se pega com E).
+  - **A cadeia** (2.1): cada depósito tem **5 estruturas únicas** em linha até ele, ~12 km entre elas. Ler o console de um elo revela o próximo como pista inteira (o último, o depósito); **um arquivo de registros a até 90 km revela o começo** da cadeia.
+  - **O analisador de genes** (§3, G3): achado ao ler o console de uma estrutura única (1 em 4) ou comprado de um andarilho que troca (35%). Na conversa: "analisar" (3% da célula) mostra o traço do gene; num **portador** (um morador em 15% das vilas habitadas a mais de 30 km da origem; 6% dos andarilhos humanos longe), "colher uma amostra" — com ele vivo (G2); morto, não serve.
+  - **Um objeto até o implante** (G1): o gene e a amostra vão com o que se carrega; **no desmaio se perdem** — o gene volta ao pedestal (ou ao andarilho que o levou); a amostra se degrada.
+  - **O implante** (G6): no berço da câmara de reconstrução, com o gene ou a amostra, ~40 s, sem custo. Depois (G5, §5): **os Safeguards não percebem mais você** (os que caçavam desistem), **os terminais ficam inteiramente legíveis**, e **o mapa recebe as estruturas únicas a até 60 km** como pistas.
+  - **O final** (§6): logo depois do implante (e de novo, deitando num berço), a escolha no painel da conversa: **manter** (segue jogando, sem ser caçado); **destruir** (8 s de tremor, baques e o escuro — a tela do fim); **entregar a uma vila** (vá a uma vila habitada e entregue numa conversa — a tela do fim). A tela do fim volta à tela de entrada (qualquer tecla ou botão do controle); o mundo salvo guarda `slot.ending`.
+- **Não feito**: o "outro caminho" de 2.3 (uma estrutura que sintetiza o gene a partir de amostras) — estava como "pode entrar depois".
+- **Testes**: `npm run check:gene` (novo) 9/9 — depósitos (todos a mais de 40 km, cadeias boas 48/48), levado, cadeia (o arquivo revela o começo; o elo revela o seguinte), pegar (no pedestal), guardas (3, todos altos — e pegaram o jogador), perder (de volta ao pedestal), amostra (traço 91%), implante (40 s; a escolha; os Safeguards não percebem; +210 pistas), finais (destruir e a vila, com a tela do fim).
+- **Imagens conferidas**: o pedestal com a cápsula no fundo do depósito, as colunas em volta (`--vaultcam=N --capture`); a tela do fim da vila (`--endingshow=village`).

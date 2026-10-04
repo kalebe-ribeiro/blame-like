@@ -10,7 +10,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 
 **Status**: `escolhida` (o usuário quer) · `decidida` · `proposta` · `standby` · `futuro` · `feita`. Ver também [[Descartadas]], [[Pendencias]] e as decisões em [[13-Decisoes]].
 
-**Estado (2026-10-03): o [[15-Plano-de-Implementacao]] inteiro (fases 0–7) e a [[Arma-do-Killy]] feitos.** A fila do que vem: [[Pendencias]] — **~~1. [[Barra-de-vida]]~~ (feita) → ~~2. [[Dano-do-emissor]] + [[Movimento-dos-inimigos]]~~ (feitos) → ~~3. [[Recuperar-o-braco]]~~ (feito) → 4. [[Gene-terminal]] → por último o [[Rework-grafico]]**, rumo ao objetivo final, o [[Gene-terminal]]. Plano original: [[Plano-de-Gameplay]].
+**Estado (2026-10-03): o [[15-Plano-de-Implementacao]] inteiro (fases 0–7) e a [[Arma-do-Killy]] feitos.** A fila do que vem: [[Pendencias]] — **~~1. [[Barra-de-vida]]~~ (feita) → ~~2. [[Dano-do-emissor]] + [[Movimento-dos-inimigos]]~~ (feitos) → ~~3. [[Recuperar-o-braco]]~~ (feito) → ~~4. [[Gene-terminal]]~~ (feito) → por último o [[Rework-grafico]]**, rumo ao objetivo final, o [[Gene-terminal]]. Plano original: [[Plano-de-Gameplay]].
 
 ## Gameplay
 
@@ -63,7 +63,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | 2 | [[Dano-do-emissor]] (dano por nível — Safeguards e vida de silício; o colapso mata qualquer um; vilas hostis) | **feita** (2026-10-04) |
 | 2b | [[Movimento-dos-inimigos]] (aceleração e velocidade terminal — a dificuldade) | **feita** (2026-10-04) |
 | 3 | [[Recuperar-o-braco]] (câmara de reconstrução, prótese, moradores das vilas; aviso de um braço só) | **feita** (2026-10-04) |
-| — | [[Gene-terminal]] (o gene de terminal da rede) | **o objetivo final** — mecânica decidida (G1–G6, 2026-10-03) |
+| — | [[Gene-terminal]] (o gene de terminal da rede) | **feito** (2026-10-04) — o objetivo final no jogo |
 | último | [[Rework-grafico]] (texturas, modelos de NPCs, animações variadas; cada hostil pelo nível, com variações) | **depois de toda a gameplay** |
 | ✔ | [[Arma-do-Killy]] (feixe que fura o terreno) | feita (F1–F4, 2026-10-03; sobrecarga com 7 estágios) — revisão: [[Arma-do-Killy-revisao]] |
 | ✔ | [[NPCs-e-Safeguards]] | feita nas fases 6 e 7; o golpe com arremesso vem com a barra de vida |

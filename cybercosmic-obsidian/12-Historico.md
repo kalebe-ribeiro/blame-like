@@ -357,3 +357,7 @@ Por que as coisas estão como estão, em ordem.
 
 - **Feito** ([[Recuperar-o-braco]] — Andamento): a câmara de reconstrução (a única nova, só em células antes vazias), a prótese (cemitérios, andarilhos; instalada do inventário; o braço de metal), os moradores refazendo um braço, os avisos de um braço só e do último braço, e a pista para onde refazer sem os dois. `check:arms` novo, 7/7. Fica a prótese nos depósitos.
 - Regressões depois do braço, todas verdes: `check:arms` 7/7, `check:beam` 30/30, `check:npcs` 12/12, `check:pad` 31 + 30, `check` 31/31 (115 fps), `check:pilgrimage` 31/31 (118 fps). Imagem conferida: a câmara por dentro.
+
+## 2026-10-04 — o gene de terminal
+
+- **Feito** ([[Gene-terminal]] — Andamento): os depósitos da Netsfera (raros, longe; guardados ou esquecidos), as cadeias de pistas, o analisador de genes, os portadores e a amostra, o implante na câmara, o controle da Cidade e os três finais. `check:gene` novo, 9/9. Com isso, **toda a fila de gameplay decidida está feita**; o próximo é o rework gráfico (depois de jogar e ajustar os números).

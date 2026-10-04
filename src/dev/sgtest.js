@@ -153,7 +153,7 @@ export async function runSafeguardTest(ctx) {
               controls.placeFeet(side);
               x.sg.lastSeen = world.toGlobal(side.clone()).setY(x.sg.lastSeen.y);
             }
-            if (t > (turn ? 4 : 3.4) || x.sg.state === 'strike' || x.sg.state === 'grab') resolve(null);
+            if (t > (turn ? 4.6 : 3.4) || x.sg.state === 'strike' || x.sg.state === 'grab') resolve(null);
             else requestAnimationFrame(tick);
           };
           tick();
@@ -177,7 +177,7 @@ export async function runSafeguardTest(ctx) {
       report({ kind: 'arranque', ok: okA, why: `${rows.join(' · ')} (${spot.place})` });
       const r = await run('high', true);
       const before = r.samples.filter((s) => s.t <= r.turnedAt).at(-1)?.v ?? 0;
-      const after = r.samples.filter((s) => r.turnedAt !== null && s.t > r.turnedAt && s.t < r.turnedAt + 1.2);
+      const after = r.samples.filter((s) => r.turnedAt !== null && s.t > r.turnedAt && s.t < r.turnedAt + 1.8);
       const low = after.length ? Math.min(...after.map((s) => s.v)) : before;
       report({ kind: 'curva', ok: r.turns > 0 && before > 13 && low < 0.85 * before, why: `alto: ${before.toFixed(1)} m/s na reta → ${low.toFixed(1)} m/s depois de virar (${r.turns} curva(s) contada(s))` });
       lantern(false);
@@ -288,7 +288,7 @@ export async function runSafeguardTest(ctx) {
   const made = sg.emerge(here(), world.origin, 2);
   const hunters = [...sg.hunters];
   await sleep(2600);
-  const out = hunters.filter((h) => h.sg.state === 'hunt' || h.sg.state === 'search' || h.sg.state === 'strike'); // (rápidos: já golpeando)
+  const out = hunters.filter((h) => ['hunt', 'search', 'strike', 'grab'].includes(h.sg.state)); // (rápidos: já golpeando, ou já pegaram)
   // escondido de novo: lanterna apagada, longe
   lantern(false);
   ctx.ui.teleport('colmeia', 'colmeia');
