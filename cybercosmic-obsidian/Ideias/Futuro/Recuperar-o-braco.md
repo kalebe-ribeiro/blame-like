@@ -29,6 +29,7 @@ Em *Blame!*, a Cidade ainda tem máquinas que fazem e consertam corpos ([[14-Uni
 - **O que é**: uma sala fechada com um berço de montagem (braços mecânicos, cabos descendo do teto, um tanque) — geometria própria na macro, como as outras únicas (`uniqueSite`/`buildUnique`), **protegida do emissor** (C3, `B.protect`) como todas.
 - **Como funciona**: entrar, deitar no berço (usar — `E`/botão 3), ~20 s de montagem com a câmera presa olhando o teto (os braços mecânicos trabalhando, faíscas, o som); sai com **os dois braços**.
 - **Onde**: sorteio à parte (hash novo, ex. 985) para os mundos antigos manterem as suas únicas; frequência como a das outras (~uma por 16 km), no fim de cadeias de [[Pistas]] como todas.
+- **Também é onde se implanta o gene de terminal** ([[Gene-terminal]] G6, 2026-10-04): com o gene ou a amostra no inventário, o berço implanta — o objetivo final passa por aqui.
 - **Diferente das outras únicas**: o efeito **não é de uma vez só** (as outras gravam em `slot.uniques` e acabou) — a câmara serve sempre, com custo (R2: 50% da célula).
 
 ### 2. Loot — a **prótese**

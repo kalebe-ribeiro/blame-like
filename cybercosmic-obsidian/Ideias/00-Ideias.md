@@ -63,7 +63,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | 2 | [[Dano-do-emissor]] (dano por nível — Safeguards e vida de silício; o colapso mata qualquer um; vilas hostis) | decidida (2026-10-04) |
 | 2b | [[Movimento-dos-inimigos]] (aceleração e velocidade terminal — a dificuldade) | decidida (M1–M4, 2026-10-04) |
 | 3 | [[Recuperar-o-braco]] (câmara de reconstrução, prótese, moradores das vilas; aviso de um braço só) | decidida (R1–R7, 2026-10-04) |
-| — | [[Gene-terminal]] (o gene de terminal da rede) | **o objetivo final** — mecânica decidida (2026-10-04, G1–G5); G6 (o lugar do implante) a confirmar |
+| — | [[Gene-terminal]] (o gene de terminal da rede) | **o objetivo final** — mecânica decidida (G1–G6, 2026-10-04) |
 | último | [[Rework-grafico]] (texturas, modelos de NPCs, animações variadas; cada hostil pelo nível, com variações) | **depois de toda a gameplay** |
 | ✔ | [[Arma-do-Killy]] (feixe que fura o terreno) | feita (F1–F4, 2026-10-03; sobrecarga com 7 estágios) — revisão: [[Arma-do-Killy-revisao]] |
 | ✔ | [[NPCs-e-Safeguards]] | feita nas fases 6 e 7; o golpe com arremesso vem com a barra de vida |

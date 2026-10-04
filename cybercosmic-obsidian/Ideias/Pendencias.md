@@ -16,7 +16,8 @@ Reorganizada em 2026-10-04. Três listas: **a implementar** (decidido, na ordem)
 | 2 | **Dano variável do emissor + níveis (Safeguards e vida de silício)** — médio-fraco mata o baixo, o médio pede vários, o alto muitos; o colapso (o nível máximo, que custa o braço) mata qualquer um; ferir/matar um morador numa vila deixa a vila hostil | [[Dano-do-emissor]] | decidida (2026-10-04) — junto da barra de vida |
 | 2b | **Movimento dos inimigos** — arranque com aceleração até uma velocidade terminal (o médio e o alto mais rápidos que a sua corrida); curvas custam velocidade | [[Movimento-dos-inimigos]] | decidida (M1–M4, 2026-10-04) — junto do dano (é o que equilibra a arma) |
 | 3 | **Recuperar o braço** — câmara de reconstrução (única nova), prótese (loot), moradores das vilas (troca), a saída garantida sem braços e o aviso de um braço só | [[Recuperar-o-braco]] | decidida (R1–R7, 2026-10-04) |
-| 4 | **Rework gráfico** — texturas, modelos de NPCs, animações variadas (as do golpe por ângulo e tipo de NPC; design e animação de cada hostil pelo nível, com variações no mesmo nível) | [[Rework-grafico]] | só **depois de toda a gameplay** |
+| 4 | **Gene de terminal** — o objetivo final: pistas longas até onde está guardado (protegido ou esquecido; NPCs podem pegá-lo), um humano com o gene (amostra com ele vivo) e o analisador de genes; implantar na câmara de reconstrução; o controle da Cidade; três finais | [[Gene-terminal]] | decidida (G1–G6, 2026-10-04) — depende da câmara (item 3) |
+| 5 | **Rework gráfico** — texturas, modelos de NPCs, animações variadas (as do golpe por ângulo e tipo de NPC; design e animação de cada hostil pelo nível, com variações no mesmo nível) | [[Rework-grafico]] | só **depois de toda a gameplay** |
 
 ### Regras novas que a barra de vida tem de respeitar (2026-10-04)
 - **O próprio coice do emissor contra uma parede não tira vida** — o baque, o tremor e o som ficam. Só o **arremesso de um hostil** contra um obstáculo tira vida. Se o empurrão do emissor te tira de uma plataforma, a **queda** conta.
@@ -29,7 +30,6 @@ Reorganizada em 2026-10-04. Três listas: **a implementar** (decidido, na ordem)
 
 | o quê | o que falta | nota |
 |---|---|---|
-| **Gene de terminal** — o objetivo final (mecânica decidida em 2026-10-04: pistas longas até onde está guardado, um humano com o gene + analisador de genes, a dificuldade pelo tamanho da Cidade, o controle da Cidade e três finais) | G6: o lugar do implante (proposta: a câmara de reconstrução ou uma única própria) | [[Gene-terminal]] |
 | **Credenciais de acesso** | se existem acessos intermediários antes do gene | [[Credenciais-de-acesso]] |
 
 ## 3. Em observação

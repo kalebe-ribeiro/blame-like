@@ -1,5 +1,5 @@
 ---
-status: decidida (2026-10-04) — o objetivo final; vários caminhos até ele; implantar num lugar próprio; a dificuldade é o tamanho da Cidade; o controle da Cidade e a escolha do final. G1–G5 respondidas; G6 (o lugar do implante) proposta
+status: decidida (2026-10-04) — o objetivo final; vários caminhos até ele; implantar num lugar próprio; a dificuldade é o tamanho da Cidade; o controle da Cidade e a escolha do final. G1–G6 decididas (o implante na câmara de reconstrução)
 prioridade: o objetivo de longo prazo — depois da barra de vida, do dano, do movimento e do braço
 tags: [futuro, gameplay, objetivo, progressao, netsfera, safeguards, vilas, ferramentas, final]
 ---
@@ -45,7 +45,7 @@ Fiel ao mangá — **nada de mecânica artificial para punir**; o que pesa é a 
 
 ## 5. O implante e o controle da Cidade
 - **Implantar** (G1/G4): com o gene (ou a amostra) no inventário, achar **um lugar de implante** e ficar nele — o gene passa a ser seu e **não se perde mais** (nem no desmaio).
-- **O lugar** (G6, proposta): a **câmara de reconstrução** ([[Recuperar-o-braco]] — a máquina que refaz corpos já é o lugar onde a Cidade mexe no seu corpo) **ou** um tipo próprio, mais raro; achado por pistas como o resto.
+- **O lugar** (G6, decidido): **a câmara de reconstrução** ([[Recuperar-o-braco]]) — a máquina que refaz corpos é o lugar onde a Cidade mexe no seu corpo. Deitar no berço com o gene (ou a amostra) no inventário implanta; a mesma sequência da reconstrução do braço, mais longa. Qualquer câmara serve — a dificuldade continua sendo chegar a uma com o gene ainda no inventário.
 - **Implantado, o controle da Cidade**:
   - **A Netsfera**: os terminais respondem — tudo legível, sem tradução parcial.
   - **O mapa**: a Cidade inteira aparece (o que a Netsfera sabe).
@@ -66,7 +66,7 @@ Fiel ao mangá — **nada de mecânica artificial para punir**; o que pesa é a 
 | G3 | o analisador de genes | **em estruturas ou em trocas** |
 | G4 | onde se usa | o **lugar de implante** (G1) |
 | G5 | os Safeguards depois | **só param de caçar** |
-| G6 | qual é o lugar de implante | **proposta**: a câmara de reconstrução, ou um tipo de única próprio, mais raro — a confirmar |
+| G6 | qual é o lugar de implante | **a câmara de reconstrução** |
 
 ## O que já existe e se liga a isto
 - [[Terminais-com-conteudo]], [[Traducao-como-progresso]], [[Pistas]], [[Diario-como-arquivo]] — a cadeia longa.
