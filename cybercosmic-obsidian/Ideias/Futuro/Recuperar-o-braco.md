@@ -1,5 +1,5 @@
 ---
-status: decidida (2026-10-04) — os três caminhos (estrutura única nova, loot, NPCs) e R1–R7
+status: decidida (2026-10-03) — os três caminhos (estrutura única nova, loot, NPCs) e R1–R7
 prioridade: alta — depois da [[Barra-de-vida]] (hoje a Peregrinação pode ficar presa sem os dois braços)
 tags: [futuro, gameplay, corpo, arma, estruturas-unicas, loot, npcs]
 ---
@@ -8,9 +8,9 @@ tags: [futuro, gameplay, corpo, arma, estruturas-unicas, loot, npcs]
 
 > Pedido do usuário (2026-10-03): níveis do emissor além do limite em que "o braço usado pra atirar é perdido" — e "deixa registrado no cofre uma futura mecânica que permite recuperar o braço em algumas estruturas específicas, ou loot, não sei. Deixa em aberto."
 >
-> **Decidido (2026-10-04, usuário):** três caminhos — **um tipo novo de estrutura única**, **loot** e **NPCs**. Ficaram de fora a regeneração lenta e a combinação com ela.
+> **Decidido (2026-10-03, usuário):** três caminhos — **um tipo novo de estrutura única**, **loot** e **NPCs**. Ficaram de fora a regeneração lenta e a combinação com ela.
 >
-> **R1–R6 aprovadas (2026-10-04)** com os preços alinhados (o caminho mais completo custa mais) e sem a R6(c): "mesmo que seja difícil chegar numa vila, ainda tem outras duas alternativas". **R7 nova**: o aviso de um braço só.
+> **R1–R6 aprovadas (2026-10-03)** com os preços alinhados (o caminho mais completo custa mais) e sem a R6(c): "mesmo que seja difícil chegar numa vila, ainda tem outras duas alternativas". **R7 nova**: o aviso de um braço só.
 
 ## O que existe hoje (feito)
 
@@ -29,7 +29,7 @@ Em *Blame!*, a Cidade ainda tem máquinas que fazem e consertam corpos ([[14-Uni
 - **O que é**: uma sala fechada com um berço de montagem (braços mecânicos, cabos descendo do teto, um tanque) — geometria própria na macro, como as outras únicas (`uniqueSite`/`buildUnique`), **protegida do emissor** (C3, `B.protect`) como todas.
 - **Como funciona**: entrar, deitar no berço (usar — `E`/botão 3), ~20 s de montagem com a câmera presa olhando o teto (os braços mecânicos trabalhando, faíscas, o som); sai com **os dois braços**.
 - **Onde**: sorteio à parte (hash novo, ex. 985) para os mundos antigos manterem as suas únicas; frequência como a das outras (~uma por 16 km), no fim de cadeias de [[Pistas]] como todas.
-- **Também é onde se implanta o gene de terminal** ([[Gene-terminal]] G6, 2026-10-04): com o gene ou a amostra no inventário, o berço implanta — o objetivo final passa por aqui.
+- **Também é onde se implanta o gene de terminal** ([[Gene-terminal]] G6, 2026-10-03): com o gene ou a amostra no inventário, o berço implanta — o objetivo final passa por aqui.
 - **Diferente das outras únicas**: o efeito **não é de uma vez só** (as outras gravam em `slot.uniques` e acabou) — a câmara serve sempre, com custo (R2: 50% da célula).
 
 ### 2. Loot — a **prótese**
@@ -44,7 +44,7 @@ Em *Blame!*, a Cidade ainda tem máquinas que fazem e consertam corpos ([[14-Uni
 - **O despertar numa vila** (desmaio arrastado por NPCs, fase 7): acordar lá dá a chance de pedir na hora.
 - **Vila hostil** (você feriu ou matou um morador dela — [[Dano-do-emissor]] §4): ali não se refaz nada, para sempre.
 
-## Decisões (aprovadas em 2026-10-04)
+## Decisões (aprovadas em 2026-10-03)
 
 **Os preços, do mais completo ao mais simples** — o caminho que dá mais custa mais:
 

@@ -12,7 +12,7 @@ tags: [gameplay, progressao]
 
 > Escolhidas (2026-09-29): **o sensor e o leitor portátil — somente.** As outras ideias ficaram de fora.
 >
-> **Exceção (2026-10-04, usuário): o analisador de genes** — para achar o humano que carrega o gene de terminal ([[Gene-terminal]] §3). As descartadas continuam descartadas.
+> **Exceção (2026-10-03, usuário): o analisador de genes** — para achar o humano que carrega o gene de terminal ([[Gene-terminal]] §3). As descartadas continuam descartadas.
 > Todas gastam a mesma energia ([[Luz-como-recurso]]). Achadas em [[Estruturas-unicas]], salas de máquinas, fim de pistas.
 
 ## Sensor ★ (escolhida)

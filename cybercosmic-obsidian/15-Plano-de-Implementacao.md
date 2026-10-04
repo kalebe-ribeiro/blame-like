@@ -200,10 +200,10 @@
 ---
 
 ## Depois da arma de Killy (2026-10-03)
-1. **A barra de vida** — decidida: [[Barra-de-vida]] (§10, a ordem: a vida → quedas com dano pela altura → o emissor → o golpe com arremesso → `check:health`). Sem dano de choque no próprio coice (2026-10-04).
+1. **A barra de vida** — decidida: [[Barra-de-vida]] (§10, a ordem: a vida → quedas com dano pela altura → o emissor → o golpe com arremesso → `check:health`). Sem dano de choque no próprio coice (2026-10-03).
 2. **O dano variável do emissor e o movimento dos inimigos** — [[Dano-do-emissor]] (decidido: Safeguards em três níveis; médio-fraco mata o baixo, o médio pede vários, o alto muitos; o colapso mata qualquer um; vila hostil ao ferir um morador) e [[Movimento-dos-inimigos]] (arranque com aceleração até a terminal; M1–M4 decididos; a vida de silício também em três níveis) — a dificuldade vem do movimento; junto da barra de vida.
 3. **Recuperar o braço** — [[Recuperar-o-braco]] (R1–R7 decididas): câmara de reconstrução (50%, os dois), prótese (andarilho 40% ou achada), moradores (carga ou 30%); o aviso de um braço só. Fecha o risco de travar a Peregrinação sem os dois braços.
-4. **O resto da gameplay** — o que o usuário pedir (ideias em [[00-Ideias]]; os Safeguards em níveis e a reação à arma) — rumo ao **objetivo final: o gene de terminal** ([[Gene-terminal]] — mecânica decidida: pistas longas até onde está guardado ou um humano com o gene (o analisador de genes), a dificuldade pelo tamanho da Cidade, o implante na câmara de reconstrução, o controle da Cidade e três finais; G1–G6 decididas).
+4. **O resto da gameplay** — o que o usuário pedir (ideias em [[00-Ideias]]; os níveis dos Safeguards e a reação à arma já estão no item 2) — rumo ao **objetivo final: o gene de terminal** ([[Gene-terminal]] — mecânica decidida: pistas longas até onde está guardado ou um humano com o gene (o analisador de genes), a dificuldade pelo tamanho da Cidade, o implante na câmara de reconstrução, o controle da Cidade e três finais; G1–G6 decididas).
 5. **Por último, o grande rework gráfico** — [[Rework-grafico]]: texturas variadas, modelos de NPCs detalhados e variados, animações variadas (as do golpe por ângulo e por tipo de NPC). **Só depois de toda a gameplay.**
 
 ## Contínuo (entra onde couber)

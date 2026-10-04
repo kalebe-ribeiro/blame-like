@@ -1,16 +1,16 @@
 ---
-status: decidida e confirmada (2026-10-04) — dano variável por nível (Safeguards e vida de silício); o tiro máximo (o colapso) mata qualquer ser; vilas hostis; a dificuldade vem do movimento dos inimigos
+status: decidida e confirmada (2026-10-03) — dano variável por nível (Safeguards e vida de silício); o tiro máximo (o colapso) mata qualquer ser; vilas hostis; a dificuldade vem do movimento dos inimigos
 prioridade: alta — junto da [[Barra-de-vida]] (as duas mexem em dano)
 tags: [futuro, arma, dano, safeguards, npcs, vilas]
 ---
 
 # O dano do emissor nos seres
 
-> Usuário (2026-10-04): "inclua variação de dano na arma também, pros inimigos não tomarem hitkill em qualquer tiro. Mas lembre que a arma é pra ser overpowered de fato."
+> Usuário (2026-10-03): "inclua variação de dano na arma também, pros inimigos não tomarem hitkill em qualquer tiro. Mas lembre que a arma é pra ser overpowered de fato."
 >
-> **Revisto (2026-10-04, usuário):** "um hit médio-fraco tem que matar um low level; um Safeguard mediano tem que tomar mais tiros médios-fracos; um high level tem que tomar vários tiros; **o tiro nível máximo tem que dar instakill em todos**. O nível de dificuldade vai se dar por conta da movimentação dos NPCs" → [[Movimento-dos-inimigos]]. E: matar um andarilho ou morador só perde a troca com ele; **ferir ou matar um morador numa vila deixa os outros hostis** (§4).
+> **Revisto (2026-10-03, usuário):** "um hit médio-fraco tem que matar um low level; um Safeguard mediano tem que tomar mais tiros médios-fracos; um high level tem que tomar vários tiros; **o tiro nível máximo tem que dar instakill em todos**. O nível de dificuldade vai se dar por conta da movimentação dos NPCs" → [[Movimento-dos-inimigos]]. E: matar um andarilho ou morador só perde a troca com ele; **ferir ou matar um morador numa vila deixa os outros hostis** (§4).
 >
-> **Confirmado (2026-10-04, usuário):** "nível máximo é o que perde o braço, o literal nível máximo" — **o colapso (estágio 7)**; e todos os detalhes do §4 (a vila hostil). **A vida de silício também tem níveis** (§3).
+> **Confirmado (2026-10-03, usuário):** "nível máximo é o que perde o braço, o literal nível máximo" — **o colapso (estágio 7)**; e todos os detalhes do §4 (a vila hostil). **A vida de silício também tem níveis** (§3).
 
 ## Hoje (feito)
 - **Todo tiro mata** o que o feixe atravessa: `app/beam.js` (`fire`, ~l. 340) testa cada ser contra o eixo (`< r + 0,45 m` do centro do corpo, a 1,1 m dos pés) e chama `world.entities.kill(e, 'beam')`.

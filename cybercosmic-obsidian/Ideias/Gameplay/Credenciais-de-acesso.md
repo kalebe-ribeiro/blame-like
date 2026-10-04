@@ -1,10 +1,10 @@
 ---
-status: descartada (2026-10-04)
+status: descartada (2026-10-03)
 prioridade: —
 tags: [gameplay, progressao, futuro]
 ---
 
-> **✗ Descartada (2026-10-04, usuário: "sem credenciais").** Em *Blame!* não há acessos em degraus: só o gene de terminal — quem tem acessa a Netsfera, quem não tem é caçado. O acesso do jogo é o [[Gene-terminal]], tudo ou nada.
+> **✗ Descartada (2026-10-03, usuário: "sem credenciais").** Em *Blame!* não há acessos em degraus: só o gene de terminal — quem tem acessa a Netsfera, quem não tem é caçado. O acesso do jogo é o [[Gene-terminal]], tudo ou nada.
 
 # Credenciais de acesso
 

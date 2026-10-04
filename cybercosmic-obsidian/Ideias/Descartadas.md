@@ -32,4 +32,4 @@ Não repetir. Ver também [[02-Direcao-de-Arte]].
 | quebra-cabeças de elevadores e trens ([[Elevadores-e-trens-como-quebra-cabeca]]) | 2026-10-03 | "nada de quebra-cabeça" (usuário) |
 | copiar inscrições ([[Copiar-inscricoes]]) | 2026-10-03 | descartada pelo usuário |
 | modo expedição ([[Modo-expedicao]]) | 2026-10-03 | descartado pelo usuário |
-| credenciais de acesso em degraus ([[Credenciais-de-acesso]]) | 2026-10-04 | não existem em *Blame!*: o único acesso é o gene de terminal ([[Gene-terminal]]) |
+| credenciais de acesso em degraus ([[Credenciais-de-acesso]]) | 2026-10-03 | não existem em *Blame!*: o único acesso é o gene de terminal ([[Gene-terminal]]) |

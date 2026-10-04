@@ -21,7 +21,7 @@ tags: [futuro, npcs, inimigos]
 > **NPCs feitos na fase 7 (2026-09-30)**: moradores das vilas (conversa curta, trocas, cargas), andarilhos transumanos (trocam ou roubam), vida de silício disfarçada (drena a célula; os Safeguards a caçam — a terceira força), despertar numa vila. Escolhas por padrão em [[13-Decisoes]].
 
 ## Como o que existe hoje prepara isso
-- **Acesso**: só o [[Gene-terminal]] — implantado, os Safeguards param de caçar. Sem credenciais intermediárias (descartadas 2026-10-04).
+- **Acesso**: só o [[Gene-terminal]] — implantado, os Safeguards param de caçar. Sem credenciais intermediárias (descartadas 2026-10-03).
 - **Energia e luz** ([[Luz-como-recurso]], [[Religar-setores]]): usar e religar pode chamar atenção.
 - **Estruturas únicas reservadas**: vilas abandonadas, berço de Safeguards lacrado ([[Estruturas-unicas]]).
 - **Cargas** em standby até existirem NPCs.
@@ -36,6 +36,6 @@ tags: [futuro, npcs, inimigos]
 - Nada de diálogo longo; fala pouca, como em *Blame!*.
 - Nada de criaturas fora do repertório da obra ([[02-Direcao-de-Arte]]).
 
-> **Níveis, dano e movimento** (decidido 2026-10-04): Safeguards **e vida de silício** em três níveis (baixo, médio, alto) — design e animação por nível, com variações no mesmo nível ([[Rework-grafico]]), com resistência ao emissor ([[Dano-do-emissor]]) e arranque com aceleração até uma velocidade terminal ([[Movimento-dos-inimigos]]) — a dificuldade vem do movimento. Ferir ou matar um morador numa vila deixa a vila hostil para sempre.
+> **Níveis, dano e movimento** (decidido 2026-10-03): Safeguards **e vida de silício** em três níveis (baixo, médio, alto) — design e animação por nível, com variações no mesmo nível ([[Rework-grafico]]), com resistência ao emissor ([[Dano-do-emissor]]) e arranque com aceleração até uma velocidade terminal ([[Movimento-dos-inimigos]]) — a dificuldade vem do movimento. Ferir ou matar um morador numa vila deixa a vila hostil para sempre.
 
 > **O golpe com arremesso** (decidido 2026-10-03): o toque do Safeguard deixa de ser captura imediata — vira um golpe de curta distância que arremessa o jogador e tira metade da vida; a captura só quando a vida zera. Ver [[Barra-de-vida]] §3.

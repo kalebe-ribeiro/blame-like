@@ -1,5 +1,5 @@
 ---
-status: decidida (2026-10-04) — o objetivo final; vários caminhos até ele; implantar num lugar próprio; a dificuldade é o tamanho da Cidade; o controle da Cidade e a escolha do final. G1–G6 decididas (o implante na câmara de reconstrução)
+status: decidida (2026-10-03) — o objetivo final; vários caminhos até ele; implantar num lugar próprio; a dificuldade é o tamanho da Cidade; o controle da Cidade e a escolha do final. G1–G6 decididas (o implante na câmara de reconstrução)
 prioridade: o objetivo de longo prazo — depois da barra de vida, do dano, do movimento e do braço
 tags: [futuro, gameplay, objetivo, progressao, netsfera, safeguards, vilas, ferramentas, final]
 ---
@@ -8,7 +8,7 @@ tags: [futuro, gameplay, objetivo, progressao, netsfera, safeguards, vilas, ferr
 
 > Usuário (2026-10-03): "o gene terminal deve ser o objetivo final, máximo, do jogo. Deve ser quase impossível."
 >
-> **Mecânica decidida (2026-10-04, usuário):** "quero que haja várias formas de encontrar o gene. Mas quero que a dificuldade esteja na grandiosidade da Cidade, assim como o mangá."
+> **Mecânica decidida (2026-10-03, usuário):** "quero que haja várias formas de encontrar o gene. Mas quero que a dificuldade esteja na grandiosidade da Cidade, assim como o mangá."
 
 ## 1. O que é
 - **O gene de terminal da rede** (*net terminal gene* — [[14-Universo-Blame]]): o que Killy procura por toda a obra, e o que a humanidade perdeu. **O objetivo final e máximo**: a maior parte das travessias nunca chega lá.
@@ -32,7 +32,7 @@ tags: [futuro, gameplay, objetivo, progressao, netsfera, safeguards, vilas, ferr
 "Várias formas": estas duas são as decididas; outras podem entrar depois (ex.: uma estrutura única que sintetiza o gene a partir de amostras).
 
 ## 3. A ferramenta nova — o analisador de genes
-- **Exceção consciente** à regra das ferramentas ("só o sensor e o leitor" — [[Ferramentas]]), pedida pelo usuário (2026-10-04).
+- **Exceção consciente** à regra das ferramentas ("só o sensor e o leitor" — [[Ferramentas]]), pedida pelo usuário (2026-10-03).
 - **O que faz**: analisa o material genético de um ser perto (um humano, uma amostra, um corpo) e diz se há traço do gene — e quanto. Diegético, no aparelho, como o sensor; gasta a célula.
 - **Onde se acha** (G3): **em estruturas** (únicas — junto do console, como o sensor) **ou em trocas** (moradores e andarilhos que trocam).
 
@@ -58,7 +58,7 @@ Fiel ao mangá — **nada de mecânica artificial para punir**; o que pesa é a 
 | **destruí-la** | uma **cutscene**: a Cidade desaba/se desfaz (o colapso em escala de mundo); fim |
 | **entregar a uma vila** | o gene vai para os humanos de uma vila, para tentar **reconstruir a humanidade**; uma cena de fim na vila |
 
-## 7. Decisões (2026-10-04)
+## 7. Decisões (2026-10-03)
 | # | pergunta | decidido |
 |---|---|---|
 | G1 | desmaiar com o gene | até ser **implantado num lugar próprio**, o gene é um objeto normal — **perde-se como qualquer outro** |
@@ -71,5 +71,5 @@ Fiel ao mangá — **nada de mecânica artificial para punir**; o que pesa é a 
 ## O que já existe e se liga a isto
 - [[Terminais-com-conteudo]], [[Traducao-como-progresso]], [[Pistas]], [[Diario-como-arquivo]] — a cadeia longa.
 - [[NPCs-e-Safeguards]] (vilas, andarilhos — quem carrega ou pega o gene), [[Dano-do-emissor]] (as vilas hostis), [[Movimento-dos-inimigos]] (os guardas).
-- **Sem acessos intermediários**: as [[Credenciais-de-acesso]] foram descartadas (2026-10-04) — o gene é o único acesso, como na obra.
+- **Sem acessos intermediários**: as [[Credenciais-de-acesso]] foram descartadas (2026-10-03) — o gene é o único acesso, como na obra.
 - [[Estruturas-unicas]], [[Barra-de-vida]], [[Recuperar-o-braco]] — o custo do caminho.

@@ -33,7 +33,7 @@
 | **o que fazer a seguir** | [[15-Plano-de-Implementacao]] (fases 0 → 7, até os NPCs) → [[Ideias/00-Ideias]] |
 | mudanças decididas e ainda não feitas (a fila, na ordem) | [[Ideias/Pendencias]] |
 
-> **Estado (2026-10-04): fases 0 a 7 feitas (o plano inteiro) e a arma de Killy fechada (F1–F4).** As escolhas por padrão das fases 3–7 foram respondidas pelo usuário ([[13-Decisoes]]). **O que vem, na ordem: [[Ideias/Pendencias]]** — a barra de vida, depois recuperar o braço; o objetivo final é o gene de terminal; o rework gráfico por último. Registrar todo o contexto novo neste cofre.
+> **Estado (2026-10-03): fases 0 a 7 feitas (o plano inteiro) e a arma de Killy fechada (F1–F4).** As escolhas por padrão das fases 3–7 foram respondidas pelo usuário ([[13-Decisoes]]). **O que vem, na ordem: [[Ideias/Pendencias]]** — a barra de vida, o dano do emissor e o movimento dos inimigos, depois recuperar o braço; o objetivo final é o gene de terminal; o rework gráfico por último. Registrar todo o contexto novo neste cofre.
 
 ## Mapa do cofre
 

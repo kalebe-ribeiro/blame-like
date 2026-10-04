@@ -1,14 +1,14 @@
 ---
-status: decidida (2026-10-04) — aceleração e velocidade terminal, mais rápidos que hoje; M1–M4 e a distribuição dos níveis aprovados (números para ajustar jogando)
+status: decidida (2026-10-03) — aceleração e velocidade terminal, mais rápidos que hoje; M1–M4 e a distribuição dos níveis aprovados (números para ajustar jogando)
 prioridade: alta — junto do [[Dano-do-emissor]] (é o que equilibra a arma)
 tags: [futuro, safeguards, npcs, movimento, dificuldade]
 ---
 
 # O movimento dos inimigos — a dificuldade
 
-> Usuário (2026-10-04): "o nível de dificuldade vai se dar por conta da movimentação dos NPCs. Faça uma nota que os inimigos têm que se mover mais rápido, com uma aceleração e velocidade terminal, e não velocidade constante desde o início. Então vai ser mais difícil ficar atirando sem ser pego."
+> Usuário (2026-10-03): "o nível de dificuldade vai se dar por conta da movimentação dos NPCs. Faça uma nota que os inimigos têm que se mover mais rápido, com uma aceleração e velocidade terminal, e não velocidade constante desde o início. Então vai ser mais difícil ficar atirando sem ser pego."
 >
-> **Aprovado (2026-10-04, usuário):** M1–M4 e a distribuição dos níveis como propostos; **a vida de silício também em três níveis** (M4).
+> **Aprovado (2026-10-03, usuário):** M1–M4 e a distribuição dos níveis como propostos; **a vida de silício também em três níveis** (M4).
 
 ## Por quê
 A arma é overpowered de propósito ([[Dano-do-emissor]]): de perto, quase tudo morre. O que deixa o jogo difícil é **não ter tempo de carregar**: carregando você anda a 60% (C2 — [[Arma-do-Killy]]), sem correr nem pular, e um tiro forte pede segundos. Inimigos que ganham velocidade transformam cada segundo de carga numa aposta.

@@ -1,5 +1,5 @@
 ---
-status: decidida (2026-10-03; revista em 2026-10-04 — quedas pela altura, sem dano de choque no próprio coice) — V1–V7 aprovadas, o golpe dos hostis detalhado (§3); a implementar
+status: decidida (2026-10-03; revista em 2026-10-03 — quedas pela altura, sem dano de choque no próprio coice) — V1–V7 aprovadas, o golpe dos hostis detalhado (§3); a implementar
 prioridade: alta (a próxima feature de gameplay)
 tags: [futuro, gameplay, vida, arma, safeguards, quedas, animacao]
 ---
@@ -10,7 +10,7 @@ tags: [futuro, gameplay, vida, arma, safeguards, quedas, animacao]
 >
 > **Decidido (2026-10-03, usuário):** "gostei de todas" (V1–V7, §9) — "altere e adicione somente alguns detalhes aos ataques dos NPCs" (§3) · "com a adição da barra de vida, a queda agora tem dano, a partir de certa altura, até o limiar do desmaio" (§4) · as animações por enquanto únicas, com as variações registradas para depois (§5) · e o grande rework gráfico depois de toda a gameplay ([[Rework-grafico]]).
 >
-> **Revisto (2026-10-04, usuário):** (1) **o choque contra um obstáculo pelo próprio coice do emissor não tira vida** — só o arremesso de um hostil (§2); (2) **a queda corrigida** (§4): a nota dizia "14 m/s ≈ 10 m de queda", mas a gravidade do jogo é **15 m/s²** (`controls/walker.js`), não 9,8 — 14 m/s seriam ~6,5 m. Agora a regra é **pela altura**: dano a partir de 10 m de queda.
+> **Revisto (2026-10-03, usuário):** (1) **o choque contra um obstáculo pelo próprio coice do emissor não tira vida** — só o arremesso de um hostil (§2); (2) **a queda corrigida** (§4): a nota dizia "14 m/s ≈ 10 m de queda", mas a gravidade do jogo é **15 m/s²** (`controls/walker.js`), não 9,8 — 14 m/s seriam ~6,5 m. Agora a regra é **pela altura**: dano a partir de 10 m de queda.
 
 ## 1. A ideia
 
@@ -25,7 +25,7 @@ Separada da **célula de energia** (luz, sensor, leitor, emissor): a célula é 
 | **o golpe de um hostil** (hoje: Safeguards — §3) | o toque = captura (desmaio, cemitério) | **um golpe de curta distância com arremesso: tira METADE da vida** (50%) e joga o corpo longe; o que acontece depois depende de onde ele cai (§3) |
 | **quedas** (§4) | > 38 m/s: desmaio direto | **dano a partir de 10 m de queda** (17,3 m/s de impacto), crescendo com a altura até **100% em 38 m/s** (~48 m) — o limiar do desmaio de hoje |
 | **bater num obstáculo — só arremessado por um hostil** (§3) | um baque (`walker.onSlam`) | dano acima de ~12 m/s contra o obstáculo, crescendo com a velocidade (~25% a 30 m/s) |
-| **bater num obstáculo pelo próprio coice do emissor** | um baque | **sem dano** (decidido 2026-10-04) — o baque, o tremor e o som continuam. Se o empurrão te tira de uma plataforma, **a queda** conta (§4) — **confirmado pelo usuário (2026-10-04)** |
+| **bater num obstáculo pelo próprio coice do emissor** | um baque | **sem dano** (decidido 2026-10-03) — o baque, o tremor e o som continuam. Se o empurrão te tira de uma plataforma, **a queda** conta (§4) — **confirmado pelo usuário (2026-10-03)** |
 | **sobrecarga do emissor** | nada até o limite; além do limite (5–7) o braço que atira é perdido — [[Recuperar-o-braco]] | dano pelo estágio: azul 0 · violeta 5% · a singularidade se formando 12% · limite 30%; a mão queima, a mira treme uns segundos, **a arma continua na mão**; além do limite o braço se perde (como hoje) e o dano é o do limite |
 | **o feixe de outro** (futuro: hostis armados) | — | (sem tiro inimigo por enquanto — ver §3) |
 
@@ -57,7 +57,7 @@ A física decide (o arremesso é um impulso de verdade no `Walker` — o mesmo e
 ## 4. Quedas com dano — pela altura
 - Hoje: impacto > 38 m/s (`app/body.js` `LETHAL_IMPACT`) → desmaio direto; abaixo disso, só tremor e som.
 - **A física do jogo**: gravidade **15 m/s²** e queda máxima de **60 m/s** (`controls/walker.js`, `vel.y - 15·s·dt`, teto `-60·s`). Então impacto `v` ↔ altura `h = v² / 30` (até o teto, ~120 m).
-- **A regra** (decidida 2026-10-04): o dano é proporcional à **energia** do impacto (`v²` — a altura caída), não à velocidade:
+- **A regra** (decidida 2026-10-03): o dano é proporcional à **energia** do impacto (`v²` — a altura caída), não à velocidade:
   - **abaixo de 10 m** (v < 17,3 m/s): nada;
   - **de 10 m a ~48 m** (17,3 → 38 m/s): `dano = (v² − 300) / (1444 − 300)`;
   - **acima de 38 m/s**: zera — o desmaio de sempre (o `LETHAL_IMPACT` não muda).
