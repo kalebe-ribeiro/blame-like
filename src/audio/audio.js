@@ -1063,11 +1063,26 @@ export class AudioEngine {
   }
 
   /** Um estágio novo da sobrecarga (1..4): um baque grave que afunda e um tinido metálico, mais alto a cada estágio. */
-  beamStage(n) {
+  beamStage(n, last = false) {
     if (!this.ctx) return;
     const ctx = this.ctx;
     const t = ctx.currentTime;
     const out = this._placed(0, 0);
+    // (o último braço: um tom grave e quadrado, duas vezes — diferente do baque dos estágios)
+    if (last) {
+      for (const dt of [0, 0.32]) {
+        const q = ctx.createOscillator();
+        q.type = 'square';
+        q.frequency.setValueAtTime(52, t + dt);
+        const qg = ctx.createGain();
+        qg.gain.setValueAtTime(0.0001, t + dt);
+        qg.gain.exponentialRampToValueAtTime(0.16, t + dt + 0.02);
+        qg.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.26);
+        q.connect(qg).connect(out);
+        q.start(t + dt);
+        q.stop(t + dt + 0.3);
+      }
+    }
     const o = ctx.createOscillator();
     o.type = 'sine';
     o.frequency.setValueAtTime(90 - 12 * n, t);

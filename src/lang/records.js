@@ -114,6 +114,10 @@ export function terminalRecords(field, site) {
       // o berço de Safeguards, lacrado
       lines.push([W('SAFEGUARD'), W('CONSTRUCTION'), code, P('·'), W('STATUS'), P(':'), W('SUSPENDED')]);
       lines.push([W('ACCESS'), W('NO'), W('AUTHORIZED'), P('·'), W('WARNING'), P('·'), W('NET'), W('GENE'), W('REQUEST')]);
+    } else if (u.kind === 'chamber') {
+      // a câmara de reconstrução: a máquina que ainda refaz corpos
+      lines.push([W('HUMAN'), W('CONSTRUCTION'), code, P('·'), W('STATUS'), P(':'), W('ACTIVE')]);
+      lines.push([W('NET'), W('TERMINAL'), W('GENE'), P(':'), W('REQUEST'), P('·'), W('ACCESS'), W('HERE')]);
     } else if (u.kind === 'antenna') {
       lines.push([W('SIGNAL'), code, P('·'), W('OUTPUT'), P(':'), N(`${r.int(2, 14)}%`), P('·'), W('REPLY'), W('NONE')]);
       lines.push([W('NET'), W('TERMINAL'), W('GENE'), P(':'), W('NO'), W('DETECTED')]);

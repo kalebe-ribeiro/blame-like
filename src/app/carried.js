@@ -220,6 +220,7 @@ export function createCarried(ctx) {
     let line = '';
     if (plugged) line = socketPowered(plugged, time) ? t('device.charging') : t('device.noPower');
     else if (note && time < note.until) line = note.text;
+    else if (ctx.arms?.hint) line = ctx.arms.hint;
     else if (nearSub) line = world.substations.isLive(nearSub.site) ? t('device.substationLive') : t('device.substation', { key: bindings.label('use') });
     else if (near) line = t('device.socket', { key: bindings.label('use') });
     else if (ctx.people?.near) line = t('device.talk', { key: bindings.label('use') });
@@ -341,6 +342,7 @@ export function createCarried(ctx) {
       // o aparelho (célula, tomadas, sensor) é da Peregrinação; a lanterna, dos dois modos
       const on = active() && awake;
       // pendurado ou subindo: as duas mãos estão na quina — o aparelho e a lanterna saem
+      hands.setKinds(player.armKind);
       hands.update(dt);
       const busy = hands.busy;
       stow = busy ? Math.min(1, stow + dt / 0.18) : Math.max(0, stow - dt / 0.4);

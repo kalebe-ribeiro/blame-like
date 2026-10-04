@@ -170,6 +170,24 @@ export function setupDev(ctx) {
     };
     tick();
   }
+  // --chambercam=N: aos N s, a câmera dentro da câmara de reconstrução mais perto, olhando o berço (capturas)
+  if (params.get('chambercam')) {
+    setTimeout(() => {
+      const g = world.toGlobal(camera.position);
+      let u = null;
+      for (const x of world.field.uniquesNear(g.x, g.y, g.z, 90000)) if (x.kind === 'chamber' && (!u || Math.hypot(x.x - g.x, x.z - g.z) < Math.hypot(u.x - g.x, u.z - g.z))) u = x;
+      if (!u) return console.warn('CHAMBERCAM: nenhuma');
+      const b = world.field.chamberBed(u);
+      const fx = Math.sin(b.yaw);
+      const fz = Math.cos(b.yaw);
+      // do lado da porta, 6 m do berço, um pouco de lado, na altura dos olhos
+      const p = new THREE.Vector3(b.x + fx * 6 + fz * 2, u.y + 1.2 + 1.7, b.z + fz * 6 - fx * 2);
+      ctx.controls.setMode('fly');
+      const yaw = Math.atan2(-(b.x - p.x), -(b.z - p.z));
+      ctx.controls.setView({ pos: p.sub(world.origin), yaw, pitch: -0.12, scale: 1 });
+      console.warn('CHAMBERCAM: ' + u.id);
+    }, Number(params.get('chambercam')) * 1000);
+  }
   // --hurt=v: aos 5 s a vida vai a v (o aparelho mostra — app/health.js)
   if (params.get('hurt')) setTimeout(() => ctx.health.set(Number(params.get('hurt'))), 5000);
   // --sgcam=N: dos N s em diante, a câmera (voando: ninguém percebe) acompanha o Safeguard
@@ -529,6 +547,7 @@ export function setupDev(ctx) {
   else if (params.get('check') === 'beam') import('../dev/beamtest.js').then((m) => m.runBeamTest(ctx));
   else if (params.get('check') === 'profile') import('../dev/profile.js').then((m) => m.runProfile(ctx));
   else if (params.get('check') === 'moves') import('../dev/movetest.js').then((m) => m.runMoveTest(ctx));
+  else if (params.get('check') === 'arms') import('../dev/armtest.js').then((m) => m.runArmTest(ctx));
   else if (params.get('check') === 'health') import('../dev/healthtest.js').then((m) => m.runHealthTest(ctx));
   else if (params.get('check') === 'safeguards') import('../dev/sgtest.js').then((m) => m.runSafeguardTest(ctx));
   else if (params.get('check')) {

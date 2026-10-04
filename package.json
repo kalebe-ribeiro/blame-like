@@ -15,6 +15,7 @@
     "check:beam": "electron . --check=beam --game=pilgrimage",
     "check:moves": "electron . --check=moves --game=pilgrimage",
     "check:health": "electron . --check=health --game=pilgrimage",
+    "check:arms": "electron . --check=arms --game=pilgrimage",
     "vendor": "node tools/vendor-bvh.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "profile": "electron . --check=profile --game=pilgrimage",

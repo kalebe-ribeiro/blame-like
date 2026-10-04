@@ -33,6 +33,8 @@ import { CONCEPTS, NEED } from '../lang/ancient.js';
 import { uniqueTerminal } from '../gen/sites.js';
 import { hash4 } from '../gen/hash.js';
 import { HUMAN_STRIKE_DAMAGE } from './health.js';
+import { ARM_COST } from './arms.js';
+import { bindings } from '../controls/bindings.js';
 
 const RECHARGE_EVERY = 20 * 60 * 1000; // ms
 const TEACH = 4;
@@ -152,6 +154,9 @@ export function createPeople(ctx) {
       }
       if ((e.npc.lore ?? 0) < 2) opts.push({ id: 'lore', label: t('talk.opt.lore') });
       if (!e.npc.thief && !e.npc.whence) opts.push({ id: 'whence', label: t('talk.opt.whence') });
+      // R3: os que trocam vendem uma prótese (só a quem falta um braço)
+      if (!e.npc.thief && ctx.arms?.missing.length && !ctx.player.carried.some((c) => c.kind === 'prosthesis') && (!ctx.rules.resources || ctx.player.energy.value >= ARM_COST.wanderer))
+        opts.push({ id: 'prosthesis', label: t('talk.opt.prosthesis', { n: Math.round(ARM_COST.wanderer * 100) }) });
       opts.push({ id: 'leave', label: t('talk.leave') });
       return opts;
     }
@@ -162,6 +167,11 @@ export function createPeople(ctx) {
     if (c && c.to === u.id) opts.push({ id: 'deliver', label: t('talk.opt.deliver') });
     if (ctx.rules.resources && ctx.player.energy.value < 0.95 && !(st.recharged && Date.now() - st.recharged < RECHARGE_EVERY)) opts.push({ id: 'recharge', label: t('talk.opt.recharge') });
     if (ctx.rules.translation && !st.taught) opts.push({ id: 'teach', label: t('talk.opt.teach') });
+    // R5: refazer o braço — uma carga entregue, ou 30% da célula; um braço
+    if (ctx.arms?.missing.length) {
+      if (c) opts.push({ id: 'armCargo', label: t('talk.opt.armCargo') });
+      if (!ctx.rules.resources || ctx.player.energy.value >= ARM_COST.villager) opts.push({ id: 'armCell', label: t('talk.opt.armCell', { n: Math.round(ARM_COST.villager * 100) }) });
+    }
     if (!st.way && otherVillage(u)) opts.push({ id: 'way', label: t('talk.opt.way') });
     if (!c && otherVillage(u)) opts.push({ id: 'cargo', label: t('talk.opt.cargo') });
     opts.push({ id: 'leave', label: t('talk.leave') });
@@ -217,6 +227,11 @@ export function createPeople(ctx) {
       } else if (id === 'whence') {
         e.npc.whence = true;
         wl = t(`talk.wander.whence.${Math.floor(hash4(world.field.seed, e.id.length, 3, e.id.charCodeAt(6) || 3, 1724) * 4)}`);
+      } else if (id === 'prosthesis') {
+        if (ctx.rules.resources) ctx.player.energy.value = Math.max(0, ctx.player.energy.value - ARM_COST.wanderer);
+        ctx.player.carried.push({ kind: 'prosthesis', from: e.id });
+        wl = t('talk.prosthesis', { key: bindings.label('inventory') });
+        world.bus.emit('player:prosthesis', { from: e.id });
       } else if (id === 'news') {
         e.npc.told = true;
         const o = world.npcs.inhabitedNear(e.feet.x, e.feet.y, e.feet.z, CARGO_RANGE)[0];
@@ -246,6 +261,15 @@ export function createPeople(ctx) {
         reveal(o.u, u);
         line = t('talk.way', { dist: fmt(o.d) });
       }
+    } else if (id === 'armCargo' || id === 'armCell') {
+      if (id === 'armCargo') {
+        const cg = cargo();
+        if (cg) ctx.player.carried.splice(ctx.player.carried.indexOf(cg), 1);
+      } else if (ctx.rules.resources) ctx.player.energy.value = Math.max(0, ctx.player.energy.value - ARM_COST.villager);
+      const w = ctx.arms.missing[0];
+      if (w) ctx.arms.restore(w, 'flesh');
+      line = t('talk.arm');
+      world.bus.emit('player:villageArm', { village: u.id, paid: id });
     } else if (id === 'cargo') {
       const r = giveCargo(u);
       line = r ? t('talk.cargo.give', { what: t(`cargo.what.${r.c.what}`), why: t(`cargo.why.${r.c.why}`), dist: fmt(r.o.d), reward: rewardText(r.c) }) : t('talk.nothing');

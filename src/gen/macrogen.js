@@ -19,7 +19,7 @@
 //  Cada placa pertence à célula que contém seu centro → gerada uma única vez.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from '../lib/three.js';
-import { MACRO, MEGA, RELIEF, UNIQUE, COLOSSUS } from './field.js';
+import { MACRO, MEGA, RELIEF, UNIQUE, COLOSSUS, CHAMBER_BED } from './field.js';
 import { hash4, rngAt } from './hash.js';
 import { place, cylinderBetween, slabBetween } from '../world/geometry.js';
 import { ChunkBuilder, pieceMemo } from './chunkgen.js';
@@ -478,6 +478,40 @@ function buildUniqueInner(F, B, u) {
     const [px, pz] = P(ha - 8, off + 5);
     block(B, 'frame', px, y0 + 3.2, pz, 0.3, 6.4, 0.3);
     B.lamp(px + 0.6, y0 + 5.8, pz, FLUORO, 35, 'faulty', { to: [px, y0 + 6.2, pz], size: 1, grid: false });
+  } else if (u.kind === 'chamber') {
+    // a câmara de reconstrução (o cofre, Recuperar-o-braco): uma sala fechada; no meio, o berço de
+    // montagem — um tampo baixo de chapa —, um trilho no teto com braços mecânicos descendo até ele,
+    // cabos pendurados, um tanque no canto. É a máquina que ainda refaz corpos (e onde o gene se implanta)
+    off = shell(B, f, y0, u.h, T, 5, 4.5, r);
+    box(B, 'macro', 0, y0 + u.h, 0, ha + 1, 1.4, hc + 1);
+    const bed = F.chamberBed(u);
+    const bA = bed.a;
+    box(B, 'machine', bA, y0, 0, CHAMBER_BED.da, CHAMBER_BED.h, CHAMBER_BED.dc); // o berço
+    box(B, 'frame', bA - CHAMBER_BED.da + 0.15, y0 + CHAMBER_BED.h, 0, 0.15, 0.35, CHAMBER_BED.dc); // a cabeceira
+    // o trilho no teto, ao longo do berço, e os braços: dois de cada lado, dobrados no cotovelo
+    box(B, 'frame', bA, y0 + u.h - 0.6, 0, CHAMBER_BED.da + 2, 0.3, 0.3);
+    for (const [k, s] of [[-0.6, 1], [0.6, -1], [-0.2, -1], [0.3, 1]]) {
+      const [sx0, sz0] = P(bA + k * CHAMBER_BED.da, 0);
+      const [ex0, ez0] = P(bA + k * CHAMBER_BED.da, s * 1.6);
+      const [tx0, tz0] = P(bA + k * CHAMBER_BED.da, s * 0.35);
+      const top = y0 + u.h - 0.75;
+      const elbow = y0 + CHAMBER_BED.h + 2.4 + r.float(-0.3, 0.3);
+      B.add('machine', cylinderBetween(B.L(sx0, top, sz0), B.L(ex0, elbow, ez0), 0.12, 0.1, 6));
+      B.add('machine', cylinderBetween(B.L(ex0, elbow, ez0), B.L(tx0, y0 + CHAMBER_BED.h + 0.9, tz0), 0.09, 0.06, 6));
+    }
+    // cabos pendurados do teto (a ponta solta, a meio metro do berço)
+    for (let q = 0; q < 5; q++) {
+      const [cx0, cz0] = P(bA + r.float(-1.5, 1.5), r.float(-1.8, 1.8));
+      B.add('conduit', cylinderBetween(B.L(cx0, y0 + u.h - 0.6, cz0), B.L(cx0, y0 + CHAMBER_BED.h + r.float(1.2, 2.2), cz0), 0.04, 0.04, 4));
+    }
+    // o tanque (em pé no canto do fundo) e um painel de máquinas na parede
+    const [kx, kz] = P(-ha + T + 2.5, hc - T - 2.5);
+    const K = B.L(kx, y0 + 2.4, kz);
+    B.add('machine', place(new THREE.CylinderGeometry(1.8, 1.9, 4.8, 12), { x: K.x, y: K.y, z: K.z }));
+    box(B, 'machine', -ha + T + 0.6, y0, -hc * 0.4, 0.6, 2.6, 3);
+    // a luz: uma lâmpada fria sobre o berço (presa ao trilho)
+    const [lx, lz] = P(bA + 1.6, 0);
+    B.lamp(lx, y0 + u.h - 1.1, lz, FLUORO, 80, 'steady', { to: [lx, y0 + u.h - 0.6, lz], size: 1.4, grid: false });
   } else if (u.kind === 'cradle') {
     // o berço de Safeguards, lacrado (fase 5; eles saem daqui na fase 6): um bloco alto sem
     // janelas; no lugar da porta, um portão enorme fechado, travado por barras presas aos batentes
@@ -515,7 +549,7 @@ function buildUniqueInner(F, B, u) {
   // luz de sinal no telhado, vista de longe (a Cidade ainda sabe que isto existe) —
   // a haste desce até o topo do telhado de cada tipo (o cemitério não tem teto: um mastro)
   const [sx, sz] = P(ha - 4, hc - 4);
-  const ROOF = { plant: 13.5 - u.h, antenna: 1, builders: 1.4, village: 1.4, cradle: 1.2, graveyard: 0 };
+  const ROOF = { plant: 13.5 - u.h, antenna: 1, builders: 1.4, village: 1.4, cradle: 1.2, graveyard: 0, chamber: 1.4 };
   const top = y0 + u.h + (ROOF[u.kind] ?? 1.6);
   if (u.kind === 'graveyard') block(B, 'frame', sx, y0 + (u.h + 8) / 2, sz, 0.4, u.h + 8, 0.4);
   B.lamp(sx, top + 2, sz, SODIUM, r.float(500, 900), 'steady', { to: [sx, top, sz], size: 2.5, far: true, grid: false });

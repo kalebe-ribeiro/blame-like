@@ -84,6 +84,9 @@ export function createUniques(ctx) {
       for (const s of sites) slot.builderSites[`${Math.round(s.x)},${Math.round(s.z)}`] = { x: Math.round(s.x), y: Math.round(s.y ?? u.y), z: Math.round(s.z), dead: !!s.dead };
       tell('unique.builders', { n: sites.length });
     },
+    chamber() {
+      tell('unique.chamber');
+    },
     antenna() {
       slot.boosts = { ...(slot.boosts ?? {}), antenna: true };
       tell('unique.antenna');

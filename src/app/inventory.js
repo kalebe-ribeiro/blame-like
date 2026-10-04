@@ -70,7 +70,10 @@ export function createInventory(ctx) {
     el.querySelector('.inv-title').textContent = t('inv.title');
     const H = player.hands;
     const A = player.arms ?? { right: true, left: true };
-    const hand = (side) => (!A[side] ? t('inv.armLost') : H[side] ? toolName(H[side]) : t('inv.empty'));
+    // (R7: com um braço só, a linha do perdido avisa que o outro é o último — na Peregrinação)
+    const last = ctx.rules.resources && A.right !== A.left;
+    const metal = (side) => (player.armKind?.[side] === 'prosthesis' ? ` ${t('inv.metal')}` : '');
+    const hand = (side) => (!A[side] ? t(last ? 'inv.armLostLast' : 'inv.armLost') : (H[side] ? toolName(H[side]) : t('inv.empty')) + metal(side));
     el.querySelector('.inv-hands').textContent = t('inv.hands', { right: hand('right'), left: hand('left') });
     const rows = [];
     for (const id of tools()) {
@@ -83,6 +86,12 @@ export function createInventory(ctx) {
       if (c.kind !== 'cargo') continue;
       const d = Math.hypot(c.x - g.x, c.y - g.y, c.z - g.z);
       rows.push({ name: t('inv.cargo', { what: t(`cargo.what.${c.what ?? 0}`) }), desc: t('inv.cargoDesc', { dist: fmt(d), reward: t(`cargo.reward.${c.reward?.kind ?? 'words'}`, { n: c.reward?.n ?? 5 }) }), act: null });
+    }
+    // a prótese (app/arms.js): vai com o que se carrega; instala-se daqui, parado
+    for (const c of player.carried) {
+      if (c.kind !== 'prosthesis') continue;
+      const can = !A.right || !A.left;
+      rows.push({ name: t('inv.prosthesis'), desc: t(can ? 'inv.prosthesisDesc' : 'inv.prosthesisWhole'), act: can ? 'install' : null, id: 'prosthesis', label: t('inv.install'), where: '' });
     }
     if (!rows.length) rows.push({ name: t('inv.nothing'), desc: '', act: null });
     listEl.innerHTML = rows
@@ -105,6 +114,11 @@ export function createInventory(ctx) {
 
   function pick(id) {
     const [act, tool] = id.split(':');
+    if (act === 'install') {
+      close();
+      ctx.arms?.installProsthesis();
+      return;
+    }
     if (act === 'equip') equip(tool);
     else unequip(tool);
     render();

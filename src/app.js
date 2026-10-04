@@ -38,6 +38,7 @@ import { createUI } from './app/ui.js';
 import { setupDev } from './app/dev.js';
 import { createWake } from './app/wake.js';
 import { createHealth } from './app/health.js';
+import { createArms } from './app/arms.js';
 import { createCarried } from './app/carried.js';
 import { createReading } from './app/reading.js';
 import { createLeads } from './app/leads.js';
@@ -179,6 +180,7 @@ ctx.health = createHealth(ctx); // a vida (o cofre, Barra-de-vida)
 ctx.inventory = createInventory(ctx); // o inventário e as mãos (antes do que se carrega)
 ctx.carried = createCarried(ctx);
 ctx.beam = createBeam(ctx); // o emissor de feixe gravitacional (a arma de Killy)
+ctx.arms = createArms(ctx); // recuperar o braço: a câmara, a prótese, os moradores (o cofre, Recuperar-o-braco)
 ctx.reading = createReading(ctx);
 ctx.power = createPower(ctx);
 ctx.marks = createMarks(ctx);
@@ -221,6 +223,7 @@ function frame() {
   ctx.marks.update(dt); // as marcas pintadas perto
   ctx.beam.update(dt);
   ctx.health.update(dt); // (depois do emissor: soma às bordas que ele fecha)
+  ctx.arms.update(dt);
   ctx.alert.update(dt);
   ctx.safeguards.update();
   ctx.people.update(dt);

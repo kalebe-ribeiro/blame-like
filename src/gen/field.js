@@ -114,7 +114,9 @@ export const SECTOR = { cell: 900, dark: 0.3, unstable: 0.15, salt: 910 };
  */
 /** Religar um setor (app/power.js): a frente da luz voltando, em m/s. */
 export const RESTORE_SPEED = 40;
-export const UNIQUE = { cell: 16000, prob: 0.75, kinds: ['console', 'archive', 'plant'], plantHall: 0.45 };
+/** O berço da câmara de reconstrução: meias medidas (ao longo da porta, de lado) e a altura do tampo. */
+export const CHAMBER_BED = { da: 1.25, dc: 0.6, h: 0.8 };
+export const UNIQUE = { cell: 16000, prob: 0.75, kinds: ['console', 'archive', 'plant'], plantHall: 0.45, chamber: 0.3 };
 export const HIVE = 48; // célula da colmeia (uma sala)
 
 export const MEGA = {
@@ -640,13 +642,18 @@ export class Field {
   uniqueSite(n, ui, uk) {
     return this._memo(`U${n},${ui},${uk}`, () => {
       const b = this.barrier(n);
-      if (!b || hash4(this.seed, ui, n, uk, 980) > UNIQUE.prob) return null;
+      // a câmara de reconstrução (o cofre, Recuperar-o-braco): só nas células que ficavam VAZIAS —
+      // um sorteio à parte, e as únicas dos mundos antigos continuam onde estavam
+      const has = hash4(this.seed, ui, n, uk, 980) <= UNIQUE.prob;
+      const chamber = !has && hash4(this.seed, ui, n, uk, 985) < UNIQUE.chamber;
+      if (!b || (!has && !chamber)) return null;
       const r = rngAt(this.seed, ui, n, uk, 981);
       const C = UNIQUE.cell;
       let kind = UNIQUE.kinds[r.int(0, UNIQUE.kinds.length - 1)];
       // os tipos da fase 4.5 vêm de um sorteio à parte (os mundos antigos mantêm os seus)
       const alt = hash4(this.seed, ui, n, uk, 983);
-      if (alt < 0.3) kind = alt < 0.15 ? 'builders' : 'antenna';
+      if (chamber) kind = 'chamber';
+      else if (alt < 0.3) kind = alt < 0.15 ? 'builders' : 'antenna';
       else {
         // os lugares reservados para os seres (fase 5): outro sorteio à parte
         const alt2 = hash4(this.seed, ui, n, uk, 984);
@@ -654,7 +661,7 @@ export class Field {
       }
       const DIMS = {
         console: [30, 30, 22], archive: [66, 26, 26], plant: [42, 42, 34], builders: [34, 34, 18], antenna: [14, 14, 8],
-        village: [40, 40, 14], graveyard: [44, 44, 6], cradle: [26, 26, 40],
+        village: [40, 40, 14], graveyard: [44, 44, 6], cradle: [26, 26, 40], chamber: [20, 16, 15],
       };
       const [hx, hz, h] = DIMS[kind];
       // tenta alguns pontos da célula até achar um lugar limpo
@@ -726,10 +733,27 @@ export class Field {
     } else if (u.kind === 'cradle') {
       a = ha + 2.5; // do lado de fora: ninguém entra no berço
       c = u.doorOff * hc + 9;
+    } else if (u.kind === 'chamber') {
+      a = ha - 5; // logo depois da porta, de lado
+      c = u.doorOff * hc + 4;
     } else {
       a = ha - 2 * ha * UNIQUE.plantHall + 3 + 4;
     }
     return { x: u.x + ax[0] * a + cx[0] * c, y, z: u.z + ax[1] * a + cx[1] * c, yaw: Math.atan2(ax[0], ax[1]) };
+  }
+
+  /**
+   * O berço de montagem de uma câmara de reconstrução: { x, y (o tampo, onde se deita), z, yaw (para
+   * onde vai a cabeça), a, c (no frame da única) } — as mesmas medidas de buildUnique em macrogen.js.
+   */
+  chamberBed(u) {
+    const d = u.door;
+    const ax = d === 0 ? [1, 0] : d === 1 ? [-1, 0] : d === 2 ? [0, 1] : [0, -1];
+    const cx = [-ax[1], ax[0]];
+    const ha = d < 2 ? u.hx : u.hz;
+    const a = -ha * 0.25;
+    const c = 0;
+    return { x: u.x + ax[0] * a + cx[0] * c, y: u.y + 1.2 + CHAMBER_BED.h, z: u.z + ax[1] * a + cx[1] * c, yaw: Math.atan2(ax[0], ax[1]), a, c };
   }
 
   /** Estruturas únicas perto de (x,y,z) — nas camadas perto de y. */

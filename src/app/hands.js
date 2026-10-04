@@ -84,6 +84,18 @@ export function buildHand(mat, side, { arm = false } = {}) {
  * As mãos do jogador. device/flashlight: os Groups de app/carried.js (as mãos que
  * seguram vão neles). update(dt) a cada quadro. busy: pendurado ou subindo.
  */
+/** Troca o material de uma mão (e do que for dela): a luva de tecido ou a prótese de metal. */
+export function paintHand(group, mat) {
+  group.traverse((o) => {
+    if (o.isMesh) o.material = mat;
+  });
+}
+
+/** O material de cada lado: a luva, ou o metal da prótese (app/arms.js — R4). */
+export function handMaterial(world, kind) {
+  return kind === 'prosthesis' ? world.materials.machine : world.materials.cloth;
+}
+
 export function createHands(ctx, { device, flashlight }) {
   const { camera, controls, world } = ctx;
   const glove = world.materials.cloth; // luvas de tecido grosso, gastas
@@ -146,7 +158,22 @@ export function createHands(ctx, { device, flashlight }) {
   const _ideal = new THREE.Vector3();
   const _now = new THREE.Vector3();
 
+  let kindsKey = '';
   return {
+    /** A prótese: o lado de metal (R4 — kinds: player.armKind). */
+    setKinds(kinds) {
+      const key = `${kinds?.right}|${kinds?.left}`;
+      if (key === kindsKey) return;
+      kindsKey = key;
+      for (const s of [1, -1]) {
+        const mat = handMaterial(world, s > 0 ? kinds?.right : kinds?.left);
+        paintHand(holdDevice[s].group, mat);
+        paintHand(holdLantern[s].group, mat);
+        const i = s > 0 ? 1 : 0; // (grip[0] é a esquerda)
+        paintHand(grip[i].group, mat);
+        arms[i].material = mat;
+      }
+    },
     /** Qual mão segura cada coisa (1 direita · −1 esquerda · 0 nenhuma — app/inventory.js). */
     setHolding(deviceSide, lanternSide) {
       for (const s of [1, -1]) {

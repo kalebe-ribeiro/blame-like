@@ -35,7 +35,7 @@
 import * as THREE from 'three';
 import { bindings } from '../controls/bindings.js';
 import { t as tr } from '../i18n/index.js';
-import { buildHand } from './hands.js';
+import { buildHand, paintHand, handMaterial } from './hands.js';
 import { beamReach } from '../gen/beamreach.js';
 import { createBeamFx, beamColors } from './beamfx.js';
 import { cutHitsBoxes } from '../gen/cut.js';
@@ -183,6 +183,7 @@ export function createBeam(ctx) {
   let lastShot = null;
   /** @type {(() => void)|null} o que fica para o quadro seguinte ao tiro (som, vibração, atenção) */
   let afterFire = null;
+  let gripKinds = '';
   const fx = createBeamFx(ctx); // o que se vê e se ouve (app/beamfx.js)
   const _d = new THREE.Vector3();
   const _a = new THREE.Vector3();
@@ -198,6 +199,7 @@ export function createBeam(ctx) {
     if (controls.mode !== 'walk' && controls.mode !== 'fly') return 'modo';
     if (bindings.uiActive || ctx.people?.isOpen || ctx.inventory?.isOpen || ctx.reading?.isOpen) return 'painel';
     if (ctx.wake?.active) return 'desmaio';
+    if (ctx.arms?.busy) return 'camara'; // (no berço, ou instalando a prótese)
     const w = controls.mode === 'walk' ? controls.walker : null;
     if (w?.ledgeState) return 'quina';
     if (w?.climbing) return 'escada';
@@ -517,7 +519,10 @@ export function createBeam(ctx) {
           const st = stageOf(o);
           if (st > stage) {
             stage = st;
-            audio.beamStage?.(st);
+            // R7: com um braço só, o primeiro estágio que custa o braço avisa — um tom próprio
+            const lastArm = !free() && player.arms.right !== player.arms.left;
+            audio.beamStage?.(st, lastArm && st === ARM_LOSS_STAGE);
+            if (lastArm && st === ARM_LOSS_STAGE) world.bus.emit('player:lastArmWarn', {});
             controls.rumble?.(0.4 + 0.15 * st, 0.3 + 0.15 * st, 200 + 80 * st);
             fx.stagePulse(st);
             world.bus.emit('player:beamStage', { stage: st });
@@ -532,8 +537,13 @@ export function createBeam(ctx) {
           // o aparelho mostra o gasto que o tiro terá — e a sobrecarga
           if (on) {
             const n = Math.round(shotOf(k, o).cost * 100);
+            const lastArm = !free() && player.arms.right !== player.arms.left;
             const msg =
-              stage >= ARM_LOSS_STAGE
+              stage >= ARM_LOSS_STAGE && lastArm
+                ? Math.floor(performance.now() / 280) % 2
+                  ? tr('device.beamLastArm', { n })
+                  : ''
+                : stage >= ARM_LOSS_STAGE
                 ? tr('device.beamBeyond', { n, name: tr(`beam.stage.${stage}`) })
                 : stage >= 4
                   ? tr('device.beamLimit', { n })
@@ -587,6 +597,12 @@ export function createBeam(ctx) {
         em.coils.forEach((mat, i) => mat.color.copy(DIM).lerp(lc, Math.max(0, Math.min(1, lit - i)) * pulse));
       }
       for (const s of [1, -1]) grips[s].group.visible = side === s;
+      // a prótese: a mão de metal segura o emissor (R4)
+      const kk = `${player.armKind?.right}|${player.armKind?.left}`;
+      if (kk !== gripKinds) {
+        gripKinds = kk;
+        for (const s of [1, -1]) paintHand(grips[s].group, handMaterial(world, s > 0 ? player.armKind?.right : player.armKind?.left));
+      }
       if (state === 'charging' && chargeK(held) >= 0) {
         em.group.updateMatrixWorld(true);
         em.muzzle.getWorldPosition(_m);
