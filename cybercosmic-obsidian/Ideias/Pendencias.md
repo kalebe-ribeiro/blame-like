@@ -29,8 +29,8 @@ Reorganizada em 2026-10-04. Três listas: **a implementar** (decidido, na ordem)
 
 | o quê | o que falta | nota |
 |---|---|---|
-| **Gene de terminal** — o objetivo final, quase impossível | a mecânica (as 4 perguntas da nota) | [[Gene-terminal]] |
-| **Credenciais de acesso** | depende do gene (acessos intermediários?) | [[Credenciais-de-acesso]] |
+| **Gene de terminal** — o objetivo final (mecânica decidida em 2026-10-04: pistas longas até onde está guardado, um humano com o gene + analisador de genes, a dificuldade pelo tamanho da Cidade, o controle da Cidade e três finais) | os detalhes G1–G5 | [[Gene-terminal]] |
+| **Credenciais de acesso** | se existem acessos intermediários antes do gene | [[Credenciais-de-acesso]] |
 
 ## 3. Em observação
 - **Travadas de ~1,9 s** numa rodada do `profile --profshot` (a primeira na RTX, depois da troca de GPU), ~2 s depois do tiro; não se repetiram em duas rodadas. Hipótese: o cache de shaders do Chromium montado para a Intel. Se voltar, o `profile` lista os programas de shader novos de cada tiro.

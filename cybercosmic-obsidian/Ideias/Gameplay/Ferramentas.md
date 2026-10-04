@@ -11,6 +11,8 @@ tags: [gameplay, progressao]
 > **Leitor portátil feito na fase 2** (`app/reading.js`): terminal morto + E → fragmento (cabeçalho + 2–3 linhas), −8% da célula; todo mundo da Peregrinação tem. O sensor é da fase 3.
 
 > Escolhidas (2026-09-29): **o sensor e o leitor portátil — somente.** As outras ideias ficaram de fora.
+>
+> **Exceção (2026-10-04, usuário): o analisador de genes** — para achar o humano que carrega o gene de terminal ([[Gene-terminal]] §3). As descartadas continuam descartadas.
 > Todas gastam a mesma energia ([[Luz-como-recurso]]). Achadas em [[Estruturas-unicas]], salas de máquinas, fim de pistas.
 
 ## Sensor ★ (escolhida)
