@@ -5,7 +5,8 @@
 //  ele não volta sozinho. Três caminhos, o mais completo custa mais:
 //    câmara de reconstrução  a estrutura única 'chamber' (gen/field.js): deitar no berço (E),
 //                            ~20 s com os braços mecânicos trabalhando → OS DOIS braços; 50% da célula
-//    prótese                 um braço de metal: achada nos cemitérios de vítimas (1 em ~3 tem uma),
+//    prótese                 um braço de metal: achada nos cemitérios de vítimas (1 em ~3 tem uma) e,
+//                            rara, nos depósitos do maciço (no mezanino do 1º nível, junto da porta),
 //                            ou comprada de um andarilho (40% — app/people.js); vai com as cargas
 //                            (player.carried) e se instala pelo inventário, parado, ~5 s → UM braço
 //                            (de metal — app/hands.js); instalar não pede mão (R6a)
@@ -23,11 +24,14 @@ import { uniqueTerminal } from '../gen/sites.js';
 import { villageInhabited } from '../gen/villages.js';
 import { bindings } from '../controls/bindings.js';
 import { IMPLANT_TIME } from './gene.js';
+import { HW, RING } from '../gen/closed.js';
 
 export const ARM_COST = { chamber: 0.5, wanderer: 0.4, villager: 0.3 };
 export const CHAMBER_TIME = 20; // s no berço
 export const INSTALL_TIME = 5; // s instalando a prótese
 export const GRAVEYARD_PROSTHESIS = 1 / 3; // a chance de um cemitério ter uma prótese
+export const DEPOT_PROSTHESIS = 0.15; // a chance de um depósito (os ocos do maciço) ter uma — raro (R3)
+const MASSIF = 192; // m: a grade dos blocos do maciço (Field.massifBlock)
 const REACH = 1.8; // m até a prótese no chão
 const BED_REACH = 2.4; // m até o berço
 const SCAN_R = 700; // m: cemitérios considerados em volta
@@ -110,6 +114,29 @@ export function createArms(ctx) {
     return { id: `pr:${u.id}`, x: u.x + ax[0] * a + cx[0] * c, y: u.y + 1.2, z: u.z + ax[1] * a + cx[1] * c, yaw: hash4(F.seed, u.n, 3, 7, 1993) * Math.PI * 2 };
   }
 
+  /** As próteses nos depósitos do maciço perto de g (GLOBAL): no mezanino do 1º nível, junto da porta oeste. */
+  function depotProsthesesNear(g, R) {
+    const F = world.field;
+    const out = [];
+    const i0 = Math.floor((g.x - R) / MASSIF);
+    const i1 = Math.floor((g.x + R) / MASSIF);
+    const k0 = Math.floor((g.z - R) / MASSIF);
+    const k1 = Math.floor((g.z + R) / MASSIF);
+    const j0 = Math.floor((g.y - 200) / MASSIF);
+    const j1 = Math.floor((g.y + 200) / MASSIF);
+    for (let i = i0; i <= i1; i++) {
+      for (let j = j0; j <= j1; j++) {
+        for (let k = k0; k <= k1; k++) {
+          const h = F.massifHollow(i, j, k);
+          if (!h || h.type !== 'deposito' || hash4(F.seed, i, j, k, 1994) >= DEPOT_PROSTHESIS) continue;
+          const zc = (h.z0 + h.z1) / 2;
+          out.push({ id: `pr:d${i},${j},${k}`, x: h.x0 + HW + RING / 2, y: h.levels[0], z: zc + 9, yaw: hash4(F.seed, i, j, k, 1993) * Math.PI * 2 });
+        }
+      }
+    }
+    return out;
+  }
+
   /** O modelo: um antebraço de metal com a mão, deitado (sem colisão). */
   function buildProsthesis() {
     const m = world.materials.machine;
@@ -137,8 +164,8 @@ export function createArms(ctx) {
   function scan() {
     const g = here();
     const want = new Set();
-    for (const u of world.field.uniquesNear(g.x, g.y, g.z, SCAN_R)) {
-      const p = prosthesisAt(u);
+    const found = world.field.uniquesNear(g.x, g.y, g.z, SCAN_R).map(prosthesisAt).concat(depotProsthesesNear(g, 400));
+    for (const p of found) {
       if (!p || loot()[p.id] || Math.hypot(p.x - g.x, p.y - g.y, p.z - g.z) > SCAN_R) continue;
       want.add(p.id);
       if (!items.has(p.id)) {
@@ -253,6 +280,7 @@ export function createArms(ctx) {
     restore,
     revealRepair,
     prosthesisAt,
+    depotProsthesesNear,
     /** (testes) as próteses em cena */
     get items() {
       return items;

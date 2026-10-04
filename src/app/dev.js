@@ -209,6 +209,19 @@ export function setupDev(ctx) {
     }, Number(params.get('vaultcam')) * 1000);
   }
   if (params.get('endingshow')) setTimeout(() => ctx.gene.showEnding(params.get('endingshow')), 6000);
+  // --sparkshot=N: dos N s em diante, as faíscas de um ser ferido (beamfx hitSparks) a 2 m à frente da câmera,
+  // a cada 0,15 s, para a captura conferir que se veem
+  if (params.get('sparkshot')) {
+    setTimeout(() => {
+      const tick = () => {
+        const f = new THREE.Vector3();
+        camera.getWorldDirection(f);
+        const g = world.toGlobal(camera.position).addScaledVector(f, 2.5).add(new THREE.Vector3(0, 0.5, 0));
+        ctx.beam.fx.hitSparks(g);
+      };
+      setInterval(tick, 150);
+    }, Number(params.get('sparkshot')) * 1000);
+  }
   // --hurt=v: aos 5 s a vida vai a v (o aparelho mostra — app/health.js)
   if (params.get('hurt')) setTimeout(() => ctx.health.set(Number(params.get('hurt'))), 5000);
   // --sgcam=N: dos N s em diante, a câmera (voando: ninguém percebe) acompanha o Safeguard

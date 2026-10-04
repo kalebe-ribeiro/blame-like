@@ -18,6 +18,7 @@
 import * as THREE from 'three';
 import { fallDamage, slamDamage, BEAM_DAMAGE, STRIKE_DAMAGE } from '../app/health.js';
 import { stageOf } from '../app/beam.js';
+import { buildArena } from './arena.js';
 
 const SETTLE = 7000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -109,6 +110,22 @@ async function run(ctx) {
     return Infinity;
   };
   const dirOf = (a) => new THREE.Vector3(Math.sin(a), 0, Math.cos(a));
+  // a arena preparada (dev/arena.js): a parede e a borda sempre iguais, para os casos que dependiam
+  // de achar a geometria certa no lugar sorteado
+  /** @type {any} */
+  let arena = null;
+  const getArena = async () => (arena ??= await buildArena(ctx));
+  let sgN = 0;
+  /** Um Safeguard de teste, criado já golpeando, em p (GLOBAL), olhando para o jogador. */
+  const strikerAt = (p) => {
+    const e = world.entities.spawn({ id: `sg:arena:${sgN++}`, kind: 'safeguard', feet: p, persist: false, brain: sg });
+    e.level = 'low';
+    const g = here();
+    e.yaw = Math.atan2(-(g.x - p.x), -(g.z - p.z));
+    e.sg = { c: null, state: 'strike', strikeT: 0, struck: false, unseen: 0, lastSeen: p.clone(), searchT: 0, percT: 0.2, sees: true, stepAcc: 0, stuckT: 0, panel: null, waitT: 0 };
+    world.entities.toNear(e, world.origin);
+    return e;
+  };
   /** Uma parede a [d0, d1] m de um ponto de chão perto dos pés (até 12 m em volta), com chão
    *  a 1,2 m do lado oposto (onde fica quem golpeia). → { c (pés, cena), d (para a parede), dist } */
   const wallNear = (feet, d0, d1) => {
@@ -247,39 +264,28 @@ async function run(ctx) {
     const thrown = 1 - H.value;
     w.thrown = false;
     w.thrownSlam = 0;
-    // o coice de verdade contra uma parede atrás (o estágio 2: a vida perde só os 5% do emissor)
-    let real = 'sem parede';
+    // o coice de verdade contra a parede da arena (o estágio 2: a vida perde só os 5% do emissor)
+    let real = 'sem arena';
     let realOk = false;
-    let back = null;
-    for (const place of ['galeria', 'colmeia', 'macico', 'deposito', 'maquinas']) {
-      const feet = await go(place);
-      const wl = feet && wallNear(feet, 0.8, 2.6);
-      if (wl) {
-        controls.placeFeet(wl.c);
-        await sleep(500);
-        back = wl.d;
-        break;
-      }
-    }
-    {
-      if (back) {
-        H.set(1);
-        let slam = 0;
-        const s0 = w.onSlam;
-        w.onSlam = (v) => {
-          slam = Math.max(slam, v);
-          s0?.(v);
-        };
-        controls.yaw = Math.atan2(back.x, back.z); // de costas para a parede (olha para −back)
-        controls.pitch = 0;
-        ctx.beam.fire(1, 0.6);
-        await sleep(1500);
-        w.onSlam = s0;
-        const got = 1 - H.value;
-        realOk = slam > 12 && Math.abs(got - BEAM_DAMAGE[2]) < 1e-6;
-        real = `bateu a ${slam.toFixed(1)} m/s · perdeu ${pct(got)} (só o emissor: ${pct(BEAM_DAMAGE[2])})`;
-        ctx.beam.restoreArms();
-      }
+    const A = await getArena();
+    if (A) {
+      // de costas para a parede, a 1,6 m dela (olhando para −x: o coice empurra para +x)
+      A.place(A.wallX - 1.6, A.c.z, Math.PI / 2);
+      await sleep(600);
+      H.set(1);
+      let slam = 0;
+      const s0 = w.onSlam;
+      w.onSlam = (v) => {
+        slam = Math.max(slam, v);
+        s0?.(v);
+      };
+      ctx.beam.fire(1, 0.6);
+      await sleep(1500);
+      w.onSlam = s0;
+      const got = 1 - H.value;
+      realOk = slam > 12 && Math.abs(got - BEAM_DAMAGE[2]) < 1e-6;
+      real = `na arena: bateu a ${slam.toFixed(1)} m/s · perdeu ${pct(got)} (só o emissor: ${pct(BEAM_DAMAGE[2])})`;
+      ctx.beam.restoreArms();
     }
     report({ kind: 'choque', ok: own === 0 && Math.abs(thrown - slamDamage(30)) < 1e-6 && realOk, why: `30 m/s pelo coice ${pct(own)} · arremessado ${pct(thrown)} · ${real}` });
   }
@@ -368,115 +374,56 @@ async function run(ctx) {
     }
   }
 
-  // golpe:borda — na beira de uma queda de mais de 60 m: o arremesso leva para fora
+  // golpe:borda — na arena, a 3 m da borda: o arremesso leva para fora, 70 m de queda
   if (want('borda')) {
-    let spot = null;
-    for (const place of ['teia', 'trelica', 'poco', 'escadaria', 'camada']) {
-      const feet = await go(place);
-      if (!feet || !sg.byTerritory.size) continue;
-      for (let i = 0; i < 60 && !spot; i++) {
-        const p = feet.clone().addScaledVector(dirOf(i * 2.4), (i % 6) * 2);
-        const y = floorBelow(p.x, feet.y + 1, p.z, 3);
-        if (y === null) continue;
-        const c = new THREE.Vector3(p.x, y, p.z);
-        for (let q = 0; q < 16 && !spot; q++) {
-          const d = dirOf((q / 16) * Math.PI * 2);
-          // chão até a borda (1,5–4 m), depois o vazio por mais 10 m, sem nada no caminho
-          let edge = null;
-          for (let r = 0.5; r <= 4; r += 0.5) if (floorBelow(c.x + d.x * r, y + 1, c.z + d.z * r, 2) === null) {
-            edge = r;
-            break;
-          }
-          if (edge === null || edge < 1.5) continue;
-          // o vazio por 4 m além da borda, e lá embaixo (53–120 m) um chão JÁ CARREGADO — numa área
-          // ainda sem chunks o corpo fica pairando e desce sem impacto (controls/walker.js)
-          let open = true;
-          for (let r = edge; r <= edge + 4 && open; r += 1) {
-            const h = w.col.ray(new THREE.Vector3(c.x + d.x * r, y + 1, c.z + d.z * r), DOWN, 50);
-            if (h) open = false;
-          }
-          if (open) {
-            const px = c.x + d.x * (edge + 4);
-            const pz = c.z + d.z * (edge + 4);
-            refreshCol(new THREE.Vector3(px, y - 75, pz), 46);
-            const h = w.col.ray(new THREE.Vector3(px, y + 1, pz), DOWN, 120);
-            if (!h || h.distance < 53 || !w.col.ready) open = false;
-            refreshCol(camera.position.clone(), 60);
-          }
-          if (!open || clearH(c, d, edge + 10) !== Infinity) continue;
-          // e chão atrás (onde ele fica)
-          if (floorBelow(c.x - d.x * 1.2, y + 1, c.z - d.z * 1.2, 2) === null) continue;
-          spot = { place, c, d, edge };
-        }
-      }
-      if (spot) break;
-    }
-    if (!spot) report({ kind: 'golpe:borda', ok: false, why: 'nenhuma borda alta' });
+    const A = await getArena();
+    if (!A) report({ kind: 'golpe:borda', ok: false, why: 'sem arena' });
     else {
-      controls.placeFeet(spot.c);
-      await sleep(500);
+      A.place(A.edgeX + 3, A.c.z, -Math.PI / 2);
+      await sleep(600);
       H.set(1);
       woke = null;
-      const z0 = zeros.length;
-      const x = bringSg(world.toGlobal(spot.c.clone().addScaledVector(spot.d, -1.2)));
-      if (x) strikeNow(x);
-      const T = watchThrow();
-      const y0 = w.feet.y;
-      let minY = y0;
-      let maxAir = 0;
       landed = null;
-      let dbgT = 0;
-      const probe = setInterval(() => {
-        minY = Math.min(minY, w.feet.y);
-        maxAir = Math.max(maxAir, w.airTime);
-        if (ctx.params.get('healthtrace') && (dbgT += 50) % 250 === 0) {
-          const gg = here();
-          const L = world.chunkLayer;
-          const s = L.size;
-          const key = `${Math.floor(gg.x / s)},${Math.floor((gg.y - 1.7) / s)},${Math.floor(gg.z / s)}`;
-          const e = L.chunks.get(key);
-          console.warn(`MOVE HDBG t ${(performance.now() / 1000).toFixed(2)} air ${w.airTime.toFixed(2)} gr ${w.grounded} y ${gg.y.toFixed(1)} vel ${w.vel.y.toFixed(1)} col.ready ${w.col.ready} chunk ${key} ${e ? `rec ${e.received} empty ${e.empty} group ${!!e.group}` : 'AUSENTE'} · around ${L.isReadyAround(gg, 30)} · wake ${ctx.wake.active} · mode ${controls.mode}`);
-        }
-      }, 50);
-      const hit = !!x && (await waitFor(() => T.r.thrown, 3));
+      const z0 = zeros.length;
+      ctx.health.testThrow = 0.5;
+      const x = strikerAt(new THREE.Vector3(A.edgeX + 4.2, A.y0, A.c.z));
+      const T = watchThrow();
+      const hit = await waitFor(() => T.r.thrown, 3);
       const after = H.value;
-      // a queda leva segundos: espera o pouso (ou o desmaio) antes de esperar o despertar
-      if (hit) await waitFor(() => !!landed || ctx.wake.active, 40);
+      world.entities.remove(x.id);
+      if (hit) await waitFor(() => !!landed || ctx.wake.active, 20);
       const back = hit && (await waitWake());
       T.stop();
-      clearInterval(probe);
-      const src = zeros.slice(z0).join(',') || `— (desceu ${(y0 - minY).toFixed(1)} m · no ar ${maxAir.toFixed(1)} s · pouso ${landed ? landed.v.toFixed(1) + ' m/s' : '—'} · ${w.thrown ? 'arremessado' : 'em pé'})`;
-      report({ kind: 'golpe:borda', ok: hit && Math.abs(after - 0.5) < 1e-6 && zeros[z0] === 'fall' && back && woke?.cause === 'impact' && H.value === 1, why: hit ? `golpe ${pct(after)} · a borda a ${spot.edge} m (${spot.place}) · zerou por ${src} · ${woke ? `acordou (${woke.cause}) com ${pct(H.value)}` : 'não acordou'}` : 'não golpeou' });
+      ctx.health.testThrow = null;
+      report({ kind: 'golpe:borda', ok: hit && Math.abs(after - 0.5) < 1e-6 && zeros[z0] === 'fall' && back && woke?.cause === 'impact' && H.value === 1, why: hit ? `golpe ${pct(after)} · a borda a 3 m · pouso ${landed ? landed.v.toFixed(1) + ' m/s' : '—'} · zerou por ${zeros.slice(z0).join(',') || '—'} · ${woke ? `acordou (${woke.cause}) com ${pct(H.value)}` : 'não acordou'}` : 'não golpeou' });
     }
   }
 
-  // golpe:parede — de costas para uma parede perto: 50% e o choque
+  // golpe:parede — na arena, de costas para a parede a 1,4 m: 50% e o choque
   if (want('parede')) {
-    let spot = null;
-    for (const place of ['colmeia', 'macico', 'deposito', 'maquinas', 'galeria']) {
-      const feet = await go(place);
-      if (!feet || !sg.byTerritory.size) continue;
-      const wl = wallNear(feet, 1.2, 2.2); // (perto: o arremesso mais fraco, 12 m/s, ainda bate acima de 12)
-      if (wl) spot = { place, ...wl };
-      if (spot) break;
-    }
-    if (!spot) report({ kind: 'golpe:parede', ok: false, why: 'nenhuma parede perto' });
+    const A = await getArena();
+    if (!A) report({ kind: 'golpe:parede', ok: false, why: 'sem arena' });
     else {
-      controls.placeFeet(spot.c);
-      await sleep(500);
+      A.place(A.wallX - 1.4, A.c.z, -Math.PI / 2);
+      await sleep(600);
       H.set(1);
-      const x = bringSg(world.toGlobal(spot.c.clone().addScaledVector(spot.d, -1.2)));
-      if (x) strikeNow(x);
+      // (a força do arremesso no meio da faixa: 14 m/s — o mais fraco, 12, perde força no voo e
+      //  chega à parede abaixo do limiar do choque)
+      ctx.health.testThrow = 0.5;
+      const x = strikerAt(new THREE.Vector3(A.wallX - 2.6, A.y0, A.c.z));
       const T = watchThrow();
-      const hit = !!x && (await waitFor(() => T.r.thrown, 3));
+      const hit = await waitFor(() => T.r.thrown, 3);
       await waitFor(() => !w.thrown, 6);
       T.stop();
+      world.entities.remove(x.id);
+      ctx.health.testThrow = null;
       const got = 1 - H.value;
       const exp = STRIKE_DAMAGE + slamDamage(T.r.slam);
-      report({ kind: 'golpe:parede', ok: hit && T.r.slam > 12 && Math.abs(got - exp) < 0.01 && got > STRIKE_DAMAGE, why: hit ? `parede a ${spot.dist.toFixed(1)} m (${spot.place}) · bateu a ${T.r.slam.toFixed(1)} m/s · perdeu ${pct(got)} (50% + ${pct(slamDamage(T.r.slam))})` : 'não golpeou' });
+      report({ kind: 'golpe:parede', ok: hit && T.r.slam > 12 && Math.abs(got - exp) < 0.01 && got > STRIKE_DAMAGE, why: hit ? `na arena, parede a 1,4 m · bateu a ${T.r.slam.toFixed(1)} m/s · perdeu ${pct(got)} (50% + ${pct(slamDamage(T.r.slam))})` : 'não golpeou' });
     }
   }
 
+  arena?.remove();
   w.onLand = onLand0;
   loud();
 }

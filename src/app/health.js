@@ -73,6 +73,8 @@ export function createHealth(ctx) {
   const applied = { p: 0, y: 0 };
   let nextBeat = 0;
   let lastCause = null;
+  /** @type {number|null} (testes) a força do arremesso, 0..1 da faixa THROW */
+  let testThrow = null;
 
   const enabled = () => {
     const r = ctx.rules.health;
@@ -148,7 +150,7 @@ export function createHealth(ctx) {
       if (left === null || left <= 0 || ctx.wake?.active) return; // zerou: a captura
     }
     ctx.beam?.cancel?.('golpe');
-    const r = Math.random();
+    const r = testThrow ?? Math.random(); // (os testes fixam a força — dev/healthtest.js)
     const v = THROW.h[0] + r * (THROW.h[1] - THROW.h[0]);
     const up = THROW.up[0] + r * (THROW.up[1] - THROW.up[0]);
     w.throwBody(dx * v * controls.scale, dz * v * controls.scale, up * controls.scale);
@@ -188,6 +190,9 @@ export function createHealth(ctx) {
     },
     damage,
     struck,
+    set testThrow(v) {
+      testThrow = v;
+    },
     /** (testes e o futuro) devolve vida */
     heal(amount) {
       const h = player.health;

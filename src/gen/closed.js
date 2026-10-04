@@ -305,8 +305,8 @@ export function genMassif(F, B, box) {
 
 // ─── interiores do maciço (blocos ocos) ─────────────────────────────────────
 
-const HW = 6; // espessura da casca
-const RING = 12; // largura dos mezaninos
+export const HW = 6; // espessura da casca
+export const RING = 12; // largura dos mezaninos
 
 /** Casca, mezaninos, portas e o conteúdo de um bloco oco. */
 function buildHollow(F, B, h, i, j, k) {

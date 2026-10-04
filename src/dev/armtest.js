@@ -8,6 +8,7 @@
 //    andarilho   um andarilho vende uma prótese por 40% (R3); instalada do inventário, parado,
 //                em ~5 s: um braço de metal (R4)
 //    cemiterio   num cemitério de vítimas com prótese: ela está no chão, e E a pega
+//    deposito    num depósito do maciço com prótese (rara): no mezanino do 1º nível, e E a pega
 //    camara      a câmara de reconstrução: o berço existe (colisão no tampo); deitar (E) com os dois
 //                braços perdidos → ~20 s → os dois de volta, de carne; −50% da célula (R1, R2)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -208,6 +209,32 @@ async function run(ctx) {
       why = `a ${(best.d / 1000).toFixed(1)} km · no chão ${shown} · pegou ${used && n1 > n0} · salvo ${!!ctx.slot.loot?.[p.id]}`;
     }
     report({ kind: 'cemiterio', ok, why });
+  }
+
+  // ── deposito: a prótese rara num depósito do maciço ──
+  {
+    let ok = false;
+    let why = 'nenhum depósito com prótese em 3 km';
+    if (ctx.ui.teleport('deposito', 'deposito')) {
+      controls.setMode('walk');
+      await sleep(SETTLE);
+      const g = here();
+      const list = ctx.arms.depotProsthesesNear(g, 3000).filter((p) => !ctx.slot.loot?.[p.id]);
+      list.sort((a, b) => Math.hypot(a.x - g.x, a.y - g.y, a.z - g.z) - Math.hypot(b.x - g.x, b.y - g.y, b.z - g.z));
+      const p = list[0];
+      if (p) {
+        stand(p.x + 1, p.y, p.z, Math.atan2(1, 0));
+        await sleep(SETTLE + 2000);
+        const shown = await waitFor(() => ctx.arms.items.has(p.id), 5);
+        const floor = (await waitFor(() => controls.walker.grounded, 4)) && Math.abs(controls.walker.feet.y + world.origin.y - p.y) < 0.6;
+        const n0 = P.carried.filter((c) => c.kind === 'prosthesis').length;
+        const used = ctx.arms.tryUse();
+        const n1 = P.carried.filter((c) => c.kind === 'prosthesis').length;
+        ok = shown && floor && used && n1 === n0 + 1;
+        why = `${list.length} em 3 km · no mezanino ${floor} (pés a ${(controls.walker.feet.y + world.origin.y - p.y).toFixed(2)} m) · em cena ${shown} · pegou ${n1 > n0}`;
+      }
+    }
+    report({ kind: 'deposito', ok, why });
   }
 
   // ── camara: o berço; os dois braços de volta ──

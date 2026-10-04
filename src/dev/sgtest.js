@@ -17,7 +17,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { circuitAt } from '../gen/patrols.js';
-import { MOVE } from '../world/levels.js';
+import { MOVE, accelerate } from '../world/levels.js';
 
 const SETTLE = 7000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -175,14 +175,31 @@ export async function runSafeguardTest(ctx) {
         rows.push(`${level}: ${first ? first.v.toFixed(1) : '?'} → ${r.M.vt} m/s em ${at ? (at.t - first.t).toFixed(2) : '—'} s (esperado ${exp.toFixed(2)}) · o corpo a ${top.toFixed(1)} · ${r.turns} curva(s)`);
       }
       report({ kind: 'arranque', ok: okA, why: `${rows.join(' · ')} (${spot.place})` });
-      const r = await run('high', true);
-      const before = r.samples.filter((s) => s.t <= r.turnedAt).at(-1)?.v ?? 0;
-      const after = r.samples.filter((s) => r.turnedAt !== null && s.t > r.turnedAt && s.t < r.turnedAt + 1.8);
-      const low = after.length ? Math.min(...after.map((s) => s.v)) : before;
-      // a regra (M2): a velocidade cai pelo ângulo que ele de fato virou — v · (0,5 + 0,5·cos θ)
-      const L = r.last;
-      const want = L ? L.from * (0.5 + 0.5 * Math.cos(L.th)) : 0;
-      report({ kind: 'curva', ok: r.turns > 0 && before > 13 && !!L && L.th > Math.PI / 6 && Math.abs(L.to - want) < 0.05 && low < before - 0.5, why: `alto: ${before.toFixed(1)} m/s na reta → ${low.toFixed(1)} m/s depois de virar (${r.turns} curva(s) contada(s); a última: ${L ? `${Math.round((L.th * 180) / Math.PI)}°, ${L.from.toFixed(1)} → ${L.to.toFixed(1)} m/s` : '—'})` });
+      // a curva (M2): a regra simulada no mesmo accelerate() dos corpos — determinística (no mundo, o
+      // caminho que ele escolhe ao mudar de alvo varia: às vezes contorna devagar, às vezes nem vira)
+      const sim = (deg, over) => {
+        const e = { walker: { vel: { x: 0, z: 0 }, speedScale: 1 }, vert: null, staggerT: 0 };
+        const S = {};
+        const dt = 1 / 60;
+        let ang = 0;
+        let before = 0;
+        let low = Infinity;
+        for (let t = 0; t < 6; t += dt) {
+          if (t >= 2.5 && t < 2.5 + over) ang += ((deg * Math.PI) / 180) * (dt / over);
+          accelerate(e, S, MOVE.high, dt);
+          e.walker.vel.x = Math.sin(ang) * S.huntV;
+          e.walker.vel.z = Math.cos(ang) * S.huntV;
+          if (t < 2.5) before = S.huntV;
+          else if (t < 2.5 + over + 1) low = Math.min(low, S.huntV);
+        }
+        return { before, low, turns: S.turns ?? 0, last: S.lastTurn ?? null };
+      };
+      const sharp = sim(90, 0.2);
+      const small = sim(20, 0.1);
+      const soft = sim(45, 2);
+      const want = sharp.last ? sharp.last.from * (0.5 + 0.5 * Math.cos(sharp.last.th)) : 0;
+      const okC = sharp.turns === 1 && sharp.last && Math.abs((sharp.last.th * 180) / Math.PI - 90) < 8 && Math.abs(sharp.last.to - want) < 0.05 && sharp.low < 0.6 * sharp.before && small.turns === 0 && soft.turns === 0;
+      report({ kind: 'curva', ok: !!okC, why: `90° em 0,2 s: ${sharp.before.toFixed(1)} → ${sharp.low.toFixed(1)} m/s (${sharp.last ? Math.round((sharp.last.th * 180) / Math.PI) : '—'}° contados) · 20°: ${small.turns} curva · 45° em 2 s (suave): ${soft.turns} curva` });
       lantern(false);
       ctx.rules = rules0;
     }

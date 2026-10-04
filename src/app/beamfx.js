@@ -475,6 +475,10 @@ export function createBeamFx(ctx) {
 
   const api = {
     /** Carregando (k 0..1) — ou não (k < 0). */
+    /** (diagnóstico) o estado das faíscas */
+    sparksState() {
+      return { vis: sparks.points.visible, last: sparks.lastDeath.toFixed(2), now: now().toFixed(2), inScene: !!sparks.points.parent?.parent, grp: group.visible };
+    },
     /** Um ser ferido pelo feixe (g: GLOBAL, o peito dele): faíscas — os de máquina (Safeguards, silício). */
     hitSparks(g, n = 24) {
       const t = now();
