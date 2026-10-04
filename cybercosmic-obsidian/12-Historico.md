@@ -339,3 +339,8 @@ Por que as coisas estão como estão, em ordem.
 - Depois: G6 — o gene se implanta na câmara de reconstrução; o gene entrou na fila de [[Ideias/Pendencias]] (nada mais esperando o usuário além das credenciais).
 - Depois: credenciais de acesso descartadas — nada mais esperando o usuário; o planejamento está fechado.
 - Depois: a branch `claude/laughing-dijkstra-envmdu` trazida para `main`; datas acertadas (estavam um dia à frente) e a ordem da fila igual em todas as notas (vida → dano e movimento → braço → gene → rework).
+
+## 2026-10-04 — a barra de vida
+
+- **Feita** ([[Barra-de-vida]] §11): a vida (salva, no aparelho só quando muda, regeneração pelo tempo), quedas com dano pela altura, o dano do emissor por estágio, o golpe dos Safeguards com arremesso (três caminhos: o mesmo plano, cair da estrutura, bater num obstáculo) e a captura só ao zerar. `check:health` novo, 12/12; `check:safeguards` 9/9. Achado no caminho: depois de um golpe que arremessa para longe da vista, o Safeguard ficava sem o último ponto visto (erro a cada quadro) — corrigido.
+

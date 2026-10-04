@@ -1,6 +1,6 @@
 ---
-status: decidida (2026-10-03; revista em 2026-10-03 — quedas pela altura, sem dano de choque no próprio coice) — V1–V7 aprovadas, o golpe dos hostis detalhado (§3); a implementar
-prioridade: alta (a próxima feature de gameplay)
+status: feita (2026-10-04) — V1–V7, quedas pela altura, o emissor, o golpe com arremesso; check:health 12/12
+prioridade: — (feita)
 tags: [futuro, gameplay, vida, arma, safeguards, quedas, animacao]
 ---
 
@@ -121,3 +121,14 @@ A física decide (o arremesso é um impulso de verdade no `Walker` — o mesmo e
 3. **O emissor** (§2, §8) — o dano por estágio no disparo.
 4. **O golpe e o arremesso** (§3) — o estado novo do Safeguard (`world/safeguards.js`: em vez de `onCatch` no toque, o golpe; a pose nova do corpo em `world/bodies.js`); o arremesso no `Walker` (impulso + controle fora até pousar; caído ~1 s); a captura só ao zerar; o hostil esperando depois do golpe.
 5. **Testes** — `npm run check:health` (novo): dano por queda em alturas conhecidas (9 m nada; 20 m ≈ 26%; 30 m ≈ 52%; 50 m zera), o choque no obstáculo arremessado (com dano) **e pelo coice do emissor contra uma parede (sem dano)**, a sobrecarga por estágio, a regeneração no tempo, zerar → desmaio → acorda cheio; **o golpe**: um Safeguard de teste golpeia o jogador em três lugares preparados — no meio de uma plataforma larga (cai no mesmo plano: 50%), perto de uma borda alta (cai da estrutura: zera e desmaia), de costas para uma parede próxima (bate: 50% + o choque); e o segundo golpe zera → a captura. Mais `check:safeguards` (as rondas e a caçada continuam), `check:beam`, `check:pad` (o aparelho).
+
+## 11. Andamento
+
+- **Feita (2026-10-04)**, na ordem do §10:
+  1. **A vida** — `app/health.js`: `player.health` (salva no slot), `damage(fonte, quanto)`, a regeneração (1%/s depois de 6 s), `player:hurt` / `player:healed` / `player:zero`; zerou → o desmaio; no despertar, cheia. Ligada na Peregrinação; no Livre, a opção "vida no modo Livre" nas configurações (V5) — sem o aparelho, uma linha no HUD ("VIDA n%"). **No aparelho**: um traço contínuo abaixo dos gomos da carga, só quando muda (V1/V2); abaixo de 35% pisca. **O corpo fala**: a tela pisca o escuro ao levar dano (`uBlack`), o foco borra (`uBlur`), com pouca vida as bordas fecham (`uFaint`, somado ao do emissor) e o coração bate (`audio.heartbeat`).
+  2. **Quedas** — `app/body.js` `onLand`: `fallDamage(impacto)` (energia, `v²`; de 10 m a 38 m/s). Sem a vida (Livre), a regra de antes (> 38 m/s desmaia). O choque — `walker.onSlam` — só tira vida com `walker.thrown`.
+  3. **O emissor** — `app/beam.js` `fire`: `BEAM_DAMAGE[estágio]` (`lastShot.hurt`); a mira treme uns segundos (proporcional ao dano). Carregar fica bloqueado enquanto se é arremessado.
+  4. **O golpe** — `world/safeguards.js`: o estado `strike` (a ~1,5 m: preparar 0,35 s girando para você → o braço em 0,15 s → recolher 0,4 s → **esperar 1,5–2 s**); **se você saiu para mais de 2,3 m durante a preparação, ele erra** (escolha de implementação: a chance de esquivar). A pose nova em `world/bodies.js` (`strike(w, s)`: o braço direito recolhido com o tronco torcido; depois cruzando à frente do peito). `app/safeguards.js`: −50%, o arremesso (`walker.throwBody`: 12–16 m/s para longe dele, 4–6 m/s para cima; o controle sai até pousar; caído ~1 s com os olhos rente ao chão) e a captura de antes só ao zerar.
+  5. **Testes** — `npm run check:health` 12/12 (ver [[10-Comandos-e-Verificacao]]); `check:safeguards` 9/9 (a captura agora vem pelo segundo golpe).
+- **Imagens conferidas**: o traço da vida no aparelho (30%), e as três poses do golpe lado a lado (`--strikepose=cycle,N` com `--capture`; `--hurt=v` põe a vida em v aos 5 s).
+- **Observação para jogar**: com os números decididos (arremesso de 12–16 m/s, choque a partir de 12 m/s, ~25% a 30 m/s), **bater num obstáculo arremessado tira pouco — de 0 a ~5%** (medido: 0,8–2,8%). Se o choque deve pesar mais, é baixar o limiar ou subir a inclinação (V7: ajustar jogando).

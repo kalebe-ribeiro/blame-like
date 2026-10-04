@@ -12,7 +12,7 @@ Reorganizada em 2026-10-03. Três listas: **a implementar** (decidido, na ordem)
 
 | # | o quê | nota | estado |
 |---|---|---|---|
-| 1 | **Barra de vida** — a vida, quedas com dano **pela altura** (a partir de 10 m; zera em 38 m/s ≈ 48 m), o golpe com arremesso dos hostis, o dano da sobrecarga, `check:health` | [[Barra-de-vida]] §10 | decidida (V1–V7; revista em 2026-10-03) — **a próxima** |
+| 1 | **Barra de vida** — a vida, quedas com dano **pela altura** (a partir de 10 m; zera em 38 m/s ≈ 48 m), o golpe com arremesso dos hostis, o dano da sobrecarga, `check:health` | [[Barra-de-vida]] §10 | **feita** (2026-10-04): `check:health` 12/12, `check:safeguards` 9/9 — ver o Andamento da nota |
 | 2 | **Dano variável do emissor + níveis (Safeguards e vida de silício)** — médio-fraco mata o baixo, o médio pede vários, o alto muitos; o colapso (o nível máximo, que custa o braço) mata qualquer um; ferir/matar um morador numa vila deixa a vila hostil | [[Dano-do-emissor]] | decidida (2026-10-03) — junto da barra de vida |
 | 2b | **Movimento dos inimigos** — arranque com aceleração até uma velocidade terminal (o médio e o alto mais rápidos que a sua corrida); curvas custam velocidade | [[Movimento-dos-inimigos]] | decidida (M1–M4, 2026-10-03) — junto do dano (é o que equilibra a arma) |
 | 3 | **Recuperar o braço** — câmara de reconstrução (única nova), prótese (loot), moradores das vilas (troca), a saída garantida sem braços e o aviso de um braço só | [[Recuperar-o-braco]] | decidida (R1–R7, 2026-10-03) |
