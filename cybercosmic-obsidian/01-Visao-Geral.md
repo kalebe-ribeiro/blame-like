@@ -4,7 +4,7 @@
 
 - **Mundo infinito** em todas as direções (inclusive para cima e para baixo), gerado proceduralmente a partir de uma seed.
 - **Andável**: gravidade, colisão real, escadas, elevadores, vagões. Também dá para voar (noclip).
-- **Sem objetivo hoje**: só um sistema grande demais para ser compreendido, e você dentro dele. **Em discussão** (2026-09-29): um modo com progressão — ler a Cidade, seguir rastros, religar setores — sem fim, mas com objetivos ([[Ideias/Gameplay/Plano-de-Gameplay]]). Referência direta: *Blame!* ([[14-Universo-Blame]]).
+- **O objetivo final** (decidido 2026-10-03): **o gene de terminal da rede** — o que Killy procura —, o objetivo máximo do jogo, **quase impossível**; a mecânica ainda vai ser elaborada ([[Ideias/Futuro/Gene-terminal]]). Até lá, e no caminho: **Em discussão** (2026-09-29): um modo com progressão — ler a Cidade, seguir rastros, religar setores — sem fim, mas com objetivos ([[Ideias/Gameplay/Plano-de-Gameplay]]). Referência direta: *Blame!* ([[14-Universo-Blame]]).
 - **Tudo procedural**: geometria, texturas (no shader), som (Web Audio). Nenhum asset externo, nenhum servidor.
 
 ## Tecnologia

@@ -29,3 +29,6 @@ Não repetir. Ver também [[02-Direcao-de-Arte]].
 | trocar o modo de um mundo | 2026-09-29 | o modo fica preso ao salvamento ([[Modos-de-jogo]]) |
 | setores em grade regular / endereços "certinhos" | 2026-09-29 | tudo aleatório e orgânico ([[Enderecamento-da-Cidade]]) |
 | ler terminais na tela do próprio mundo | 2026-09-29 | a tela abre no centro ([[Terminais-com-conteudo]]) |
+| quebra-cabeças de elevadores e trens ([[Elevadores-e-trens-como-quebra-cabeca]]) | 2026-10-03 | "nada de quebra-cabeça" (usuário) |
+| copiar inscrições ([[Copiar-inscricoes]]) | 2026-10-03 | descartada pelo usuário |
+| modo expedição ([[Modo-expedicao]]) | 2026-10-03 | descartado pelo usuário |

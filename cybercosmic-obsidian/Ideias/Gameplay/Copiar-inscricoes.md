@@ -1,5 +1,5 @@
 ---
-status: proposta
+status: descartada (usuário, 2026-10-03)
 prioridade: média
 tags: [gameplay, base]
 ---

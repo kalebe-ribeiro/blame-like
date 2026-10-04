@@ -34,10 +34,10 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Seeds-compartilhaveis]] | ✔ feita (fase 4.4) | baixa |
 | [[Marcas-do-jogador]] | ✔ feita (fase 4.3) | baixa |
 | [[Cargas]] | feita (fase 7; contexto e recompensa em 2026-10-01) | — |
-| [[Copiar-inscricoes]] | proposta | média |
-| [[Credenciais-de-acesso]] | proposta | média |
-| [[Elevadores-e-trens-como-quebra-cabeca]] | proposta | baixa |
-| [[Modo-expedicao]] | proposta (talvez absorvida pelos modos) | baixa |
+| [[Copiar-inscricoes]] | ✗ descartada (2026-10-03) | — |
+| [[Credenciais-de-acesso]] | proposta — a relação com o gene fica para a mecânica dele | média |
+| [[Elevadores-e-trens-como-quebra-cabeca]] | ✗ descartada (2026-10-03) | — |
+| [[Modo-expedicao]] | ✗ descartado (2026-10-03) | — |
 
 ## Mundo
 
@@ -64,6 +64,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | [[Arma-do-Killy]] (feixe que fura o terreno) | feita (F1–F4, 2026-10-03; sobrecarga com estágios) |
 | [[Barra-de-vida]] (vida; golpe com arremesso dos hostis; quedas com dano; o custo da sobrecarga) | decidida (2026-10-03) — a implementar, a próxima |
 | [[Recuperar-o-braco]] (o braço perdido além do limite do emissor) | futuro — em aberto |
+| [[Gene-terminal]] (o gene de terminal da rede) | **o objetivo final, máximo — quase impossível** (2026-10-03); a mecânica: o usuário elabora |
 | [[Rework-grafico]] (texturas variadas, modelos de NPCs detalhados e variados, animações variadas) | futuro — **depois de toda a gameplay** |
 
 ## Técnico
