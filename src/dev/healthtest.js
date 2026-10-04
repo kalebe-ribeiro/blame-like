@@ -215,7 +215,7 @@ async function run(ctx) {
       const st = stageOf(o);
       const got = 1 - H.value;
       rows.push(`${st}:${pct(got)}`);
-      if (Math.abs(got - BEAM_DAMAGE[st]) > 1e-6 || ctx.beam.lastShot?.hurt !== BEAM_DAMAGE[st]) ok = false;
+      if (Math.abs(got - BEAM_DAMAGE[st]) > 1e-6 || ctx.beam.lastShot?.bodyHurt !== BEAM_DAMAGE[st]) ok = false;
       ctx.beam.restoreArms();
       await sleep(1000);
     }

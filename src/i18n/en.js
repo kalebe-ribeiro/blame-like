@@ -340,6 +340,7 @@ export default {
   'talk.news': 'There are people {dist} away. Hidden. As they should be.',
   'talk.newsNone': 'No one near. No one far either.',
   'npc.stolen': 'THE WANDERER TOOK THE CARGO',
+  'npc.villageSaw': 'THE VILLAGE SAW',
   'npc.drained': 'CELL DRAINED',
   'talk.leave': '— walk away',
   'talk.keys': 'W/S choose · E confirm · Esc leave',

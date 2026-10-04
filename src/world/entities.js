@@ -56,6 +56,7 @@ const LIFT_REACH = 60; // m: elevadores que um corpo considera para mudar de ní
 const LADDER_REACH = 14; // m: idem, escadas de marinheiro
 const VERT_GIVEUP = 150; // s: desiste de um elevador/escada (e o evita por um tempo)
 const DOWN = new THREE.Vector3(0, -1, 0);
+const STAGGER = 0.6; // s cambaleando depois de um tiro que não matou
 
 const _o = new THREE.Vector3();
 const _d = new THREE.Vector3();
@@ -136,7 +137,8 @@ export class EntitySystem {
   damage(e, amount, cause = 'unknown') {
     if (e.dead) return;
     e.hp -= amount;
-    this.bus?.emit('being:hurt', { id: e.id, kind: e.kind, cause, hp: e.hp });
+    if (cause === 'beam') e.staggerT = STAGGER; // cambaleia
+    this.bus?.emit('being:hurt', { id: e.id, kind: e.kind, cause, hp: e.hp, amount, x: e.feet.x, y: e.feet.y, z: e.feet.z });
     if (e.hp <= 0) this.kill(e, cause);
   }
 
@@ -234,6 +236,7 @@ export class EntitySystem {
       if (e.tier === 'far' && dist < NEAR && this.world.chunkLayer.isReadyAround(e.feet, 30)) this._toNear(e, origin);
       else if (e.tier === 'near' && dist > FAR) e.tier = 'far';
 
+      if (e.staggerT > 0) e.staggerT = Math.max(0, e.staggerT - dt);
       if (e.brain) e.brain.think(e, dt, g, origin, time);
       else if (e.tier === 'near') this._stepNear(e, dt, origin, time);
       else this._stepFar(e, dt);
@@ -246,6 +249,7 @@ export class EntitySystem {
         // o Walker olha para (−sen yaw, −cos yaw); o corpo foi montado olhando para +z
         e.rig.group.rotation.y = e.yaw + Math.PI;
         e.rig.animate(dt, e.speed, e.tier === 'far' || e.walker.grounded);
+        if (e.staggerT > 0) e.rig.stagger?.(Math.sin((e.staggerT / STAGGER) * Math.PI));
         if (e.grabPose) e.rig.grab?.(e.grabPose); // agarrando alguém (app/wake.js)
         else if (e.strikePose) e.rig.strike?.(e.strikePose.w, e.strikePose.s); // o golpe (world/safeguards.js)
       }

@@ -340,6 +340,7 @@ export default {
   'talk.news': 'Tem gente a {dist}. Escondida. Como deve ser.',
   'talk.newsNone': 'Ninguém por perto. Ninguém longe também.',
   'npc.stolen': 'O ANDARILHO LEVOU A CARGA',
+  'npc.villageSaw': 'A VILA VIU',
   'npc.drained': 'CÉLULA DRENADA',
   'talk.leave': '— ir embora',
   'talk.keys': 'W/S escolher · E confirmar · Esc sair',

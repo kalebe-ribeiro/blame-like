@@ -226,6 +226,16 @@ function buildBody(material, D, slitMat = null, dress = null) {
       spine.rotation.x += 0.3 * k;
       neck.rotation.x = 0.25 * k;
     },
+    /** Ferido (k 0..1): o tronco recua, a cabeça cai para trás, os braços abrem (o cofre, Dano-do-emissor §4). */
+    stagger(k) {
+      for (const A of arms) {
+        A.sh.rotation.x += 0.5 * k;
+        A.sh.rotation.z = A.s * (0.06 + 0.45 * k);
+        A.el.rotation.x -= 0.4 * k;
+      }
+      spine.rotation.x -= 0.35 * k;
+      neck.rotation.x = -0.3 * k;
+    },
     /** O golpe: w (0..1) recolhe o braço direito para trás e torce o tronco; s (0..1) o braço vem
      *  para a frente, de lado, na altura do peito (o arremesso). */
     strike(w, s) {

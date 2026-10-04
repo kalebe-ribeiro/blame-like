@@ -5,11 +5,14 @@
 //    conversa    E diante de um: a conversa abre; aprender palavras; levar uma carga
 //    carga       carregando: não se corre (controls.burden)
 //    entrega     na vila de destino: entregar → a carga sai, a célula enche
-//    despertar   recolhido por humanos → acorda perto de uma vila habitada
+//    hostil      ferir um morador com o emissor: a vila fica hostil (salvo), não conversa, sai das
+//                vilas habitadas (carga, despertar), e um morador vem e golpeia (−25%, o arremesso)
+//    despertar   recolhido por humanos → acorda perto de uma vila habitada (não a hostil)
 //    andarilhos  existem andarilhos perto da teia, e eles andam
 //    ladrao      um andarilho ladrão arranca a carga de quem chega perto
 //    silicio     a vida de silício se revela de perto e o toque drena a célula
 //    terceira    um Safeguard vê a vida de silício e vai atrás dela, não de você
+//    andarilho   ferido pelo emissor, foge; morto, nada além (nenhuma vila fica hostil)
 //    fiscal      nenhum corpo atravessou parede nem caiu
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -133,6 +136,42 @@ async function run(ctx) {
   }
   report({ kind: 'entrega', ok: delivered, why: `${delivered ? 'entregue · célula cheia' : 'não entregou'} · ${rewardWhy}` });
 
+  // ── hostil: ferir um morador ──
+  let hostileId = null;
+  {
+    const hv = cargo ? world.npcs.inhabitedNear(cargo.x, cargo.y, cargo.z, 200)[0] : v;
+    const ppl = world.npcs.villages.get(hv?.u.id)?.people ?? [];
+    const vic = ppl.find((e) => e.tier === 'near' && !e.dead);
+    let why = 'nenhum morador perto';
+    let ok = false;
+    if (vic) {
+      facing(vic, 4);
+      await sleep(800);
+      ctx.health.set(1);
+      /** @type {any} */
+      let hit = null;
+      const off2 = world.bus.on('player:struck', (ev) => (hit ??= ev));
+      world.entities.damage(vic, 0.1, 'beam'); // (um raspão do emissor)
+      hostileId = hv.u.id;
+      const saved = !!ctx.slot.villages?.[hostileId]?.hostile;
+      const out = !world.npcs.inhabitedNear(hv.u.x, hv.u.y, hv.u.z, 200).some((o) => o.u.id === hostileId);
+      facing(vic, 2.2);
+      const g0 = here();
+      const fwd = new THREE.Vector3(-Math.sin(controls.yaw), 0, -Math.cos(controls.yaw));
+      const noTalk = !world.npcs.talkable(g0, fwd);
+      const struck = await waitFor(() => !!hit, 20);
+      await sleep(300);
+      off2();
+      const lost = 1 - ctx.health.value;
+      ok = saved && out && noTalk && struck && hit.by === 'human' && Math.abs(lost - 0.25) < 0.02;
+      why = `salvo ${saved} · fora das vilas habitadas ${out} · sem conversa ${noTalk} · golpe ${struck ? `de ${hit.by}, vida −${Math.round(lost * 100)}%` : 'não veio'}`;
+    }
+    report({ kind: 'hostil', ok, why });
+    ctx.ui.teleport('teia', 'teia');
+    await waitFor(() => !controls.walker.thrown, 5);
+    ctx.health.set(1);
+  }
+
   // ── despertar ──
   /** @type {any} */
   let woke = null;
@@ -143,7 +182,7 @@ async function run(ctx) {
   await waitFor(() => !!woke, 90);
   off();
   const wv = woke ? world.npcs.inhabitedNear(woke.to.x, woke.to.y, woke.to.z, 400)[0] : null;
-  report({ kind: 'despertar', ok: !!woke && woke.taker === 'npc' && !!wv && wv.d < 80, why: woke ? `acordou (${woke.taker}) a ${wv ? Math.round(wv.d) : '?'} m de uma vila habitada · carga ${ctx.player.carried.length ? 'pedida' : 'nenhuma'}` : 'não acordou' });
+  report({ kind: 'despertar', ok: !!woke && woke.taker === 'npc' && !!wv && wv.d < 80 && wv.u.id !== hostileId, why: woke ? `acordou (${woke.taker}) a ${wv ? Math.round(wv.d) : '?'} m de uma vila habitada${wv?.u.id === hostileId ? ' — A HOSTIL' : ''} · carga ${ctx.player.carried.length ? 'pedida' : 'nenhuma'}` : 'não acordou' });
   await waitFor(() => !ctx.wake.active, 20);
   ctx.player.carried.length = 0;
 
@@ -216,14 +255,51 @@ async function run(ctx) {
     const pp = circuitAt(guard.sg.c, guard.sg.s + 45);
     stand(pp.x, pp.y, pp.z);
     await sleep(4000);
-    const q = circuitAt(guard.sg.c, guard.sg.s + 10);
+    // (a de antes pode ter saído de cena — longe do jogador, o andarilho sai da lista: um que esteja aqui)
+    if (![...world.npcs.wanderers.values()].includes(si)) si = [...world.npcs.wanderers.values()].find((e) => !e.dead && e !== wd) ?? si;
+    Object.assign(si.npc, { silicon: true, thief: false });
+    // (ele pode não estar de ronda — caçando, voltando: a vida de silício vai 10 m à frente dele, onde ele está)
+    if (guard.sg.state !== 'patrol') {
+      sg._lose(guard);
+      guard.sg.state = 'patrol'; // (de ronda: de volta à ronda ele percebe mais — veria você)
+    }
+    if (ctx.carried.lanternOn) ctx.carried.toggleLantern();
+    // (só a prioridade: o jogador fica imperceptível aqui — a caçada a você é do check:safeguards)
+    const senses0 = sg.senses;
+    sg.senses = () => null;
+    const q = circuitAt(guard.sg.c, guard.sg.s + 8);
+    // (ainda voltando à ronda: longe do ponto do circuito — então 8 m à frente de onde ele está)
+    if (guard.feet.distanceTo(new THREE.Vector3(q.x, q.y, q.z)) > 20) Object.assign(q, { x: guard.feet.x - Math.sin(guard.yaw) * 8, y: guard.feet.y, z: guard.feet.z - Math.cos(guard.yaw) * 8 });
     si.feet.set(q.x, q.y, q.z);
     world.entities.toNear(si, world.origin);
     if (!si.npc.revealed) world.npcs.reveal(si);
     si.npc.state = 'walk';
     chased = await waitFor(() => guard.sg.prey === si || !world.npcs.wanderers.size || world.npcs.stats.destroyed > 0, 15);
+    sg.senses = senses0;
+    const eyeS = new THREE.Vector3(guard.feet.x, guard.feet.y + 2.1, guard.feet.z);
+    const tgt = new THREE.Vector3(si.feet.x, si.feet.y + 1.4, si.feet.z);
+    var dbg = `si: morta ${si.dead} revelada ${si.npc.revealed} na lista ${[...world.npcs.silicon()].includes(si)} · a ${si.feet.distanceTo(guard.feet).toFixed(1)} m · vista ${sg._clear(eyeS, tgt, eyeS.distanceTo(tgt), world.origin)} · tier ${si.tier}/${guard.tier}`;
   }
-  report({ kind: 'terceira', ok: chased, why: guard ? (chased ? `o Safeguard foi atrás da vida de silício (${guard.sg.prey ? 'caçando' : 'alcançou'})` : `não foi (${guard.sg.state}, ${guard.tier})`) : 'sem Safeguard perto' });
+  report({ kind: 'terceira', ok: chased, why: guard ? (chased ? `o Safeguard foi atrás da vida de silício (${guard.sg.prey ? 'caçando' : 'alcançou'})` : `não foi (${guard.sg.state}, ${guard.tier}) · ${typeof dbg === 'string' ? dbg : ''}`) : 'sem Safeguard perto' });
+
+  // ── andarilho ferido e morto ──
+  {
+    const hostile0 = Object.values(ctx.slot.villages ?? {}).filter((x) => x.hostile).length;
+    const w2 = [...world.npcs.wanderers.values()].find((e) => !e.dead && e !== si && !e.npc.revealed) ?? (wd && !wd.dead && !wd.npc.revealed ? wd : null);
+    let fled = false;
+    if (w2) {
+      await waitFor(() => w2.npc.state === 'walk', 30);
+      Object.assign(w2.npc, { silicon: false, thief: false, state: 'walk' });
+      meet(w2, 6);
+      await sleep(500);
+      world.entities.damage(w2, 0.1, 'beam');
+      fled = await waitFor(() => w2.npc.state === 'flee', 3);
+      world.entities.kill(w2, 'beam');
+    }
+    await sleep(300);
+    const hostile1 = Object.values(ctx.slot.villages ?? {}).filter((x) => x.hostile).length;
+    report({ kind: 'andarilho', ok: !!w2 && fled && w2.dead && hostile1 === hostile0, why: w2 ? `ferido: ${fled ? 'fugiu' : `não fugiu (${w2.npc.state})`} · morto ${w2.dead} · vilas hostis ${hostile0} → ${hostile1}` : 'nenhum andarilho perto' });
+  }
 
   clearInterval(watch);
   report({ kind: 'fiscal', ok: fiscal.wall === 0 && fiscal.fell === 0, why: `atravessou parede ${fiscal.wall}× · caiu ${fiscal.fell}×` });

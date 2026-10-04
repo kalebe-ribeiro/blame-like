@@ -41,6 +41,7 @@ import { createBeamFx, beamColors } from './beamfx.js';
 import { cutHitsBoxes } from '../gen/cut.js';
 import { CHUNK } from '../gen/field.js';
 import { BEAM_DAMAGE, slamDamage } from './health.js';
+import { resistOf } from '../world/levels.js';
 
 export const CHARGE = { min: 0.25, full: 2.5, hold: 3.0, over: 6.5, beyond: 11.0 };
 /** O estágio a partir do qual o braço que atira é perdido. */
@@ -104,6 +105,9 @@ export function shotOf(k, o = 0) {
     range: 30 + 370 * k + 600 * a + 1000 * b,
     r: 0.6 + 2.2 * k + 2.4 * a + 2.5 * a * a * a + 5 * b + 6 * b * b,
     cost: 0.03 + 0.15 * k + 0.17 * a + 0.15 * b,
+    // o dano nos seres (o cofre, Dano-do-emissor §1), em "vidas" de um ser de resistência 1:
+    // a carga 0,3 → 1; a sobrecarga até 3 no limite; além, 4 e 5; o COLAPSO (estágio 7) mata qualquer um
+    dmg: o >= STAGES[7] - 1e-6 ? Infinity : o > 1 ? 3 + 3 * (o - 1) : o > 0 ? 1 + 2 * o : 0.3 + 0.7 * k,
   };
 }
 
@@ -337,17 +341,21 @@ export function createBeam(ctx) {
       world.addCut(cut, a);
     }
     mark();
-    // o que estava no caminho morre
+    // o que estava no caminho: o dano pela carga e pela resistência de cada um (o cofre, Dano-do-emissor):
+    // em cheio (o centro do corpo dentro do furo) ×1, de raspão (até 0,45 m fora) ×0,5; o colapso mata
     const ab = end.clone().sub(a);
     let kills = 0;
+    let hurt = 0;
     for (const e of world.entities.list.values()) {
       if (e.dead) continue;
       _m.copy(e.feet).y += 1.1;
       const u = Math.max(0, Math.min(1, _m.clone().sub(a).dot(ab) / (ab.lengthSq() || 1)));
-      if (a.clone().addScaledVector(ab, u).distanceTo(_m) < S.r + 0.45) {
-        world.entities.kill(e, 'beam');
-        kills++;
-      }
+      const d = a.clone().addScaledVector(ab, u).distanceTo(_m);
+      if (d >= S.r + 0.45) continue;
+      if (S.dmg === Infinity) world.entities.kill(e, 'beam');
+      else world.entities.damage(e, (S.dmg * (d < S.r ? 1 : 0.5)) / resistOf(e), 'beam');
+      if (e.dead) kills++;
+      else hurt++;
     }
     mark();
     // os efeitos: o traço, a detonação correndo pela linha, a brasa, o que cai (app/beamfx.js)
@@ -368,10 +376,10 @@ export function createBeam(ctx) {
     // além do limite, o braço que segura o emissor se desfaz
     const lost = stageOf(oo) >= ARM_LOSS_STAGE ? loseArm(_m.clone()) : null;
     // a sobrecarga cobra do corpo (app/health.js): a mão queima, a mira treme — pode zerar (V6)
-    const hurt = BEAM_DAMAGE[stageOf(oo)];
-    if (hurt > 0) ctx.health?.damage('beam', hurt);
+    const self = BEAM_DAMAGE[stageOf(oo)];
+    if (self > 0) ctx.health?.damage('beam', self);
     mark();
-    lastShot = { k: kk, o: oo, ...S, t, stop, kills, lost, hurt };
+    lastShot = { k: kk, o: oo, ...S, t, stop, kills, hurt, lost, bodyHurt: BEAM_DAMAGE[stageOf(oo)] };
     world.bus.emit('player:beam', { k: kk, o: oo, length: t, stop, kills, x: end.x, y: end.y, z: end.z });
     mark();
     const names = ['alcance', 'corte', 'mortes', 'efeitos', 'som/coice/alerta', 'braço', 'avisos'];
@@ -394,6 +402,17 @@ export function createBeam(ctx) {
     world.bus.emit('player:armLost', { arm: which });
     return which;
   }
+
+  // ferido sem morrer (o cofre, Dano-do-emissor §4): as máquinas soltam faíscas; os humanos, um baque
+  world.bus.on('being:hurt', (ev) => {
+    if (ev.cause !== 'beam' || ev.hp <= 0) return;
+    const g = new THREE.Vector3(ev.x, ev.y + 1.3, ev.z);
+    const [pan, dist] = ctx.placeOf(g.x, g.y, g.z);
+    if (ev.kind === 'safeguard' || ev.kind === 'silicon') {
+      fx.hitSparks(g);
+      audio.clangAt?.(pan, Math.max(1, dist));
+    } else audio.impact?.(Math.min(14, 6 + 8 * (ev.amount ?? 0)));
+  });
 
   // teclado e mouse (o controle: controls.padFire / padCancel — controls/noclip.js)
   document.addEventListener('keydown', (e) => {

@@ -49,6 +49,10 @@ export function slamDamage(v) {
 export const BEAM_DAMAGE = [0, 0, 0.05, 0.12, 0.3, 0.3, 0.3, 0.3];
 
 export const STRIKE_DAMAGE = 0.5;
+/** O golpe de um humano (os moradores de uma vila hostil — o cofre, Dano-do-emissor §4). */
+export const HUMAN_STRIKE_DAMAGE = 0.25;
+/** O arremesso do golpe (m/s): horizontal, para longe de quem golpeou; e para cima. */
+export const THROW = { h: [12, 16], up: [4, 6] };
 export const REGEN = { delay: 6, rate: 0.01 };
 /** s que a vida fica no aparelho depois de encher */
 const SHOW_AFTER = 3;
@@ -113,6 +117,45 @@ export function createHealth(ctx) {
     ctx.wake.start('impact');
   }
 
+  /**
+   * O golpe de um hostil chegou (e: o corpo dele; hit: você ainda ao alcance): −amount e o
+   * arremesso para longe dele (controls/walker.js throwBody); zerou → onZero(e) (a captura).
+   * Sem a vida (o Livre sem a opção), só o arremesso.
+   */
+  function struck(e, hit, amount, onZero) {
+    if (ctx.wake?.active) return;
+    const [pan, dist] = ctx.placeOf(e.feet.x, e.feet.y + 1.2, e.feet.z);
+    if (!hit) {
+      audio.sgStepAt?.(pan, dist, true); // errou: o braço passa no ar, o pé bate
+      return;
+    }
+    const w = controls.walker;
+    const p = world.toGlobal(ctx.camera.position);
+    let dx = p.x - e.feet.x;
+    let dz = p.z - e.feet.z;
+    const h = Math.hypot(dx, dz);
+    if (h < 1e-3) {
+      dx = -Math.sin(e.yaw);
+      dz = -Math.cos(e.yaw);
+    } else {
+      dx /= h;
+      dz /= h;
+    }
+    audio.impact?.(28);
+    world.bus.emit('player:struck', { x: e.feet.x, y: e.feet.y, z: e.feet.z, by: e.kind });
+    if (enabled()) {
+      const left = damage('strike', amount, { by: e, catch: onZero });
+      if (left === null || left <= 0 || ctx.wake?.active) return; // zerou: a captura
+    }
+    ctx.beam?.cancel?.('golpe');
+    const r = Math.random();
+    const v = THROW.h[0] + r * (THROW.h[1] - THROW.h[0]);
+    const up = THROW.up[0] + r * (THROW.up[1] - THROW.up[0]);
+    w.throwBody(dx * v * controls.scale, dz * v * controls.scale, up * controls.scale);
+    controls.pitch = Math.min(1.2, controls.pitch + 0.3); // a cabeça vai para trás com o golpe
+    if (!enabled()) controls.rumble?.(0.9, 0.7, 400);
+  }
+
   // no despertar, a vida volta cheia
   world.bus.on('player:wake', () => {
     player.health.value = player.health.max;
@@ -144,6 +187,7 @@ export function createHealth(ctx) {
       return enabled() && !ctx.wake?.active ? Math.max(0, 1 - frac() / LOW) * 0.22 : 0;
     },
     damage,
+    struck,
     /** (testes e o futuro) devolve vida */
     heal(amount) {
       const h = player.health;

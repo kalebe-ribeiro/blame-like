@@ -19,6 +19,11 @@
 //    por um quarto da célula, ou contam onde há uma vila; os outros não têm
 //    nada a dizer (e, se você carrega uma carga, podem arrancá-la e fugir).
 //  VIDA DE SILÍCIO (7.6): tentar falar com uma a revela; o toque dela drena a célula.
+//  VILA HOSTIL (o cofre, Dano-do-emissor §4): ferir ou matar um morador com o emissor deixa
+//    a vila hostil PARA SEMPRE (slot.villages[id].hostile): os moradores vêm e golpeiam (−25%,
+//    o arremesso — app/health.js struck); não conversam, não trocam, não refazem nada; a vila
+//    não é mais lugar de despertar nem destino de carga. Zerou por eles: o desmaio dos NPCs,
+//    e você acorda noutra vila (longe).
 //  O que cada vila já deu fica no mundo salvo (slot.villages).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
@@ -27,6 +32,7 @@ import { TalkPanel } from '../ui/talk.js';
 import { CONCEPTS, NEED } from '../lang/ancient.js';
 import { uniqueTerminal } from '../gen/sites.js';
 import { hash4 } from '../gen/hash.js';
+import { HUMAN_STRIKE_DAMAGE } from './health.js';
 
 const RECHARGE_EVERY = 20 * 60 * 1000; // ms
 const TEACH = 4;
@@ -275,7 +281,27 @@ export function createPeople(ctx) {
   });
 
   // o que os andarilhos e a vida de silício podem fazer com você (world/npcs.js)
+  // ferir ou matar um morador: a vila viu (para sempre)
+  const angered = (ev) => {
+    if (ev.cause !== 'beam') return;
+    const e = world.entities.list.get(ev.id);
+    const u = e?.npc?.role === 'villager' ? e.npc.village : null;
+    if (!u) return;
+    const st = stateOf(u.id);
+    if (st.hostile) return;
+    st.hostile = true;
+    if (with_?.npc?.village?.id === u.id) close();
+    tell(t('npc.villageSaw'));
+    ctx.audio?.sgSpot?.(...ctx.placeOf(e.feet.x, e.feet.y + 1.2, e.feet.z));
+    world.bus.emit('village:hostile', { id: u.id });
+  };
+  world.bus.on('being:hurt', angered);
+  world.bus.on('being:die', angered);
+
   const wire = () => {
+    world.npcs.hostile = (id) => !!slot.villages?.[id]?.hostile;
+    // o golpe de um morador hostil: −25% e o arremesso; zerou → recolhido por humanos (longe dali)
+    world.npcs.onStrike = (e, hit) => ctx.health?.struck(e, hit, HUMAN_STRIKE_DAMAGE, () => ctx.wake.start('impact', 'npc'));
     world.npcs.player = {
       carrying: () => !!cargo(),
       walking: () => controls.mode === 'walk' && !ctx.wake?.active,

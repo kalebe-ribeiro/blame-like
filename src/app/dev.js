@@ -133,7 +133,7 @@ export function setupDev(ctx) {
   }
   // --strikepose=w,s: o Safeguard mais perto fica na pose do golpe (para capturas — world/bodies.js strike)
   // (--strikepose=cycle,N: aos N s ele para e as três poses — parado, preparando, golpeando — são
-  //  capturadas lado a lado no mesmo lugar: strike-rest/wind/swing.png ao lado da --capture)
+  //  capturadas lado a lado no mesmo lugar: strike-rest/wind/swing.png ao lado da --capture; e ferido: strike-hurt.png)
   if (params.get('strikepose')?.startsWith('cycle')) {
     const at = Number(params.get('strikepose').split(',')[1] ?? 14);
     const shot = (name) => /** @type {any} */ (window).cybercosmic?.devCapture?.(name);
@@ -150,6 +150,13 @@ export function setupDev(ctx) {
         await shot(`strike-${n}.png`);
       }
       near.strikePose = null;
+      // ferido (o cofre, Dano-do-emissor §4): a pose de recuo no meio, e as faíscas do peito
+      const keep = setInterval(() => (near.staggerT = 0.3), 10);
+      const THREE_ = await import('three');
+      ctx.beam.fx.hitSparks(new THREE_.Vector3(near.feet.x, near.feet.y + 1.3, near.feet.z), 40);
+      await wait(120);
+      await shot('strike-hurt.png');
+      clearInterval(keep);
       near.sg.state = 'patrol';
     }, at * 1000);
   } else if (params.get('strikepose')) {

@@ -94,6 +94,9 @@ async function run(ctx) {
 
   await sleep(SETTLE);
   const part = ctx.params.get('beampart');
+  // o dano nos seres e a fuga (dev/damagetest.js — --beampart=dano só isso)
+  if (!part || part === 'dano') await (await import('./damagetest.js')).runDamage(ctx, report);
+  if (part === 'dano') return;
   if (part !== 'f1') await runF2(ctx, report);
   if (part === 'f2') return;
 

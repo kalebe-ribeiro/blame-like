@@ -86,6 +86,7 @@ export function createWake(ctx) {
       for (const u of world.field.uniquesNear(g.x, g.y, g.z, R)) {
         if (u.kind !== kind) continue;
         if (kind === 'village' && !villageInhabited(world.field, u)) continue; // quem te recolheu mora lá
+        if (kind === 'village' && ctx.slot?.villages?.[u.id]?.hostile) continue; // (uma vila hostil não recolhe ninguém)
         const d = Math.hypot(u.x - g.x, u.y - g.y, u.z - g.z);
         if (!best || d < best.d) best = { u, d };
       }

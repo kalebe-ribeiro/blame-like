@@ -10,10 +10,14 @@
 //    chamado    no aberto: o de ronda mais perto vem pelo grafo
 //    subir      procurando você 240 m acima (a ponte de cima de uma passagem): ele
 //               pega o elevador grande e chega lá; e, sem elevador, sobe pela escada
+//    arranque   num chão largo, um de cada nível caçando em linha reta: começa em v0 e chega à
+//               terminal no tempo da aceleração (baixo 8 m/s em 2 s · médio 11 em 2 s · alto 14 em 1,4 s)
+//    curva      o alto na terminal: o alvo muda 90° de lado — ele perde velocidade e acelera de novo
 //    fiscal     nenhum corpo atravessou parede nem caiu
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { circuitAt } from '../gen/patrols.js';
+import { MOVE } from '../world/levels.js';
 
 const SETTLE = 7000;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -65,7 +69,130 @@ export async function runSafeguardTest(ctx) {
     return e;
   };
 
+  /** O arranque e a curva (--sgpart=arranque roda só isto). */
+  const arranque = async () => {
+  // ── arranque e curva: num chão largo ──
+  {
+    const w = controls.walker;
+    const DOWN = new THREE.Vector3(0, -1, 0);
+    const dirOf = (a) => new THREE.Vector3(Math.sin(a), 0, Math.cos(a));
+    const floorBelow = (x, y, z) => {
+      const h = w.col.ray(new THREE.Vector3(x, y, z), DOWN, 3);
+      return h && h.face && h.face.normal.y > 0.55 ? h.point.y : null;
+    };
+    let spot = null;
+    for (const place of ['camada', 'galeria', 'estrato', 'teia', 'maquinas']) {
+      if (!ctx.ui.teleport(place, place)) continue;
+      controls.setMode('walk');
+      await sleep(SETTLE);
+      await waitFor(() => w.grounded && sg.byTerritory.size > 0, 6);
+      if (!sg.byTerritory.size) continue;
+      w.col._t = -1e9;
+      w.col.buildsPerFrame = 600;
+      w.col.refresh(camera.position.clone(), 70);
+      w.col.buildsPerFrame = 2;
+      const feet = w.feet.clone();
+      // uma linha de 45 m de chão plano, sem nada no caminho, e 20 m de lado aos 30 m
+      for (let i = 0; i < 40 && !spot; i++) {
+        const p = feet.clone().addScaledVector(dirOf(i * 2.4), (i % 5) * 4);
+        const y = floorBelow(p.x, feet.y + 1, p.z);
+        if (y === null) continue;
+        const c = new THREE.Vector3(p.x, y, p.z);
+        for (let q = 0; q < 8 && !spot; q++) {
+          const d = dirOf((q / 8) * Math.PI * 2);
+          const side = new THREE.Vector3(-d.z, 0, d.x);
+          let ok = true;
+          for (let r = 3; r <= 45 && ok; r += 3) {
+            const fy = floorBelow(c.x + d.x * r, y + 1, c.z + d.z * r);
+            if (fy === null || Math.abs(fy - y) > 0.4) ok = false;
+          }
+          for (let r = 3; r <= 20 && ok; r += 3) {
+            const o = c.clone().addScaledVector(d, 30).addScaledVector(side, r);
+            const fy = floorBelow(o.x, y + 1, o.z);
+            if (fy === null || Math.abs(fy - y) > 0.4) ok = false;
+          }
+          for (const hh of [1.0, 1.8]) if (ok && w.col.ray(c.clone().setY(y + hh), d, 45)) ok = false;
+          if (ok && w.col.ray(c.clone().addScaledVector(d, 30).setY(y + 1.2), side, 20)) ok = false;
+          if (ok) spot = { place, c, d, side };
+        }
+      }
+      if (spot) break;
+    }
+    if (!spot) {
+      report({ kind: 'arranque', ok: false, why: 'nenhum chão largo com ronda perto' });
+      report({ kind: 'curva', ok: false, why: '—' });
+    } else {
+      const rules0 = ctx.rules;
+      ctx.rules = { ...rules0, health: false }; // (só o movimento: sem golpe nem arremesso no fim)
+      const run = async (level, turn) => {
+        // o jogador na ponta; o Safeguard 44 m antes, caçando
+        controls.placeFeet(spot.c.clone().addScaledVector(spot.d, 44));
+        await sleep(600);
+        const g = here();
+        let x = null;
+        for (const e of sg.byTerritory.values()) if (!x || e.feet.distanceTo(g) < x.feet.distanceTo(g)) x = e;
+        for (const e of sg.all()) if (e !== x && e.sg.state !== 'patrol') sg._lose(e);
+        x.feet.copy(world.toGlobal(spot.c.clone()));
+        world.entities.toNear(x, world.origin);
+        x.walker.vel.set(0, 0, 0);
+        x.level = level;
+        lantern(true);
+        Object.assign(x.sg, { state: 'hunt', sees: true, unseen: 0, lastSeen: g.clone().setY(g.y - 1.7), prey: null, bestD: Infinity, stuckT: 0, waitT: 0, huntV: undefined, turns: 0, turnRef: null });
+        const M = MOVE[level];
+        const t0 = performance.now();
+        const samples = [];
+        let turnedAt = null;
+        await new Promise((resolve) => {
+          const tick = () => {
+            const t = (performance.now() - t0) / 1000;
+            samples.push({ t, v: x.sg.huntV ?? 0, sp: x.speed });
+            // a curva: com ele na terminal, o alvo pula 90° para o lado
+            if (turn && turnedAt === null && t > 2.2) {
+              turnedAt = t;
+              const side = spot.c.clone().addScaledVector(spot.d, 30).addScaledVector(spot.side, 18);
+              controls.placeFeet(side);
+              x.sg.lastSeen = world.toGlobal(side.clone()).setY(x.sg.lastSeen.y);
+            }
+            if (t > (turn ? 4 : 2.6) || x.sg.state === 'strike' || x.sg.state === 'grab') resolve(null);
+            else requestAnimationFrame(tick);
+          };
+          tick();
+        });
+        sg._lose(x);
+        return { M, samples, turnedAt, turns: x.sg.turns ?? 0 };
+      };
+      const rows = [];
+      let okA = true;
+      for (const level of ['low', 'mid', 'high']) {
+        const r = await run(level, false);
+        const first = r.samples.find((s) => s.v > 0);
+        const at = r.samples.find((s) => s.v >= r.M.vt - 0.05);
+        const exp = (r.M.vt - r.M.v0) / r.M.a;
+        const top = Math.max(...r.samples.map((s) => s.sp));
+        const ok = !!first && first.v < r.M.v0 + 0.5 && !!at && Math.abs(at.t - first.t - exp) < 0.35 && top > 0.85 * r.M.vt;
+        if (!ok) okA = false;
+        rows.push(`${level}: ${first ? first.v.toFixed(1) : '?'} → ${r.M.vt} m/s em ${at ? (at.t - first.t).toFixed(2) : '—'} s (esperado ${exp.toFixed(2)}) · o corpo a ${top.toFixed(1)} · ${r.turns} curva(s)`);
+      }
+      report({ kind: 'arranque', ok: okA, why: `${rows.join(' · ')} (${spot.place})` });
+      const r = await run('high', true);
+      const before = r.samples.filter((s) => s.t <= r.turnedAt).at(-1)?.v ?? 0;
+      const after = r.samples.filter((s) => r.turnedAt !== null && s.t > r.turnedAt && s.t < r.turnedAt + 1.2);
+      const low = after.length ? Math.min(...after.map((s) => s.v)) : before;
+      report({ kind: 'curva', ok: r.turns > 0 && before > 13 && low < 0.8 * before, why: `alto: ${before.toFixed(1)} m/s na reta → ${low.toFixed(1)} m/s depois de virar (${r.turns} curva(s) contada(s))` });
+      lantern(false);
+      ctx.rules = rules0;
+    }
+  }
+
+  };
+
   await sleep(SETTLE);
+  if (ctx.params.get('sgpart') === 'arranque') {
+    await arranque();
+    clearInterval(watch);
+    console.warn('CHECK:DONE');
+    return;
+  }
 
   // ── rondas ──
   ctx.ui.teleport('teia', 'teia');
@@ -224,6 +351,8 @@ export async function runSafeguardTest(ctx) {
     }
     report({ kind: `subir:${how}`, ok: !!res?.ok, why: res ? `subiu ${res.up.toFixed(0)} de ${res.H.toFixed(0)} m · ${res.state} · ${res.vert}` : 'sem elevador grande ou sem ronda' });
   }
+
+  await arranque();
 
   clearInterval(watch);
   for (const x of sg.all()) {

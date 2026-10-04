@@ -475,6 +475,11 @@ export function createBeamFx(ctx) {
 
   const api = {
     /** Carregando (k 0..1) — ou não (k < 0). */
+    /** Um ser ferido pelo feixe (g: GLOBAL, o peito dele): faíscas — os de máquina (Safeguards, silício). */
+    hitSparks(g, n = 24) {
+      const t = now();
+      for (let i = 0; i < n; i++) sparks.spawn(g, _v.set((Math.random() - 0.5) * 4, Math.random() * 3, (Math.random() - 0.5) * 4), t, 0.3 + Math.random() * 0.6, 0.04 + Math.random() * 0.05);
+    },
     /** O braço que atira se desfaz (muzzle: a boca, na cena): pedaços caindo, faíscas, poeira. */
     armBurst(muzzle) {
       const g = muzzle.clone().add(world.origin);

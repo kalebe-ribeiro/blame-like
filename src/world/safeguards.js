@@ -10,10 +10,14 @@
 //    luz (escuro e quieto: só muito perto; setor com energia; lanterna acesa) e
 //    com o alerta do setor; linha de visão por raio. Ouve correr e os barulhos
 //    (this.noise: quedas, alavancas, leituras). De ronda percebe pouco.
-//  CAÇADA (6.4): ronda → caça (direto, ~5 m/s: mais que o seu andar, menos que
-//    a sua corrida) → perdeu de vista: vai ao último ponto visto e procura →
+//  CAÇADA (6.4): ronda → caça → perdeu de vista: vai ao último ponto visto e procura →
 //    desiste → volta ao circuito. Não sobe escadas de marinheiro nem pula de
 //    beiradas (o desvio local não pisa onde não há chão).
+//  NÍVEIS E ARRANQUE (o cofre, Movimento-dos-inimigos): cada um é baixo, médio ou alto
+//    (world/levels.js — pelo lugar: perto do começo só baixos). Caçando, ARRANCA: começa
+//    devagar e acelera até a terminal do nível (baixo 8 m/s — menos que a sua corrida;
+//    médio 11, alto 14 — mais); uma curva forte custa velocidade; escada, elevador, ferido
+//    ou depois de um golpe, recomeça de baixo.
 //  CAPTURA (6.5): o toque — this.onCatch (app/safeguards.js → desmaio → cemitério).
 //  O GOLPE (com a vida — o cofre, Barra-de-vida §3): a ~1,5 m, no lugar do toque, se
 //    this.strikes() diz que sim: para, gira para você e recolhe o braço (0,35 s); o braço
@@ -33,10 +37,11 @@ import * as THREE from 'three';
 import { territoryAt, patrolCircuit, circuitAt, circuitNearest, PATROL } from '../gen/patrols.js';
 import * as circ from '../gen/patrols.js';
 import { CollisionWorld } from './collision.js';
+import { levelAt, MOVE, accelerate } from './levels.js';
 
 const WALK = 4.2; // m/s do Walker com speedScale 1
 const PATROL_SCALE = PATROL.speed / WALK;
-const HUNT_SCALE = 1.25; // ~5,2 m/s
+const HUNT_SCALE = 1.25; // ~5,2 m/s (atrás da vida de silício — ela não é o jogador)
 const SCAN = 600; // m: territórios mantidos em volta do jogador
 const DROP = 900; // m: longe assim, a ronda sai da memória
 const SIGHT_MAX = 105; // m: ninguém vê além disso (a névoa, a poeira)
@@ -160,6 +165,8 @@ export class SafeguardSystem {
     const s = c.phase + this.clock() * PATROL.speed;
     const p = circuitAt(c, s);
     const e = this.ents.spawn({ id: `sg:${c.id}`, kind: 'safeguard', feet: p, yaw: p.yaw, persist: false, brain: this });
+    const p0 = c.pts[0];
+    e.level = levelAt(this.field, p0.x, p0.y, p0.z, 0);
     e.walker.speedScale = PATROL_SCALE;
     e.sg = { c, s, state: 'patrol', unseen: 0, lastSeen: null, searchT: 0, percT: Math.random() * 0.2, sees: false, stepAcc: 0, stuckT: 0 };
     this.byTerritory.set(c.id, e);
@@ -253,7 +260,6 @@ export class SafeguardSystem {
       this._lose(e);
       return;
     }
-    e.walker.speedScale = HUNT_SCALE;
     // caçando vida de silício: ela é o alvo
     if (S.prey) {
       if (!this.world.npcs?.wanderers || ![...this.world.npcs.silicon()].includes(S.prey)) {
@@ -274,10 +280,12 @@ export class SafeguardSystem {
       return;
     }
     const feet = _a.set(g.x, g.y - 1.7, g.z);
+    this._accelerate(e, dt);
     if (S.unseen < 0) S.lastSeen.copy(feet); // recém-saído da parede: ainda sabe onde você está
     // depois de um golpe, espera antes de vir de novo (a chance de fugir ferido)
     if (S.waitT > 0) {
       S.waitT -= dt;
+      S.huntV = undefined; // (parado: o arranque recomeça de baixo)
       e.speed = 0;
       e.walker.vel.x = 0;
       e.walker.vel.z = 0;
@@ -320,6 +328,11 @@ export class SafeguardSystem {
     }
   }
 
+  /** O arranque (M1–M2): de v0 até a terminal com a aceleração do nível; curvas custam. */
+  _accelerate(e, dt) {
+    accelerate(e, e.sg, MOVE[e.level ?? 'low'], dt);
+  }
+
   /** Vira o corpo para o ponto (GLOBAL). */
   _face(e, p) {
     const want = Math.atan2(-(p.x - e.feet.x), -(p.z - e.feet.z));
@@ -354,6 +367,7 @@ export class SafeguardSystem {
       S.state = 'hunt';
       S.lastSeen = feet.clone(); // (arremessado longe da vista: ele vai ver onde você caiu)
       S.waitT = STRIKE.waitMin + Math.random() * (STRIKE.waitMax - STRIKE.waitMin);
+      S.huntV = undefined; // (o arranque recomeça de baixo)
       S.unseen = 0;
       S.stuckT = 0;
       S.bestD = Infinity;
@@ -471,6 +485,7 @@ export class SafeguardSystem {
       S.lastSeen = new THREE.Vector3(g.x, g.y - 1.7, g.z);
       if (S.state !== 'hunt') {
         S.state = 'hunt';
+        S.huntV = undefined; // o arranque começa de baixo
         S.bestD = Infinity;
         S.stuckT = 0;
         this.stats.spotted++;
@@ -583,6 +598,7 @@ export class SafeguardSystem {
     this.group.add(panel);
     const id = `sgh:${Math.round(this.time * 1000)}:${this.hunters.size}`;
     const e = this.ents.spawn({ id, kind: 'safeguard', feet: spot.wall.clone().addScaledVector(spot.nrm, -0.2), yaw: Math.atan2(spot.nrm.x, spot.nrm.z) + Math.PI, persist: false, brain: this });
+    e.level = levelAt(this.field, spot.wall.x, spot.wall.y, spot.wall.z, 1);
     e.sg = {
       c: null, state: 'emerge', unseen: 0, lastSeen: new THREE.Vector3(g.x, g.y - 1.7, g.z), searchT: 0, percT: 1.8, sees: false, stepAcc: 0, stuckT: 0,
       panel: { mesh: panel, wall: spot.wall, nrm: spot.nrm, front: spot.front, t: 0 },

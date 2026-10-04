@@ -14,12 +14,20 @@
 //    depois foge. É a terceira força: um Safeguard que a vê caça ela, não você
 //    (world/safeguards.js), e ela foge dele.
 //
+//  FERIDOS E A VILA HOSTIL (o cofre, Dano-do-emissor §4): o andarilho ferido pelo emissor
+//    foge; a vida de silício tem nível (world/levels.js — baixa/média/alta: a resistência e o
+//    arranque); ferir ou matar um morador deixa a VILA HOSTIL (this.hostile(id) — app/people.js
+//    guarda no mundo salvo): os moradores dela vêm (o arranque dos humanos, M4) e golpeiam
+//    como os Safeguards — o golpe com arremesso, −25% (this.onStrike).
+//
 //  Posições GLOBAIS; o corpo é movido pelo Walker (world/entities.js).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { hash4 } from '../gen/hash.js';
 import { villageLayout, villageFrame, villageInhabited } from '../gen/villages.js';
 import { territoryAt, patrolCircuit, circuitAt, circuitNearest, PATROL, WANDER, wandererOf } from '../gen/patrols.js';
+import { levelAt, MOVE, accelerate } from './levels.js';
+import { STRIKE } from './safeguards.js';
 
 const KEEP = 600; // m: vilas mantidas em volta do jogador
 const DROP = 800;
@@ -45,6 +53,10 @@ export class NpcSystem {
     this.scanT = 0;
     this.enabled = true;
     this.bus = null;
+    /** @type {(id: string) => boolean} a vila está hostil? (app/people.js — o mundo salvo) */
+    this.hostile = (_id) => false;
+    /** (e, hit) — o golpe de um morador hostil chegou (app/people.js) */
+    this.onStrike = null;
   }
 
   /** Todas as pessoas em cena (moradores e andarilhos). */
@@ -62,7 +74,7 @@ export class NpcSystem {
   inhabitedNear(x, y, z, R) {
     return this.field
       .uniquesNear(x, y, z, R)
-      .filter((u) => u.kind === 'village' && villageInhabited(this.field, u))
+      .filter((u) => u.kind === 'village' && villageInhabited(this.field, u) && !this.hostile(u.id))
       .map((u) => ({ u, d: Math.hypot(u.x - x, u.y - y, u.z - z) }))
       .sort((a, b) => a.d - b.d);
   }
@@ -142,6 +154,7 @@ export class NpcSystem {
     const e = this.ents.spawn({ id: `wd:${t.id}`, kind: 'transhuman', feet: new THREE.Vector3(p.x, p.y, p.z), yaw: p.yaw, persist: false, brain: this });
     e.walker.speedScale = WANDER_SPEED / WALK;
     e.npc = { role: 'wanderer', silicon, thief, revealed: false, c, s: s0, state: 'walk', t: 0 };
+    if (silicon) e.level = levelAt(F, c.pts[0].x, c.pts[0].y, c.pts[0].z, 2);
     this.wanderers.set(t.id, e);
   }
 
@@ -150,6 +163,7 @@ export class NpcSystem {
     const N = e.npc;
     if (!N.silicon || N.revealed) return;
     N.revealed = true;
+    N.hunt = {}; // (o arranque começa de baixo)
     this.ents.replaceRig(e, 'silicon');
     N.state = 'hunt';
     N.t = 0;
@@ -194,6 +208,7 @@ export class NpcSystem {
     if (N.role === 'wanderer') return this._wander(e, dt, g, origin, time);
     e.speed = 0;
     if (e.tier !== 'near') return; // longe: fica onde está
+    if (this.hostile(N.village.id)) return this._hostile(e, dt, g, origin, time);
     // alguém chegou perto: para e olha para ele
     const dp = Math.hypot(g.x - e.feet.x, g.z - e.feet.z);
     if (dp < 4.5 && Math.abs(g.y - 1.7 - e.feet.y) < 2) {
@@ -221,6 +236,59 @@ export class NpcSystem {
     if (hd < 0.6 || N.walkT > 25) {
       N.target = null;
       N.wait = 3 + Math.random() * 10;
+    }
+  }
+
+  /** Um morador de uma vila hostil: vem com o arranque dos humanos (M4) e golpeia (−25%). */
+  _hostile(e, dt, g, origin, time) {
+    const N = e.npc;
+    const feet = new THREE.Vector3(g.x, g.y - 1.7, g.z);
+    const P = this.player;
+    N.hunt ??= {};
+    if (N.strikeT !== undefined) {
+      // o golpe: os mesmos tempos do Safeguard (world/safeguards.js STRIKE)
+      N.strikeT += dt;
+      const t = N.strikeT;
+      e.speed = 0;
+      e.walker.vel.x = 0;
+      e.walker.vel.z = 0;
+      const want = Math.atan2(-(feet.x - e.feet.x), -(feet.z - e.feet.z));
+      if (t < STRIKE.windup) e.yaw += Math.atan2(Math.sin(want - e.yaw), Math.cos(want - e.yaw)) * 0.35;
+      const w = Math.min(1, t / STRIKE.windup);
+      const sw = Math.max(0, Math.min(1, (t - STRIKE.windup) / STRIKE.swing));
+      const back = Math.max(0, Math.min(1, (t - STRIKE.windup - STRIKE.swing) / STRIKE.recover));
+      e.strikePose = { w: w * (1 - back), s: sw * (1 - back) };
+      if (!N.struck && t >= STRIKE.windup + STRIKE.swing * 0.6) {
+        N.struck = true;
+        const hit = Math.hypot(feet.x - e.feet.x, feet.z - e.feet.z) < STRIKE.hit && Math.abs(feet.y - e.feet.y) < 2;
+        this.onStrike?.(e, hit);
+      }
+      if (t >= STRIKE.windup + STRIKE.swing + STRIKE.recover) {
+        e.strikePose = null;
+        N.strikeT = undefined;
+        N.waitT = STRIKE.waitMin + Math.random() * (STRIKE.waitMax - STRIKE.waitMin);
+        N.hunt.huntV = undefined;
+      }
+      return;
+    }
+    const dp = Math.hypot(feet.x - e.feet.x, feet.z - e.feet.z);
+    const level = Math.abs(feet.y - e.feet.y) < 2;
+    // longe demais, ou você não está andando (desmaiado, voando): voltam para o galpão
+    if (dp > 80 || !P?.walking()) {
+      N.hunt.huntV = undefined;
+      return this.ents.walkToward(e, e.feet, dt, origin, time);
+    }
+    if ((N.waitT ?? 0) > 0) {
+      N.waitT -= dt;
+      this.ents.walkToward(e, e.feet, dt, origin, time);
+      return;
+    }
+    accelerate(e, N.hunt, MOVE.villager, dt);
+    this.ents.walkToward(e, feet, dt, origin, time);
+    if (dp < STRIKE.reach && level) {
+      N.strikeT = 0;
+      N.struck = false;
+      this.bus?.emit('villager:strike', { x: e.feet.x, y: e.feet.y, z: e.feet.z });
     }
   }
 
@@ -255,6 +323,15 @@ export class NpcSystem {
       return;
     }
     N.t += dt;
+    // ferido pelo emissor: o andarilho foge de você (a vida de silício disfarçada se mostra)
+    if (e.staggerT > 0 && N.state !== 'flee') {
+      if (N.silicon && !N.revealed) return this.reveal(e);
+      if (!N.silicon) {
+        N.state = 'flee';
+        N.t = 0;
+        N.from = null;
+      }
+    }
     if (N.state === 'walk') {
       // disfarçada: de perto, se revela
       if (N.silicon && !N.revealed && dp < 6 && level && walking) return this.reveal(e);
@@ -284,8 +361,8 @@ export class NpcSystem {
       return;
     }
     if (N.state === 'hunt') {
-      // revelada: vem direto; o toque drena a célula
-      e.walker.speedScale = 1.2;
+      // revelada: vem direto, com o arranque do nível dela (M4); o toque drena a célula
+      accelerate(e, (N.hunt ??= {}), MOVE[e.level ?? 'low'], dt);
       this.ents.walkToward(e, feet, dt, origin, time);
       if (dp < 1.0 && level && walking) {
         P?.drain();
@@ -331,6 +408,7 @@ export class NpcSystem {
     let best = null;
     for (const e of this.all()) {
       if (e.dead || e.npc?.revealed || (e.npc?.role === 'wanderer' && e.npc.state !== 'walk')) continue;
+      if (e.npc?.role === 'villager' && this.hostile(e.npc.village.id)) continue; // a vila hostil não conversa
       const dx = e.feet.x - g.x;
       const dz = e.feet.z - g.z;
       const d = Math.hypot(dx, dz);
