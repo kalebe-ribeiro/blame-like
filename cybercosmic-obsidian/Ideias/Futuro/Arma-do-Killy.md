@@ -6,6 +6,8 @@ tags: [futuro, arma, safeguards, terreno]
 
 # A arma do Killy — emissor de feixe gravitacional (plano v3)
 
+> **Planejado (2026-10-04)**: o tiro deixa de matar sempre — dano variável pela carga, o cheio mata tudo de hoje: [[Dano-do-emissor]].
+
 > Plano reescrito depois da [[Arma-do-Killy-revisao|revisão crítica]] (27 falhas). Cada falha está marcada **(R n)** onde é resolvida. A primeira versão (buracos por shader) foi feita e retirada; o histórico está no fim.
 
 ## 0. Requisitos (do usuário)

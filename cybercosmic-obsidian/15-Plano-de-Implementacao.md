@@ -201,9 +201,10 @@
 
 ## Depois da arma de Killy (2026-10-03)
 1. **A barra de vida** — decidida: [[Barra-de-vida]] (§10, a ordem: a vida → quedas com dano pela altura → o emissor → o golpe com arremesso → `check:health`). Sem dano de choque no próprio coice (2026-10-04).
-2. **Recuperar o braço** — [[Recuperar-o-braco]]: câmara de reconstrução (única nova), prótese (loot), moradores das vilas; R1–R6 a confirmar. Fecha o risco de travar a Peregrinação sem os dois braços.
-3. **O resto da gameplay** — o que o usuário pedir (ideias em [[00-Ideias]]; os Safeguards em níveis e a reação à arma) — rumo ao **objetivo final: o gene de terminal** ([[Gene-terminal]] — quase impossível; a mecânica, o usuário elabora).
-4. **Por último, o grande rework gráfico** — [[Rework-grafico]]: texturas variadas, modelos de NPCs detalhados e variados, animações variadas (as do golpe por ângulo e por tipo de NPC). **Só depois de toda a gameplay.**
+2. **O dano variável do emissor** — [[Dano-do-emissor]]: o tiro fraco fere, o cheio mata tudo de hoje, a sobrecarga até de raspão (D1–D5 a confirmar); pode ir junto da barra de vida.
+3. **Recuperar o braço** — [[Recuperar-o-braco]] (R1–R7 decididas): câmara de reconstrução (50%, os dois), prótese (andarilho 40% ou achada), moradores (carga ou 30%); o aviso de um braço só. Fecha o risco de travar a Peregrinação sem os dois braços.
+4. **O resto da gameplay** — o que o usuário pedir (ideias em [[00-Ideias]]; os Safeguards em níveis e a reação à arma) — rumo ao **objetivo final: o gene de terminal** ([[Gene-terminal]] — quase impossível; a mecânica, o usuário elabora).
+5. **Por último, o grande rework gráfico** — [[Rework-grafico]]: texturas variadas, modelos de NPCs detalhados e variados, animações variadas (as do golpe por ângulo e por tipo de NPC). **Só depois de toda a gameplay.**
 
 ## Contínuo (entra onde couber)
 

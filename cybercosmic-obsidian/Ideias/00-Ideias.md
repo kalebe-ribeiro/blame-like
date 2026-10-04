@@ -60,7 +60,8 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | ordem | ideia | status |
 |---|---|---|
 | 1 | [[Barra-de-vida]] (vida; golpe com arremesso dos hostis; quedas com dano pela altura; o custo da sobrecarga) | decidida (2026-10-03, revista 2026-10-04) — **a próxima** |
-| 2 | [[Recuperar-o-braco]] (câmara de reconstrução, prótese, moradores das vilas) | caminhos decididos (2026-10-04); R1–R6 a confirmar |
+| 2 | [[Dano-do-emissor]] (o tiro fraco fere, o cheio mata; overpowered) | princípio decidido (2026-10-04); D1–D5 a confirmar |
+| 3 | [[Recuperar-o-braco]] (câmara de reconstrução, prótese, moradores das vilas; aviso de um braço só) | decidida (R1–R7, 2026-10-04) |
 | — | [[Gene-terminal]] (o gene de terminal da rede) | **o objetivo final, máximo — quase impossível**; esperando a mecânica do usuário |
 | último | [[Rework-grafico]] (texturas, modelos de NPCs, animações variadas) | **depois de toda a gameplay** |
 | ✔ | [[Arma-do-Killy]] (feixe que fura o terreno) | feita (F1–F4, 2026-10-03; sobrecarga com 7 estágios) — revisão: [[Arma-do-Killy-revisao]] |

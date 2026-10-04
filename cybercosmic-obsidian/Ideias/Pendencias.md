@@ -13,15 +13,16 @@ Reorganizada em 2026-10-04. Três listas: **a implementar** (decidido, na ordem)
 | # | o quê | nota | estado |
 |---|---|---|---|
 | 1 | **Barra de vida** — a vida, quedas com dano **pela altura** (a partir de 10 m; zera em 38 m/s ≈ 48 m), o golpe com arremesso dos hostis, o dano da sobrecarga, `check:health` | [[Barra-de-vida]] §10 | decidida (V1–V7; revista em 2026-10-04) — **a próxima** |
-| 2 | **Recuperar o braço** — câmara de reconstrução (única nova), prótese (loot), moradores das vilas (troca) e a saída garantida sem braços | [[Recuperar-o-braco]] | caminhos decididos (2026-10-04); **R1–R6 a confirmar antes de começar** |
-| 3 | **Rework gráfico** — texturas, modelos de NPCs, animações variadas (as do golpe por ângulo e tipo de NPC) | [[Rework-grafico]] | só **depois de toda a gameplay** |
+| 2 | **Dano variável do emissor** — o tiro fraco fere, o cheio mata tudo de hoje, a sobrecarga mata até de raspão (a arma continua overpowered) | [[Dano-do-emissor]] | princípio decidido (2026-10-04); **D1–D5 a confirmar** — pode ir junto da barra de vida |
+| 3 | **Recuperar o braço** — câmara de reconstrução (única nova), prótese (loot), moradores das vilas (troca), a saída garantida sem braços e o aviso de um braço só | [[Recuperar-o-braco]] | decidida (R1–R7, 2026-10-04) |
+| 4 | **Rework gráfico** — texturas, modelos de NPCs, animações variadas (as do golpe por ângulo e tipo de NPC) | [[Rework-grafico]] | só **depois de toda a gameplay** |
 
 ### Regras novas que a barra de vida tem de respeitar (2026-10-04)
 - **O próprio coice do emissor contra uma parede não tira vida** — o baque, o tremor e o som ficam. Só o **arremesso de um hostil** contra um obstáculo tira vida. Se o empurrão do emissor te tira de uma plataforma, a **queda** conta.
 - **A queda é pela altura** (energia, `v²`), com a gravidade real do jogo (15 m/s², `controls/walker.js`) — a conta antiga ("14 m/s ≈ 10 m") estava errada: dava ~6,5 m.
 
-### Risco já no jogo, resolvido pelo item 2
-- **Peregrinação sem os dois braços = preso para sempre**: atirar além do limite com um braço só perde o segundo; sem braços não há quinas nem escadas, e nada devolve o braço (o despertar também não). Até o item 2 existir, um mundo salvo pode travar. A regra R6 de [[Recuperar-o-braco]] é a saída garantida.
+### Risco já no jogo, resolvido pelo item 3
+- **Peregrinação sem os dois braços = preso para sempre**: atirar além do limite com um braço só perde o segundo; sem braços não há quinas nem escadas, e nada devolve o braço (o despertar também não). Até o item 3 existir, um mundo salvo pode travar. As regras R6 (a saída) e R7 (o aviso de um braço só) de [[Recuperar-o-braco]] resolvem.
 
 ## 2. Esperando o usuário (não implementar antes)
 
@@ -29,7 +30,7 @@ Reorganizada em 2026-10-04. Três listas: **a implementar** (decidido, na ordem)
 |---|---|---|
 | **Gene de terminal** — o objetivo final, quase impossível | a mecânica (as 4 perguntas da nota) | [[Gene-terminal]] |
 | **Credenciais de acesso** | depende do gene (acessos intermediários?) | [[Credenciais-de-acesso]] |
-| **Recuperar o braço — R1–R6** | confirmar as propostas (os dois braços na câmara, preços, onde a prótese aparece, a saída garantida) | [[Recuperar-o-braco]] |
+| **Dano do emissor — D1–D5** | confirmar os números (a fórmula do dano, o raspão, a resistência de cada ser, o ferido) | [[Dano-do-emissor]] |
 
 ## 3. Em observação
 - **Travadas de ~1,9 s** numa rodada do `profile --profshot` (a primeira na RTX, depois da troca de GPU), ~2 s depois do tiro; não se repetiram em duas rodadas. Hipótese: o cache de shaders do Chromium montado para a Intel. Se voltar, o `profile` lista os programas de shader novos de cada tiro.
