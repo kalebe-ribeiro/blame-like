@@ -398,3 +398,12 @@ Fotos do usuário: o furo na máquina colossal saía **oco** (sem as faces do co
 - Os blocos e trilhos dos Construtores já eram cortados peça a peça a partir do original: sem o problema.
 - Imagens: `--cutobj=col|car|lift|gantry` (três cortes encavalados fora do essencial; a câmera presa ao objeto olha o furo de viés) gera `cutobj-<tipo>.png`. Nas quatro: as paredes do furo aparecem.
 - Testes (`dano`): `construtor`, `elevador`, `vagao` e `colosso` também exigem **0 peças ocas** — 13/13; `check:moves` 6/6. (Uma rodada perdeu o colosso do mapa logo depois do corte no núcleo: instável, a seguinte passou; o teste agora diz quando isso acontece.)
+
+## 2026-10-04 — O feixe não chegava ao que fica dentro da trincheira
+
+Foto do usuário: o **bloco central da máquina colossal não era cortado**; e, de certa distância, **nada** da máquina era cortado, mesmo na potência máxima.
+- **Causa** (`gen/beamreach.js`): o feixe tratava a laje como uma faixa cheia `[fundo, topo]` onde a placa existe. Mas as **trincheiras das máquinas são escavadas por baixo até 56 m** (`Field.trenchAt`, placa a placa, como `gen/macrogen.js` monta a laje). O feixe parava no plano do fundo da laje mesmo na trincheira aberta. Tudo o que fica acima desse plano era inalcançável: o bloco central, as longarinas e os rodízios. E quem atirava de dentro da trincheira (acima do fundo, numa placa "cheia") começava "dentro do concreto": o feixe tinha 0 m.
+- **Correção**: o concreto agora é o de verdade. Em cada ponto: a placa existe (`barrierTileSolid`) **e** a altura está entre o fundo da trincheira (fundo + `trenchAt`) e o topo. O feixe anda pelo trecho dentro da faixa (passos de 2 m e aperto por bissecção) e para ao entrar no concreto pela face de baixo, pela de cima ou pela parede de uma trincheira. Antes, um feixe horizontal dentro da faixa, numa passagem, atravessava a laje de lado; agora para na parede.
+- **Distância**: o tiro **cheio vai até 400 m** (`shotOf`: 30 + 370k); a sobrecarga vai até 1000 m, e além dela até 2000 m. É assim por projeto. Medido (`--colreach`): de baixo, cheio a 380 m, sobrecarga a 900 m; cortam a plataforma, a longarina e o bloco.
+- Imagem: `--cutobj=colcore` mostra o bloco central furado. O `--cutobj` agora corta pelo trecho do feixe (`beamReach`).
+- Teste (`dano`, `colosso`): o feixe tem de chegar ao bloco e à longarina de dentro da trincheira e de baixo, a 120 e a 380 m. `check:beam`: f1 16/16, f2 6/6, dano 13/13.

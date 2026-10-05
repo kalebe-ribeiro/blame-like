@@ -19,6 +19,7 @@ import * as THREE from 'three';
 import { chargeK, shotOf } from '../app/beam.js';
 import { BUILDER } from '../world/builders.js';
 import { COLOSSUS } from '../gen/field.js';
+import { beamReach } from '../gen/beamreach.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const DOWN = new THREE.Vector3(0, -1, 0);
@@ -461,8 +462,24 @@ export async function runDamage(ctx, report) {
         const stopped = !!p1 && !!M() && M().pos.distanceTo(p1) < 0.01;
         if (!p1 || !M()) console.warn('DANO colosso: a máquina saiu do mapa', key, C.machines.size, [...C.machines.keys()].join(','));
         const oco = hollow(id);
-        ok = !!alive && moving && dead && stopped && !oco;
-        why = `cortado na plataforma: segue ${!!alive && moving} (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) · o núcleo: ${dead ? 'parou' : 'NÃO parou'} · a trincheira parada ${stopped} · peças ocas ${oco}`;
+        // o feixe chega às partes DENTRO da trincheira (acima do fundo da laje): o bloco central e a
+        // longarina — de dentro da trincheira (ao lado) e de baixo, de perto e de longe (cheio: 400 m)
+        const mm = M() ?? first?.[1];
+        mm.group.updateMatrixWorld(true);
+        const Wp = (p) => new THREE.Vector3(...p).applyMatrix4(mm.group.matrixWorld).add(world.origin);
+        const alongV = mm.lane.axis === 'x' ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, 1);
+        const sideV = mm.lane.axis === 'x' ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0);
+        const reachFail = [];
+        for (const [nm, tg] of /** @type {[string, THREE.Vector3][]} */ ([['bloco', Wp([0, H / 2 + 2, -18])], ['longarina', Wp([45, H - 5, 0])]])) {
+          for (const [how, off] of /** @type {[string, THREE.Vector3][]} */ ([['ao lado', sideV.clone().multiplyScalar(-(nm === 'bloco' ? 60 : 0)).addScaledVector(alongV, 150)], ['de baixo 120 m', new THREE.Vector3(0, -60, 0).addScaledVector(alongV, 104)], ['de baixo 380 m', new THREE.Vector3(0, -190, 0).addScaledVector(alongV, 329)]])) {
+            const a = tg.clone().add(off);
+            const d = tg.clone().sub(a).normalize();
+            const r = beamReach(world.field, a, d, shotOf(1, 0).range);
+            if (r.t < tg.distanceTo(a)) reachFail.push(`${nm} ${how}: parou a ${r.t.toFixed(0)} de ${tg.distanceTo(a).toFixed(0)} (${r.stop ?? 'alcance'})`);
+          }
+        }
+        ok = !!alive && moving && dead && stopped && !oco && !reachFail.length;
+        why = `cortado na plataforma: segue ${!!alive && moving} (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) · o núcleo: ${dead ? 'parou' : 'NÃO parou'} · a trincheira parada ${stopped} · peças ocas ${oco} · o feixe nas partes de dentro da trincheira: ${reachFail.length ? reachFail.join('; ') : 'chega'}`;
       }
     }
     report({ kind: 'colosso', ok, why });

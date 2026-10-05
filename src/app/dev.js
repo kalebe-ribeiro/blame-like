@@ -313,7 +313,7 @@ export function setupDev(ctx) {
   // câmera, presa a ela, olha o furo de viés: cutobj-<tipo>.png — as faces em brasa em todos (nada oco)
   if (params.get('cutobj')) {
     const kind = params.get('cutobj');
-    const place = { col: 'colosso', car: 'transportador', lift: 'poco', gantry: 'construtores' }[kind];
+    const place = { col: 'colosso', colcore: 'colosso', car: 'transportador', lift: 'poco', gantry: 'construtores' }[kind];
     setTimeout(() => ctx.ui.teleport(place, place), 2000);
     setTimeout(async () => {
       const shot = (name) => /** @type {any} */ (window).cybercosmic?.devCapture?.(name);
@@ -324,6 +324,11 @@ export function setupDev(ctx) {
       if (kind === 'col') {
         const m = near([...world.colossi.machines.values()], (x) => x.pos);
         if (m) o = { root: m.group, id: `col:${m.lane.id}:${m.k}`, p: [40, 4, 95], dir: [0, 1, 0], r: 2.8, cam: [40, 10, 103], half: 20 };
+      } else if (kind === 'colcore') {
+        // o bloco central (dentro da trincheira, acima do fundo da laje): a face da frente, de viés
+        const m = near([...world.colossi.machines.values()], (x) => x.pos);
+        const Hc = 56 - 18 + 14;
+        if (m) o = { root: m.group, id: `col:${m.lane.id}:${m.k}`, p: [8, Hc / 2 + 2, 30], dir: [0, 0, -1], r: 2.8, cam: [15, Hc / 2 + 6, 44], half: 30 };
       } else if (kind === 'car') {
         const c = [...world.transit.cars.values()][0];
         if (c) o = { root: c.group, id: `car:${c.line.id}:${c.k}`, p: [2, 2, 2], dir: [1, 0, 0], r: 1.2, cam: [8, 3.2, 5], half: 4 };
@@ -348,11 +353,15 @@ export function setupDev(ctx) {
         o.root.updateMatrixWorld(true);
         // (o desvio de lado: perpendicular à direção do corte)
         const d = V(o.dir);
-        const side = Math.abs(d.y) > 0.5 ? V(off) : new THREE.Vector3(0, off[2], off[0]);
+        const side = Math.abs(d.y) > 0.5 ? V(off) : Math.abs(d.x) > 0.5 ? new THREE.Vector3(0, off[2], off[0]) : new THREE.Vector3(off[0], off[2], 0);
         const c = V(o.p).add(side).applyMatrix4(o.root.matrixWorld).add(world.origin);
         const dw = d.clone().transformDirection(o.root.matrixWorld);
         const a = c.clone().addScaledVector(dw, -o.half);
-        const b = c.clone().addScaledVector(dw, o.half);
+        // (até onde o feixe chegaria de a: o mesmo trecho de um tiro — gen/beamreach.js)
+        const { beamReach } = await import('../gen/beamreach.js');
+        const reach = beamReach(world.field, a, dw, 2 * o.half);
+        if (reach.t < 2 * o.half) console.warn(`CUTOBJ: o feixe parou a ${reach.t.toFixed(1)} de ${2 * o.half} (${reach.stop})`);
+        const b = a.clone().addScaledVector(dw, reach.t);
         world.addCut({ a: a.toArray(), b: b.toArray(), r: o.r }, a, { now: true });
       }
       const caps = [];
@@ -666,6 +675,59 @@ export function setupDev(ctx) {
         };
       }
     }, Number(params.get('cutshot')) * 1000);
+  }
+  // --colreach: até onde o feixe chega numa máquina colossal — de várias distâncias, de baixo e de lado,
+  // mirando a plataforma, o bloco central e a longarina: o trecho (t), onde parou e por quê (o console)
+  if (params.get('colreach')) {
+    setTimeout(() => ctx.ui.teleport('colosso', 'colosso'), 2000);
+    setTimeout(async () => {
+      const { beamReach } = await import('../gen/beamreach.js');
+      const { jamAt, shotOf } = await import('./beam.js');
+      const C = world.colossi;
+      const g0 = world.toGlobal(camera.position.clone());
+      const m = [...C.machines.values()].sort((a, b) => a.pos.distanceTo(g0) - b.pos.distanceTo(g0))[0];
+      if (!m) return console.warn('COLREACH: nenhuma');
+      m.group.updateMatrixWorld(true);
+      const H = 56 - 18 + 14;
+      const W = (p) => new THREE.Vector3(...p).applyMatrix4(m.group.matrixWorld).add(world.origin);
+      const targets = { plataforma: W([0, 4, 60]), bloco: W([0, H / 2 + 2, -18]), longarina: W([45, H - 5, 0]) };
+      const b = m.lane.b;
+      const lines = [`COLREACH: ${m.lane.id}:${m.k} eixo ${m.lane.axis} · laje ${b.bottom.toFixed(0)}..${b.top.toFixed(0)} · pé ${m.pos.y.toFixed(0)}`];
+      const side = m.lane.axis === 'x' ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0);
+      const along = m.lane.axis === 'x' ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, 1);
+      for (const [name, tg] of Object.entries(targets)) {
+        for (const D of [40, 120, 250, 380, 600, 1000]) {
+          for (const [how, off] of /** @type {[string, THREE.Vector3][]} */ ([['de baixo', new THREE.Vector3(0, -D * 0.5, 0).addScaledVector(along, D * 0.87)], ['de lado', side.clone().multiplyScalar(D).setY(-20)], ['ao longo', along.clone().multiplyScalar(D).setY(-10)]])) {
+            const a = tg.clone().add(off);
+            const d = tg.clone().sub(a).normalize();
+            const out = [];
+            for (const [k, o] of [[1, 0], [1, 1], [1, 2]]) {
+              const S = shotOf(k, o);
+              const r = beamReach(world.field, a, d, S.range);
+              const jam = jamAt(world.field, a, d, r.t);
+              const dist = tg.distanceTo(a);
+              out.push(`${o ? 'sobre' + o : 'cheio'} ${r.t >= dist ? 'CHEGA' : `para a ${r.t.toFixed(0)} (${jam < r.t ? 'jam' : r.stop ?? 'alcance'})`}`);
+            }
+            lines.push(`  ${name} · ${D} m ${how}: ${out.join(' · ')}`);
+          }
+        }
+      }
+      // tiros de verdade (o trecho do feixe → world.addCut, como app/beam.js fire): a resistência cai?
+      const id = `col:${m.lane.id}:${m.k}`;
+      for (const [name, D, o] of /** @type {[string, number, number][]} */ ([['plataforma', 100, 0], ['bloco', 100, 0], ['plataforma', 380, 0], ['longarina', 380, 0], ['bloco', 900, 2]])) {
+        m.group.updateMatrixWorld(true);
+        const tg = { plataforma: W([0, 4, 60]), bloco: W([0, H / 2 + 2, -18]), longarina: W([45, H - 5, 0]) }[name];
+        const a = tg.clone().add(new THREE.Vector3(0, -D * 0.5, 0).addScaledVector(along, D * 0.87));
+        const d = tg.clone().sub(a).normalize();
+        const S = shotOf(1, o);
+        const r = beamReach(world.field, a, d, S.range);
+        const hp0 = world.dyn.info(id)?.cuts;
+        world.addCut({ a: a.toArray(), b: a.clone().addScaledVector(d, r.t).toArray(), r: S.r }, a, { now: true });
+        const hp1 = world.dyn.info(id)?.cuts;
+        lines.push(`  TIRO ${name} de ${D} m (${o ? 'sobre' + o : 'cheio'}): feixe ${r.t.toFixed(0)} m de ${tg.distanceTo(a).toFixed(0)} · cortes na máquina ${hp0} → ${hp1} (${JSON.stringify(world.dyn.info(id))}) ${hp1 > hp0 ? 'CORTOU' : 'NADA'}`);
+      }
+      console.warn(lines.join('\n'));
+    }, 16000);
   }
   if (params.get('golink')) {
     setTimeout(() => {

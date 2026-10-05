@@ -1,10 +1,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  Até onde vai o feixe do emissor (a arma de Killy): ele acaba ao entrar numa
-//  camada intransponível (onde há placa de laje montada — Field.barrierTileSolid)
+//  camada intransponível (onde há placa de laje montada — Field.barrierTileSolid —, fora das
+//  trincheiras das máquinas colossais)
 //  ou numa estrutura única (de fora, na caixa dela; de dentro, na face de dentro
 //  das paredes). Puro: só o Field.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { MEGA } from './field.js';
+
+const TILE = MEGA.tile; // a placa da laje (gen/macrogen.js: a trincheira é medida no meio de cada placa)
 const UNIQUE_MARGIN = 1; // m em volta de uma estrutura única (as paredes dela)
 const UNIQUE_WALL = 3.2; // a espessura das paredes de uma única (gen/macrogen.js shell, T = 3) e uma folga
 
@@ -16,24 +20,60 @@ const UNIQUE_WALL = 3.2; // a espessura das paredes de uma única (gen/macrogen.
 export function beamReach(F, a, dir, range) {
   let t = range;
   let stop = null;
-  // as camadas: uma faixa horizontal infinita [bottom, top]; o feixe acaba ao entrar nela
-  // (onde a laje existe — uma passagem aberta deixa passar)
+  // as camadas: o concreto de verdade — a faixa [fundo, topo], menos as passagens e escotilhas
+  // (Field.barrierTileSolid) e menos as TRINCHEIRAS das máquinas colossais, escavadas por baixo até
+  // `depth` m (Field.trenchAt, por placa — como gen/macrogen.js monta a laje). O feixe acaba ao
+  // entrar no concreto: pela face de baixo, pela de cima, ou pela parede de uma trincheira.
   const y0 = a.y;
   const y1 = a.y + dir.y * range;
-  for (const b of F.barriersNear((y0 + y1) / 2)) {
-    for (const y of [b.top, b.bottom]) {
-      if (Math.abs(dir.y) < 1e-5) continue;
-      const tt = (y - a.y) / dir.y;
-      if (tt <= 0 || tt >= t) continue;
-      const x = a.x + dir.x * tt;
-      const z = a.z + dir.z * tt;
-      if (F.barrierTileSolid(b, x, z)) {
-        t = tt;
-        stop = 'layer';
-      }
+  const seen = new Set();
+  for (const b of [...F.barriersNear(y0), ...F.barriersNear((y0 + y1) / 2), ...F.barriersNear(y1)]) {
+    if (seen.has(b.n)) continue;
+    seen.add(b.n);
+    // o trecho do raio dentro da faixa
+    let tin = 0;
+    let tout = t;
+    if (Math.abs(dir.y) < 1e-6) {
+      if (a.y < b.bottom || a.y > b.top) continue;
+    } else {
+      const ta = (b.bottom - a.y) / dir.y;
+      const tb = (b.top - a.y) / dir.y;
+      tin = Math.max(0, Math.min(ta, tb));
+      tout = Math.min(t, Math.max(ta, tb));
     }
-    // começou dentro da laje (encostado nela)
-    if (a.y > b.bottom && a.y < b.top && F.barrierTileSolid(b, a.x, a.z)) return { t: 0, stop: 'layer' };
+    if (tin >= tout) continue;
+    const solid = (s) => {
+      const y = a.y + dir.y * s;
+      const x = a.x + dir.x * s;
+      const z = a.z + dir.z * s;
+      if (!F.barrierTileSolid(b, x, z)) return false;
+      const T = TILE;
+      return y >= b.bottom + F.trenchAt(b, (Math.floor(x / T) + 0.5) * T, (Math.floor(z / T) + 0.5) * T) && y <= b.top;
+    };
+    // começou dentro do concreto (encostado nele)
+    if (tin === 0 && solid(0)) return { t: 0, stop: 'layer' };
+    // anda pelo trecho; no primeiro ponto sólido, aperta entre ele e o anterior
+    const STEP = 2;
+    let prev = tin;
+    for (let s = tin + 1e-3; s <= tout + STEP; s += STEP) {
+      const at = Math.min(s, tout);
+      if (solid(at)) {
+        let lo = prev;
+        let hi = at;
+        for (let k = 0; k < 12; k++) {
+          const m = (lo + hi) / 2;
+          if (solid(m)) hi = m;
+          else lo = m;
+        }
+        if (hi < t) {
+          t = hi;
+          stop = 'layer';
+        }
+        break;
+      }
+      prev = at;
+      if (at >= tout) break;
+    }
   }
   // as estruturas únicas: a caixa do prédio (interseção raio × caixa). De fora, o feixe
   // acaba na parede de fora; de dentro (dá para entrar nelas), atira-se, mas ele acaba
