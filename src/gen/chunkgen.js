@@ -18,7 +18,7 @@ import { CHUNK, PILLAR_CELL, SEG_H, WALK, DUCT } from './field.js';
 import { genTransit, stationNear } from './transit.js';
 import { rngAt } from './hash.js';
 import { mergeAll, place, cylinderBetween } from '../world/geometry.js';
-import { catenaryCable, plumbLine } from '../world/cables.js';
+import { catenaryCable, plumbLine, cableMat } from '../world/cables.js';
 import { cutPiece, inCut, components, keepTris } from './cut.js';
 
 import { FLUORO, SODIUM, COLD, WARN } from './colors.js';
@@ -545,7 +545,9 @@ function buildSegment(F, B, p, j, anchors) {
     const ang = r.float(0, Math.PI * 2);
     const rr = lerp(ra, rb, (y - ya) / SEG_H);
     const o = B.L(c.x + Math.cos(ang) * rr, y, c.z + Math.sin(ang) * rr);
-    B.add('cable', plumbLine(o, r.float(80, 260), { rng: r, radius: r.float(0.06, 0.25) }));
+    const len = r.float(80, 260);
+    const rad = r.float(0.06, 0.25);
+    B.add(cableMat(rad), plumbLine(o, len, { rng: r, radius: rad }));
   }
   // luz na superfície
   if (r.chance(0.07)) {
@@ -613,7 +615,9 @@ function buildRoot(F, B, p, y, radius, r) {
     for (let i = 0; i < n; i++) {
       const ang = (i / n) * Math.PI * 2 + r.float(0, 0.5);
       const o = L.clone().add(new THREE.Vector3(Math.cos(ang) * radius * 0.6, -2, Math.sin(ang) * radius * 0.6));
-      B.add('cable', plumbLine(o, r.float(30, 180), { rng: r, radius: r.float(0.15, 0.5) }));
+      const len = r.float(30, 180);
+      const rad = r.float(0.15, 0.5);
+      B.add(cableMat(rad), plumbLine(o, len, { rng: r, radius: rad }));
     }
   }
 }
@@ -862,10 +866,10 @@ function genCables(F, B, anchors) {
       }
       const span = Math.hypot(ex - sx, ty - gy, ez - sz);
       if (span < 20 || span > 240) continue;
-      B.add('cable', catenaryCable(B.L(sx, gy, sz), B.L(ex, ty, ez), {
+      B.add('hose', catenaryCable(B.L(sx, gy, sz), B.L(ex, ty, ez), {
         rng: r,
         noise3: F.noise3,
-        radius: r.float(0.25, 1.6),
+        radius: r.float(0.25, 1.6), // (grosso: colide — world/cables.js cableMat)
         sag: r.float(0.08, 0.35),
       }));
       break;

@@ -25,6 +25,7 @@ import { MEGA } from './field.js';
 import { hash4, rngAt } from './hash.js';
 import { place, cylinderBetween, buildTaperedTube } from '../world/geometry.js';
 import { SODIUM, FLUORO, WARN } from './colors.js';
+import { cableMat } from '../world/cables.js';
 
 const W = MEGA.wall;
 const LEVEL = 48;
@@ -321,7 +322,7 @@ function cableRiver(B, L, ta, tb, y, r) {
       pts.push(L(ta + (tb - ta) * u, y + dy - s * 4 * u * (1 - u), dd + Math.sin(u * Math.PI) * r.float(0, 1.2)));
       rs.push(rad);
     }
-    B.add('cable', buildTaperedTube(pts, rs, { radialSegments: 4, smooth: 2 }));
+    B.add(cableMat(rad), buildTaperedTube(pts, rs, { radialSegments: 4, smooth: 2 }));
   }
 }
 

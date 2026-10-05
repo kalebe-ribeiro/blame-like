@@ -7,6 +7,7 @@
 import { Field } from '../gen/field.js';
 import { generateChunk, hasPieceMemo, exportPieceMemo, importPieceMemo, pieceMemoKey } from '../gen/chunkgen.js';
 import { memoGet, memoPut } from './pieceStore.js';
+import { GEN_VERSION } from './cutCache.js';
 import { generateMacro } from '../gen/macrogen.js';
 import { NavGraph } from '../gen/nav.js';
 import { patrolCircuit } from '../gen/patrols.js';
@@ -30,7 +31,7 @@ self.onmessage = async (e) => {
   // (só perto e a macro: os chunks de longe — LOD — têm peças simples e são muitos; ler e gravar
   //  a memória deles custava mais que recortá-los)
   const memoKey = e.data.cutJob && !level ? pieceMemoKey(layer, level, cx, cy, cz) : null;
-  const diskKey = memoKey ? `${seed}|${memoKey}` : null;
+  const diskKey = memoKey ? `${GEN_VERSION}|${seed}|${memoKey}` : null;
   if (memoKey && !hasPieceMemo(memoKey)) {
     const saved = await memoGet(diskKey);
     if (saved) importPieceMemo(memoKey, saved);

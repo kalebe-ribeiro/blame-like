@@ -14,7 +14,7 @@
 import * as THREE from '../lib/three.js';
 import { hash4, rngAt } from './hash.js';
 import { place, cylinderBetween } from '../world/geometry.js';
-import { plumbLine } from '../world/cables.js';
+import { plumbLine, cableMat } from '../world/cables.js';
 import { SODIUM, FLUORO, COLD, WARN } from './colors.js';
 
 const LEVEL = 48;
@@ -193,7 +193,9 @@ function dressGallery(F, B, box, g) {
         const z = (k + r.next()) * C;
         const s = along === 'x' ? z : x;
         if (Math.abs(s - g.c) > g.w / 2 - 5) continue;
-        B.add('cable', plumbLine(B.L(x, g.top, z), r.float(60, g.h * 0.7), { rng: r, radius: r.float(0.1, 0.35) }));
+        const len = r.float(60, g.h * 0.7);
+        const rad = r.float(0.1, 0.35);
+        B.add(cableMat(rad), plumbLine(B.L(x, g.top, z), len, { rng: r, radius: rad }));
       }
     }
   }
@@ -295,7 +297,9 @@ function dressStratum(F, B, box, st) {
         const x = (i + r.next()) * C;
         const z = (k + r.next()) * C;
         if (!F.strataSolid(st, x, z)) continue;
-        B.add('cable', plumbLine(B.L(x, st.bottom, z), r.float(40, 220), { rng: r, radius: r.float(0.1, 0.4) }));
+        const len = r.float(40, 220);
+        const rad = r.float(0.1, 0.4);
+        B.add(cableMat(rad), plumbLine(B.L(x, st.bottom, z), len, { rng: r, radius: rad }));
       }
     }
   }

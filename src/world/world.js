@@ -56,7 +56,7 @@ const LOD0_RADIUS = 420;
 const LOD1_RADIUS = 1300;
 
 // materiais que somem perto do raio dos chunks / da camada macro
-const NEAR_MATS = ['cut', 'lamp', 'tower', 'bridge', 'rib', 'cable', 'duct', 'dress', 'block', 'slab', 'monolith', 'plaza', 'tube', 'hive', 'massif',
+const NEAR_MATS = ['cut', 'lamp', 'tower', 'bridge', 'rib', 'cable', 'hose', 'duct', 'dress', 'block', 'slab', 'monolith', 'plaza', 'tube', 'hive', 'massif',
   'rungs', 'grate', 'door', 'sign', 'shack', 'cloth', 'screen', 'graffiti', 'water'];
 const FAR_MATS = ['lampFar', 'wall', 'floor', 'frame', 'stairway', 'macro', 'conduit', 'barrier', 'beam', 'cascade', 'pool', 'flood'];
 /** Período do deslocamento de origem nos shaders (múltiplo de CHUNK). */
@@ -288,6 +288,10 @@ export class World {
       beam: createBeamMaterial(S, { color: new THREE.Vector3(0.95, 0.88, 0.75), intensity: 0.05, fade: fadeMacro }),
       colossusBeam: createBeamMaterial(S, { color: new THREE.Vector3(1.0, 0.7, 0.42), intensity: 0.14, fade: fadeMacro }),
     };
+    // o cabo grosso (colide — world/cables.js cableMat): o mesmo desenho do fino, uma cópia dele (fora do
+    // sorteio das sementes acima: um material novo no meio mudaria o desenho de todos os seguintes)
+    this.materials.hose = this.materials.cable.clone();
+    for (const k of Object.keys(S)) this.materials.hose.uniforms[k] = S[k];
     // variantes para os chunks LOD: mesmas receitas, fade no fim do alcance
     this.lodMaterials = {};
     this._recipes = { concrete, darkConcrete, steel, deck, rubber, megaWall };

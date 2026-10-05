@@ -27,9 +27,13 @@ function db() {
   return dbp;
 }
 
+/** A versão da geração nas chaves: subir quando a geração dos chunks mudar (as entradas velhas deixam de
+ *  ser usadas — g2: os cabos grossos passaram a 'hose', que colide). */
+export const GEN_VERSION = 'g2';
+
 /** A chave de um chunk com estes cortes. */
 export function cutKey(seed, layer, level, cx, cy, cz, cuts) {
-  return `${seed}|${layer}|${level}|${cx},${cy},${cz}|${cuts.map((c) => c.id).sort().join(',')}`;
+  return `${GEN_VERSION}|${seed}|${layer}|${level}|${cx},${cy},${cz}|${cuts.map((c) => c.id).sort().join(',')}`;
 }
 
 /**
@@ -38,7 +42,7 @@ export function cutKey(seed, layer, level, cx, cy, cz, cuts) {
  * do resultado — são os mesmos ao carregar de novo e depois de um tiro.
  */
 export function boxKey(seed, layer, level, cx, cy, cz) {
-  return `caixas|${seed}|${layer}|${level}|${cx},${cy},${cz}`;
+  return `caixas|${GEN_VERSION}|${seed}|${layer}|${level}|${cx},${cy},${cz}`;
 }
 
 /** O resultado guardado (ou null). */

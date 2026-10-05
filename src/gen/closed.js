@@ -453,7 +453,7 @@ function buildSilo(B, r, { ix0, ix1, iz0, iz1, floorTop, levels, y1, zc, xc }) {
     const rr = r.float(8, R * 0.8);
     const cx = xc + Math.cos(a) * rr;
     const cz = zc + Math.sin(a) * rr;
-    B.add('cable', cylinderBetween(B.L(cx, y1 - 6, cz), B.L(cx, y1 - 6 - r.float(40, 130), cz), 0.25, 0.25, 4));
+    B.add('hose', cylinderBetween(B.L(cx, y1 - 6, cz), B.L(cx, y1 - 6 - r.float(40, 130), cz), 0.25, 0.25, 4)); // (grosso: colide)
   }
   B.add('beam', beamGeometry(B.L(xc, y1 - 6, zc), y1 - 6 - floorTop, 10, 16));
   B.lamp(xc, floorTop + 30, zc, SODIUM, 120, 'steady', { to: [xc, y1 - 6, zc], size: 1.6 }); // pendurada do teto, no eixo do silo

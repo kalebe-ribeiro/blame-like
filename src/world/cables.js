@@ -44,3 +44,13 @@ export function plumbLine(top, length, { rng, radius = 0.12 }) {
   }
   return buildTaperedTube(pts, radii, { radialSegments: 4, smooth: 2 });
 }
+
+/**
+ * O material de um cabo pelo raio: fino ('cable') não colide (fios, cabos das passarelas — o corpo
+ * passa por eles); grosso ('hose', o mesmo desenho) colide — um cabo de 0,4 a 3 m de grossura é um
+ * tubo, não um fio (achado no playtest: catenárias de até 1,6 m de raio atravessadas pelo corpo).
+ */
+export const HOSE_R = 0.2;
+export function cableMat(radius) {
+  return radius >= HOSE_R ? 'hose' : 'cable';
+}
