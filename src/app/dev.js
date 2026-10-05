@@ -385,6 +385,111 @@ export function setupDev(ctx) {
   }
   // --hurt=v: aos 5 s a vida vai a v (o aparelho mostra — app/health.js)
   if (params.get('hurt')) setTimeout(() => ctx.health.set(Number(params.get('hurt'))), 5000);
+  // --hosetest=N: aos N s, os cabos grossos ('hose' — world/cables.js) em volta: quantos, e se a colisão
+  // do corpo bate num deles (um raio do lado de fora, apontado para o meio do tubo); e o corpo empurrado
+  // contra ele para (não atravessa). Uma captura: hose.png
+  if (params.get('hosetest')) {
+    setTimeout(async () => {
+      const col = ctx.controls.walker.col;
+      const g = world.toGlobal(camera.position.clone());
+      const hoses = [];
+      for (const L of [world.chunkLayer]) for (const e of L.chunks.values()) for (const m of e.group?.children ?? []) if (m.userData.mat === 'hose') hoses.push(m);
+      const cables = [];
+      for (const e of world.chunkLayer.chunks.values()) for (const m of e.group?.children ?? []) if (m.userData.mat === 'cable') cables.push(m);
+      // o ponto de um cabo grosso mais perto da câmera: um vértice da malha
+      let best = null;
+      const v = new THREE.Vector3();
+      for (const m of hoses) {
+        const p = m.geometry.attributes.position;
+        for (let i = 0; i < p.count; i += 7) {
+          v.fromBufferAttribute(p, i).applyMatrix4(m.matrixWorld);
+          const d = v.distanceTo(camera.position);
+          if (!best || d < best.d) best = { d, p: v.clone(), m };
+        }
+      }
+      if (!best) return console.warn(`HOSETEST: nenhum cabo grosso perto (${cables.length} malhas de cabos finos)`);
+      // de fora: 3 m acima do ponto, para baixo
+      col._t = -1e9;
+      col.buildsPerFrame = 600;
+      const from = best.p.clone().add(new THREE.Vector3(0, 3, 0));
+      col.refresh(from, 20);
+      col.buildsPerFrame = 2;
+      const hit = col.ray(from, new THREE.Vector3(0, -1, 0), 6);
+      const inCol = col.meshes.includes(best.m);
+      console.warn(`HOSETEST: ${hoses.length} malhas de cabos grossos · a mais perta a ${best.d.toFixed(0)} m · na colisão do corpo ${inCol} · o raio de cima bate em ${hit ? `${hit.object.userData.mat} a ${hit.distance.toFixed(2)} m` : 'nada'}`);
+      // a câmera de lado, olhando o ponto (a captura)
+      ctx.controls.canFly = true;
+      ctx.controls.setMode('fly');
+      ctx.controls.setView({ pos: best.p.clone().add(new THREE.Vector3(4, 2, 4)), yaw: Math.atan2(-4, -4), pitch: -0.35, scale: 1 });
+      await new Promise((r) => setTimeout(r, 1500));
+      await /** @type {any} */ (window).cybercosmic?.devCapture?.('hose.png');
+    }, Number(params.get('hosetest')) * 1000);
+  }
+  // --holdstats=N: aos N s, o levantamento dos APOIOS (o cofre, Mobilidade §4) nas paredes em volta (40 m):
+  // em colunas de parede de 0,5 a 14 m de altura, os rebordos onde cabe a mão (a face recua acima, um
+  // topo plano de ≥ 5 cm); uma coluna é "escalável" se tem apoios encadeados (até 1,5 m um do outro)
+  // por ≥ 4 m. O console: quantas colunas, quantas com algum apoio, quantas escaláveis, e o que forma
+  // os apoios (o material)
+  if (params.get('holdstats')) {
+    setTimeout(() => {
+      const w = ctx.controls.walker;
+      const col = w.col;
+      col._t = -1e9;
+      col.buildsPerFrame = 900;
+      const g = camera.position.clone();
+      col.refresh(g, 60);
+      col.buildsPerFrame = 2;
+      const DOWNV = new THREE.Vector3(0, -1, 0);
+      const stats = { cols: 0, withHold: 0, climbable: 0, holds: 0, mats: {} };
+      const o = new THREE.Vector3();
+      for (let r = 3; r <= 40; r += 4) {
+        for (let a = 0; a < 36; a++) {
+          const ang = (a / 36) * Math.PI * 2 + r * 0.37;
+          const dir = new THREE.Vector3(Math.cos(ang), 0, Math.sin(ang));
+          // um ponto de chão a r m, e a parede mais perto nessa direção (até 6 m)
+          const base = g.clone().addScaledVector(dir, r);
+          const fl = col.ray(base.clone().setY(g.y + 1), DOWNV, 12);
+          if (!fl || !fl.face || fl.face.normal.y < 0.7) continue;
+          const y0 = fl.point.y;
+          const wall = col.ray(o.copy(fl.point).setY(y0 + 1.2), dir, 6);
+          if (!wall || !wall.face || Math.abs(wall.face.normal.y) > 0.3) continue;
+          stats.cols++;
+          // de baixo para cima, de 5 em 5 cm: onde a face recua (o rebordo) com um topo plano
+          const holds = [];
+          let prev = wall.distance;
+          for (let h = 0.5; h <= 14; h += 0.05) {
+            const hit = col.ray(o.copy(fl.point).setY(y0 + h), dir, 6.5);
+            const d = hit && hit.face && Math.abs(hit.face.normal.y) < 0.5 ? hit.distance : Infinity;
+            if (d > prev + 0.05 && prev < 6) {
+              // o topo do rebordo: um raio para baixo logo além da face de baixo
+              const top = col.ray(o.copy(fl.point).addScaledVector(dir, prev + 0.03).setY(y0 + h + 0.25), DOWNV, 0.4);
+              if (top && top.face && top.face.normal.y > 0.7) {
+                holds.push(h);
+                const m = top.object.userData.mat ?? '?';
+                stats.mats[m] = (stats.mats[m] ?? 0) + 1;
+              }
+            }
+            prev = d;
+          }
+          stats.holds += holds.length;
+          if (holds.length) stats.withHold++;
+          // encadeados: a maior corrida com degraus ≤ 1,5 m, a partir do alcance de pé (≤ 2,25 m)
+          let run = 0;
+          let best = 0;
+          let last = null;
+          for (const h of holds) {
+            if (last === null ? h <= 2.25 : h - last <= 1.5) run += last === null ? h : h - last;
+            else run = 0;
+            last = last === null && h > 2.25 ? null : h;
+            best = Math.max(best, run);
+          }
+          if (best >= 4) stats.climbable++;
+        }
+      }
+      const where = world.regionAt(camera.position);
+      console.warn(`HOLDSTATS ${where}: ${stats.cols} colunas de parede · com algum apoio ${stats.withHold} · escaláveis (≥ 4 m) ${stats.climbable} · apoios ${stats.holds} · materiais ${JSON.stringify(stats.mats)}`);
+    }, Number(params.get('holdstats')) * 1000);
+  }
   // --progswitch: quais materiais trocam de programa de shader entre as chamadas renderer.render de um
   // quadro (o three reavalia o programa a cada troca: getProgram/getParameters) — a cada 3 s, os piores
   if (params.get('progswitch')) {

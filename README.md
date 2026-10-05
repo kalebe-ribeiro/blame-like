@@ -333,6 +333,9 @@ A tecla **O**, ou o botão na tela de entrada, abre o painel. Os valores ficam s
 - **Mundo ainda carregando**: se a geometria ao redor ainda não foi gerada, o corpo paira até ela chegar.
 - **Lanternas**: os fogos-fátuos orbitam perto de você, iluminando o caminho.
 - **Passos por superfície**, todos sintetizados: concreto, chapa de aço (ressoa), grade vazada (chacoalha) e poça (respingo).
+- **Quinas e bordas**: pulando de frente para uma quina até ~2,25 m, o corpo agarra (até 1,3 m passa por cima direto); no ar, as mãos pegam a borda que passar por elas. Pendurado: frente ou pulo sobe; os lados andam pela borda e **contornam os cantos**; **pulo + lado** salta para a borda do outro lado de um vão (até ~3 m); **pulo + trás** vira e salta para a parede de trás; **trás** solta, e as mãos pegam a próxima borda abaixo (descer uma fachada de borda em borda).
+- **Descer pela borda**: andando de costas para uma beirada alta, o corpo desce e fica pendurado nela em vez de cair.
+- **Rolamento**: apertar pulo logo antes de tocar o chão, numa queda média, rola: muito menos dano (20 m: 26% → 7%). As quedas grandes continuam fatais.
 - **Escadas**: encostado numa escada, W sobe e S desce. A/D solta para o lado, mas só se houver patamar ali: o corpo encaixa no nível.
 - **Elevadores e vagões**: o que você pisa pode se mover, e você vai junto. A bordo, o trilho ronca e as juntas batem a cada 12 m.
 

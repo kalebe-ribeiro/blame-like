@@ -180,7 +180,36 @@ async function run(ctx) {
   }
   else if (!column) report({ kind: 'queda', ok: false, why: 'nenhuma coluna livre de 52 m' });
   else {
+    const rolls = async () => {
+    // o rolamento (o cofre, Mobilidade §3): 20 m; o pulo apertado ~0,15 s antes do toque → absorve 8 m
+    // de queda; apertado cedo demais (~1 s antes) não conta
+    for (const [kind, pressAt] of /** @type {[string, number][]} */ ([['rolamento', 1.48], ['rolamento:cedo', 0.5]])) {
+      H.set(1);
+      landed = null;
+      /** @type {any} */
+      let rolled = null;
+      const off = world.bus.on('player:roll', (ev) => (rolled = ev));
+      const b = column.base;
+      controls.placeFeet(new THREE.Vector3(b.x, b.y + 20, b.z));
+      const t0 = performance.now();
+      await waitFor(() => (performance.now() - t0) / 1000 >= pressAt || !!landed, 3);
+      controls.forceInput = { f: 0, r: 0, jump: true };
+      await sleep(120);
+      controls.forceInput = { f: 0, r: 0, jump: false };
+      const ok1 = await waitFor(() => !!landed, 5);
+      await sleep(900);
+      controls.forceInput = null;
+      off?.();
+      const got = 1 - H.value;
+      const full = fallDamage(Math.sqrt(2 * 15 * 20));
+      const exp = rolled ? fallDamage(Math.sqrt(2 * 15 * 20 - 2 * 15 * 8)) : full;
+      const ok = ok1 && (kind === 'rolamento' ? !!rolled && Math.abs(got - exp) < 0.02 : !rolled && Math.abs(got - full) < 0.02);
+      report({ kind, ok, why: `20 m · o pulo aos ${pressAt} s da largada · ${rolled ? `rolou (impacto ${rolled.v0.toFixed(1)} → ${rolled.v.toFixed(1)} m/s)` : 'não rolou'} · dano ${pct(got)} (sem rolar seria ${pct(full)})` });
+    }
+    };
     for (const hgt of [9, 20, 30, 50]) {
+      // (antes da de 50 m: ela desmaia e acorda o jogador longe da coluna)
+      if (hgt === 50) await rolls();
       H.set(1);
       landed = null;
       const z0 = zeros.length;

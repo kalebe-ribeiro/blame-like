@@ -68,6 +68,7 @@ Cada ideia tem uma nota com status e prioridade. Ao implementar, mude o `status`
 | ✔ | [[Arma-do-Killy]] (feixe que fura o terreno) | feita (F1–F4, 2026-10-03; sobrecarga com 7 estágios) — revisão: [[Arma-do-Killy-revisao]] |
 | ✔ | [[NPCs-e-Safeguards]] | feita nas fases 6 e 7; o golpe com arremesso vem com a barra de vida |
 | ✔ | [[Quinas-e-maos]] (agarrar quinas, subir; mãos) | feita (2026-09-30) |
+| ◐ | [[Mobilidade]] (descer pela borda, contornar e saltar pendurado, rolamento, escalar pelos apoios) | em andamento (2026-10-05) |
 
 ## Técnico
 

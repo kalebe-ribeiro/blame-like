@@ -17,6 +17,7 @@
 import * as THREE from 'three';
 import { edgeDist } from '../gen/nav.js';
 import { EDGE_DIRS } from '../gen/field.js';
+import { buildArena } from './arena.js';
 
 const SETTLE = 7000;
 const PLACES = ['colmeia', 'macico', 'deposito', 'maquinas', 'estrato', 'escadaria', 'construtores', 'galeria', 'silo', 'teia'];
@@ -311,5 +312,110 @@ async function run(ctx) {
       break;
     }
     report({ kind: 'borda', ok, why });
+  }
+
+  // ── mobilidade (o cofre, Mobilidade): na arena, com a fachada de lajes sob a borda −x ──
+  if (!only || only === 'mobilidade') {
+    const arena = await buildArena(ctx, { facade: true });
+    if (!arena) report({ kind: 'descer-borda', ok: false, why: 'sem arena' });
+    else {
+      const { y0, edgeX, c } = arena;
+      // de costas para a borda −x (olhando +x: yaw −π/2), andando para trás
+      arena.place(edgeX + 1.2, c.z, -Math.PI / 2);
+      await sleep(800);
+      controls.forceInput = { f: -1, r: 0, jump: false };
+      const hung = await waitFor(() => !!w.ledge, 4);
+      await sleep(300);
+      const g = () => w.feet.clone().add(world.origin);
+      const top0 = w.ledge ? w.ledge.topY + world.origin.y : NaN;
+      const fy = g().y;
+      report({ kind: 'descer-borda', ok: hung && Math.abs(top0 - y0) < 0.1 && Math.abs(fy - (y0 - w.eye - 0.02)) < 0.15, why: `andando de costas: ${hung ? `pendurado na borda (topo ${(top0 - y0).toFixed(2)} m, pés ${(fy - y0).toFixed(2)} m)` : `não se pendurou (pés ${(fy - y0).toFixed(2)} m, ${w.grounded ? 'no chão' : 'no ar'})`}` });
+      // ainda segurando "trás": não solta (pede apertar de novo)
+      await sleep(800);
+      const held = !!w.ledge;
+      // solta: as mãos pegam a laje de baixo, e a outra
+      const tops = [];
+      for (let i = 0; i < 2 && w.ledge; i++) {
+        controls.forceInput = { f: 0, r: 0, jump: false };
+        await sleep(300);
+        controls.forceInput = { f: -1, r: 0, jump: false };
+        await sleep(250);
+        controls.forceInput = { f: 0, r: 0, jump: false };
+        const t0 = w.ledge;
+        await waitFor(() => !!w.ledge && w.ledge !== t0, 3);
+        tops.push(w.ledge ? +(w.ledge.topY + world.origin.y - y0).toFixed(2) : null);
+      }
+      controls.forceInput = null;
+      const want = arena.facadeTops.map((t) => +(t - y0).toFixed(2));
+      const okDown = held && tops.length === 2 && tops.every((t, i) => t !== null && Math.abs(t - want[i]) < 0.1);
+      report({ kind: 'soltar-baixo', ok: okDown, why: `segurando trás: ${held ? 'continuou pendurado' : 'SOLTOU'} · soltando: pegou as bordas em ${JSON.stringify(tops)} (as lajes em ${JSON.stringify(want)})` });
+      controls.forceInput = null;
+      arena.remove();
+    }
+    // os cantos e os saltos, no ginásio
+    const gym = await buildArena(ctx, { gym: true });
+    if (gym) {
+      const { c, y0 } = gym;
+      const G = () => w.feet.clone().add(world.origin);
+      /** de pé em (x, z) (relativos ao centro), olhando −z, pula e agarra a borda à frente */
+      const hangAt = async (x, z) => {
+        controls.forceInput = null;
+        w.ledge = null;
+        w.climb = null;
+        gym.place(c.x + x, c.z + z, 0);
+        await sleep(700);
+        controls.forceInput = { f: 0, r: 0, jump: true };
+        await sleep(150);
+        controls.forceInput = { f: 0, r: 0, jump: false };
+        return await waitFor(() => !!w.ledge, 2);
+      };
+      const nrmTxt = () => (w.ledge ? `(${w.ledge.nrm.x.toFixed(1)}, ${w.ledge.nrm.z.toFixed(1)})` : '—');
+      // canto de fora: no L, indo para −x até o fim do braço
+      {
+        const hung = await hangAt(3.5, 4.6);
+        controls.forceInput = { f: 0, r: -1, jump: false };
+        await waitFor(() => w.ledge && w.ledge.nrm.x < -0.9, 5);
+        await sleep(600);
+        const p = G();
+        const ok = hung && !!w.ledge && w.ledge.nrm.x < -0.9 && p.x < c.x + 2;
+        report({ kind: 'canto-fora', ok, why: `pendurado ${hung} · a borda agora olha para ${nrmTxt()} · pés em x ${(p.x - c.x).toFixed(2)}, z ${(p.z - c.z).toFixed(2)} (o canto em x 2, z 4)` });
+      }
+      // canto de dentro: indo para +x até o outro braço do L
+      {
+        const hung = await hangAt(3.5, 4.6);
+        controls.forceInput = { f: 0, r: 1, jump: false };
+        await waitFor(() => w.ledge && w.ledge.nrm.x < -0.9, 6);
+        await sleep(600);
+        const p = G();
+        const ok = hung && !!w.ledge && w.ledge.nrm.x < -0.9 && p.x > c.x + 5 && p.z > c.z + 4;
+        report({ kind: 'canto-dentro', ok, why: `pendurado ${hung} · a borda agora olha para ${nrmTxt()} · pés em x ${(p.x - c.x).toFixed(2)}, z ${(p.z - c.z).toFixed(2)} (o canto em x 6, z 4)` });
+      }
+      // salto de lado: do A para o B (o vão de 1,5 m)
+      {
+        const hung = await hangAt(-5, -5.4);
+        await sleep(400);
+        controls.forceInput = { f: 0, r: 1, jump: true };
+        await sleep(150);
+        controls.forceInput = { f: 0, r: 0, jump: false };
+        await sleep(1200);
+        const p = G();
+        const ok = hung && !!w.ledge && p.x > c.x - 2.6;
+        report({ kind: 'salto-lado', ok, why: `pendurado no A ${hung} · depois do salto: ${w.ledge ? 'pendurado' : 'NÃO pendurado'} em x ${(p.x - c.x).toFixed(2)} (o B começa em −2,5)` });
+      }
+      // salto para trás: do A para o C (a 2,5 m, atrás)
+      {
+        const hung = await hangAt(-6, -5.4);
+        await sleep(400);
+        controls.forceInput = { f: -1, r: 0, jump: true };
+        await sleep(150);
+        controls.forceInput = { f: 0, r: 0, jump: false };
+        await sleep(1200);
+        const p = G();
+        const ok = hung && !!w.ledge && w.ledge.nrm.z < -0.9 && p.z > c.z - 4.2;
+        report({ kind: 'salto-tras', ok, why: `pendurado no A ${hung} · depois do salto: ${w.ledge ? `pendurado, a borda olhando ${nrmTxt()}` : 'NÃO pendurado'} · pés em z ${(p.z - c.z).toFixed(2)} (a face do C em −3,5)` });
+      }
+      controls.forceInput = null;
+      gym.remove();
+    } else report({ kind: 'canto-fora', ok: false, why: 'sem arena' });
   }
 }

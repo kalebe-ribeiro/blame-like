@@ -28,7 +28,7 @@ Reorganizada em 2026-10-03. Três listas: **a implementar** (decidido, na ordem)
 
 ## 2. Esperando o usuário
 
-(nada — tudo decidido em 2026-10-03; as credenciais de acesso foram descartadas)
+- **Escalar pelos apoios da parede** ([[Mobilidade]] §4) — pendência pedida pelo usuário (2026-10-05). O levantamento (`--holdstats`) não achou nenhuma parede escalável: a escalada precisa que a geração ganhe relevo (cornijas, nervuras, grampos de manutenção) onde a Cidade teria. Decidir antes de implementar.
 
 ## 3. Em observação
 - ✔ **Casos de teste que dependiam do lugar sorteado** — resolvidos (2026-10-04): a vida usa uma **arena preparada** (`dev/arena.js`: plataforma, parede, borda, piso 70 m abaixo, no vão de um poço); o arranque e a curva dos Safeguards conferem a regra numa **simulação determinística** do mesmo `accelerate()` (no mundo, só que o corpo chega à terminal).

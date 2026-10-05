@@ -46,6 +46,12 @@ export function createBody(ctx) {
     world.bus.emit('player:grab', {});
   };
   w.onMantle = (h) => audio.mantle(h);
+  // rolou no pouso (controls/walker.js): o ombro no chão, o resto do impacto vai no giro
+  w.onRoll = (v0, v) => {
+    audio.mantle(0.6);
+    controls.rumble?.(0.35, 0.5, 260);
+    world.bus.emit('player:roll', { v0, v });
+  };
   w.onLand = (impact, height) => {
     audio.land(Math.min(1, impact / 30));
     audio.impact(impact);

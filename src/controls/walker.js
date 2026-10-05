@@ -37,7 +37,22 @@ const LEDGE = {
   hangBelow: 0.02, // m: os olhos ficam rente à quina, pendurado (o queixo na borda)
   shimmy: 0.9, // m/s pela borda
   maxFall: 14, // m/s: caindo mais rápido que isso, as mãos não seguram
+  leapSide: 2.4, // m: pendurado, o salto de lado (pulo + lado) alcança uma borda até aqui
+  leapBack: 3.2, // m: pendurado, o salto para trás (pulo + trás) alcança a parede em frente até aqui
+  leapT: 0.45, // s: o salto entre bordas
+  dropEdge: 2.5, // m: andando de costas para uma beirada com queda maior que isto, o corpo desce e se pendura
+  lowerT: 0.6, // s: descer da beirada até ficar pendurado
 };
+/** O rolamento (o cofre, Mobilidade §3): pulo apertado pouco antes de tocar o chão, caindo. */
+const ROLL = {
+  window: 0.3, // s: o pulo até isto antes do toque vale
+  min: 9, // m/s de impacto (~2,7 m de queda): abaixo disso não há o que rolar
+  absorb: 8, // m: a energia de 8 m de queda vai para o rolamento (nada até ~18 m; 30 m: 31% em vez de 52%)
+  maxV: 38, // m/s: o impacto letal (app/health.js FALL.lethal) — acima disso, rolar não salva
+  dur: 0.65, // s rolando
+  speed: 4.5, // m/s para a frente, rolando
+};
+const G_WALK = 15; // a gravidade daqui (vel.y −= 15·s·dt)
 const ease = (k) => k * k * (3 - 2 * k);
 
 const _o = new THREE.Vector3();
@@ -93,8 +108,20 @@ export class Walker {
     this.shimmyT = 0;
     this.grabCooldown = 0;
     this.turnTo = null; // yaw para onde o corpo se vira ao agarrar (controls/noclip.js aplica)
+    this.backFree = false; // pendurado: soltar pede apertar "trás" de novo
+    this.dropping = false; // soltou uma borda e cai rente à parede
+    this.ignoreAbove = Infinity; // soltou uma borda: as mãos só pegam as de baixo dela (até pousar)
     this.onGrab = null; // () — as mãos pegaram a quina
     this.onMantle = null; // (altura) — começou a subir
+    this.onLower = null; // () — começou a descer da beirada para se pendurar
+    this.onLeap = null; // () — saltou de uma borda para outra
+    this.rollAt = -Infinity; // (tempo) o pulo apertado caindo — o rolamento ao tocar o chão
+    this.rollT = 0; // s de rolamento que faltam
+    this.rollPitch = 0; // rad: a cabeça mergulhando no rolamento (controls/noclip.js soma ao olhar)
+    this.jumpLatch = false; // o pulo do rolamento ainda segurado: não vira um salto
+    this.onRoll = null; // (impacto antes, depois) — rolou
+    this.cornerT = 0; // s até poder virar outro canto pendurado
+    this._s = 1;
   }
 
   /** O arremesso de um golpe: velocidade horizontal (hx, hz) e para cima (up), em m/s. */
@@ -121,6 +148,13 @@ export class Walker {
     this.airTime = 0;
     this.fallStartY = this.feet.y;
     this.carrier.set(0, 0, 0);
+    // posto noutro lugar (transporte, despertar, voo): nada de agarrão, rolamento ou queda de antes
+    this.ledge = null;
+    this.climb = null;
+    this.rollT = 0;
+    this.rollPitch = 0;
+    this.dropping = false;
+    this.ignoreAbove = Infinity;
   }
 
   /**
@@ -142,6 +176,7 @@ export class Walker {
     const radius = 0.38 * s;
     const stepH = 0.55 * s;
     const col = this.col;
+    this._s = s;
 
     this.feet.copy(camera.position).y -= eye + this.bob - this.dip;
     this.dip *= Math.exp(-4.5 * dt); // os joelhos voltam devagar
@@ -166,6 +201,23 @@ export class Walker {
     // ── intenção de movimento (no plano) ──
     const sin = Math.sin(yaw);
     const cos = Math.cos(yaw);
+    // rolando: o corpo vai para a frente sozinho; a cabeça mergulha e volta
+    if (this.rollT > 0) {
+      this.rollT = Math.max(0, this.rollT - dt);
+      const k = 1 - this.rollT / ROLL.dur;
+      this.rollPitch = -Math.sin(k * Math.PI) * 0.9;
+      input = { ...input, f: 1, r: 0, run: false, jump: false };
+    } else this.rollPitch = 0;
+    if (!input.jump) this.jumpLatch = false;
+    // soltou uma borda: cai rente à parede (segurar "trás" não o afasta das bordas de baixo)
+    if (this.dropping) {
+      if (this.grounded || this.ledge || this.climb) this.dropping = false;
+      else input = { ...input, f: 0, r: 0, run: false };
+    }
+    if (this.jumpLatch) input = { ...input, jump: false };
+    // caindo rápido, o pulo APERTADO (não segurado desde antes): rola se tocar o chão logo
+    if (!this.grounded && input.jump && !this._jumpWas && this.vel.y < -ROLL.min * s * 0.7) this.rollAt = time;
+    this._jumpWas = !!input.jump;
 
     // ── quinas: subindo, pendurado, ou pegando uma agora ──
     this.grabCooldown = Math.max(0, this.grabCooldown - dt);
@@ -174,6 +226,15 @@ export class Walker {
     if (this.canGrab && !this.thrown && this._tryLedge(input, sin, cos, s, eye)) {
       this._apply(camera, eye);
       return true;
+    }
+    // andando de costas para fora de uma beirada funda: desce e se pendura nela (o cofre, Mobilidade §2)
+    if (this.canGrab && !this.thrown && this.grounded && input.f < 0 && !input.run && !input.burden && this.grabCooldown <= 0) {
+      const l = this._edgeBehind(sin, cos, s, radius, stepH);
+      if (l) {
+        this._startLower(l, s, eye);
+        this._apply(camera, eye);
+        return true;
+      }
     }
 
     // ── escada à frente? ──
@@ -200,7 +261,7 @@ export class Walker {
     }
     _d.set(-sin * input.f + cos * input.r, 0, -cos * input.f - sin * input.r);
     if (_d.lengthSq() > 1) _d.normalize();
-    const speed = (input.run ? 8.5 : 4.2) * (input.slow ? 0.6 : 1) * s * this.speedScale;
+    const speed = (this.rollT > 0 ? ROLL.speed : input.run ? 8.5 : 4.2) * (input.slow ? 0.6 : 1) * s * this.speedScale;
     const control = this.grounded ? 12 : 2.2;
     const k = Math.min(1, control * dt);
     this.vel.x += (_d.x * speed - this.vel.x) * k;
@@ -256,9 +317,21 @@ export class Walker {
       this.grounded = true;
       this.groundObj = hit.object;
       if (!wasGrounded) {
-        // pouso pesado: a câmera afunda proporcionalmente ao impacto
-        this.dip = Math.max(this.dip, Math.min(0.95, Math.max(0, -impact / s - 7) * 0.022) * s * this.dipScale);
-        this.onLand?.(-impact / s, this.fallStartY - this.feet.y);
+        let v = -impact / s;
+        // o rolamento: o pulo apertado pouco antes do toque, numa queda que não é letal
+        if (!this.thrown && time - this.rollAt < ROLL.window && v > ROLL.min && v < ROLL.maxV) {
+          const v0 = v;
+          v = Math.sqrt(Math.max(0, v * v - 2 * G_WALK * ROLL.absorb));
+          this.rollT = ROLL.dur;
+          this.rollAt = -Infinity;
+          this.jumpLatch = true;
+          this.dip = Math.max(this.dip, (this.eye - 0.7) * s * this.dipScale); // agachado, rolando
+          this.onRoll?.(v0, v);
+        } else {
+          // pouso pesado: a câmera afunda proporcionalmente ao impacto
+          this.dip = Math.max(this.dip, Math.min(0.95, Math.max(0, v - 7) * 0.022) * s * this.dipScale);
+        }
+        this.onLand?.(v, this.fallStartY - this.feet.y);
         if (this.thrown && this.downT <= 0) this.downT = 1; // caído ~1 s (o cofre, Barra-de-vida §3.2)
       }
     } else {
@@ -268,6 +341,7 @@ export class Walker {
     if (this.grounded) {
       this.airTime = 0;
       this.fallStartY = this.feet.y;
+      this.ignoreAbove = Infinity;
     } else {
       this.airTime += dt;
     }
@@ -426,7 +500,7 @@ export class Walker {
     for (const d of dirs) {
       if (d !== fwd && !deep) continue;
       const l = this._findLedge(d, s, lo, hi);
-      if (l) {
+      if (l && l.topY < this.ignoreAbove) {
         this._startHang(l, s, eye, false);
         // o corpo se vira para a parede
         this.turnTo = Math.atan2(l.nrm.x, l.nrm.z);
@@ -436,8 +510,69 @@ export class Walker {
     return false;
   }
 
+  /**
+   * De pé, a beirada logo atrás (andando de costas): uma queda de mais de LEDGE.dropEdge, e a face
+   * da laje para as mãos → a quina (como _findLedge: { topY, landY, edge, nrm, h }) ou null.
+   */
+  _edgeBehind(sin, cos, s, radius, stepH) {
+    const col = this.col;
+    const b = _b1.set(sin, 0, cos); // para trás
+    // o pé de trás já está quase no ar? (logo além do corpo, nenhum chão até dropEdge)
+    _o.copy(this.feet).addScaledVector(b, radius + 0.12 * s);
+    _o.y += stepH;
+    if (col.ray(_o, DOWN, stepH + LEDGE.dropEdge * s)) return null;
+    // onde o chão acaba (andando para trás, de 5 em 5 cm)
+    let t = 0;
+    for (let x = 0; x <= radius + 0.12 * s; x += 0.05 * s) {
+      _o.copy(this.feet).addScaledVector(b, x);
+      _o.y += 0.3 * s;
+      const h = col.ray(_o, DOWN, 0.6 * s);
+      if (!h || !h.face || h.face.normal.y <= WALKABLE_NY) break;
+      t = x;
+    }
+    // a face da laje embaixo da beirada (de fora para dentro), onde as mãos ficam
+    let face = null;
+    for (const below of [0.25, 0.08]) {
+      _o.copy(this.feet).addScaledVector(b, t + 0.5 * s);
+      _o.y -= below * s;
+      _q.copy(b).negate();
+      const h = col.ray(_o, _q, 0.9 * s);
+      if (h && h.face && Math.abs(h.face.normal.y) < 0.6) {
+        face = h;
+        break;
+      }
+    }
+    const edge = face ? face.point.clone() : this.feet.clone().addScaledVector(b, t + 0.05 * s);
+    edge.y = this.feet.y;
+    const nrm = b.clone();
+    if (face) {
+      nrm.copy(face.face.normal).transformDirection(face.object.matrixWorld);
+      nrm.y = 0;
+      if (nrm.lengthSq() < 0.09) nrm.copy(b);
+      nrm.normalize();
+      if (nrm.dot(b) < 0) nrm.negate();
+    }
+    return { topY: this.feet.y, landY: this.feet.y, edge, nrm, h: 0 };
+  }
+
+  /** Descer da beirada até ficar pendurado nela (o contrário de subir): ~0,6 s. */
+  _startLower(l, s, eye) {
+    const from = this.feet.clone();
+    const to = l.edge.clone().addScaledVector(l.nrm, 0.34 * s);
+    to.y = l.topY - eye - LEDGE.hangBelow * s;
+    // primeiro o corpo vai até a beirada e se abaixa; depois desce rente à face
+    const mid = l.edge.clone().addScaledVector(l.nrm, 0.2 * s);
+    mid.y = l.topY - 0.5 * s;
+    this.climb = { t: 0, dur: LEDGE.lowerT, from, mid, to, h: 0, vault: false, edge: l.edge.clone(), nrm: l.nrm.clone(), toHang: l, lower: true };
+    this.vel.set(0, 0, 0);
+    this.grounded = false;
+    this.turnTo = Math.atan2(l.nrm.x, l.nrm.z); // de frente para a face
+    this.onLower?.();
+  }
+
   _startHang(l, s, eye, climbNow) {
     this.ledge = l;
+    this.backFree = false;
     this.vel.set(0, 0, 0);
     this.carrier.set(0, 0, 0);
     this.grounded = false;
@@ -453,24 +588,54 @@ export class Walker {
     const l = this.ledge;
     this.hangT += dt;
     this.bob *= Math.exp(-8 * dt);
+    // soltar pede apertar "trás" de novo (quem desceu de costas ainda o segura ao se pendurar)
+    if (input.f >= 0 && !input.descend) this.backFree = true;
+    this.cornerT = Math.max(0, (this.cornerT ?? 0) - dt);
+    // saltos entre bordas (o cofre, Mobilidade §1): pulo + lado → ao longo da parede; pulo + trás → a de trás
+    if (input.jump && this.hangT > 0.3 && (input.r || input.f < 0)) {
+      const t = this._alongWall(l, sin, cos, input.r || 1);
+      const l2 = input.f < 0 ? this._leapTarget(l.nrm, l.nrm, s, eye, 1.2, LEDGE.leapBack) : this._leapTarget(t, l.nrm.clone().negate(), s, eye, 0.6, LEDGE.leapSide + 0.5, true);
+      if (l2) {
+        this._startLeap(l2, s, eye);
+        this._apply(camera, eye);
+        return true;
+      }
+    }
     if ((input.jump || input.f > 0) && this.hangT > 0.3) {
       this._startMantle(l, s, eye, false);
-    } else if (input.f < 0 || input.descend) {
-      // solta: cai rente à parede (as mãos só voltam a pegar depois de um instante)
+    } else if ((input.f < 0 || input.descend) && this.backFree) {
+      // solta: cai rente à parede; as mãos pegam a próxima borda que passar por elas, abaixo desta
+      // (descer uma parede de borda em borda — o cofre, Mobilidade §1)
       this.ledge = null;
-      this.grabCooldown = 0.7;
-      this.vel.set(l.nrm.x * 0.6, 0, l.nrm.z * 0.6);
+      this.grabCooldown = 0.12;
+      this.ignoreAbove = l.topY - 0.4 * s;
+      this.dropping = true; // até pegar outra ou pousar: cai rente à parede, sem se afastar dela
+      this.vel.set(l.nrm.x * 0.25, 0, l.nrm.z * 0.25);
       this.fallStartY = this.feet.y;
     } else if (input.r) {
       // pela borda: o lado da câmera, ao longo da parede
       const tx = cos - l.nrm.x * (cos * l.nrm.x - sin * l.nrm.z);
       const tz = -sin - l.nrm.z * (cos * l.nrm.x - sin * l.nrm.z);
       const tl = Math.hypot(tx, tz) || 1;
-      const was = _p.copy(this.feet);
-      this.feet.x += (tx / tl) * input.r * LEDGE.shimmy * s * dt;
-      this.feet.z += (tz / tl) * input.r * LEDGE.shimmy * s * dt;
+      // (uma cópia: o _findLedge usa _p por dentro — antes, no fim da borda, o corpo voltava a um ponto
+      // qualquer da busca do topo)
+      const was = this.feet.clone();
+      const step = LEDGE.shimmy * s * dt;
+      const sx = (tx / tl) * Math.sign(input.r);
+      const sz = (tz / tl) * Math.sign(input.r);
+      // uma parede do lado, no caminho do corpo (o outro braço de um L): a borda acaba ali — o canto
+      let blocked = false;
+      for (const hh of [0.6, 1.3]) {
+        _o.set(this.feet.x, this.feet.y + hh * s, this.feet.z);
+        const hit = this.col.ray(_o, _d.set(sx, 0, sz), 0.38 * s + step);
+        if (hit && hit.face && Math.abs(hit.face.normal.y) < 0.5) blocked = true;
+      }
+      if (!blocked) {
+        this.feet.x += sx * step * Math.abs(input.r);
+        this.feet.z += sz * step * Math.abs(input.r);
+      }
       const into = _q.copy(l.nrm).negate();
-      const l2 = this._findLedge(into, s, l.topY - this.feet.y - 0.3 * s, l.topY - this.feet.y + 0.3 * s);
+      const l2 = blocked ? null : this._findLedge(into, s, l.topY - this.feet.y - 0.3 * s, l.topY - this.feet.y + 0.3 * s);
       if (l2) {
         this.ledge = l2;
         this.feet.copy(l2.edge).addScaledVector(l2.nrm, 0.34 * s);
@@ -478,10 +643,89 @@ export class Walker {
         // mão por mão: o corpo balança um pouco a cada troca (as mãos — app/hands.js)
         this.shimmyT += dt;
         this.bob = -Math.abs(Math.sin(this.shimmyT * 5.2)) * 0.035 * s;
-      } else this.feet.copy(was); // acabou a borda
+      } else {
+        // acabou a borda: um canto? (a borda segue na face do lado, ou na parede à frente)
+        this.feet.copy(was);
+        const t = this._alongWall(l, sin, cos, input.r);
+        const l3 = this.cornerT > 0 ? null : this._cornerLedge(l, t, s, eye);
+        if (l3) {
+          this.ledge = l3;
+          this.feet.copy(l3.edge).addScaledVector(l3.nrm, 0.34 * s);
+          this.feet.y = l3.topY - eye - LEDGE.hangBelow * s;
+          this.turnTo = Math.atan2(l3.nrm.x, l3.nrm.z);
+          this.cornerT = 0.5;
+        }
+      }
     }
     this._apply(camera, eye);
     return true;
+  }
+
+  /** A direção ao longo da parede (unitária, horizontal) para o lado `side` (+1 direita da câmera, −1 esquerda). */
+  _alongWall(l, sin, cos, side) {
+    const tx = cos - l.nrm.x * (cos * l.nrm.x - sin * l.nrm.z);
+    const tz = -sin - l.nrm.z * (cos * l.nrm.x - sin * l.nrm.z);
+    const tl = Math.hypot(tx, tz) || 1;
+    return new THREE.Vector3((tx / tl) * Math.sign(side), 0, (tz / tl) * Math.sign(side));
+  }
+
+  /** Uma quina vista de um ponto (`pos`, os pés) numa direção — a busca de sempre, de outro lugar. */
+  _ledgeFrom(pos, dir, s, minH, maxH) {
+    const save = this.feet.clone();
+    this.feet.copy(pos);
+    const l = this._findLedge(dir, s, minH, maxH);
+    this.feet.copy(save);
+    return l;
+  }
+
+  /** No fim da borda, indo para `t`: a borda que vira o canto — a face do lado (canto de fora: o bloco
+   *  acaba) ou a parede à frente (canto de dentro). Na mesma altura (±0,3 m). */
+  _cornerLedge(l, t, s, eye) {
+    const h = eye + LEDGE.hangBelow * s;
+    // canto de dentro: a parede logo à frente, no sentido em que se ia
+    const inner = this._ledgeFrom(this.feet, t, s, h - 0.3 * s, h + 0.3 * s);
+    if (inner && Math.abs(inner.topY - l.topY) < 0.3 * s && inner.nrm.dot(t) < -0.5) return inner;
+    // canto de fora: além do fim, rente à face do lado, olhando de volta
+    const q = this.feet.clone().addScaledVector(t, 0.7 * s).addScaledVector(l.nrm, -0.68 * s);
+    const outer = this._ledgeFrom(q, t.clone().negate(), s, h - 0.3 * s, h + 0.3 * s);
+    if (outer && Math.abs(outer.topY - l.topY) < 0.3 * s && outer.nrm.dot(t) > 0.5) return outer;
+    return null;
+  }
+
+  /** O alvo de um salto pendurado: andando `step` de `dmin` a `dmax` m, uma borda olhando para `look`
+   *  (a mão vai até ela) na altura de agora ±0,6 m. A primeira que aparecer. */
+  _leapTarget(step, look, s, eye, dmin, dmax, needGap = false) {
+    const h = eye + LEDGE.hangBelow * s;
+    const q = new THREE.Vector3();
+    // de lado (`needGap`): a borda do outro lado de um vão; sem vão no alcance, um pulo de 1,5 m ao
+    // longo da mesma borda
+    let gap = false;
+    let hop = null;
+    for (let d = dmin * s; d <= dmax * s; d += 0.15 * s) {
+      q.copy(this.feet).addScaledVector(step, d);
+      const l = this._ledgeFrom(q, look, s, h - 0.6 * s, h + 0.6 * s);
+      if (!l) {
+        gap = true;
+        continue;
+      }
+      if (l.edge.distanceTo(this.ledge.edge) <= 0.5 * s) continue;
+      if (!needGap || gap) return l;
+      if (!hop && d >= 1.5 * s) hop = l;
+    }
+    return needGap && !gap ? hop : null;
+  }
+
+  /** O salto entre bordas: um arco curto até ficar pendurado na outra. */
+  _startLeap(l, s, eye) {
+    const from = this.feet.clone();
+    const to = l.edge.clone().addScaledVector(l.nrm, 0.34 * s);
+    to.y = l.topY - eye - LEDGE.hangBelow * s;
+    const mid = from.clone().lerp(to, 0.5);
+    mid.y = Math.max(from.y, to.y) + 0.35 * s;
+    this.climb = { t: 0, dur: LEDGE.leapT, from, mid, to, h: 0, vault: false, edge: l.edge.clone(), nrm: l.nrm.clone(), toHang: l, leap: true };
+    this.ledge = null;
+    this.turnTo = Math.atan2(l.nrm.x, l.nrm.z);
+    this.onLeap?.();
   }
 
   /** Subir: primeiro o corpo sobe rente à parede, depois passa por cima da quina. */
@@ -506,7 +750,10 @@ export class Walker {
     if (k < split) this.feet.lerpVectors(c.from, c.mid, ease(k / split));
     else this.feet.lerpVectors(c.mid, c.to, ease((k - split) / (1 - split)));
     this.bob *= Math.exp(-8 * dt);
-    if (k >= 1) {
+    if (k >= 1 && c.toHang) {
+      this.climb = null;
+      this._startHang(c.toHang, this._s ?? 1, eye, false);
+    } else if (k >= 1) {
       this.climb = null;
       this.grounded = true;
       this.airTime = 0;

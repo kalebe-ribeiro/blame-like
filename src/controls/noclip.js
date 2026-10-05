@@ -125,7 +125,9 @@ export class NoclipControls {
 
   _applyRotation(time) {
     // micro-rolagem lenta: o horizonte nunca está completamente reto
-    this._euler.set(this.pitch, this.yaw, Math.sin(time * 0.13) * 0.006);
+    // (rolando: a cabeça mergulha e volta — controls/walker.js rollPitch)
+    const roll = this.mode === 'walk' ? this.walker?.rollPitch ?? 0 : 0;
+    this._euler.set(Math.max(-1.55, this.pitch + roll), this.yaw, Math.sin(time * 0.13) * 0.006);
     this.camera.quaternion.setFromEuler(this._euler);
   }
 
