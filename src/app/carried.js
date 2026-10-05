@@ -178,9 +178,10 @@ export function createCarried(ctx) {
       for (const u of F.uniquesNear(g.x, g.y, g.z, RR('unique'))) consider(u.x, u.y + 10, u.z, RR('unique'));
     } else if (sensor === 'motion') {
       // o que se move: máquinas colossais e vagões
-      const c = world.colossi.nearest(F, g, time);
+      const c = world.colossi.nearest(F, g, time, (m) => !m.stopped); // (a parada não se move)
       if (c) consider(c.x, c.y, c.z, RR('motion'));
       for (const car of world.transit.cars.values()) {
+        if (world.transit.stoppedForGood(car.line)) continue; // (a linha parada de vez não se move mais)
         const p = car.group.position;
         consider(p.x + world.origin.x, p.y + world.origin.y, p.z + world.origin.z, RR('motion') * 0.5);
       }

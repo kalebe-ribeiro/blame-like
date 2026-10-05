@@ -16,21 +16,21 @@ const MEASURE = 2500; // ms medindo quadros
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Mede quadros por `ms`: fps médio e pior quadro. */
-function measure(ms) {
+/** fps e o pior intervalo entre quadros DESENHADOS (app.js frameHooks — um rAF pode passar a vez). */
+function measure(ms, ctx) {
   return new Promise((resolve) => {
     const ts = [];
     let last = 0;
     const t0 = performance.now();
-    const tick = (t) => {
+    const hook = (t) => {
       if (last) ts.push(t - last);
       last = t;
-      if (t - t0 < ms) requestAnimationFrame(tick);
-      else {
-        const avg = ts.reduce((a, b) => a + b, 0) / Math.max(1, ts.length);
-        resolve({ fps: Math.round(1000 / avg), worst: Math.round(Math.max(0, ...ts)) });
-      }
+      if (t - t0 < ms) return;
+      ctx.frameHooks.delete(hook);
+      const avg = ts.reduce((a, b) => a + b, 0) / Math.max(1, ts.length);
+      resolve({ fps: Math.round(1000 / avg), worst: Math.round(Math.max(0, ...ts)) });
     };
-    requestAnimationFrame(tick);
+    ctx.frameHooks.add(hook);
   });
 }
 
@@ -68,7 +68,7 @@ export async function runCheck(ctx) {
     if (n === 3) world.outages.trigger(world.toGlobal(camera.position), camera.getWorldDirection(new THREE.Vector3()), ctx.getTime());
     if (n === 6) world.collapses.trigger(world.toGlobal(camera.position), camera.getWorldDirection(new THREE.Vector3()), ctx.getTime());
     await sleep(SETTLE);
-    const m = await measure(MEASURE);
+    const m = await measure(MEASURE, ctx.app);
     const w = controls.walker;
     const g = world.toGlobal(camera.position);
     // "caiu": em queda livre há muito tempo depois de o terreno carregar

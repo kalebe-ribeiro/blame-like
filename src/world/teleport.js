@@ -151,6 +151,7 @@ export function findDestination(F, kind, g, recent = new Set(), opts = {}) {
         return [m.lane.axis === 'x' ? m.x + ahead : m.x, m.y - 120, m.lane.axis === 'x' ? m.z : m.z + ahead];
       };
       const open = (m) => {
+        if (m.stopped) return false; // (uma trincheira parada pelo emissor: nada passa por cima)
         const [x, y, z] = spot(m);
         return F.isOpenBiome(x, y, z) && F.isOpenBiome(m.x, y, m.z) && !F.insideVoid(x, y, z) && !F.nearMegaWall(x, y, z, 60);
       };

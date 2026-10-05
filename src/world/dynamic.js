@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import * as CSGLIB from '../lib/three-bvh-csg.js';
-import { cutPiece, setCSG } from '../gen/cut.js';
+import { cutPiece, dropLoose, segDist, setCSG } from '../gen/cut.js';
 import { movingMaterial } from '../shaders/materials.js';
 import { mergeAll } from './geometry.js';
 
@@ -140,10 +140,21 @@ export class DynamicCuts {
   /** Um corte novo (GLOBAL — world.addCut): nos objetos que ele atravessa. */
   onCut(cut) {
     const origin = this.world.origin;
+    // o corte na cena (para o filtro barato: a esfera de cada malha)
+    const sc = { a: [cut.a[0] - origin.x, cut.a[1] - origin.y, cut.a[2] - origin.z], b: [cut.b[0] - origin.x, cut.b[1] - origin.y, cut.b[2] - origin.z], r: cut.r };
     for (const o of this.objs.values()) {
       const root = o.root;
       if (!root.parent) continue;
       root.updateMatrixWorld(true);
+      // longe de todas as malhas dele: nada a fazer (sem montar peças — o primeiro tiro do mundo
+      // passava por todas as estruturas carregadas, dezenas de colossos)
+      const reach = o.meshes.some((m) => {
+        const geo = o.cut?.get(m)?.base ?? m.geometry;
+        if (!geo.boundingSphere) geo.computeBoundingSphere();
+        const c = _c.copy(geo.boundingSphere.center).applyMatrix4(m.matrixWorld);
+        return segDist(c.x, c.y, c.z, sc) < cut.r + geo.boundingSphere.radius * m.matrixWorld.getMaxScaleOnAxis();
+      });
+      if (!reach) continue;
       // o corte no frame do root
       _inv.copy(root.matrixWorld).invert();
       const a = new THREE.Vector3(cut.a[0], cut.a[1], cut.a[2]).sub(origin).applyMatrix4(_inv);
@@ -161,7 +172,12 @@ export class DynamicCuts {
           if (hitEss) this.stats.essential++;
           else this.stats.worn++;
           o.onDead(o.st.dead, false);
-          this.world.bus?.emit('structure:dead', { id: o.id, reason: o.st.dead });
+          // onde: o ponto do eixo do corte mais perto do objeto (GLOBAL — o estrondo, as faíscas)
+          const at = new THREE.Vector3(cut.a[0], cut.a[1], cut.a[2]);
+          const ab = new THREE.Vector3(cut.b[0], cut.b[1], cut.b[2]).sub(at);
+          const rp = root.getWorldPosition(new THREE.Vector3()).add(origin);
+          at.addScaledVector(ab, Math.max(0, Math.min(1, rp.clone().sub(at).dot(ab) / (ab.lengthSq() || 1))));
+          this.world.bus?.emit('structure:dead', { id: o.id, reason: o.st.dead, x: at.x, y: at.y, z: at.z });
         } else this.world.bus?.emit('structure:hit', { id: o.id, hp: o.st.hp });
       }
       this._save(o);
@@ -179,9 +195,13 @@ export class DynamicCuts {
     let changed = false;
     _inv.copy(o.root.matrixWorld).invert();
     o.cut ??= new Map(); // malha → { pieces: [{ geo, memo, n, kept, caps }], cuts (no frame dela), caps }
+    for (const mesh of o.meshes) if (!o.cut.has(mesh)) o.cut.set(mesh, { base: mesh.geometry, pieces: piecesOf(mesh.geometry), cuts: [], caps: null });
+    // as caixas de todas as peças do objeto (as malhas dele dividem o frame do root — vagão, carro,
+    // colosso, pórtico): um fragmento solto que não encosta em nenhuma outra cai (nada flutua)
+    const allPieces = [...o.cut.values()].flatMap((st) => st.pieces);
+    for (const pc of allPieces) if (!pc.geo.boundingBox) pc.geo.computeBoundingBox();
     for (const mesh of o.meshes) {
-      let st = o.cut.get(mesh);
-      if (!st) o.cut.set(mesh, (st = { base: mesh.geometry, pieces: piecesOf(mesh.geometry), cuts: [], caps: null }));
+      const st = o.cut.get(mesh);
       // o frame da malha a partir do do root
       mesh.updateMatrixWorld(true);
       _m.copy(_inv).multiply(mesh.matrixWorld); // malha → root
@@ -192,7 +212,13 @@ export class DynamicCuts {
         b: _b.fromArray(c.b).applyMatrix4(toMesh).toArray(),
         r: c.r,
       }));
-      const all = [...st.cuts, ...local];
+      // (só os que chegam perto da malha: os outros nem entram na lista dela — cada tiro do mundo
+      // passava por todas as peças de todas as estruturas)
+      if (!st.base.boundingSphere) st.base.computeBoundingSphere();
+      const S = st.base.boundingSphere;
+      const near = local.filter((c) => segDist(S.center.x, S.center.y, S.center.z, c) < c.r + S.radius);
+      if (!near.length) continue;
+      const all = [...st.cuts, ...near];
       st.cuts = all;
       // peça a peça (cada caixa, cada tubo: um sólido fechado — fundidas, as que se tocam nos cantos
       // deixam de parecer fechadas e o corte sairia sem faces)
@@ -200,6 +226,16 @@ export class DynamicCuts {
       for (const pc of st.pieces) {
         const r = cutPiece(pc.geo, all, { maxEdge: 1.2, memo: pc.memo, key: 'p' });
         if (r.mode === 'none') continue;
+        // os fragmentos pequenos que ficaram soltos saem e caem (uma vez cada: a memória da peça os
+        // guarda e o próximo corte os devolveria)
+        const lost = dropLoose(r, allPieces.filter((q) => q !== pc).map((q) => q.geo.boundingBox));
+        for (const f of lost) {
+          const key = f.min.concat(f.max).map((v) => Math.round(v * 2)).join(',');
+          if ((pc.dropped ??= new Set()).has(key)) continue;
+          pc.dropped.add(key);
+          const c = new THREE.Vector3((f.min[0] + f.max[0]) / 2, (f.min[1] + f.max[1]) / 2, (f.min[2] + f.max[2]) / 2).applyMatrix4(mesh.matrixWorld).add(this.world.origin);
+          this.world.bus?.emit('cut:loose', { x: c.x, y: c.y, z: c.z, sx: f.max[0] - f.min[0], sy: f.max[1] - f.min[1], sz: f.max[2] - f.min[2], mat: mesh.userData.mat ?? 'machine' });
+        }
         // mudou? (o corte novo pode passar ao lado: a memória devolve o mesmo resultado)
         const n = count(r.kept) * 7 + count(r.caps);
         if (n === pc.n) {

@@ -385,6 +385,107 @@ export function setupDev(ctx) {
   }
   // --hurt=v: aos 5 s a vida vai a v (o aparelho mostra — app/health.js)
   if (params.get('hurt')) setTimeout(() => ctx.health.set(Number(params.get('hurt'))), 5000);
+  // --progswitch: quais materiais trocam de programa de shader entre as chamadas renderer.render de um
+  // quadro (o three reavalia o programa a cada troca: getProgram/getParameters) — a cada 3 s, os piores
+  if (params.get('progswitch')) {
+    const r = ctx.renderer;
+    const props = r.properties;
+    const last = new WeakMap();
+    const count = new Map();
+    let mats = [];
+    setInterval(() => {
+      const s = new Set();
+      ctx.scene.traverse((o) => o.material && (Array.isArray(o.material) ? o.material.forEach((m) => s.add(m)) : s.add(o.material)));
+      mats = [...s];
+    }, 1000);
+    // dentro de um render: o programa de um material mudou de um objeto para o outro?
+    const rbd = r.renderBufferDirect.bind(r);
+    r.renderBufferDirect = (camera, scene, geometry, material, object, group) => {
+      const before = props.get(material)?.currentProgram;
+      const out = rbd(camera, scene, geometry, material, object, group);
+      const after = props.get(material)?.currentProgram;
+      if (before && after && before !== after) {
+        const a = (before.cacheKey ?? '').split(',');
+        const b = (after.cacheKey ?? '').split(',');
+        // quem é: o material no mundo (world.materials) e o caminho de pais do objeto
+        const wm = Object.entries(world.materials).find(([, v]) => v === material)?.[0] ?? (material.defines?.USE_OBJECT_PATTERN ? 'movendo' : '?');
+        const path = [];
+        for (let o = object; o && path.length < 4; o = o.parent) path.push(o.name || o.type + (o.userData?.mat ? ':' + o.userData.mat : '') + (o.isBatchedMesh ? '[lote]' : ''));
+        const k = `${wm} em ${path.join(' < ')}: ${a.filter((x) => !b.includes(x)).slice(0, 2).join('|') || '·'}→${b.filter((x) => !a.includes(x)).slice(0, 2).join('|') || '·'}`;
+        count.set(k, (count.get(k) ?? 0) + 1);
+      }
+      return out;
+    };
+    const render = r.render.bind(r);
+    let calls = 0;
+    const kinds = new Map();
+    r.render = (scene, cam) => {
+      const t0 = performance.now();
+      const out = render(scene, cam);
+      calls++;
+      const rt = r.getRenderTarget();
+      const k = `${scene === ctx.scene ? 'CENA' : scene.name || scene.type + '(' + scene.children.length + ')'} · ${cam.name || cam.type} · ${rt ? `alvo ${rt.width}×${rt.height}` : 'tela'}`;
+      const v = kinds.get(k) ?? { n: 0, ms: 0 };
+      v.n++;
+      v.ms += performance.now() - t0;
+      kinds.set(k, v);
+      for (const m of mats) {
+        const p = props.get(m)?.currentProgram;
+        if (!p) continue;
+        const was = last.get(m);
+        if (was && was !== p) {
+          const k = `${m.type}${m.name ? ':' + m.name : ''} ${(was.cacheKey ?? '').split(',').filter((x, i, a) => !(p.cacheKey ?? '').split(',').includes(x)).slice(0, 3).join('|')} → ${(p.cacheKey ?? '').split(',').filter((x) => !(was.cacheKey ?? '').split(',').includes(x)).slice(0, 3).join('|')}`;
+          count.set(k, (count.get(k) ?? 0) + 1);
+        }
+        last.set(m, p);
+      }
+      return out;
+    };
+    setInterval(() => {
+      const top = [...count].sort((a, b) => b[1] - a[1]).slice(0, 8);
+      console.warn(`PROGSWITCH ${calls} chamadas em 3 s · ${[...count.values()].reduce((a, b) => a + b, 0)} trocas · ${top.map(([k, v]) => `${v}× ${k}`).join(' ;; ') || '—'}`);
+      console.warn(`PROGSWITCH chamadas por tipo (3 s): ${[...kinds].sort((a, b) => b[1].ms - a[1].ms).map(([k, v]) => `${v.n}× ${k} = ${v.ms.toFixed(0)} ms`).join(' ;; ')}`);
+      kinds.clear();
+      count.clear();
+      calls = 0;
+    }, 3000);
+  }
+  // --hitch: cada quadro de mais de 150 ms vai para o console, com o que apareceu nele — programas de
+  // shader novos (e quais: compilar trava), geometrias e texturas novas
+  if (params.get('hitch')) {
+    let last = performance.now();
+    let progs = 0;
+    let geos = 0;
+    let texs = 0;
+    const seen = new Set();
+    const t0 = performance.now();
+    let heap = 0;
+    // as tarefas longas do navegador (fora do quadro também: mensagens de worker, timers, coleta de lixo)
+    try {
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries()) if (e.duration > 120) console.warn(`HITCH tarefa longa ${e.duration.toFixed(0)} ms aos ${((e.startTime - t0) / 1000).toFixed(1)} s (${e.name})`);
+      }).observe({ type: 'longtask', buffered: true });
+    } catch {}
+    // (a cada quadro DESENHADO — app.js frameHooks: um rAF pode passar a vez)
+    const tick = () => {
+      const now = performance.now();
+      const info = ctx.renderer.info;
+      const P = info.programs ?? [];
+      const fresh = P.filter((p) => !seen.has(p));
+      for (const p of fresh) seen.add(p);
+      const h = /** @type {any} */ (performance).memory?.usedJSHeapSize ?? 0;
+      if (now - last > 150) {
+        const g = world.toGlobal(camera.position.clone());
+        console.warn(`HITCH ${(now - last).toFixed(0)} ms aos ${((now - t0) / 1000).toFixed(1)} s @ ${[g.x, g.y, g.z].map(Math.round)} · heap ${(heap / 1e6).toFixed(0)}→${(h / 1e6).toFixed(0)} MB · programas ${progs}→${P.length} (${fresh.map((p) => p.name || p.cacheKey?.slice(0, 40)).join(', ') || '—'}) · geometrias ${geos}→${info.memory.geometries} · texturas ${texs}→${info.memory.textures}`);
+      }
+      progs = P.length;
+      heap = h;
+      geos = info.memory.geometries;
+      texs = info.memory.textures;
+      last = now;
+    };
+    ctx.frameHooks.add(tick);
+  }
   // --sgcam=N: dos N s em diante, a câmera (voando: ninguém percebe) acompanha o Safeguard
   // mais perto de frente, a --sgdist m (padrão 4,5), na altura do peito
   if (params.get('sgcam')) {
@@ -800,7 +901,7 @@ export function setupDev(ctx) {
   else if (params.get('check') === 'health') import('../dev/healthtest.js').then((m) => m.runHealthTest(ctx));
   else if (params.get('check') === 'safeguards') import('../dev/sgtest.js').then((m) => m.runSafeguardTest(ctx));
   else if (params.get('check')) {
-    import('../dev/check.js').then((m) => m.runCheck({ teleport: ctx.ui.teleport, world, controls: ctx.controls, camera, THREE, getTime: () => ctx.time, only: params.get('check') }));
+    import('../dev/check.js').then((m) => m.runCheck({ teleport: ctx.ui.teleport, world, controls: ctx.controls, camera, THREE, getTime: () => ctx.time, only: params.get('check'), app: ctx }));
   }
 
   // --stats: FPS e streaming no terminal a cada 2 s
@@ -855,11 +956,8 @@ export function setupDev(ctx) {
     const dbg = gl.getExtension('WEBGL_debug_renderer_info');
     console.warn(`gpu=${dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)}`);
     let frames = 0;
-    const count = () => {
-      frames++;
-      requestAnimationFrame(count);
-    };
-    count();
+    // (os quadros DESENHADOS — app.js frameHooks: um rAF pode passar a vez)
+    ctx.frameHooks.add(() => frames++);
     setInterval(() => {
       const g = world.toGlobal(camera.position);
       const s = world.stats;

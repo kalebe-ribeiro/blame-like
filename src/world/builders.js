@@ -25,7 +25,7 @@ import * as THREE from 'three';
 import { movingMaterial } from '../shaders/materials.js';
 import { mergeAll, place } from './geometry.js';
 import { RNG } from '../core/rng.js';
-import { cutPiece, segDist } from '../gen/cut.js';
+import { cutPiece, dropLoose, segDist } from '../gen/cut.js';
 
 const SPAN = 150; // vão do pórtico
 const LEG_H = 70; // altura das pernas
@@ -35,6 +35,8 @@ const BLOCK = { w: 12, h: 8 };
 export const BUILDER = { SPAN, LEG_H, BLOCK };
 const MOVE_SPEED = 3; // m/s do pórtico nos trilhos
 const LOWER_T = 9;
+const GROUND = new THREE.Box3(new THREE.Vector3(-Infinity, -Infinity, -Infinity), new THREE.Vector3(Infinity, 0.2, Infinity));
+const BREAK_CLEAR = 7; // m: o truque (12 m ao longo do trilho) para antes da ponta de um trilho cortado
 const WELD_T = 7;
 const RAISE_T = 6;
 
@@ -104,7 +106,12 @@ export class BuilderSystem {
       essential: [at(-SPAN / 2, 4, 4), at(SPAN / 2, 4, 4), at(0, LEG_H + 4, 7)],
       onDead: (_why, replay) => {
         if (site.dead) return;
-        this._wreck(site, new RNG((site.def.seed ^ 0x9e3779b9) >>> 0));
+        // derrubado pelo emissor: tomba ONDE ESTÁ (nada some nem aparece); onde ficou vai para o mundo
+        // salvo — o canteiro recriado volta igual (sem isto, ia para um ponto qualquer do trilho)
+        const ws = this.dyn.world.worldState;
+        const key = `bgWreck:${site.def.id}`;
+        if (!replay && ws?.get(key) === undefined) ws?.set(key, { gx: site.gx ?? 0, hx: site.hx ?? 0 });
+        this._wreck(site, new RNG((site.def.seed ^ 0x9e3779b9) >>> 0), ws?.get(key) ?? null);
         this.stats.destroyed++;
         if (!replay) this.bus?.emit('builder:destroyed', { id: site.def.id, x: site.def.x, y: site.def.y + LEG_H / 2, z: site.def.z });
       },
@@ -122,10 +129,29 @@ export class BuilderSystem {
     const ids = near.map((c) => c.id).join(',');
     if (ids === (site.cutIds ?? '')) return;
     site.cutIds = ids;
+    site.cutMemo = new Map(); // (as chaves levam a lista de cortes: as de antes não servem mais — e acumulavam)
     site.cutsL = near.map((c) => ({ id: c.id, a: [c.a[0] - d.x, c.a[1] - d.y, c.a[2] - d.z], b: [c.b[0] - d.x, c.b[1] - d.y, c.b[2] - d.z], r: c.r, keep: c.keep && [c.keep[0] - d.x, c.keep[1] - d.y, c.keep[2] - d.z, c.keep[3], c.keep[4] - d.y] }));
     this._rebuildBuilt(site);
     // os trilhos (fixos): o mesmo corte
     const r = this._cutParts(site.railParts, site.cutsL, site, 'rail');
+    // onde os trilhos foram cortados (ao longo deles): o pórtico não passa dali
+    const along = d.axis === 'x' ? 2 : 0;
+    const across = d.axis === 'x' ? 0 : 2;
+    const half = (SPAN + 60) / 2;
+    site.railBreaks = [];
+    for (const c of site.cutsL) {
+      for (const side of [-SPAN / 2, SPAN / 2]) {
+        // o ponto do eixo do corte mais perto do trilho (a reta ao longo, em lado = side, y = 0,5)
+        const pa = c.a[across];
+        const dp = c.b[across] - pa;
+        const dy = c.b[1] - c.a[1];
+        const L2 = dp * dp + dy * dy;
+        const u = L2 > 1e-9 ? Math.max(0, Math.min(1, ((side - pa) * dp + (0.5 - c.a[1]) * dy) / L2)) : 0;
+        if (Math.hypot(pa + dp * u - side, c.a[1] + dy * u - 0.5) >= c.r + 0.6) continue;
+        const at = c.a[along] + (c.b[along] - c.a[along]) * u;
+        if (Math.abs(at) < half) site.railBreaks.push(at);
+      }
+    }
     site.rails.geometry.dispose();
     site.rails.geometry = r.kept;
     this._setCaps(site, 'railCaps', r.caps);
@@ -146,12 +172,32 @@ export class BuilderSystem {
       let res = site.cutMemo.get(key);
       if (!res) {
         res = cutPiece(g, site.cutsL, { maxEdge: 1.5 });
+        if (res.mode !== 'none') this._dropLoose(site, g, parts, res);
         site.cutMemo.set(key, res);
       }
       if (res.kept) kept.push(res.kept);
       if (res.caps) caps.push(res.caps);
     }
     return { kept: kept.length ? mergeAll(kept.map((g) => g.clone())) : new THREE.BufferGeometry(), caps: caps.length ? mergeAll(caps.map((g) => g.clone())) : null };
+  }
+
+  /** Os pedaços pequenos de um bloco cortado que ficaram soltos (sem encostar noutro bloco nem no chão)
+   *  caem — a regra dos chunks (gen/cut.js dropLoose); cada um uma vez só. */
+  _dropLoose(site, g, parts, res) {
+    const boxes = [];
+    for (const q of parts) {
+      if (q === g) continue;
+      if (!q.boundingBox) q.computeBoundingBox();
+      boxes.push(q.boundingBox.clone().expandByScalar(0.2)); // (a junta de 0,3 m entre blocos: soldados)
+    }
+    boxes.push(GROUND); // o chão do canteiro: o que encosta nele (pela junta de baixo) está apoiado
+    const d = site.def;
+    for (const f of dropLoose(res, boxes)) {
+      const key = `${g.userData.cell}:${f.min.concat(f.max).map((v) => Math.round(v * 2)).join(',')}`;
+      if ((site.dropped ??= new Set()).has(key)) continue;
+      site.dropped.add(key);
+      this.bus?.emit('cut:loose', { x: d.x + (f.min[0] + f.max[0]) / 2, y: d.y + (f.min[1] + f.max[1]) / 2, z: d.z + (f.min[2] + f.max[2]) / 2, sx: f.max[0] - f.min[0], sy: f.max[1] - f.min[1], sz: f.max[2] - f.min[2], mat: 'block' });
+    }
   }
 
   /** Corta peças (geometrias no frame do canteiro) pelos cortes: → { kept (uma malha), caps (ou null) }. */
@@ -188,7 +234,12 @@ export class BuilderSystem {
     site.group.add(site[key]);
   }
 
-  _wreck(site, r) {
+  /**
+   * O canteiro morto. `at` ({ gx, hx }): derrubado pelo emissor — o pórtico tomba onde estava, o gancho
+   * e a carga caem embaixo de onde estavam, e nada mais muda (a obra, os blocos, os pórticos velhos).
+   * Sem `at`: um cemitério desde sempre (a geração — o ponto e o resto pelo RNG do canteiro).
+   */
+  _wreck(site, r, at = null) {
     const def = site.def;
     const along = def.axis === 'x' ? 'z' : 'x';
     const rust = this.materials.rib;
@@ -196,18 +247,26 @@ export class BuilderSystem {
     site.rails.material = rust;
     // o pórtico parou num ponto qualquer, torto: uma perna afundou
     site.gantry.material = rust;
-    const gx = r.float(-40, 40);
+    const gx0 = r.float(-40, 40);
+    const gx = at ? at.gx : gx0;
     if (along === 'z') site.gantry.position.set(0, -3, gx);
     else site.gantry.position.set(gx, -3, 0);
     const tilt = r.sign() * r.float(0.06, 0.16);
     if (along === 'z') site.gantry.rotation.z = tilt;
     else site.gantry.rotation.x = tilt;
     // o gancho caiu com a carga
-    const hx = r.float(-SPAN / 3, SPAN / 3);
+    const hx0 = r.float(-SPAN / 3, SPAN / 3);
+    const hx = at ? at.hx : hx0;
     site.hook.position.set(along === 'z' ? hx : gx + 6, 0.75, along === 'z' ? gx + 6 : hx);
     site.hook.rotation.set(r.float(-0.4, 0.4), r.float(0, 3), 1.2);
     site.load.position.set(along === 'z' ? hx + 7 : gx + 9, BLOCK.h / 2 - 1.2, along === 'z' ? gx + 9 : hx + 7);
     site.load.rotation.set(r.float(-0.3, 0.3), r.float(0, 3), r.float(0.2, 0.6));
+    site.load.visible = true;
+    site.group.updateMatrixWorld(true);
+    if (at) {
+      site.warn = { phase: r.float(0, 10) };
+      return;
+    }
     // a obra ficou pela metade, com falhas
     const keep = r.int(site.cols * 2, site.cols * 9);
     site.built = site.built.concat(site.plan.splice(0, keep)).filter(() => r.chance(0.8));
@@ -338,6 +397,8 @@ export class BuilderSystem {
       const d = site.def;
       site.group.position.set(d.x - origin.x, d.y - origin.y, d.z - origin.z);
       if (site.dead) {
+        // parado: nada mais anda (o que ficou do último quadro arrastaria quem está em cima)
+        for (const m of [site.gantry, site.hook, site.load]) m.userData.dx = m.userData.dy = m.userData.dz = 0;
         // só a lâmpada de aviso, vermelha e fraca, no alto do pórtico torto
         site.group.updateMatrixWorld(true);
         // o farol inclina junto com o pórtico torto
@@ -357,12 +418,19 @@ export class BuilderSystem {
       const acrossPos = d.axis === 'x' ? target.x : target.z;
       if (task.phase === 'move') {
         // o pórtico anda nos trilhos e o carro do guincho corre pela viga
-        const goal = along === 'z' ? target.z : target.x;
+        let goal = along === 'z' ? target.z : target.x;
+        // um trilho cortado no caminho: o pórtico chega até o corte e para ali (a obra para)
+        const dir = Math.sign(goal - site.gx);
+        for (const at of site.railBreaks ?? []) {
+          const stopAt = at - dir * BREAK_CLEAR;
+          if (dir && (at - site.gx) * dir > 0 && (goal - stopAt) * dir > 0) goal = (stopAt - site.gx) * dir > 0 ? stopAt : site.gx;
+        }
+        site.stuck = goal !== (along === 'z' ? target.z : target.x);
         const step = MOVE_SPEED * dt;
         const toward = (v, g2) => (Math.abs(g2 - v) < step ? g2 : v + Math.sign(g2 - v) * step);
         site.gx = toward(site.gx, goal);
         site.hx = toward(site.hx, acrossPos);
-        if (Math.abs(goal - site.gx) < 0.01 && Math.abs(acrossPos - site.hx) < 0.01) Object.assign(task, { phase: 'lower', t0: time });
+        if (!site.stuck && Math.abs(goal - site.gx) < 0.01 && Math.abs(acrossPos - site.hx) < 0.01) Object.assign(task, { phase: 'lower', t0: time });
       } else if (task.phase === 'lower') {
         const u = Math.min(1, tt / LOWER_T);
         hookY = hookTop - 8 + (target.y + BLOCK.h / 2 + 0.75 - (hookTop - 8)) * u * u * (3 - 2 * u);
@@ -385,7 +453,9 @@ export class BuilderSystem {
         hookY = target.y + BLOCK.h / 2 + 0.75 + (hookTop - 8 - (target.y + BLOCK.h / 2 + 0.75)) * u;
         if (u >= 1) this._nextTask(site, time);
       }
-      // posiciona pórtico, gancho e carga
+      // posiciona pórtico, gancho e carga — e quanto cada um andou neste quadro (quem está de pé
+      // neles anda junto: controls/walker.js, world/entities.js — como nos vagões e elevadores)
+      const before = [site.gantry, site.hook, site.load].map((m) => m.position.clone());
       if (along === 'z') site.gantry.position.set(0, 0, site.gx);
       else site.gantry.position.set(site.gx, 0, 0);
       const hx = along === 'z' ? site.hx : site.gx;
@@ -393,6 +463,13 @@ export class BuilderSystem {
       site.hook.position.set(hx, hookY, hz);
       site.load.visible = loadVisible && task.phase !== 'raise';
       site.load.position.set(hx, hookY - 0.75 - BLOCK.h / 2, hz);
+      [site.gantry, site.hook, site.load].forEach((m, i) => {
+        const placed = m.userData.placed;
+        m.userData.dx = placed ? m.position.x - before[i].x : 0;
+        m.userData.dy = placed ? m.position.y - before[i].y : 0;
+        m.userData.dz = placed ? m.position.z - before[i].z : 0;
+        m.userData.placed = true;
+      });
       site.group.updateMatrixWorld(true);
 
       // luzes: farol âmbar no alto do pórtico, arco de solda no ponto de trabalho

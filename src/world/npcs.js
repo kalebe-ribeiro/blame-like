@@ -32,6 +32,7 @@ import { villageCarrier } from '../gen/gene.js';
 
 const KEEP = 600; // m: vilas mantidas em volta do jogador
 const DROP = 800;
+const STALE_DROP = 450; // m: um andarilho de circuito cortado sai quando ninguém o vê (além da névoa)
 const WALK = 4.2;
 const WANDER_SPEED = WANDER.speed;
 const SALT = WANDER.salt; // o circuito do andarilho (outro que o da ronda)
@@ -41,6 +42,8 @@ export class NpcSystem {
   constructor(world) {
     this.world = world;
     this.field = world.field;
+    /** @type {THREE.Vector3 | null} onde o jogador estava no último quadro (GLOBAL) */
+    this.lastG = null;
     this.ents = world.entities;
     this.villages = new Map(); // id da vila → { u, layout, people: [entidades] }
     this.wanderers = new Map(); // território → entidade
@@ -83,6 +86,7 @@ export class NpcSystem {
   }
 
   update(time, dt, g) {
+    (this.lastG ??= new THREE.Vector3()).copy(g); // (onCut: quem pode ser visto não some)
     // um circuito de andarilho por quadro — calculado num worker
     const q = this.wqueue.shift();
     if (q) {
@@ -107,10 +111,15 @@ export class NpcSystem {
     }
   }
 
-  /** Um corte do emissor: os andarilhos de circuito cortado saem (o próximo varrer refaz o circuito). */
+  /** Um corte do emissor: os andarilhos de circuito cortado saem (o próximo varrer refaz) — menos
+   *  o corpo de quem morreu e quem pode ser visto (nada some na frente do jogador: sai depois, longe). */
   onCut() {
     for (const [id, e] of this.wanderers) {
-      if (e.npc.state !== 'walk' || !this.field.cutOnPath(e.npc.c.pts)) continue;
+      if (e.dead || e.npc.state !== 'walk' || !this.field.cutOnPath(e.npc.c.pts)) continue;
+      if (e.feet.distanceTo(this.lastG ?? e.feet) < STALE_DROP) {
+        e.npc.stale = true;
+        continue;
+      }
       this.ents.remove(e.id);
       this.wanderers.delete(id);
     }
@@ -137,7 +146,8 @@ export class NpcSystem {
       this.wqueue.push(t);
     }
     for (const [id, e] of this.wanderers) {
-      if (!ids.has(id) && e.feet.distanceTo(g) > DROP && e.npc.state === 'walk') {
+      const d = e.feet.distanceTo(g);
+      if (e.npc.state === 'walk' && ((!ids.has(id) && d > DROP) || (e.npc.stale && d > STALE_DROP))) {
         this.ents.remove(e.id);
         this.wanderers.delete(id);
       }

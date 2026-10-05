@@ -81,6 +81,8 @@ export class TerminalSystem {
     if (site.kind === 'station' && this.transit) return this.transit.stationStatus(site.line, site.s, time);
     if (site.kind === 'hatch' && this.world?.colossi) {
       const s = this.world.colossi.nextAt(site.lane, site.hatch.t, time);
+      // a trincheira parada pelo emissor (uma máquina destruída, o trilho cortado)
+      if (this.world.colossi.laneStopped(site.lane)) return s === null ? [{ w: 'TRENCH' }, { w: 'DAMAGED' }, { p: '·' }, { w: 'NEXT' }, { w: 'MACHINE' }, { p: ':' }, { w: 'NONE' }] : [{ w: 'MACHINE' }, { p: ':' }, { w: 'DAMAGED' }];
       if (s === null) return [{ w: 'NEXT' }, { w: 'MACHINE' }, { p: ':' }, { w: 'NONE' }];
       if (s <= COLOSSUS.len / 2 / COLOSSUS.speed) return [{ w: 'MACHINE' }, { p: ':' }, { w: 'BOARDING' }];
       return [{ w: 'NEXT' }, { w: 'MACHINE' }, { p: ':' }, { n: `${Math.max(1, Math.round(s / 60))}` }, { p: 'MIN' }];

@@ -13,6 +13,12 @@
 
 Névoa volumétrica, janelas, placas, ferrugem: tudo no shader de superfície (`shaders/materials.js`). Shaders que desenham lotes precisam de `#include <batching_pars_vertex>` / `<batching_vertex>`.
 
+## Ritmo dos quadros (2026-10-04)
+
+- O jogo roda sem o limite de quadros do Chromium (`main.js disable-frame-rate-limit`, por causa da RTX desenhando para a tela da Intel). Sem freio, a CPU enfileirava quadros além da GPU, e o driver a segurava por 200–450 ms de uma vez nas vistas pesadas. Agora há **no máximo 4 quadros em voo**: uma fence do WebGL2 no fim de cada quadro, e o rAF seguinte passa a vez se a GPU ainda estiver neles (`app.js MAX_INFLIGHT`). Pior quadro ≤ 42 ms nos lugares medidos, com a mesma média.
+- **fps se mede pelos quadros desenhados** (`ctx.frameHooks`), nunca pelo intervalo do rAF.
+- Dois cuidados com o three r170 (ver [[11-Invariantes-e-Armadilhas]]): o getter `BatchedMesh.colorTexture` (`world/batches.js`) e as cópias `soloMaterial` das malhas comuns (`world.js`).
+
 ## Lotes (`world/batches.js`)
 
 - Um `MaterialBatch` por material, com **páginas** de `BatchedMesh` de 64k–128k vértices (páginas pequenas: envio grande de buffer trava o Chrome/ANGLE).

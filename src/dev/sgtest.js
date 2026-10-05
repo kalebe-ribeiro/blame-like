@@ -44,9 +44,10 @@ export async function runSafeguardTest(ctx) {
   /** @type {any} */
   let woke = null;
   world.bus.on('player:wake', (ev) => (woke = ev));
-  const fiscal = { wall: 0, fell: 0 };
+  const fiscal = { wall: 0, fell: 0, where: '' };
   const watch = setInterval(() => {
     for (const e of sg.all()) {
+      if (e.stats.wall > fiscal.wall) fiscal.where = e.stats.wallLast ?? '';
       fiscal.wall = Math.max(fiscal.wall, e.stats.wall);
       fiscal.fell = Math.max(fiscal.fell, e.stats.fell);
     }
@@ -403,9 +404,10 @@ export async function runSafeguardTest(ctx) {
 
   clearInterval(watch);
   for (const x of sg.all()) {
+    if (x.stats.wall > fiscal.wall) fiscal.where = x.stats.wallLast ?? '';
     fiscal.wall = Math.max(fiscal.wall, x.stats.wall);
     fiscal.fell = Math.max(fiscal.fell, x.stats.fell);
   }
-  report({ kind: 'fiscal', ok: fiscal.wall === 0 && fiscal.fell === 0, why: `atravessou parede ${fiscal.wall}× · caiu ${fiscal.fell}×` });
+  report({ kind: 'fiscal', ok: fiscal.wall === 0 && fiscal.fell === 0, why: `atravessou parede ${fiscal.wall}×${fiscal.where ? ` (${fiscal.where})` : ''} · caiu ${fiscal.fell}×` });
   console.warn('CHECK:DONE');
 }

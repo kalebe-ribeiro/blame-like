@@ -83,6 +83,36 @@ src/
   app/beings.js             os seres no mundo salvo; corpo de teste
   dev/beingtest.js          npm run check:beings: corpos de teste atravessando a teia
 
+  app/marks.js              marcas deixadas por você (pintar, apagar)
+  app/power.js              religar um setor no armário de uma subestação
+  world/substations.js      subestações e setores religados (WorldState 'sector:<id>')
+  app/share.js              seeds compartilháveis (o código do mundo)
+  app/uniques.js            o que cada estrutura única faz ao ler o console
+
+  app/beam.js               o emissor (a arma de Killy): carga, sobrecarga, disparo, coice, o braço perdido
+  app/beamfx.js             os efeitos do emissor: clarão, anéis, faíscas, detritos caindo (cut:swap, cut:loose)
+  render/lens.js            a lente gravitacional do emissor
+  gen/beamreach.js          até onde vai o feixe (a laje de verdade, com as trincheiras; as únicas)
+  gen/cut.js                o corte: CSG peça a peça, peças abertas, memória, fragmentos soltos (dropLoose), railDist
+  world/cutCache.js         o cache dos chunks cortados (saída do worker)
+  world/pieceStore.js       a memória das peças cortadas no disco (IndexedDB)
+  world/noCollide.js        os materiais sem colisão (chunks e o worker)
+  world/dynamic.js          o emissor nas estruturas ATIVAS: corte no frame do objeto, essenciais, resistência
+  world/levels.js           os níveis dos hostis (baixo · médio · alto): movimento, resistência
+  app/health.js             a vida: quedas, golpe e arremesso, o emissor; desmaio ao zerar
+  app/arms.js               recuperar o braço: câmara de reconstrução, próteses (andarilho, cemitério, depósito)
+  gen/gene.js               o gene de terminal, o puro: um de cada por seed (cofre guardado, esquecido, vila portadora)
+  app/gene.js               o gene no jogo: o analisador, pegar, o implante, os três finais
+
+  dev/arena.js              a arena dos testes (plataforma num poço, parede, borda)
+  dev/beamtest.js           npm run check:beam (F1 o corte, F2 o jogo)
+  dev/damagetest.js         check:beam --beampart=dano: dano, fuga, cadáver, estruturas ativas, trilhos, rondas
+  dev/healthtest.js         npm run check:health
+  dev/armtest.js            npm run check:arms
+  dev/genetest.js           npm run check:gene
+  dev/movetest.js           npm run check:moves (seres em escadas, elevadores, vagões)
+  dev/profile.js            npm run profile (ms por sistema, GPU, triângulos)
+
   render/pipeline.js        ScenePass: SSAO, TAA, raios na névoa
   render/reflection.js      reflexo planar da água
   shaders/chunks.js         GLSL: simplex, fbm, névoa volumétrica

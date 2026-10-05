@@ -107,7 +107,7 @@ export function createBody(ctx) {
     world.transit.riding = car;
     if (car && !lastCar) world.bus.emit('player:board', { car });
     if (car && car === lastCar && car.powered !== lastPowered) {
-      hud.push(t(car.powered ? 'hud.transit.power' : 'hud.transit.nopower'));
+      hud.push(t(car.powered ? 'hud.transit.power' : world.transit.stoppedForGood(car.line) ? 'hud.transit.damaged' : 'hud.transit.nopower'));
     }
     lastCar = car;
     lastPowered = car?.powered;

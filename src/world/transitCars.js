@@ -22,6 +22,7 @@ import * as THREE from 'three';
 import { movingMaterial } from '../shaders/materials.js';
 import { TRANSIT } from '../gen/field.js';
 import { stationT } from '../gen/transit.js';
+import { railDist } from '../gen/cut.js';
 import { mergeAll, place } from './geometry.js';
 
 const S = TRANSIT.station;
@@ -70,7 +71,10 @@ export class TransitCars {
   _clock(line, time) {
     let k = this.clocks.get(line.id);
     if (!k) {
-      k = { c: time, rate: 1, seen: time };
+      // uma linha parada de vez (vagão destruído, trilho cortado): o relógio volta de onde parou
+      // (salvo no mundo) — os vagões estão onde ficaram, parados; não andam de novo ao reaparecer
+      const stop = this.dyn?.world.worldState?.get(`transitStop:${line.id}`);
+      k = typeof stop === 'number' ? { c: stop, rate: 0, seen: time } : { c: time, rate: this._lineDead(line) ? 0 : 1, seen: time };
       this.clocks.set(line.id, k);
     }
     return k;
@@ -130,7 +134,14 @@ export class TransitCars {
   }
 
   /** O horário da estação s (terminais), em tokens da língua antiga (lang/ancient.js). */
+  /** A linha parou de vez (um vagão destruído, o trilho cortado — não um apagão)? */
+  stoppedForGood(line) {
+    return this._lineDead(line) || this.dyn?.world.worldState?.get(`transitStop:${line.id}`) !== undefined;
+  }
+
   stationStatus(line, s, time) {
+    // parada de vez pelo emissor (um vagão destruído, o trilho cortado): danificada, não "sem energia"
+    if (this.stoppedForGood(line)) return [{ w: 'LINE' }, { w: 'DAMAGED' }, { p: '·' }, { w: 'CAR' }, { w: 'SUSPENDED' }];
     const k = this.clocks.get(line.id);
     const c = k ? k.c : time;
     if (k && k.rate < 0.05) return [{ w: 'CAR' }, { w: 'SUSPENDED' }, { p: '·' }, { w: 'POWER' }, { p: ':' }, { w: 'NONE' }];
@@ -193,31 +204,30 @@ export class TransitCars {
       }
     }
     // um vagão destruído pelo emissor: a linha para de vez
-    for (const L of this.lines) if (this._lineDead(L)) dark.add(L.id);
+    const stopped = new Set(); // (de vez: o vagão destruído, o trilho cortado — não o apagão)
+    for (const L of this.lines) if (this._lineDead(L)) stopped.add(L.id);
     // um trilho cortado pelo emissor: a linha para (os vagões não entram num trecho cortado)
     const F = this.field;
     if (F.cuts?.length) {
       for (const L of this.lines) {
         if (L.cutVer === F.cutVer) {
-          if (L.cut) dark.add(L.id);
+          if (L.cut) stopped.add(L.id);
           continue;
         }
         L.cutVer = F.cutVer;
         const lat = L.u + L.track.off;
         // o trilho é uma reta ao longo do eixo da linha, em (lat, y − 1,5)
-        L.cut = F.cuts.some((c) => {
-          for (let s = 0; s <= 20; s++) {
-            const u = s / 20;
-            const x = c.a[0] + (c.b[0] - c.a[0]) * u;
-            const y = c.a[1] + (c.b[1] - c.a[1]) * u;
-            const z = c.a[2] + (c.b[2] - c.a[2]) * u;
-            const off = L.axis === 'z' ? x - lat : z - lat;
-            if (Math.hypot(off, y - (L.y - 1.5)) < c.r + 1.2) return true;
-          }
-          return false;
-        });
-        if (L.cut) dark.add(L.id);
+        // (a distância exata ao eixo do corte: um tiro longo que cruza o trilho não passa entre amostras)
+        L.cut = F.cuts.some((c) => railDist(c, L.axis, lat, L.y - 1.5) < c.r + 1.2);
+        if (L.cut) stopped.add(L.id);
       }
+    }
+    const ws = this.dyn?.world.worldState;
+    for (const id of stopped) {
+      dark.add(id);
+      // onde ela parou (freando: até parar) fica no mundo
+      const k = this.clocks.get(id);
+      if (k && ws && (k.rate > 0 || ws.get(`transitStop:${id}`) === undefined)) ws.set(`transitStop:${id}`, k.c);
     }
     for (const [id, k] of this.clocks) {
       // freia em ~6 s; na volta da energia, retoma devagar (~12 s)

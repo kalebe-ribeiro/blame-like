@@ -114,7 +114,9 @@ Como está feito:
 - tela cheia pelo controle via `preload.js` (IPC; um botão do controle não é gesto para a Fullscreen API);
 - `npm run check:pad` (`dev/padtest.js`): um controle falso joga os dois modos e confere tudo.
 
-### A arma do Killy — método do buraco (2026-09-30)
+### A arma do Killy — método do buraco (2026-09-30) — **SUBSTITUÍDA em 2026-10-02**
+
+> A versão "de shader" foi feita e retirada (ver abaixo, e o histórico de 2026-10-02). A arma voltou no mesmo dia com o **corte de verdade**: CSG peça por peça (`gen/cut.js`), os chunks atingidos refeitos, as faces do corte em brasa. Camadas e estruturas únicas continuam intransponíveis. O texto a seguir fica só como registro.
 
 Se e quando a arma existir (fase 6), o terreno será furado pelo **buraco "de shader"**: cada tiro guarda um cilindro (origem, direção, raio) no mundo; todos os shaders descartam o que está dentro; o lado de dentro das caixas é pintado como borda fundida; a colisão ignora o que está dentro. **Não** recortar geometria (CSG). Detalhes em [[Ideias/Futuro/Arma-do-Killy]]. Em aberto para a fase 6: combate × só fuga, o que o feixe não fura (recomendação: camadas e estruturas únicas), alcance, custo em energia, alerta dos Safeguards.
 
@@ -188,7 +190,7 @@ O usuário respondeu item a item (na ordem deste arquivo):
 - **Fase 6:** mantém tudo, **exceto: uma animação ao ser capturado pelo Safeguard** (feita: a câmera vira para o rosto dele, ele puxa e levanta, os braços fecham em volta — `app/wake.js` fase 'grabbed', `bodies.js grab(k)`).
 - **Fase 7:** mantém tudo.
 - **Bateria ×3** ("a bateria acaba muito rápido"): todos os gastos da célula divididos por 3 (lanterna 21 min, sensor 45 min, religar setor, ler fragmento).
-- **Arma do Killy — requisitos para quando for feita** (não está no jogo): não atravessa camadas nem únicas; potência ajustável (alcance, raio, gasto); ≥ 5 tiros com carga máxima → [[Ideias/Futuro/Arma-do-Killy]]. Uma primeira versão (buracos por shader) foi feita e **retirada a pedido do usuário em 2026-10-02**: não convencia (peças ocas pelo furo, o próprio corpo sumindo perto do cilindro, entidades erradas no tiro). Se voltar: o corte de verdade (CSG peça por peça em `ChunkBuilder.add`, refazendo os chunks atingidos), não o shader.
+- **Arma do Killy — requisitos** (**no jogo desde 2026-10-02**, com o corte de verdade — histórico F1–F4): não atravessa camadas nem únicas; potência ajustável (alcance, raio, gasto); ≥ 5 tiros com carga máxima → [[Ideias/Futuro/Arma-do-Killy]]. Uma primeira versão (buracos por shader) foi feita e **retirada a pedido do usuário em 2026-10-02**: não convencia (peças ocas pelo furo, o próprio corpo sumindo perto do cilindro, entidades erradas no tiro). Se voltar: o corte de verdade (CSG peça por peça em `ChunkBuilder.add`, refazendo os chunks atingidos), não o shader.
 
 ### Stack: reforçar, não migrar (2026-10-02)
 

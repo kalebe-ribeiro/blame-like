@@ -14,7 +14,7 @@ npm start
 Na primeira vez, a tela de entrada pede para escolher o modo (botão **MUNDOS**). Cada modo tem **um mundo salvo**, e um mundo nunca troca de modo:
 
 - **Livre**: contemplação e exploração sem regras. Voo, transporte para qualquer tipo de lugar, mundo novo com R, a leitura de instrumento na tela.
-- **Peregrinação**: a pé, sem transporte e quase nada na tela. É o modo com progressão, em construção fase por fase: ler a Cidade, seguir o que ela deixou, religar setores e, no futuro, os Safeguards e os raros vivos, à maneira de *Blame!*.
+- **Peregrinação**: a pé, sem transporte e quase nada na tela. É o modo com progressão: ler a Cidade, seguir o que ela deixou, religar setores, fugir (ou enfrentar) os Safeguards, encontrar os raros vivos e procurar o **gene de terminal**, à maneira de *Blame!*.
 
 O jogo é em **inglês** por padrão, com **português** como opção nas configurações. Os textos ficam em `src/i18n/` (um arquivo por idioma).
 
@@ -35,9 +35,11 @@ Padrões:
 | correr · acelerar 6× voando | SHIFT | LT | |
 | andar ↔ voar | F | X | Livre |
 | piloto automático (voo): deriva sozinho, curvando devagar | P | direcional ↑ | Livre |
-| ler um terminal · conectar numa tomada | E | Y | |
+| usar: ler um terminal, conectar numa tomada, falar, pegar, deitar na câmara, instalar uma prótese | E | Y | |
+| emissor (a arma): segurar carrega, soltar atira · cancelar | Q ou clique esquerdo · SHIFT ou clique direito | RT · LT (segurando RT) | |
+| inventário e as mãos | I | R3 | |
 | lanterna | F | X | Peregrinação |
-| lanterna (sem célula) | L | RT | Livre |
+| lanterna (sem célula) | L | L3 | Livre |
 | sensor | G | direcional ↓ | Peregrinação |
 | pintar uma marca (ou apagar a marca em que você mira) | V | LB | |
 | foto: um quadro limpo (sem interface nem grão, 16 quadros de TAA) em até 4K, em Imagens/CYBERCOSMIC | F2 | RB | |
@@ -52,6 +54,18 @@ Padrões:
 | DevTools (fixo, desenvolvimento) | F12 | | |
 
 Numa escada, frente e trás sobem e descem (encostado nela); esquerda e direita soltam para o patamar do lado. Clicar na tela de entrada entra no mundo (trava o mouse e liga o áudio).
+
+### A arma, a vida, os inimigos, os vivos e o gene
+
+Em detalhe no cofre (`cybercosmic-obsidian/`); aqui, o essencial:
+
+- **O emissor** (a arma de Killy, `app/beam.js`): segurar carrega (até 400 m de alcance e 2,8 m de raio). Passando de 3 s entra na **sobrecarga** (até 1 km e 7,7 m de raio; além, até 2 km e ~19 m: um túnel). O furo é cilíndrico e de verdade: o que ele atravessa é cortado e fica cortado no mundo salvo. O coice empurra, e muito na sobrecarga. Além do limite, **o braço que atira se desfaz**. Gasta a célula. As camadas (as lajes) e as estruturas únicas são intransponíveis: o feixe acaba nelas, mas entra nas trincheiras das máquinas colossais.
+- **Estruturas ativas** (`world/dynamic.js`): as máquinas colossais, os vagões, os carros dos elevadores e os pórticos dos Construtores recebem cortes de verdade e continuam funcionando. Param de vez se o corte pega um ponto essencial (o núcleo, os truques, os cantos dos cabos, a base das pernas) ou se a resistência deles acaba depois de vários cortes. Um trilho cortado também para a linha, a trincheira ou o pórtico. Onde pararam fica no mundo salvo.
+- **A vida** (`app/health.js`): ligada na Peregrinação, opcional no Livre. Quedas tiram vida pela altura (50 m zeram), assim como o golpe dos Safeguards (que arremessa) e a sobrecarga do emissor (mais a cada estágio). Zerou, você desmaia e acorda longe. Ela volta sozinha (1%/s depois de 6 s sem dano).
+- **Safeguards** (`world/safeguards.js`): um em ronda por território; saem das paredes quando o alerta do setor sobe. Têm três níveis, com arranque e velocidade diferentes: o médio-fraco mata o baixo, o médio pede vários tiros, o alto muitos. O colapso mata qualquer um.
+- **Os raros vivos** (`world/npcs.js`): vilas habitadas (conversa, trocas, cargas para entregar), andarilhos ambíguos e a vida de silício. Ferir um morador torna a vila hostil.
+- **Recuperar o braço** (`app/arms.js`): a câmara de reconstrução (os dois braços, 50% da célula), uma prótese de um andarilho (40%) ou achada num cemitério ou depósito, ou um morador (30% ou uma carga).
+- **O gene de terminal** (`gen/gene.js`, `app/gene.js`): o objetivo final. Numa seed há um de cada: guardado num cofre com guardas (150–300 km), esquecido num cofre (100–250 km) e numa vila portadora (80–200 km, achada com o analisador de genes). O implante é na câmara de reconstrução e leva a três finais.
 
 ### O corpo na Peregrinação
 
@@ -401,6 +415,36 @@ src/
   controls/walker.js        física de caminhada (chão, paredes, degraus, pulo)
   world/geometry.js         tubo afunilado, merge, cilindro entre pontos
   world/cables.js           catenárias e fios de prumo
+  i18n/index.js             t(), idiomas, números e distâncias (en.js padrão, pt.js opção)
+  world/entities.js         os seres: perto com física (o Walker), longe abstrato; dano, morte, cadáveres
+  world/bodies.js           os corpos procedurais e a passada
+  gen/nav.js                o grafo de navegação dos seres (consultado no Field) + A*
+  gen/patrols.js            territórios e circuitos de ronda dos Safeguards
+  world/safeguards.js       Safeguards: rondas, percepção, caçada, golpe, paredes, chamado
+  app/safeguards.js         Safeguards no jogo: sentidos, barulhos, sons, desmaio
+  app/alert.js              o alerta por setor (o que chama os Safeguards)
+  world/levels.js           os níveis dos hostis (baixo · médio · alto): movimento e resistência
+  gen/villages.js           as vilas e quais são habitadas
+  world/npcs.js             moradores, andarilhos, vida de silício
+  app/people.js             conversa, trocas, cargas, despertar numa vila, a vila hostil
+  ui/talk.js                o painel da conversa (navegável pelo controle)
+  app/beings.js             os seres no mundo salvo; o corpo de teste
+  app/inventory.js          o inventário e as mãos equipáveis
+  app/hands.js              as mãos: o aparelho, a lanterna, o emissor, agarrar quinas
+  app/beam.js               o emissor (a arma de Killy): carga, sobrecarga, disparo, coice, o braço perdido
+  app/beamfx.js             os efeitos do emissor: clarão, anéis, faíscas, detritos caindo
+  render/lens.js            a lente gravitacional do emissor
+  gen/beamreach.js          até onde vai o feixe (a laje de verdade, com as trincheiras; as únicas)
+  gen/cut.js                o corte de verdade: CSG peça a peça, memória das peças, fragmentos soltos
+  world/cutCache.js         o cache dos chunks cortados
+  world/pieceStore.js       a memória das peças cortadas no disco (IndexedDB)
+  world/noCollide.js        os materiais sem colisão
+  world/dynamic.js          o emissor nas estruturas ativas (colossos, vagões, elevadores, pórticos)
+  app/health.js             a vida (quedas, golpe, sobrecarga do emissor; desmaio ao zerar)
+  app/arms.js               recuperar o braço: câmara de reconstrução, próteses
+  gen/gene.js, app/gene.js  o gene de terminal: onde está (um de cada por seed), o analisador, o implante, os finais
+  dev/                      os testes: check.js, padtest, beingtest, sgtest, npctest, climbtest, movetest,
+                            beamtest e damagetest, healthtest, armtest, genetest, profile; arena.js
   shaders/chunks.js         GLSL: simplex, fbm, névoa volumétrica
   shaders/materials.js      superfícies, feixes, cascatas, poeira, céu
   shaders/post.js           filme: dessaturação, grão, vinheta
@@ -456,8 +500,25 @@ Não use `material.clone()`, porque ele desconecta os uniforms compartilhados.
 ```bash
 npm run check
 npm run check:pilgrimage
+npm run typecheck   # antes de qualquer check: os tipos do JavaScript, em segundos
 ```
 Teste de fumaça: numa seed fixa, visita todos os destinos do painel de transporte. Em cada um espera o terreno carregar, mede o fps (média e pior quadro) e confere se o corpo não atravessou o chão. No meio do roteiro força um apagão e um colapso. Erros de script, de shader e de WebGL reprovam. Sai com código 0 (passou) ou 1, e não toca no seu salvamento. `--check=trelica,escadaria --pos=x,y,z` roda só esses destinos, nessa ordem, partindo desse ponto.
+
+Os outros checks, cada um de um sistema (rodar só os que a mudança pede — a tabela está no cofre, `10-Comandos-e-Verificacao`):
+
+| check | o quê |
+|---|---|
+| `npm run check:pad` | os dois modos só com um controle simulado (regra absoluta) |
+| `npm run check:beings` | corpos de teste atravessando a teia |
+| `npm run check:moves` | os seres em quinas, escadas, elevadores e vagões |
+| `npm run check:climb` | as quinas: pular, agarrar, subir |
+| `npm run check:safeguards` | rondas, percepção, caçada, captura, paredes, subir atrás de você, arranque e curva |
+| `npm run check:npcs` | vilas, conversa, cargas, andarilhos, vida de silício, a vila hostil |
+| `npm run check:beam` | o emissor: o corte (F1), o jogo (F2); `--beampart=dano`: dano por nível, a fuga, cadáveres, as estruturas ativas, os trilhos cortados |
+| `npm run check:health` | a vida: quedas, a volta, o emissor, o golpe e o arremesso |
+| `npm run check:arms` | recuperar o braço |
+| `npm run check:gene` | o gene de terminal: os três lugares, pegar, perder, o implante, os finais |
+| `npm run profile` | ms por sistema, GPU e triângulos em vários lugares |
 
 ```bash
 npx electron . --stats

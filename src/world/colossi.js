@@ -17,6 +17,7 @@ import * as THREE from 'three';
 import { movingMaterial } from '../shaders/materials.js';
 import { COLOSSUS } from '../gen/field.js';
 import { hash4 } from '../gen/hash.js';
+import { railDist } from '../gen/cut.js';
 import { beamGeometry } from '../gen/beams.js';
 import { mergeAll, place } from './geometry.js';
 
@@ -150,9 +151,23 @@ export class ColossusSystem {
     return k * COLOSSUS.spacing + phase + dir * COLOSSUS.speed * time;
   }
 
+  /** Algum corte do emissor pega um dos dois trilhos do teto (gen/macrogen.js: a ±45 m do eixo,
+   *  12 m abaixo do teto da trincheira)? */
+  _railCut(lane) {
+    const y = lane.b.bottom + COLOSSUS.depth - 12;
+    for (const c of this.field.cuts ?? []) for (const side of [-45, 45]) if (railDist(c, lane.axis, lane.lat + side, y) < c.r + 2.5) return true;
+    return false;
+  }
+
+  /** A trincheira parou (uma máquina dela destruída pelo emissor, ou o trilho cortado)? */
+  laneStopped(lane) {
+    return this.dyn?.world.worldState?.get(`colLane:${lane.id}`) !== undefined;
+  }
+
   /**
    * A máquina mais próxima (em posição GLOBAL) de um ponto que `accept` aceite,
-   * ou null — para o transporte.
+   * ou null — para o transporte e o sensor. `stopped`: a trincheira dela parou (onde ela
+   * está de fato — não onde estaria andando).
    * @param {(m: any) => boolean} [accept]
    */
   nearest(field, g, time, accept = () => true) {
@@ -160,16 +175,17 @@ export class ColossusSystem {
     let best = null;
     for (const lane of field.trenchesNear(g.x, g.y, g.z, 9000)) {
       const u = lane.axis === 'x' ? g.x : g.z;
-      const base = this.posT(lane, 0, time);
+      const lt = this._laneTime(lane, time);
+      const base = this.posT(lane, 0, lt);
       const k0 = Math.round((u - base) / COLOSSUS.spacing);
       for (let k = k0 - 3; k <= k0 + 3; k++) {
         if (!this.exists(lane, k)) continue;
-        const t = this.posT(lane, k, time);
+        const t = this.posT(lane, k, lt);
         const x = lane.axis === 'x' ? t : lane.lat;
         const z = lane.axis === 'x' ? lane.lat : t;
         const d = Math.hypot(x - g.x, lane.b.bottom - g.y, z - g.z);
         if (best && d >= best.d) continue;
-        const m = { d, x, y: lane.b.bottom, z, lane, dir: this._laneInfo(lane).dir };
+        const m = { d, x, y: lane.b.bottom, z, lane, dir: this._laneInfo(lane).dir, stopped: this.laneStopped(lane) };
         if (accept(m)) best = m;
       }
     }
@@ -185,7 +201,14 @@ export class ColossusSystem {
       this.lanes = this.field.trenchesNear(g.x, g.y, g.z, RANGE);
     }
     const want = new Set();
+    const F = this.field;
     for (const lane of this.lanes) {
+      // um trilho do teto cortado pelo emissor: a trincheira para (no instante do corte, salvo no
+      // mundo) — como os vagões e os elevadores; as máquinas não passam por um trilho cortado
+      if (F.cuts?.length && lane.cutVer !== F.cutVer) {
+        lane.cutVer = F.cutVer;
+        if (!this.laneStopped(lane) && this._railCut(lane)) this.dyn?.world.worldState?.set(`colLane:${lane.id}`, this._laneTime(lane, time));
+      }
       const lateral = lane.axis === 'x' ? g.z - lane.lat : g.x - lane.lat;
       if (Math.abs(lateral) > RANGE) continue;
       const u = lane.axis === 'x' ? g.x : g.z;
@@ -229,9 +252,10 @@ export class ColossusSystem {
       m.light.y = y + 1; // sob a plataforma, junto das lâmpadas dela
       m.light.z = z;
       this.lights.push(m.light);
-      // o baque das garras (só as que dá para ouvir)
-      const before = Math.floor((time - dt + m.clamp) / CLAMP);
-      if (Math.floor((time + m.clamp) / CLAMP) !== before && m.pos.distanceTo(g) < HEAR) this.bus?.emit('colossus:clamp', { x, y, z });
+      // o baque das garras (só as que dá para ouvir) — pelo relógio da trincheira: parada, não bate
+      const lt = this._laneTime(L, time);
+      const before = Math.floor((lt - dt + m.clamp) / CLAMP);
+      if (lt === time && Math.floor((lt + m.clamp) / CLAMP) !== before && m.pos.distanceTo(g) < HEAR) this.bus?.emit('colossus:clamp', { x, y, z });
     }
   }
 
@@ -240,9 +264,16 @@ export class ColossusSystem {
     for (const m of this.machines.values()) m.group.position.sub(delta);
   }
 
-  /** A máquina mais perto de passar pelo ponto `t` da trincheira: segundos até chegar (ou null). */
+  /** A máquina mais perto de passar pelo ponto `t` da trincheira: segundos até chegar (ou null).
+   *  Trincheira parada: 0 se uma máquina ficou parada sobre o ponto; senão, nenhuma vem (null). */
   nextAt(lane, t, time) {
     const { dir } = this._laneInfo(lane);
+    if (this.laneStopped(lane)) {
+      const lt = this._laneTime(lane, time);
+      const k0 = Math.round((t - this.posT(lane, 0, lt)) / COLOSSUS.spacing);
+      for (let k = k0 - 1; k <= k0 + 1; k++) if (this.exists(lane, k) && Math.abs(t - this.posT(lane, k, lt)) < COLOSSUS.len / 2) return 0;
+      return null;
+    }
     const base = this.posT(lane, 0, time);
     const k0 = Math.round((t - base) / COLOSSUS.spacing);
     let best = null;

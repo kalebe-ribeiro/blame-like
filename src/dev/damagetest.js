@@ -20,6 +20,7 @@ import { chargeK, shotOf } from '../app/beam.js';
 import { BUILDER } from '../world/builders.js';
 import { COLOSSUS } from '../gen/field.js';
 import { beamReach } from '../gen/beamreach.js';
+import { components } from '../gen/cut.js';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const DOWN = new THREE.Vector3(0, -1, 0);
@@ -183,6 +184,47 @@ export async function runDamage(ctx, report) {
   report({ kind: 'fuga:medio', ok: !!mid && mid.tStrike !== null && mid.tStrike < 3.2, why: mid ? `médio a 13 m, você parado: ${mid.tStrike !== null ? `golpe aos ${mid.tStrike.toFixed(2)} s (o cheio leva 2,5 s + soltar)` : `não chegou em 8 s · ${mid.diag}`}` : 'sem ronda' });
   const lo = await chase('low', true);
   report({ kind: 'fuga', ok: !!lo && lo.tShot !== null && lo.tStrike === null && lo.k > 0.99 && lo.dead, why: lo ? `baixo, andando para trás: ${lo.tShot !== null ? `atirou um cheio (k ${lo.k?.toFixed(2)}) aos ${lo.tShot.toFixed(2)} s · ${lo.dead ? 'morreu' : `sobrou ${(lo.hp * 100).toFixed(0)}%`}` : `golpeado aos ${lo.tStrike?.toFixed(2)} s`} · ${lo.diag}` : 'sem ronda' });
+  // ronda:corte — um corte no circuito de um Safeguard de ronda à vista: ele não some (sai depois,
+  // longe); morto por um tiro sobre o próprio circuito, o corpo fica onde caiu
+  {
+    let ok = false;
+    let why = 'sem ronda perto';
+    await waitFor(() => [...sg.byTerritory.values()].some((e) => !e.dead && e.sg.state === 'patrol'), 20);
+    const g = world.toGlobal(camera.position.clone());
+    const x = [...sg.byTerritory.values()].filter((e) => !e.dead && e.sg.state === 'patrol').sort((a, b) => a.feet.distanceTo(g) - b.feet.distanceTo(g))[0];
+    if (x) {
+      // a câmera vai para perto dele (à vista: a 40 m), voando — ninguém percebe
+      controls.canFly = true;
+      controls.setMode('fly');
+      controls.setView({ pos: x.feet.clone().add(new THREE.Vector3(30, 12, 20)).sub(world.origin), yaw: 0, pitch: -0.2, scale: 1 });
+      await sleep(1500);
+      g.copy(world.toGlobal(camera.position.clone()));
+      const chest = () => x.feet.clone().add(new THREE.Vector3(0, 1.1, 0));
+      const shotAt = () => {
+        const c = chest();
+        const d = c.clone().sub(g).setY(0).normalize();
+        world.addCut({ a: c.clone().addScaledVector(d, -6).toArray(), b: c.clone().addScaledVector(d, 4).toArray(), r: 2.2 }, c, { now: true });
+      };
+      const pathCut0 = world.field.cutOnPath(x.sg.c.pts);
+      // 1) só o circuito cortado (ele vivo, à vista)
+      shotAt();
+      await sleep(800);
+      const cutNow = world.field.cutOnPath(x.sg.c.pts);
+      const stays = world.entities.list.has(x.id) && !!x.sg.stale;
+      // 2) morto por um tiro sobre o circuito
+      world.entities.kill(x, 'beam');
+      shotAt();
+      await sleep(800);
+      const corpse = world.entities.list.has(x.id) && x.dead;
+      ok = cutNow && stays && corpse;
+      why = `a ${x.feet.distanceTo(g).toFixed(0)} m · circuito cortado ${cutNow} (antes ${pathCut0}) · vivo: ${stays ? 'ficou (sai quando longe)' : 'SUMIU'} · morto: ${corpse ? 'o corpo ficou' : 'o corpo SUMIU'}`;
+    }
+    report({ kind: 'ronda:corte', ok, why });
+    // (de volta ao lugar dos casos de dano)
+    controls.setMode('walk');
+    home();
+    await sleep(800);
+  }
   sg.senses = senses0;
   ctx.rules = rules0;
   ctx.health.set(1);
@@ -349,12 +391,18 @@ export async function runDamage(ctx, report) {
         const alive = !site.dead && i1 && i1.hp < 1 && capsOf(site.gantry) > 0;
         // mais cortes em pontos não essenciais: a resistência acaba — o canteiro cai
         let n = 0;
+        const alongOf = () => (d.axis === 'x' ? site.gantry.position.z : site.gantry.position.x);
+        let pre = null;
         while (!site.dead && n < 8) {
+          pre = { g: alongOf(), nb: site.built.length, kids: site.group.children.length };
           cutAt(site.gantry, { ...lp, y: 28 + n * 7 }, ldir);
           n++;
           await sleep(200);
         }
         const worn = site.dead && dyn.info(`bg:${d.id}`)?.dead === 'worn';
+        // tombou ONDE ESTAVA, e nada apareceu nem sumiu (a obra, blocos caídos, pórticos velhos)
+        const inPlace = !!pre && Math.abs(alongOf() - pre.g) < 0.5 && site.built.length === pre.nb && site.group.children.length === pre.kids;
+        const placeWhy = pre ? `o pórtico ${(alongOf() - pre.g).toFixed(2)} m de onde estava · blocos ${pre.nb}→${site.built.length} · peças do canteiro ${pre.kids}→${site.group.children.length}` : '-';
         // o essencial: noutro canteiro, a perna embaixo — cai de um tiro
         let ess = 'sem segundo canteiro';
         const s2 = live[1];
@@ -365,11 +413,36 @@ export async function runDamage(ctx, report) {
           ess = s2.dead && dyn.info(`bg:${s2.def.id}`)?.dead === 'essential' ? 'a base da perna: caiu de um tiro' : `não caiu (${dyn.info(`bg:${s2.def.id}`)?.dead})`;
         }
         const oco = hollow(`bg:${d.id}`);
-        ok = solid && blockCut && railCut && alive && worn && !ess.startsWith('não') && !oco;
-        why = `perna sólida ${solid} · bloco: furo ${blockCut} · trilho: furo ${railCut} · perna no meio: segue trabalhando ${!!alive} (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) · +${n} cortes: ${worn ? 'gasto, caiu' : 'NÃO caiu'} · ${ess} · peças ocas ${oco}`;
+        ok = solid && blockCut && railCut && alive && worn && inPlace && !ess.startsWith('não') && !oco;
+        why = `perna sólida ${solid} · bloco: furo ${blockCut} · trilho: furo ${railCut} · perna no meio: segue trabalhando ${!!alive} (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) · +${n} cortes: ${worn ? 'gasto, caiu' : 'NÃO caiu'} (${placeWhy}) · ${ess} · peças ocas ${oco}`;
       } else why = 'nenhum canteiro vivo perto';
     }
     report({ kind: 'construtor', ok, why });
+  }
+
+  // construtor:trilho — um trilho cortado no caminho: o pórtico chega até o corte e para ali
+  {
+    let ok = false;
+    let why = 'nenhum canteiro vivo';
+    const B = world.builders;
+    const site = [...B.sites.values()].find((x) => !x.dead && x.task);
+    if (site) {
+      const d = site.def;
+      const along = d.axis === 'x' ? 'z' : 'x';
+      // um alvo longe (o pórtico vai andar ~40 m) e o corte a 15 m dele, no caminho, no trilho +SPAN/2
+      const goal = along === 'z' ? B._cellPos(site, site.task.cell).z : B._cellPos(site, site.task.cell).x;
+      site.task.phase = 'move';
+      site.gx = goal - 40;
+      const at = site.gx + 15;
+      const side = BUILDER.SPAN / 2;
+      const p = along === 'z' ? new THREE.Vector3(d.x + side, d.y + 0.5, d.z + at) : new THREE.Vector3(d.x + at, d.y + 0.5, d.z + side);
+      world.addCut({ a: [p.x, p.y + 6, p.z], b: [p.x, p.y - 3, p.z], r: 1.5 }, p, { now: true });
+      await sleep(12000);
+      const stopAt = at - 7;
+      ok = !!site.stuck && Math.abs(site.gx - stopAt) < 0.5 && !site.dead;
+      why = `cortes no trilho achados ${JSON.stringify((site.railBreaks ?? []).map((v) => +v.toFixed(1)))} · o pórtico em ${site.gx.toFixed(1)} (o corte em ${at.toFixed(1)}, para em ${stopAt.toFixed(1)}; o alvo em ${goal.toFixed(1)}) · preso ${!!site.stuck}`;
+    }
+    report({ kind: 'construtor:trilho', ok, why });
   }
 
   // elevador: o carro cortado continua; o canto dos cabos (essencial) o para
@@ -399,10 +472,129 @@ export async function runDamage(ctx, report) {
       await sleep(2000);
       const stopped = Math.abs(car.y - y0) < 0.01;
       const oco = hollow(id);
-      ok = !!alive && dead && stopped && !oco;
-      why = `${car.def.kind}: cortado no meio, segue (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) ${!!alive} · o canto dos cabos: ${dead ? 'parou' : 'NÃO parou'} · parado de fato ${stopped} · peças ocas ${oco}`;
+      // some de perto e volta (como sair e voltar, ou recarregar o mundo): reaparece onde parou, parado
+      const yStop = car.y;
+      E.cars.delete(car.def.id);
+      car.group.removeFromParent();
+      dyn.detach(id);
+      E._scanTimer = 0;
+      await waitFor(() => E.cars.has(car.def.id), 5);
+      await sleep(1500);
+      const back = E.cars.get(car.def.id);
+      const same = !!back && Math.abs(back.y - yStop) < 0.05 && back.rate === 0 && !!back.dead;
+      ok = !!alive && dead && stopped && !oco && same;
+      why = `${car.def.kind}: cortado no meio, segue (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) ${!!alive} · o canto dos cabos: ${dead ? 'parou' : 'NÃO parou'} · parado de fato ${stopped} · peças ocas ${oco} · ao voltar: ${back ? `a ${(back.y - yStop).toFixed(2)} m de onde parou, ritmo ${back.rate}` : 'não voltou'}`;
     }
     report({ kind: 'elevador', ok, why });
+  }
+
+  // cadaver:vagao — um corpo morto no piso de um vagão andando: vai junto (não fica para trás no ar)
+  {
+    let ok = false;
+    let why = 'nenhum vagão perto';
+    const T = world.transit;
+    if (ctx.ui.teleport('transportador', 'transportador')) await sleep(8000);
+    await waitFor(() => T.cars.size > 0, 10);
+    // um vagão que vai andar logo (o que acabou de parar fica na estação um tempo)
+    const car = [...T.cars.values()].find((c) => (c.speed ?? 0) > 1) ?? [...T.cars.values()][0];
+    if (car) {
+      car.group.updateMatrixWorld(true);
+      const local = new THREE.Vector3(0.5, 0.02, 3);
+      const p = local.clone().applyMatrix4(car.group.matrixWorld).add(world.origin);
+      const e = world.entities.spawn({ id: 't:dano:vagao', kind: 'test', feet: p, persist: false });
+      // a câmera vai junto (o corpo só é cuidado perto dela)
+      controls.canFly = true;
+      controls.setMode('fly');
+      let on = true;
+      const tick = () => {
+        if (!on) return;
+        requestAnimationFrame(tick);
+        car.group.updateMatrixWorld(true);
+        camera.position.copy(new THREE.Vector3(8, 4, 3).applyMatrix4(car.group.matrixWorld));
+      };
+      tick();
+      // de pé no vagão (o vivo vai junto — o Walker), e então morre ali: o corpo segue no vagão
+      await waitFor(() => e.walker.grounded && !!e.walker.groundObj?.userData.transit, 6);
+      car.group.updateMatrixWorld(true);
+      local.copy(new THREE.Vector3(e.feet.x, e.feet.y, e.feet.z).sub(world.origin).applyMatrix4(car.group.matrixWorld.clone().invert()));
+      world.entities.kill(e, 'beam');
+      const t0 = car.t;
+      await sleep(9000);
+      on = false;
+      car.group.updateMatrixWorld(true);
+      const back = new THREE.Vector3(e.feet.x, e.feet.y, e.feet.z).sub(world.origin).applyMatrix4(car.group.matrixWorld.clone().invert());
+      const moved = Math.abs(car.t - t0);
+      const off = back.distanceTo(local);
+      ok = moved > 20 && off < 1.2;
+      why = `o vagão andou ${moved.toFixed(0)} m · o corpo a ${off.toFixed(2)} m de onde morreu, no frame do vagão (y ${back.y.toFixed(2)}) · caindo ${e.fallV?.toFixed(1)}`;
+      world.entities.remove(e.id);
+    }
+    report({ kind: 'cadaver:vagao', ok, why });
+  }
+
+  // solto:vagao — dois tiros de verdade (app/beam.js) no guarda-corpo de um vagão parado na estação, a
+  // 1,8 m um do outro: o trecho do meio fica solto e cai (gen/cut.js dropLoose — nada flutua)
+  {
+    let ok = false;
+    let why = 'nenhum vagão parado';
+    const T = world.transit;
+    // na plataforma de uma estação (o caso anterior seguiu um vagão para longe)
+    if (ctx.ui.teleport('transportador', 'transportador')) await sleep(8000);
+    // um vagão que ACABA de parar na estação (a parada inteira pela frente: os dois tiros com ele parado)
+    const moving = new Set();
+    /** @type {any} */
+    let car = null;
+    await waitFor(() => {
+      for (const c of T.cars.values()) {
+        if (c.dead) continue;
+        if ((c.speed ?? 0) > 1) moving.add(c);
+        else if (moving.has(c) && (c.speed ?? 1) < 0.01) car = c;
+      }
+      return !!car;
+    }, 150);
+    if (car) {
+      const W = 5;
+      const L = 22;
+      const rail = (z) => new THREE.Vector3(-W / 2 + 0.15, 1.0, z).applyMatrix4(car.group.matrixWorld);
+      const loose = [];
+      const off = world.bus.on('cut:loose', (d) => loose.push(d));
+      const fall0 = ctx.beam.fx.stats.falling;
+      controls.canFly = true;
+      controls.setMode('fly');
+      ctx.player.energy.value = 1;
+      ctx.inventory.equip('emitter');
+      for (const z of [L / 4 + 1.9 + 1.2, L / 4 + 1.9 + 3.0]) {
+        car.group.updateMatrixWorld(true);
+        const p = rail(z);
+        controls.setView({ pos: p.clone().add(new THREE.Vector3(0, 3, 0)), yaw: 0, pitch: -Math.PI / 2 + 0.001, scale: 1 });
+        await sleep(400);
+        ctx.beam.testHeld = true;
+        await sleep(350);
+        ctx.beam.testHeld = false;
+        await sleep(900);
+      }
+      ctx.beam.testHeld = null;
+      await sleep(1200);
+      off?.();
+      const fell = ctx.beam.fx.stats.falling - fall0;
+      const mine = loose.filter((d) => d.mat === 'machine');
+      // (diagnóstico: a peça do guarda-corpo — cortada? em quantas partes?)
+      const id = `car:${car.line.id}:${car.k}`;
+      const pcs = [...(world.dyn.objs.get(id)?.cut?.values() ?? [])].flatMap((st) => st.pieces);
+      const railPc = pcs.find((pc) => {
+        const c = pc.geo.boundingSphere?.center;
+        return c && Math.abs(c.x + W / 2 - 0.15) < 0.3 && Math.abs(c.y - 1) < 0.3 && c.z > 3;
+      });
+      let parts = '?';
+      if (railPc?.kept) {
+        const g = railPc.kept.index ? railPc.kept.clone() : railPc.kept.clone();
+        if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
+        parts = components(g).map((c) => `${c.min[2].toFixed(2)}..${c.max[2].toFixed(2)}`).join(' ');
+      }
+      ok = mine.length >= 1 && fell >= 1;
+      why = `fragmentos soltos do vagão ${mine.length} (${mine.map((d) => [d.sx, d.sy, d.sz].map((v) => v.toFixed(2)).join('×')).join(' · ')}) · pedaços caindo a mais ${fell} · tiros ${ctx.beam.lastShot ? `r ${ctx.beam.lastShot.r?.toFixed(2)}` : '?'} · o guarda-corpo: ${railPc ? `cortado ${railPc.cut}, partes (z) ${parts}, largados ${railPc.dropped?.size ?? 0}` : 'peça não achada'} · o vagão andou ${(car.speed ?? 0).toFixed(1)} m/s · resistência ${Math.round((dyn.info(id)?.hp ?? 1) * 100)}%`;
+    }
+    report({ kind: 'solto:vagao', ok, why });
   }
 
   // vagão: cortado continua; um truque (essencial) para a linha
@@ -425,8 +617,24 @@ export async function runDamage(ctx, report) {
       await sleep(300);
       const dead = car.dead && dyn.info(id)?.dead === 'essential' && !!world.worldState?.get(`transitDead:${car.line.id}`);
       const oco = hollow(id);
-      ok = !!alive && dead && !oco;
-      why = `cortado no meio, segue (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) ${!!alive} · o truque: ${dead ? 'parou a linha' : 'NÃO parou'} · peças ocas ${oco}`;
+      // freia até parar; some de perto e volta: os vagões reaparecem onde ficaram, parados
+      await sleep(8000);
+      const tStop = car.t;
+      const L = car.line;
+      T.clocks.delete(L.id);
+      for (const [cid, c] of [...T.cars]) {
+        if (c.line.id !== L.id) continue;
+        c.group.removeFromParent();
+        T.cars.delete(cid);
+        dyn.detach(`car:${cid}`);
+      }
+      await waitFor(() => T.cars.has(`${L.id}:${car.k}`), 5);
+      await sleep(1500);
+      const back = T.cars.get(`${L.id}:${car.k}`);
+      const k = T.clocks.get(L.id);
+      const same = !!back && back.t !== null && Math.abs(back.t - tStop) < 0.5 && k?.rate === 0;
+      ok = !!alive && dead && !oco && same;
+      why = `cortado no meio, segue (resistência ${i1 ? Math.round(i1.hp * 100) : '?'}%) ${!!alive} · o truque: ${dead ? 'parou a linha' : 'NÃO parou'} · peças ocas ${oco} · ao voltar: ${back ? `a ${(back.t - tStop).toFixed(2)} m de onde parou, ritmo ${k?.rate}` : 'não voltou'}`;
     }
     report({ kind: 'vagao', ok, why });
   }
@@ -483,5 +691,32 @@ export async function runDamage(ctx, report) {
       }
     }
     report({ kind: 'colosso', ok, why });
+  }
+
+  // colosso:trilho — o trilho do teto da trincheira cortado: a trincheira para (como vagões e elevadores)
+  {
+    let ok = false;
+    let why = 'nenhuma máquina andando perto';
+    const C = world.colossi;
+    const g0 = world.toGlobal(camera.position.clone());
+    const m = [...C.machines.values()].filter((x) => !C.laneStopped(x.lane)).sort((a, b) => a.pos.distanceTo(g0) - b.pos.distanceTo(g0))[0];
+    if (m) {
+      const L = m.lane;
+      const y = L.b.bottom + COLOSSUS.depth - 12;
+      // 300 m adiante da máquina, atravessando o trilho +45 de lado (horizontal, perpendicular a ele)
+      const u = (L.axis === 'x' ? m.pos.x : m.pos.z) + 300;
+      const side = L.lat + 45;
+      const a = L.axis === 'x' ? [u, y, side - 10] : [side - 10, y, u];
+      const b = L.axis === 'x' ? [u, y, side + 10] : [side + 10, y, u];
+      world.addCut({ a, b, r: 2 }, new THREE.Vector3(...a), { now: true });
+      await sleep(600);
+      const stopped = C.laneStopped(L);
+      const p0 = m.pos.clone();
+      await sleep(1500);
+      const still = m.pos.distanceTo(p0) < 0.01;
+      ok = stopped && still;
+      why = `trincheira ${L.id}: parada ${stopped} · a máquina ${still ? 'parou' : `andou ${m.pos.distanceTo(p0).toFixed(1)} m`}`;
+    }
+    report({ kind: 'colosso:trilho', ok, why });
   }
 }

@@ -191,15 +191,27 @@ ctx.beings = createBeings(ctx); // os corpos dos seres no mundo salvo (fase 5)
 ctx.safeguards = createSafeguards(ctx); // rondas, caçadas, captura (fase 6)
 ctx.people = createPeople(ctx); // conversa, trocas, cargas (fase 7)
 ctx.gene = createGene(ctx); // o gene de terminal: o objetivo final (o cofre, Gene-terminal)
+/** Avisados a cada quadro DESENHADO (os testes medem por aqui: um rAF pode passar a vez — o laço abaixo). */
+ctx.frameHooks = new Set();
 setupDev(ctx);
 
 // ─── loop ───────────────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
 const globalPos = new THREE.Vector3();
 
+// No máximo MAX_INFLIGHT quadros esperando a GPU (uma "fence" do WebGL2 no fim de cada um). O jogo roda
+// sem o limite de quadros do Chromium (main.js disable-frame-rate-limit): sem isto, numa vista pesada a CPU
+// enfileirava quadros mais rápido do que a GPU os desenhava e, de tempos em tempos, o driver a segurava por
+// 200–450 ms de uma vez (medido com --hitch e --cpuprofile). Assim o quadro espera a vez, sem travar.
+const MAX_INFLIGHT = 4;
+const inflight = [];
+
 function frame() {
   requestAnimationFrame(frame);
   const { renderer, camera, world, shared, dust, audio, hud } = ctx;
+  const gl = /** @type {WebGL2RenderingContext} */ (renderer.getContext());
+  while (inflight.length && gl.getSyncParameter(inflight[0], gl.SYNC_STATUS) === gl.SIGNALED) gl.deleteSync(inflight.shift());
+  if (inflight.length >= MAX_INFLIGHT) return; // (a GPU ainda está nos de antes: este rAF passa a vez)
   renderer.info.reset();
   const dt = Math.min(clock.getDelta(), 0.05);
   ctx.time += dt;
@@ -265,5 +277,11 @@ function frame() {
     seed: ctx.seed,
   });
   audio.update({ speed: controls.speed });
+  const f = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+  if (f) inflight.push(f);
+  if (ctx.frameHooks.size) {
+    const now = performance.now();
+    for (const h of [...ctx.frameHooks]) h(now);
+  }
 }
 frame();

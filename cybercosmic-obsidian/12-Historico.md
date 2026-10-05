@@ -407,3 +407,55 @@ Foto do usuário: o **bloco central da máquina colossal não era cortado**; e, 
 - **Distância**: o tiro **cheio vai até 400 m** (`shotOf`: 30 + 370k); a sobrecarga vai até 1000 m, e além dela até 2000 m. É assim por projeto. Medido (`--colreach`): de baixo, cheio a 380 m, sobrecarga a 900 m; cortam a plataforma, a longarina e o bloco.
 - Imagem: `--cutobj=colcore` mostra o bloco central furado. O `--cutobj` agora corta pelo trecho do feixe (`beamReach`).
 - Teste (`dano`, `colosso`): o feixe tem de chegar ao bloco e à longarina de dentro da trincheira e de baixo, a 120 e a 380 m. `check:beam`: f1 16/16, f2 6/6, dano 13/13.
+
+## 2026-10-04 — Varredura final de bugs (antes do rework gráfico)
+
+Pedido do usuário: "uma última varredura de bugs e inconsistências antes de iniciar o rework". Checks completos, análise estática (tipos estritos, i18n, eventos, salvamento, invariantes deste cofre) e revisão do código novo. Achados e correções:
+
+**Estruturas paradas e o mundo salvo**
+- **Vagão / elevador parados de vez voltavam a andar.** Ao recriar (sair e voltar, ou recarregar), o relógio recomeçava do tempo atual: os vagões apareciam noutro lugar e andavam ~6 s antes de parar. Agora o ponto da parada fica no mundo salvo (`transitStop:<linha>`, `liftStop:<id>`) e eles reaparecem onde ficaram, parados. Testes: `vagao` e `elevador` (some e volta: 0,00 m de diferença).
+- **O colosso parado aparecia "andando" no transporte, no sensor e na escotilha.** `nearest()` e `nextAt()` ignoravam a trincheira parada. Agora o transporte "colosso" escolhe uma máquina que anda, o sensor de movimento ignora as paradas, e a escotilha diz `TRENCH DAMAGED`. A estação de uma linha parada diz `LINE DAMAGED` (antes: "sem energia").
+- **Trilho cortado.** Vagões e elevadores paravam, mas **o colosso passava por cima dos trilhos cortados do teto da trincheira** e **o pórtico dos Construtores atravessava o trilho cortado**. Agora a trincheira para (`colLane`) e o pórtico chega até o corte e fica preso (`site.railBreaks`, `site.stuck`). Testes: `colosso:trilho`, `construtor:trilho`.
+- **Detecção de trilho cortado por amostras.** Os vagões amostravam 21 pontos do corte: num tiro de 2 km, um a cada 100 m, e um corte que cruzava o trilho passava batido. Agora a distância é exata (`gen/cut.js railDist`).
+
+**Corpos**
+- **O cadáver não acompanhava o piso que anda.** Num vagão ou no convés do colosso, a máquina saía de baixo dele; num elevador subindo, o piso passava por ele. Agora o morto vai junto (`corpseOn`, como o `_carry` dos vivos) e herda o piso em que o vivo estava apoiado. Teste: `cadaver:vagao`.
+- **O pórtico dos Construtores não dizia quanto andou** (`userData.dx`), então quem estava de pé nele não era levado junto. Agora diz, e zera quando o canteiro cai.
+- **Safeguards e andarilhos de ronda sumiam na frente do jogador.** Um tiro que cortava o circuito removia na hora a ronda inteira, inclusive o corpo de quem esse tiro acabara de matar. Agora o corpo fica onde caiu, e a ronda viva à vista só sai quando está longe (além de 450 m: `STALE_DROP`). Teste: `ronda:corte`.
+
+**Robustez e custo**
+- **Geometria vazia derrubava a colisão.** Um corte que apaga uma malha inteira deixava uma geometria sem `position`, e a BVH quebra nela: um tiro de colapso num carro de elevador derrubaria o jogo. `world/collision.js` agora ignora malha sem triângulos.
+- **Cada estrutura ativa guardava todos os cortes do mundo**, e o primeiro tiro montava as peças de todas as estruturas carregadas (dezenas de colossos a 7 km). Agora há um filtro pela esfera de cada malha.
+- **`cutMemo` dos Construtores vazava.** As chaves levam a lista de cortes, e as velhas nunca saíam. Agora é zerado quando a lista muda.
+- O `beamReach` novo (que entra na trincheira) custa até 1,4 ms por tiro de 2 km. As paradas são exatas: a parede a 80 m, o teto a 156 m.
+
+**Nada flutua (C1) fora dos chunks**
+- Um fragmento pequeno (< 8 m³) solto por um corte, que não encosta em nada, vira entulho que cai. Isso valia só para os chunks. Agora vale também para as estruturas ativas e para a obra dos Construtores (`gen/cut.js dropLoose`, evento `cut:loose`). Como nos chunks, só perto de um tiro recente: ao voltar a um lugar, os cortes salvos refeitos não fazem cair de novo.
+
+**Retorno e documentação**
+- A destruição de colosso, vagão e elevador não tinha som nem efeito (`structure:dead` sem ouvinte). Agora tem o mesmo estrondo do canteiro, no ponto do corte.
+- O README estava atrás do jogo. Dizia que Safeguards e raros vivos vinham "no futuro" e que a lanterna do Livre era no RT (é L3; o RT é o emissor). Faltavam o emissor e o inventário nos controles, e as mecânicas novas. Atualizado, assim como a tabela de controles deste cofre (o inventário: I / R3).
+
+**Mais achados (segunda metade)**
+- **O Livre podia ficar sem braço para sempre.** O braço perdido volta em 30 s, mas o relógio era só da sessão: salvar e recarregar antes disso deixava o braço perdido. Agora o Livre reagenda a volta de todo braço que falta, inclusive ao abrir o mundo.
+- **A câmara cobrava antes.** Os 50% da célula saíam no começo dos 20 s; sair do jogo no meio levava a carga sem devolver os braços. Agora saem no fim, junto com os braços. A prótese e o implante já eram assim.
+- **Cadáver herdando um chão velho.** Um ser morto longe (sem física) tinha o `groundObj` de quando esteve perto, noutro lugar. Agora só herda o piso se estava com física.
+- **O cofre contradizia o jogo.** `13-Decisoes` dizia "Não recortar geometria (CSG)" e que a arma "não está no jogo". Marcado como substituído (a arma voltou com o corte de verdade em 2026-10-02). O mapa de arquivos estava sem 27 módulos, e a "Estrutura" do README sem 37. Completados; o README ganhou a tabela de todos os checks.
+- **O fiscal dos Safeguards não dizia onde.** Agora diz o material, a posição e o estado de quem atravessou (`stats.wallLast`). Duas rodadas seguidas de `check:safeguards` falharam cada uma num caso diferente (`subir:elevador`, depois o `fiscal` com 1 atravessamento) e passaram no outro: instável, em observação com o diagnóstico novo.
+
+- **O pórtico derrubado ao vivo pulava e o canteiro mudava.** O `_wreck` foi feito para gerar cemitérios: rodando na hora da destruição, mandava o pórtico para um ponto qualquer do trilho, fazia blocos aparecerem e sumirem, e criava blocos caídos e pórticos velhos do nada. Agora, derrubado pelo emissor, o pórtico tomba onde estava, o gancho e a carga caem embaixo de onde estavam e nada mais muda. O lugar fica salvo (`bgWreck:<id>`), e o canteiro recriado volta igual. Teste: `construtor` confere o tombo no lugar.
+- **A máquina parada continuava batendo as garras.** O baque (com o controle vibrando) usava o relógio do mundo, não o da trincheira. Agora uma trincheira parada não bate.
+- **A bordo de uma linha destruída**, o aviso dizia "SEM ENERGIA · aguardando religamento". Agora diz "LINHA DANIFICADA · parada de vez" (`hud.transit.damaged`; `transit.stoppedForGood`).
+
+- **Testes novos** (`check:beam --beampart=dano`, agora 18 casos em ~2 min): `construtor:trilho`, `cadaver:vagao`, `solto:vagao` (dois tiros de verdade no guarda-corpo: um pedaço de 0,12 × 0,12 × 0,28 m sai e cai), `ronda:corte`, `colosso:trilho`; e mais conferências em `elevador`, `vagao` (somem e voltam onde pararam) e `construtor` (o tombo no lugar).
+- **Instáveis vistos** (passaram na rodada seguinte, sem mudança no código deles): `check:safeguards` `subir:elevador` e o `fiscal` (1 atravessamento — agora diz onde); `check:arms` `andarilho` (a posição do andarilho no circuito quando o teste chega).
+
+**Desempenho: as travadas de ~1/3 s e 18% da CPU no three.js**
+- No `check` do Livre, `unica` tinha o pior quadro em 334–375 ms. Isolado, repetia em 370–453 ms, também na Peregrinação; já existia no commit de 03/10 à noite, quando o jogo passou à GPU dedicada sem limite de quadros. Parado ali, travava 200–450 ms a cada 1–2 s, sem shader novo, sem coleta de lixo e sem nenhum sistema do quadro acima de 3 ms.
+- O perfil de CPU do Chromium (`--cpuprofile`, nova) mostrou ~18% da CPU em `getProgram`/`getParameters` do three. **Bug do three r170:** o `setProgram` confere `object.colorTexture` num `BatchedMesh`, que guarda a textura em `_colorsTexture`. `undefined !== null`, então todo lote reavaliava o programa em toda chamada de desenho, montando a chave com o código inteiro do shader. Contorno: um getter `colorTexture` no protótipo (`world/batches.js`). O tempo sumiu do perfil.
+- Também: o mesmo `ShaderMaterial` desenhado ora num lote, ora numa malha comum (Construtores, terminais, elevadores, mãos…), trocava de programa ~1.000×/s (`--progswitch`, nova). `world.js` agora dá a toda malha comum uma cópia própria (`soloMaterial`: os mesmos uniforms), a cada 0,5 s. Trocas: ~0.
+- Com a CPU livre, as travadas pioraram: sem o limite de quadros do Chromium (`disable-frame-rate-limit`), a CPU enfileirava quadros mais rápido que a GPU desenhava, e o driver a segurava de uma vez. **No máximo 4 quadros esperando a GPU** (uma fence do WebGL2 no fim de cada quadro; o rAF seguinte passa a vez se a GPU ainda estiver neles: `app.js MAX_INFLIGHT`). Medido nos quadros desenhados: o pior quadro caiu de 334–453 ms para ≤ 42 ms em `unica`, `terminal`, `teia` e `colmeia`, com a média igual à de antes (2 em voo: ~80 fps em todo lugar; 3: −25% na teia; 4: o equilíbrio). Parado na única: 94–98 fps sem nenhuma travada (antes ~100 com travadas a cada 1–2 s).
+- **Os testes medem os quadros desenhados.** `ctx.frameHooks` (app.js) avisa a cada quadro desenhado; `check`, `check:beings`, `profile`, `--stats` e `--hitch` passaram a usá-lo, porque um rAF que passa a vez não é um quadro.
+- O `profile` agora também mede a vida, os braços, o gene e o despertar.
+
+**Conferido e sem problema:** tipos estritos (só código morto inofensivo); i18n (as mesmas chaves nos dois idiomas, placeholders iguais, nenhuma chave usada faltando, inclusive as montadas); eventos (nenhum ouvinte sem emissor); salvamento (tudo por id estável); `Math.random` só em eventos de sessão e comportamento; configurações reaplicadas ao reconstruir o mundo; a origem flutuante nos efeitos novos; os seres desistem de uma linha parada (10 s) e evitam a aresta.

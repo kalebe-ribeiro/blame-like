@@ -57,14 +57,14 @@ export async function runBeingTest(ctx) {
     let frames = 0;
     let worst = 0;
     let last = performance.now();
-    const count = () => {
-      const t = performance.now();
+    // (os quadros desenhados — app.js frameHooks: um rAF pode passar a vez)
+    const count = (t) => {
       worst = Math.max(worst, t - last);
       last = t;
       frames++;
-      if (world.entities.list.has(e.id)) requestAnimationFrame(count);
+      if (!world.entities.list.has(e.id)) ctx.frameHooks.delete(count);
     };
-    requestAnimationFrame(count);
+    ctx.frameHooks.add(count);
     let tick = 0;
     while (e.state === 'walk' && (performance.now() - t0) / 1000 < limit) {
       await sleep(500);

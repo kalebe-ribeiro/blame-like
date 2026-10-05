@@ -163,7 +163,7 @@ function createWindow() {
   if (process.argv.includes('--nonpcs')) query.set('nonpcs', '1');
   if (process.argv.includes('--wreveal')) query.set('wreveal', '1');
   if (process.argv.includes('--sgwatch')) query.set('sgwatch', '1');
-  for (const k of ['sgnear', 'sgdist', 'sgemerge', 'sgcam', 'talk', 'talkpick', 'wcam', 'hang', 'ledgestats', 'ambient', 'climbonly', 'shimmy', 'inventory', 'equip', 'grabtest', 'grabfreeze', 'moveonly', 'movetrace', 'profplaces', 'profres', 'sgtrace', 'golink', 'golinkat', 'cutshot', 'cutrange', 'cutr', 'beampart', 'beamhold', 'beamfire', 'profshot', 'fxshots', 'fxfar', 'fxhold', 'profhold', 'healthpart', 'healthtrace', 'strikepose', 'hurt', 'sgpart', 'chambercam', 'vaultcam', 'endingshow', 'sparkshot', 'buildercam', 'cutcar', 'cutobj', 'colreach']) if (argValue(k)) query.set(k, argValue(k));
+  for (const k of ['sgnear', 'sgdist', 'sgemerge', 'sgcam', 'talk', 'talkpick', 'wcam', 'hang', 'ledgestats', 'ambient', 'climbonly', 'shimmy', 'inventory', 'equip', 'grabtest', 'grabfreeze', 'moveonly', 'movetrace', 'profplaces', 'profres', 'sgtrace', 'golink', 'golinkat', 'cutshot', 'cutrange', 'cutr', 'beampart', 'beamhold', 'beamfire', 'profshot', 'fxshots', 'fxfar', 'fxhold', 'profhold', 'healthpart', 'healthtrace', 'strikepose', 'hurt', 'sgpart', 'chambercam', 'vaultcam', 'endingshow', 'sparkshot', 'buildercam', 'cutcar', 'cutobj', 'colreach', 'hitch', 'progswitch', 'cpuprofile']) if (argValue(k)) query.set(k, argValue(k));
   if (argValue('gounique')) query.set('gounique', argValue('gounique'));
   if (argValue('body')) query.set('body', argValue('body')); // --body=6: um corpo de teste aos 6 s (fase 5)
   if (argValue('bodydist')) query.set('bodydist', argValue('bodydist'));
@@ -210,6 +210,31 @@ function createWindow() {
     // o teste dos corpos anda de verdade (a pé, a ~2,3 m/s): tem mais tempo
     const limit = argValue('check') === 'moves' ? 25 : ['beings', 'safeguards', 'npcs', 'profile', 'beam'].includes(argValue('check')) ? 12 : 6;
     setTimeout(() => finishCheck(`tempo esgotado (${limit} min)`), limit * 60 * 1000);
+  }
+
+  // (dev) --cpuprofile=arquivo.cpuprofile --cpuat=S --cpufor=S: grava o perfil de CPU da página (o profiler
+  // do Chromium, pelo protocolo de depuração) dos S s em diante, por S s — o que roda entre os quadros também
+  const cpuPath = argValue('cpuprofile');
+  if (cpuPath) {
+    const at = Number(argValue('cpuat') || 25);
+    const dur = Number(argValue('cpufor') || 10);
+    setTimeout(async () => {
+      const dbg = win.webContents.debugger;
+      try {
+        dbg.attach('1.3');
+        await dbg.sendCommand('Profiler.enable');
+        await dbg.sendCommand('Profiler.setSamplingInterval', { interval: 200 });
+        await dbg.sendCommand('Profiler.start');
+        setTimeout(async () => {
+          const { profile } = await dbg.sendCommand('Profiler.stop');
+          fs.writeFileSync(path.resolve(cpuPath), JSON.stringify(profile));
+          console.log(`perfil de CPU salvo em ${cpuPath}`);
+          dbg.detach();
+        }, dur * 1000);
+      } catch (e) {
+        console.log('cpuprofile falhou: ' + e.message);
+      }
+    }, at * 1000);
   }
 
   if (capturePath) {

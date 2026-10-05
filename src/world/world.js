@@ -21,7 +21,7 @@
 import * as THREE from 'three';
 import { DynamicCuts } from './dynamic.js';
 import { RNG } from '../core/rng.js';
-import { PALETTE, createSurfaceMaterial, createSkyMaterial, createBeamMaterial, createCascadeMaterial, linearColor } from '../shaders/materials.js';
+import { PALETTE, createSurfaceMaterial, createSkyMaterial, createBeamMaterial, createCascadeMaterial, linearColor, soloMaterial } from '../shaders/materials.js';
 import { ElevatorSystem } from './elevators.js';
 import { BuilderSystem } from './builders.js';
 import { ParticleSystem } from './particles.js';
@@ -572,6 +572,18 @@ export class World {
     return out;
   }
 
+  /** Toda malha comum da cena que usa um material dos lotes passa a usar uma cópia própria dele. */
+  _soloMaterials() {
+    if (!this._shared || this._sharedFor !== this.materials) {
+      this._shared = new Set([...Object.values(this.materials), ...Object.values(this.lodMaterials ?? {})]);
+      this._sharedFor = this.materials;
+    }
+    const shared = this._shared;
+    (this.streamGroup.parent ?? this.streamGroup).traverse((/** @type {any} */ o) => {
+      if (o.isMesh && !o.isBatchedMesh && !Array.isArray(o.material) && shared.has(o.material)) o.material = soloMaterial(o.material);
+    });
+  }
+
   /**
    * Um corte "a seco" (app/beamfx.js, no aquecimento): o caminho inteiro de addCut — o recorte
    * de cada camada, a reação dos seres, das rondas e dos objetos — com um corte a um milhão de
@@ -602,6 +614,11 @@ export class World {
 
   update(time, dt, camera, observerScale) {
     this.frameNo = (this.frameNo ?? 0) + 1; // (o orçamento de colisão por quadro — world/collision.js)
+    // as malhas comuns com um material dos lotes ganham uma cópia própria (shaders/materials.js soloMaterial)
+    if ((this._soloT = (this._soloT ?? 0) - dt) <= 0) {
+      this._soloT = 0.5;
+      this._soloMaterials();
+    }
     // depois de um corte: no quadro seguinte, as camadas de longe; no outro, o resto do mundo
     // (cada coisa num quadro — o tiro não junta tudo num só)
     if (this._lateRecut.length && this.frameNo > this._afterCut) {

@@ -127,7 +127,10 @@ export class ElevatorSystem {
         def.phase = (Math.abs(Math.sin(def.x * 0.013 + def.z * 0.029)) * 1000) % 300;
         const group = this._buildCar(def);
         this.group.add(group);
-        const car = { def, group, y: ElevatorSystem.heightAt(def, time), clock: time, rate: 1, dead: false };
+        // parado de vez (destruído, trilho cortado): volta de onde parou (salvo no mundo)
+        const stop = this.dyn?.world.worldState?.get(`liftStop:${id}`);
+        const clock = typeof stop === 'number' ? stop : time;
+        const car = { def, group, y: ElevatorSystem.heightAt(def, clock), clock, rate: typeof stop === 'number' ? 0 : 1, dead: false };
         this.cars.set(id, car);
         // o emissor: os pontos dos cabos (os cantos de cima) são o essencial; destruído, o carro para onde está
         const hw = (def.w ?? 8) / 2 - 1;
@@ -160,6 +163,11 @@ export class ElevatorSystem {
         if (car.cut) powered = false;
       }
       if (car.dead) powered = false; // (destruído pelo emissor: parado de vez)
+      if (car.dead || car.cut) {
+        // onde ele parou (freando: até parar) fica no mundo
+        const ws = this.dyn?.world.worldState;
+        if (ws && (car.rate > 0 || ws.get(`liftStop:${car.def.id}`) === undefined)) ws.set(`liftStop:${car.def.id}`, car.clock);
+      }
       car.rate = powered ? Math.min(1, car.rate + dt / 8) : Math.max(0, car.rate - dt / 4);
       car.clock += car.rate * dt;
       const y = ElevatorSystem.heightAt(car.def, car.clock);

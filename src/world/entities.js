@@ -150,6 +150,9 @@ export class EntitySystem {
     e.cause = cause;
     e.speed = 0;
     e.state = 'dead';
+    // morreu de pé num piso que anda (vagão, elevador, o convés do colosso): o corpo segue nele desde já
+    // (só com física — perto: longe, o Walker guarda o chão de quando esteve perto, noutro lugar)
+    e.corpseOn = e.tier === 'near' && e.walker?.grounded ? e.walker.groundObj : null;
     this.bus?.emit('being:die', { id: e.id, kind: e.kind, cause, x: e.feet.x, y: e.feet.y, z: e.feet.z });
   }
 
@@ -261,6 +264,16 @@ export class EntitySystem {
   /** O corpo morto: confere o chão (a cada 0,4 s parado; a cada quadro caindo) e cai com a gravidade. */
   _settleCorpse(e, dt, origin) {
     e.fallV ??= 0;
+    // deitado num piso que se move (vagão, elevador, o convés do colosso): vai junto, a cada quadro
+    // (como os vivos — _carry); sem isso a máquina saía de baixo dele
+    let top = e.corpseOn;
+    while (top?.parent) top = top.parent;
+    const gd = !e.fallV && top?.isScene ? e.corpseOn.userData : null; // (a máquina saiu de cena: não arrasta mais)
+    if (gd && (gd.dx || gd.dy || gd.dz)) {
+      e.feet.x += gd.dx || 0;
+      e.feet.y += gd.dy || 0;
+      e.feet.z += gd.dz || 0;
+    }
     if (!e.fallV && (e.settleT = (e.settleT ?? 0) - dt) > 0) return;
     e.settleT = 0.4;
     const col = e.walker.col;
@@ -274,14 +287,17 @@ export class EntitySystem {
       if (e.fallV) this.bus?.emit('being:corpseLand', { id: e.id, v: e.fallV, x: e.feet.x, y: floor, z: e.feet.z });
       e.feet.y = floor;
       e.fallV = 0;
+      e.corpseOn = hit.object;
       return;
     }
+    e.corpseOn = null;
     // no ar: cai (a mesma gravidade do Walker)
     e.fallV = Math.min(60, e.fallV + 15 * dt);
     e.feet.y -= e.fallV * dt;
     if (floor !== null && e.feet.y < floor) {
       e.feet.y = floor;
       e.fallV = 0;
+      e.corpseOn = hit.object;
     }
   }
 
@@ -888,7 +904,12 @@ export class EntitySystem {
       _s.set(bx, by + 1.2, bz);
       _d.divideScalar(mv);
       const hit = w.col.ray(_s, _d, mv);
-      if (hit && hit.face && Math.abs(hit.face.normal.y) < 0.55) e.stats.wall++;
+      if (hit && hit.face && Math.abs(hit.face.normal.y) < 0.55) {
+        e.stats.wall++;
+        // (onde e em quê — o fiscal dos testes diz)
+        const u = hit.object.userData;
+        e.stats.wallLast = `${u.mat ?? '?'}${u.transit ? ' (vagão)' : ''}${u.dy || u.dx || u.dz ? ' (andando)' : ''} em ${[bx, by, bz].map(Math.round).join(',')} · ${e.kind} ${e.sg?.state ?? e.npc?.state ?? e.state}${e.vert ? ' ' + e.vert.kind + ':' + e.vert.phase : ''}`;
+      }
     }
     e.feet.copy(w.feet).add(origin);
     e.speed = Math.hypot(w.vel.x, w.vel.z);

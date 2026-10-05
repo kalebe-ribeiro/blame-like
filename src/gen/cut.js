@@ -42,6 +42,22 @@ export function segDist(x, y, z, c) {
 }
 
 /**
+ * A distância do eixo do corte c a uma reta paralela ao eixo `axis` ('x' ou 'z') — um trilho: a reta
+ * passa em (lado = `side`, altura = `y`), onde lado é a coordenada z (trilho ao longo de x) ou x
+ * (ao longo de z). Exata: no plano transversal ao trilho, a distância de um ponto a um segmento.
+ */
+export function railDist(c, axis, side, y) {
+  const k = axis === 'x' ? 2 : 0;
+  const pa = c.a[k];
+  const ya = c.a[1];
+  const dp = c.b[k] - pa;
+  const dy = c.b[1] - ya;
+  const L2 = dp * dp + dy * dy;
+  const t = L2 > 1e-9 ? Math.max(0, Math.min(1, ((side - pa) * dp + (y - ya) * dy) / L2)) : 0;
+  return Math.hypot(pa + dp * t - side, ya + dy * t - y);
+}
+
+/**
  * A distância do ponto ao EIXO do corte, só dentro do trecho do cilindro (pontas retas, como o
  * pincel do CSG); fora das pontas, Infinity. (Uma cápsula — pontas redondas — tirava o chão
  * em volta de quem atira: a ponta perto da arma tem o raio inteiro.)
@@ -618,6 +634,44 @@ export function keepTris(g, tris) {
   for (const t of tris) out.push(ix.getX(t * 3), ix.getX(t * 3 + 1), ix.getX(t * 3 + 2));
   g.setIndex(out);
   return g;
+}
+
+/**
+ * Fragmentos soltos (a decisão C1 — a Cidade é ancorada; nada flutua): no resultado de cutPiece, as
+ * partes conexas (o que ficou e as faces do corte juntos: um sólido) que ficaram pequenas (caixa
+ * < `maxVol` m³) e não encostam em nenhuma de `boxes` (as outras peças, THREE.Box3 no mesmo frame)
+ * saem da peça (res.kept/res.caps mudam no lugar, ou viram null). → [{ min, max }] o que saiu.
+ * (A mesma regra de gen/chunkgen.js _dropLoose, para o que é cortado fora dos chunks: as
+ * estruturas ativas, a obra dos Construtores.)
+ */
+export function dropLoose(res, boxes, maxVol = 8) {
+  const geoms = [res.kept, res.caps].filter(Boolean);
+  if (!geoms.length || geoms.some((g) => !g.index)) return [];
+  const joint = geoms.length === 2 ? concat(geoms[0].clone(), geoms[1].clone()) : concat(null, geoms[0].toNonIndexed());
+  const split = geoms[0].index.count / 3; // triângulos [0, split) são do primeiro
+  const comps = components(joint);
+  if (comps.length < 2) return [];
+  const E = 0.05;
+  const keep = geoms.map(() => []);
+  const out = [];
+  for (const c of comps) {
+    const vol = (c.max[0] - c.min[0]) * (c.max[1] - c.min[1]) * (c.max[2] - c.min[2]);
+    const touches = boxes.some((b) => b.min.x <= c.max[0] + E && b.max.x >= c.min[0] - E && b.min.y <= c.max[1] + E && b.max.y >= c.min[1] - E && b.min.z <= c.max[2] + E && b.max.z >= c.min[2] - E);
+    if (vol < maxVol && !touches) {
+      out.push({ min: c.min, max: c.max });
+      continue;
+    }
+    for (const t of c.tris) {
+      if (t < split) keep[0].push(t);
+      else keep[1].push(t - split);
+    }
+  }
+  if (!out.length) return [];
+  const kept = geoms.map((g, i) => (keep[i].length === g.index.count / 3 ? g : keepTris(g, keep[i])));
+  const k = res.kept ? kept.shift() : null;
+  res.kept = k;
+  res.caps = res.caps ? kept.shift() : null;
+  return out;
 }
 
 /**

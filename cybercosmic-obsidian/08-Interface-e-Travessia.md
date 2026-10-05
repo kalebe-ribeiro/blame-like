@@ -15,6 +15,7 @@
 | lanterna / sensor | F / G | X / ↓ | Peregrinação |
 | lanterna | L | L3 | Livre |
 | emissor: segurar carrega, soltar atira · cancelar | Q ou clique esquerdo · SHIFT ou clique direito | RT · LT (segurando RT) | carregando: 60% do passo, sem correr nem pular |
+| inventário e as mãos | I | R3 | |
 | foto / mapa | F2 / M | RB / SELECT | |
 | menu (tela de entrada) | ESC | START | |
 | interface / transporte / mundo novo | H / T / R | → / — / — | Livre |

@@ -44,6 +44,7 @@ const PATROL_SCALE = PATROL.speed / WALK;
 const HUNT_SCALE = 1.25; // ~5,2 m/s (atrás da vida de silício — ela não é o jogador)
 const SCAN = 600; // m: territórios mantidos em volta do jogador
 const DROP = 900; // m: longe assim, a ronda sai da memória
+const STALE_DROP = 450; // m: uma ronda de circuito cortado sai quando ninguém a vê (além da névoa)
 const SIGHT_MAX = 105; // m: ninguém vê além disso (a névoa, a poeira)
 const CATCH = 1.0; // m (horizontal)
 /** O golpe: alcance para começar, alcance no impacto (você pode sair na preparação), os tempos (s). */
@@ -61,6 +62,8 @@ const _d = new THREE.Vector3();
 
 export class SafeguardSystem {
   constructor(group, materials, world) {
+    /** @type {THREE.Vector3 | null} onde o jogador estava no último quadro (GLOBAL) */
+    this.lastG = null;
     this.group = group;
     this.materials = materials;
     this.world = world;
@@ -105,6 +108,7 @@ export class SafeguardSystem {
 
   update(time, dt, g, origin) {
     this.time = time;
+    (this.lastG ??= new THREE.Vector3()).copy(g); // (onCut: quem pode ser visto não some)
     if (!this.enabled) {
       if (this.byTerritory.size || this.hunters.size) this.clear();
       return;
@@ -127,7 +131,8 @@ export class SafeguardSystem {
         if (!this.byTerritory.has(id) && !this.none.has(id) && !this.pending.has(id) && !this.queue.some((q) => q.id === id)) this.queue.push({ id, p });
       }
       for (const [id, e] of this.byTerritory) {
-        if (!ids.has(id) && e.sg.state === 'patrol' && e.feet.distanceTo(g) > DROP) {
+        const d = e.feet.distanceTo(g);
+        if (e.sg.state === 'patrol' && ((!ids.has(id) && d > DROP) || (e.sg.stale && d > STALE_DROP))) {
           this.ents.remove(e.id);
           this.byTerritory.delete(id);
         }
@@ -151,11 +156,17 @@ export class SafeguardSystem {
     for (const e of this.hunters) this._panel(e, dt, origin);
   }
 
-  /** Um corte do emissor: as rondas de circuito cortado saem (o próximo varrer refaz o circuito). */
+  /** Um corte do emissor: as rondas de circuito cortado saem (o próximo varrer refaz o circuito) —
+   *  menos o corpo de quem morreu (fica onde caiu) e quem pode ser visto: nada some na frente do
+   *  jogador (fica marcado e sai quando estiver longe — STALE_DROP). */
   onCut() {
     const F = this.field;
     for (const [id, e] of this.byTerritory) {
-      if (e.sg.state !== 'patrol' || !F.cutOnPath(e.sg.c.pts)) continue;
+      if (e.dead || e.sg.state !== 'patrol' || !F.cutOnPath(e.sg.c.pts)) continue;
+      if (e.feet.distanceTo(this.lastG ?? e.feet) < STALE_DROP) {
+        e.sg.stale = true;
+        continue;
+      }
       this.ents.remove(e.id);
       this.byTerritory.delete(id);
     }

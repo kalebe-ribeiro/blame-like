@@ -61,6 +61,9 @@
 | Trocar de mundo com o salvamento automático ligado grava o mundo velho por cima do novo (`beforeunload`) | desligar `ctx.saving` antes de recarregar |
 | Um raio exatamente sobre a junta de duas peças (pontos do grafo em múltiplos de 12 m) erra as duas — o corpo caía pelo chão | o Walker procura o chão em 5 pontos; o "pulo do vão" dos seres em 3 |
 | Geometria gerada atravessando caminhos verticais (duto na escada de manutenção; patamar em cima de quem sobe) | ao gerar algo perto de escada/elevador, testar SUBINDO de verdade (`check:moves`) |
+| three r170: `BatchedMesh` sem `colorTexture` (o lote guarda `_colorsTexture`) — o `setProgram` reavaliava o programa de todo lote em todo quadro (~18% da CPU) | getter no protótipo (`world/batches.js`); ao atualizar o three, conferir se ainda é preciso |
+| O mesmo `ShaderMaterial` num lote e numa malha comum troca de programa a cada desenho | malha comum usa `soloMaterial(m)` (`world.js` aplica sozinho a cada 0,5 s) |
+| Sem o limite de quadros do Chromium, a CPU enfileira quadros além da GPU e o driver a segura por 200–450 ms | no máximo 4 quadros em voo (fence — `app.js MAX_INFLIGHT`); medir fps pelos quadros DESENHADOS (`ctx.frameHooks`), não pelo rAF |
 | Dois Electron escrevendo no mesmo log (no Windows não há `pkill`) | `taskkill //F //IM electron.exe` antes de outro teste em segundo plano |
 
 | Nome de script Python igual a um módulo da biblioteca (`types.py`): o Python importou o script no lugar do módulo e ele rodou duas vezes (inserções em dobro) | nomes de script que não colidem (`fix_types.py`) |

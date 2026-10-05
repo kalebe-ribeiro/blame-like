@@ -257,7 +257,7 @@ export function createArms(ctx) {
       tell(t('device.chamberWeak', { n: Math.round(ARM_COST.chamber * 100) }), 3);
       return;
     }
-    if (!free()) player.energy.value -= ARM_COST.chamber;
+    // (o custo sai no fim, com os braços: sair do jogo no meio dos 20 s não leva a carga sem devolver nada)
     ctx.beam?.cancel?.('camara');
     seq = { t: 0, bed: nb.b, u: nb.u, nextSpark: 1, nextClang: 0.5 };
     controls.forceInput = { f: 0, r: 0, run: false, jump: false };
@@ -373,6 +373,7 @@ export function createArms(ctx) {
           audio.powerDown?.(0, 3, 400);
           ctx.gene?.implantDone();
         } else if (seq.t >= T) {
+          if (!free()) player.energy.value = Math.max(0, player.energy.value - ARM_COST.chamber);
           for (const side of missing()) restore(side, 'flesh');
           const id = seq.u.id;
           seq = null;

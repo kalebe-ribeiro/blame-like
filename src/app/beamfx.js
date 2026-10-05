@@ -380,6 +380,14 @@ export function createBeamFx(ctx) {
     falling.push({ mesh, vy: vel?.y ?? 0, vx: vel?.x ?? 0, vz: vel?.z ?? 0, floor, rest: false, bounced: false, g: g.clone(), spin: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(6) });
   }
 
+  // um fragmento solto de uma estrutura ativa ou da obra dos Construtores (world/dynamic.js,
+  // world/builders.js — a regra dos chunks, gen/cut.js dropLoose): cai como os detritos da Cidade
+  // (como os detritos dos chunks: só perto de um tiro recente — ao voltar a um lugar, os cortes salvos são
+  // refeitos e os mesmos fragmentos sairiam de novo; conferido no quadro seguinte: o tiro entra na lista
+  // depois do corte)
+  const looseQueue = [];
+  world.bus.on('cut:loose', (d) => looseQueue.push(d));
+
   // um chunk refeito por um corte entrou: os detritos do corte recente caem, e as bordas
   // de verdade (raios do eixo para fora) viram lascas e pontos que pingam faíscas
   world.bus.on('cut:swap', ({ entry }) => {
@@ -776,6 +784,13 @@ export function createBeamFx(ctx) {
       for (let n = 0; n < 2 && pendingDrops.length; n++) {
         const [pg, sx, sy, sz, mat, v] = pendingDrops.shift();
         drop(pg, sx, sy, sz, mat, v);
+      }
+      if (looseQueue.length) {
+        const recent = shots.filter((s) => t - s.t0 < 6);
+        for (const d of looseQueue.splice(0)) {
+          const p = new THREE.Vector3(d.x, d.y, d.z);
+          if (recent.some((s) => segDist(p, s) < s.r + Math.max(d.sx, d.sy, d.sz) + 1)) pendingDrops.push([p, d.sx * 0.9, d.sy * 0.9, d.sz * 0.9, d.mat, null]);
+        }
       }
       // ── o que cai ──
       for (let i = falling.length - 1; i >= 0; i--) {

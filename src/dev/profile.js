@@ -72,6 +72,10 @@ async function run(ctx) {
   wrap(ctx.sound, 'update', 'som (lugares)');
   wrap(ctx.hud, 'update', 'hud');
   wrap(ctx.beam, 'update', 'arma (emissor)');
+  wrap(ctx.health, 'update', 'vida');
+  wrap(ctx.arms, 'update', 'braços (próteses, câmara)');
+  wrap(ctx.gene, 'update', 'gene');
+  wrap(ctx.wake, 'update', 'despertar');
   wrap(world, 'addCut', 'arma: addCut');
   wrap(ctx.beam.fx, 'fire', 'arma: efeitos do tiro');
   wrap(ctx.audio, 'update', 'áudio');
@@ -198,8 +202,8 @@ async function run(ctx) {
   /** @type {string[]} */
   const newProgs = [];
   /** @type {any} */
+  // (a cada quadro DESENHADO — app.js frameHooks: um rAF pode passar a vez)
   const tick = () => {
-    raf(tick);
     ctx._profFrame?.();
     const now = performance.now();
     // (programas de shader novos neste quadro: uma compilação no meio do jogo)
@@ -221,7 +225,7 @@ async function run(ctx) {
     triFrame.clear();
     last = now;
   };
-  raf(tick);
+  ctx.frameHooks.add(tick);
 
   const reset = () => {
     for (const s of acc.values()) {

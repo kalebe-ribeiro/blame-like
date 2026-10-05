@@ -416,6 +416,16 @@ export function createBeam(ctx) {
     } else audio.impact?.(Math.min(14, 6 + 8 * (ev.amount ?? 0)));
   });
 
+  // uma estrutura ativa destruída (o colosso, um vagão, um carro de elevador — world/dynamic.js):
+  // o mesmo estrondo (o pórtico dos Construtores tem o seu, logo abaixo)
+  world.bus.on('structure:dead', (ev) => {
+    if (ev.id.startsWith('bg:') || ev.x === undefined) return;
+    const [pan, dist] = ctx.placeOf(ev.x, ev.y, ev.z);
+    audio.clangAt?.(pan, Math.max(1, dist));
+    audio.impact?.(Math.max(8, 40 - dist / 20));
+    fx.hitSparks(new THREE.Vector3(ev.x, ev.y, ev.z), 60);
+    controls.rumble?.(0.6, 0.5, 500);
+  });
   // um Construtor derrubado pelo corte (world/builders.js): o estrondo do pórtico, faíscas
   world.bus.on('builder:destroyed', (ev) => {
     const [pan, dist] = ctx.placeOf(ev.x, ev.y, ev.z);
@@ -566,6 +576,9 @@ export function createBeam(ctx) {
 
       const tn = performance.now() / 1000;
       for (const which of ['right', 'left']) {
+        // no Livre o braço volta sozinho — também o que faltava ao abrir o mundo salvo (o relógio da
+        // volta não é salvo: sem isto, recarregar antes dos 30 s deixava o Livre sem o braço para sempre)
+        if (free() && !player.arms[which] && !armRegrow[which]) armRegrow[which] = tn + ARM_REGROW_FREE;
         if (armRegrow[which] && tn >= armRegrow[which]) {
           armRegrow[which] = 0;
           player.arms[which] = true;

@@ -451,6 +451,26 @@ export function movingMaterial(m) {
   return v;
 }
 
+/**
+ * Uma cópia própria de um material dos lotes (os mesmos uniforms, o mesmo shader) para uma malha COMUM.
+ * O three escolhe o programa pelo material e pelo tipo do objeto: o mesmo ShaderMaterial desenhado ora
+ * num BatchedMesh (os chunks), ora numa malha comum, troca de programa a cada vez — e cada troca monta
+ * a chave do programa com o código inteiro do shader (getProgram/getParameters: ~20% da CPU do quadro,
+ * medido com --progswitch e --cpuprofile). world.js aplica isto a toda malha comum da cena.
+ */
+const _solo = new WeakMap();
+export function soloMaterial(m) {
+  if (!m?.isShaderMaterial) return m;
+  let v = _solo.get(m);
+  if (!v) {
+    v = m.clone();
+    v.uniforms = m.uniforms; // (compartilhados: o mundo muda um, os dois mudam)
+    v.name = m.name;
+    _solo.set(m, v);
+  }
+  return v;
+}
+
 // ─── Feixes de luz volumétricos ─────────────────────────────────────────────
 //  Cilindros abertos com blending aditivo. A coordenada "ao longo do feixe"
 //  (0 na fonte, 1 no fim) vem codificada em normal.y pela geometria (ver

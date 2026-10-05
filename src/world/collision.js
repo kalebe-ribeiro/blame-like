@@ -59,6 +59,8 @@ export class CollisionWorld {
     const consider = (mesh) => {
       if (!mesh.isMesh || mesh.userData.noCollide) return;
       const geom = mesh.geometry;
+      // (uma malha que o emissor apagou inteira fica sem triângulos: nada a colidir — e a BVH quebra nela)
+      if (!geom.attributes.position?.count) return;
       if (!geom.boundingSphere) geom.computeBoundingSphere();
       _c.copy(geom.boundingSphere.center).applyMatrix4(mesh.matrixWorld);
       if (_c.distanceTo(scenePos) - geom.boundingSphere.radius > radius) return;

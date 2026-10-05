@@ -41,6 +41,18 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 
+// three r170: o setProgram do renderer confere `object.colorTexture` num BatchedMesh, mas o lote guarda a
+// textura das cores em `_colorsTexture` — `undefined !== null` dava verdadeiro e TODO lote reavaliava o
+// programa em toda chamada de desenho, em todo quadro (getProgram monta a chave com o código inteiro do
+// shader: ~18% da CPU do quadro — medido com --cpuprofile). O getter faz a conferência ver o que existe.
+if (!('colorTexture' in THREE.BatchedMesh.prototype)) {
+  Object.defineProperty(THREE.BatchedMesh.prototype, 'colorTexture', {
+    get() {
+      return this._colorsTexture ?? null;
+    },
+  });
+}
+
 const PAGE_MIN = 1 << 16; // vértices da primeira página de cada material
 const PAGE_MAX = 1 << 17; // teto das páginas seguintes (~3 MB: um envio só para a GPU)
 const SPARE_AT = 0.3; // abaixo desta folga (fração de uma página), prepara a próxima

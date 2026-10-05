@@ -167,6 +167,7 @@ export default {
   'hud.fly': 'LOCOMOTION: DRIFT · gravity suspended',
   'hud.transit.power': 'TRANSIT :: POWER RESTORED',
   'hud.transit.nopower': 'TRANSIT :: NO POWER · awaiting restart',
+  'hud.transit.damaged': 'TRANSIT :: LINE DAMAGED · stopped for good',
   'hud.photo': 'RECORD SAVED :: Pictures/CYBERCOSMIC',
   'hud.outage.start': 'SECTOR 0x{sector} :: POWER INTERRUPTED',
   'hud.outage.restore': 'SECTOR 0x{sector} :: CASCADE RESTART',

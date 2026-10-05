@@ -167,6 +167,7 @@ export default {
   'hud.fly': 'LOCOMOÇÃO: DERIVA · gravidade suspensa',
   'hud.transit.power': 'TRANSPORTADOR :: ENERGIA RESTABELECIDA',
   'hud.transit.nopower': 'TRANSPORTADOR :: SEM ENERGIA · aguardando religamento',
+  'hud.transit.damaged': 'TRANSPORTADOR :: LINHA DANIFICADA · parada de vez',
   'hud.photo': 'REGISTRO SALVO :: Imagens/CYBERCOSMIC',
   'hud.outage.start': 'SETOR 0x{sector} :: ENERGIA INTERROMPIDA',
   'hud.outage.restore': 'SETOR 0x{sector} :: RELIGAMENTO EM CASCATA',
