@@ -258,7 +258,7 @@ export class EntitySystem {
       else this._stepFar(e, dt);
 
       // o corpo na cena
-      const vis = dist < VISIBLE;
+      const vis = dist < VISIBLE && e.rig.ready !== false; // (a pele contínua ainda vindo do worker: invisível)
       e.rig.group.visible = vis;
       if (vis) {
         e.rig.group.position.set(e.feet.x - origin.x, e.feet.y - origin.y, e.feet.z - origin.z);

@@ -14,9 +14,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { FleshLayer, cachedLayer, skinned } from './flesh.js';
+import { FleshLayer, layerGeometry, skinned } from './flesh.js';
 import { safeguardFlesh, humanFlesh } from './fleshKits.js';
 import { safeguardKit, siliconKit, humanKit, transhumanKit, tribeOf } from './kits.js';
+
+const FAR_LOD = 14; // m: daí em diante, a malha de longe
 
 const TEST = {
   hip: 0.95, // altura do quadril
@@ -147,6 +149,7 @@ export function buildSiliconLevel(M, level, id) {
 function buildBody(material, D, slitMat = null, dress = null, kit = null) {
   const G = D.girth ?? 1;
   const plain = !kit?.flesh; // com pele contínua (kit.flesh), o corpo de cilindros não é desenhado
+  const state = { ready: true, disposed: false };
   const group = new THREE.Group();
   const root = joint(group, 0, D.hip, 0); // o quadril (sobe e desce com a passada)
   const meshes = [];
@@ -248,16 +251,30 @@ function buildBody(material, D, slitMat = null, dress = null, kit = null) {
       return l >= 0 ? 20 + l : 0;
     });
     const J = { root, spine, neck, arms, legs, D };
-    for (const L of kit.flesh(J)) {
-      const geo = cachedLayer(L.key, () => {
+    // cada camada em dois níveis (perto e longe — a malha de longe com a grade 2,4× maior); o worker as
+    // monta (world/flesh.js) e o corpo só aparece quando todas chegam (ready — world/entities.js)
+    const layers = kit.flesh(J);
+    let pending = layers.length;
+    state.ready = false;
+    for (const L of layers) {
+      const make = () => {
         const layer = new FleshLayer(bones, chains);
         L.build(layer, J);
         return layer;
-      }, L.cell ?? 0.018);
+      };
+      const cell = L.cell ?? 0.018;
       // (--fleshdebug: cada camada de uma cor, sem o shader do mundo — para achar de onde vem uma forma)
       const dbg = /** @type {any} */ (globalThis).__fleshDebug;
       const mat = dbg ? new THREE.MeshLambertMaterial({ color: new THREE.Color().setHSL((dbg.n++ * 0.17) % 1, 0.7, 0.5) }) : L.mat;
-      group.add(skinned(geo, mat, skeleton));
+      Promise.all([layerGeometry(L.key, make, cell), layerGeometry(L.key + ':far', make, cell * 2.4)]).then(([gNear, gFar]) => {
+        if (state.disposed) return;
+        const lod = new THREE.LOD();
+        lod.addLevel(skinned(gNear, mat, skeleton), 0);
+        lod.addLevel(skinned(gFar, mat, skeleton), FAR_LOD);
+        lod.userData.noCollide = true;
+        group.add(lod);
+        if (--pending === 0) state.ready = true;
+      });
     }
   }
   group.traverse((o) => (o.userData.noCollide = true));
@@ -393,7 +410,12 @@ function buildBody(material, D, slitMat = null, dress = null, kit = null) {
       root.position.z = 0;
       kit?.rest?.();
     },
+    /** A pele já chegou do worker? (até lá o corpo não aparece) */
+    get ready() {
+      return state.ready;
+    },
     dispose() {
+      state.disposed = true;
       group.traverse((/** @type {any} */ o) => !o.geometry?.userData?.shared && o.geometry?.dispose?.());
       kit?.dispose?.();
     },

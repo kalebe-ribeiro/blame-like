@@ -619,8 +619,9 @@ export function setupDev(ctx) {
         B.buildHumanFlesh(M, 'hB'),
         B.buildHumanFlesh(M, 'hC'),
       ];
+      while (!list.every((r) => r.ready !== false)) await new Promise((r) => setTimeout(r, 50));
       let tris = 0;
-      for (const r of list) r.group.traverse((/** @type {any} */ o) => o.isSkinnedMesh && (tris += (o.geometry.index?.count ?? 0) / 3));
+      for (const r of list) r.group.traverse((/** @type {any} */ o) => o.isLOD && (tris += (o.levels[0].object.geometry.index?.count ?? 0) / 3));
       console.warn(`FLESH: ${list.length} corpos em ${(performance.now() - t0).toFixed(0)} ms · ${(tris / 1000).toFixed(1)} mil triângulos de pele`);
       const fwd = new THREE.Vector3();
       camera.getWorldDirection(fwd);
