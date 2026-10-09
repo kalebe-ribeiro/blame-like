@@ -100,11 +100,23 @@ varying vec3 vAxZ;
 
 #include <clipping_planes_pars_vertex>
 #include <batching_pars_vertex>
+#include <skinning_pars_vertex>
 
 void main() {
   vec3 p = position;
   vec3 n = normal;
   vTop = (clamp(length(normal), 0.5, 1.0) - 0.5) * 48.0;   // (gen/chunkgen.js markTopEdges: 0,5 → 1 = 0 → 24 m)
+  // os corpos em malha contínua (world/flesh.js): a pele segue os ossos; o desenho fica na pose de repouso
+  #ifdef USE_SKINNING
+    vec3 objectNormal = n;
+    vec3 transformed = p;
+    #include <skinbase_vertex>
+    #include <skinnormal_vertex>
+    #include <skinning_vertex>
+    vec3 pRest = p;
+    p = transformed;
+    n = objectNormal;
+  #endif
   #ifdef USE_INSTANCING
     p = (instanceMatrix * vec4(p, 1.0)).xyz;
     n = mat3(instanceMatrix) * n;
@@ -124,6 +136,9 @@ void main() {
     // preso ao objeto — senão as placas deslizam por ele enquanto anda
     vPatPos = p;
     vPatN = n;
+    #ifdef USE_SKINNING
+      vPatPos = pRest;
+    #endif
     #ifdef USE_SURF_TEX
       vAxX = normalize(mat3(modelMatrix) * vec3(1.0, 0.0, 0.0));
       vAxY = normalize(mat3(modelMatrix) * vec3(0.0, 1.0, 0.0));

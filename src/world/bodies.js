@@ -14,6 +14,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { FleshLayer, cachedLayer, skinned } from './flesh.js';
+import { safeguardFlesh, humanFlesh } from './fleshKits.js';
 import { safeguardKit, siliconKit, humanKit, transhumanKit, tribeOf } from './kits.js';
 
 const TEST = {
@@ -34,8 +36,14 @@ function limb(len, r0, r1, mat) {
   return new THREE.Mesh(g, mat);
 }
 
+/** Marca uma peça do corpo de cilindros (o boneco): com pele contínua ela não entra. */
+function base(m) {
+  m.userData.base = true;
+  return m;
+}
+
 function joint(parent, x, y, z) {
-  const j = new THREE.Group();
+  const j = new THREE.Bone(); // (um osso: a pele em malha contínua — world/flesh.js — segue estes)
   j.position.set(x, y, z);
   parent.add(j);
   return j;
@@ -56,7 +64,7 @@ function fuseParts(group, moving) {
     const walk = (/** @type {any} */ o) => {
       for (const c of o.children) {
         if (moving.has(c)) continue;
-        if (c.isMesh) {
+        if (c.isMesh && !c.isSkinnedMesh) {
           const k = byMat.get(c.material) ?? [];
           k.push(c);
           byMat.set(c.material, k);
@@ -99,6 +107,16 @@ export function buildTestBody(material) {
   return buildBody(material, TEST);
 }
 
+/** Em malha contínua (o rework gráfico, segunda rodada — world/flesh.js, world/fleshKits.js). */
+export function buildSafeguardFlesh(M, level, id) {
+  const { D, kit } = safeguardFlesh(level, M, id);
+  return buildBody(M.pale, D, null, null, kit);
+}
+export function buildHumanFlesh(M, id, tribe = 'abrigado') {
+  const { D, kit } = humanFlesh(tribe, M, id);
+  return buildBody(M.cloth, D, null, null, kit);
+}
+
 /** Os hostis por nível (o rework gráfico, frente 5 — world/kits.js): M os materiais, level, id. */
 export function buildSafeguardLevel(M, level, id) {
   const { D, kit } = safeguardKit(level, M, id);
@@ -128,26 +146,28 @@ export function buildSiliconLevel(M, level, id) {
  */
 function buildBody(material, D, slitMat = null, dress = null, kit = null) {
   const G = D.girth ?? 1;
+  const plain = !kit?.flesh; // com pele contínua (kit.flesh), o corpo de cilindros não é desenhado
   const group = new THREE.Group();
   const root = joint(group, 0, D.hip, 0); // o quadril (sobe e desce com a passada)
   const meshes = [];
   const add = (parent, mesh) => {
+    if (!plain && mesh.userData.base) return mesh; // (as peças do boneco: a pele cobre)
     parent.add(mesh);
     meshes.push(mesh);
     return mesh;
   };
 
   // bacia e tronco (um pouco inclinado para a frente: anda curvado)
-  add(root, new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.16, 0.18), material));
+  add(root, base(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.16, 0.18), material)));
   const spine = joint(root, 0, 0.06, 0);
   spine.rotation.x = 0.08;
   const chest = new THREE.CylinderGeometry(0.19 * G, 0.13 * G, D.torso, 7);
   chest.scale(1, 1, 0.62);
   chest.translate(0, D.torso / 2, 0);
-  add(spine, new THREE.Mesh(chest, material));
+  add(spine, base(new THREE.Mesh(chest, material)));
   // pescoço e cabeça: lisa, sem rosto
   const neck = joint(spine, 0, D.torso, 0.01);
-  add(neck, limb(0.1, 0.045 * G, 0.05 * G, material)).position.y = 0.1;
+  add(neck, base(limb(0.1, 0.045 * G, 0.05 * G, material))).position.y = 0.1;
   if (kit?.head) kit.head(neck, add);
   else {
     const head = new THREE.SphereGeometry(0.12, 10, 8);
@@ -188,9 +208,9 @@ function buildBody(material, D, slitMat = null, dress = null, kit = null) {
       const mat = mech ? dress.mech : material;
       const sh = joint(spine, s * D.shoulderW * (pair ? 0.85 : 1), D.torso * (pair ? 0.62 : 1) - 0.06, 0);
       sh.rotation.z = s * 0.06;
-      add(sh, limb(ua, (mech ? 0.06 : 0.05) * G, 0.042 * G, mat));
+      add(sh, base(limb(ua, (mech ? 0.06 : 0.05) * G, 0.042 * G, mat)));
       const el = joint(sh, 0, -ua, 0);
-      add(el, limb(fa, (mech ? 0.05 : 0.04) * G, 0.03 * G, mat));
+      add(el, base(limb(fa, (mech ? 0.05 : 0.04) * G, 0.03 * G, mat)));
       if (kit?.hand) kit.hand(el, s, fa, add);
       arms.push({ sh, el, s, extra: pair > 0 });
     }
@@ -200,13 +220,13 @@ function buildBody(material, D, slitMat = null, dress = null, kit = null) {
   const legs = [];
   for (const s of [-1, 1]) {
     const hp = joint(root, s * D.hipW, -0.04, 0);
-    add(hp, limb(D.thigh, 0.075 * G, 0.055 * G, material));
+    add(hp, base(limb(D.thigh, 0.075 * G, 0.055 * G, material)));
     const kn = joint(hp, 0, -D.thigh, 0);
-    add(kn, limb(D.shin, 0.052 * G, 0.04 * G, material));
+    add(kn, base(limb(D.shin, 0.052 * G, 0.04 * G, material)));
     const an = joint(kn, 0, -D.shin, 0);
     const foot = new THREE.BoxGeometry(0.09, 0.06, 0.24);
     foot.translate(0, -0.03, 0.06);
-    add(an, new THREE.Mesh(foot, material));
+    add(an, base(new THREE.Mesh(foot, material)));
     legs.push({ hp, kn, an, s });
   }
   // de pé, o pé encosta em y = 0: quadril − (coxa + canela) − 0,04 − 0,06 (o pé)
@@ -215,6 +235,31 @@ function buildBody(material, D, slitMat = null, dress = null, kit = null) {
 
   const moving = new Set([group, root, spine, neck, ...arms.flatMap((A) => [A.sh, A.el]), ...legs.flatMap((L) => [L.hp, L.kn, L.an])]);
   fuseParts(group, moving);
+  if (kit?.flesh) {
+    // a pele: as camadas da receita (cada uma uma malha, no cache pela chave), presas aos ossos na pose de agora
+    group.updateMatrixWorld(true);
+    const bones = /** @type {THREE.Bone[]} */ ([...moving].filter((b) => b !== group));
+    const skeleton = new THREE.Skeleton(bones);
+    // as cadeias (world/flesh.js): 0 o tronco; 1.. cada braço; 20.. cada perna
+    const chains = bones.map((b) => {
+      const a = arms.findIndex((A) => A.sh === b || A.el === b);
+      if (a >= 0) return 1 + a;
+      const l = legs.findIndex((L) => L.hp === b || L.kn === b || L.an === b);
+      return l >= 0 ? 20 + l : 0;
+    });
+    const J = { root, spine, neck, arms, legs, D };
+    for (const L of kit.flesh(J)) {
+      const geo = cachedLayer(L.key, () => {
+        const layer = new FleshLayer(bones, chains);
+        L.build(layer, J);
+        return layer;
+      }, L.cell ?? 0.018);
+      // (--fleshdebug: cada camada de uma cor, sem o shader do mundo — para achar de onde vem uma forma)
+      const dbg = /** @type {any} */ (globalThis).__fleshDebug;
+      const mat = dbg ? new THREE.MeshLambertMaterial({ color: new THREE.Color().setHSL((dbg.n++ * 0.17) % 1, 0.7, 0.5) }) : L.mat;
+      group.add(skinned(geo, mat, skeleton));
+    }
+  }
   group.traverse((o) => (o.userData.noCollide = true));
 
   let phase = 0;
@@ -349,7 +394,7 @@ function buildBody(material, D, slitMat = null, dress = null, kit = null) {
       kit?.rest?.();
     },
     dispose() {
-      group.traverse((/** @type {any} */ o) => o.geometry?.dispose?.());
+      group.traverse((/** @type {any} */ o) => !o.geometry?.userData?.shared && o.geometry?.dispose?.());
       kit?.dispose?.();
     },
   };

@@ -596,6 +596,76 @@ export function setupDev(ctx) {
       await /** @type {any} */ (window).cybercosmic?.devCapture?.('beings.png');
     }, Number(params.get('beingsheet')) * 1000);
   }
+  // --fleshsheet=N: aos N s, os corpos em MALHA CONTÍNUA (a segunda rodada do rework — world/flesh.js) de
+  // perto, ao lado dos de antes: Safeguards baixos (variantes, uma no golpe) e humanos abrigados. Captura
+  // flesh.png (de frente) e flesh_side.png (de lado, mais perto). --fleshpose=walk|rest
+  if (params.get('fleshsheet')) {
+    setTimeout(async () => {
+      const B = await import('../world/bodies.js');
+      const M = world.materials;
+      if (params.get('fleshdebug')) {
+        /** @type {any} */ (globalThis).__fleshDebug = { n: 0 };
+        ctx.scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 3));
+      }
+      const t0 = performance.now();
+      const list = [
+        B.buildSafeguardLevel(M, 'low', 'sgA'),
+        B.buildSafeguardFlesh(M, 'low', 'sgA'),
+        B.buildSafeguardFlesh(M, 'low', 'sgB'),
+        B.buildSafeguardFlesh(M, 'low', 'sgC'),
+        B.buildSafeguardFlesh(M, 'low', 'sgD'),
+        B.buildHumanOf(M, 'vl:abrigadox:0', 'abrigado'),
+        B.buildHumanFlesh(M, 'hA'),
+        B.buildHumanFlesh(M, 'hB'),
+        B.buildHumanFlesh(M, 'hC'),
+      ];
+      let tris = 0;
+      for (const r of list) r.group.traverse((/** @type {any} */ o) => o.isSkinnedMesh && (tris += (o.geometry.index?.count ?? 0) / 3));
+      console.warn(`FLESH: ${list.length} corpos em ${(performance.now() - t0).toFixed(0)} ms · ${(tris / 1000).toFixed(1)} mil triângulos de pele`);
+      const fwd = new THREE.Vector3();
+      camera.getWorldDirection(fwd);
+      fwd.y = 0;
+      fwd.normalize();
+      const side = new THREE.Vector3(-fwd.z, 0, fwd.x);
+      const col = ctx.controls.walker.col;
+      col._t = -1e9;
+      col.refresh(camera.position, 40);
+      const n = list.length;
+      const pose = params.get('fleshpose') ?? 'walk';
+      list.forEach((rig, i) => {
+        const p = camera.position.clone().addScaledVector(fwd, 5.2).addScaledVector(side, (i - (n - 1) / 2) * 0.95);
+        const hit = col.ray(p.clone().setY(camera.position.y + 1), new THREE.Vector3(0, -1, 0), 20);
+        if (hit) p.y = hit.point.y;
+        rig.group.position.copy(p);
+        rig.group.rotation.y = Math.atan2(-fwd.x, -fwd.z);
+        rig.animate(pose === 'rest' ? 0 : 0.3, pose === 'rest' ? 0 : 1.2, true);
+        if (i === 2) rig.strike(0.8, 0.2, 'overhead');
+        ctx.scene.add(rig.group);
+      });
+      ctx.controls.canFly = true;
+      ctx.controls.setMode('fly');
+      if (!ctx.carried.lanternOn) ctx.carried.toggleLantern();
+      await new Promise((r) => setTimeout(r, 2500));
+      const cap = /** @type {any} */ (window).cybercosmic?.devCapture;
+      await cap?.('flesh.png');
+      // de perfil: cada corpo gira 90°
+      for (const rig of list) rig.group.rotation.y += Math.PI / 2;
+      await new Promise((r) => setTimeout(r, 800));
+      await cap?.('flesh_side.png');
+      // de perto, um de cada vez, de três quartos: o Safeguard novo, o humano novo
+      for (const [k, i] of [['sg', 1], ['hu', 6]]) {
+        list.forEach((rig, j) => (rig.group.visible = j === i));
+        const rig = list[i];
+        const p = camera.position.clone().addScaledVector(fwd, i === 1 ? 2.9 : 1.9);
+        const hit = col.ray(p.clone().setY(camera.position.y + 1), new THREE.Vector3(0, -1, 0), 20);
+        if (hit) p.y = hit.point.y;
+        rig.group.position.copy(p);
+        rig.group.rotation.y = Math.atan2(-fwd.x, -fwd.z) + 0.5;
+        await new Promise((r) => setTimeout(r, 800));
+        await cap?.(`flesh_${k}.png`);
+      }
+    }, Number(params.get('fleshsheet')) * 1000);
+  }
   // --rayprobe=N: aos N s, um raio do centro da tela por todas as malhas de colisão (os dois lados das faces):
   // o material, a distância e se a face está de COSTAS para a câmera (uma face de costas na frente de uma de
   // frente: a peça é oca vista dali)

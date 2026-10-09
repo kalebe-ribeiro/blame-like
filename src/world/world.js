@@ -304,6 +304,19 @@ export class World {
     // sorteio das sementes acima: um material novo no meio mudaria o desenho de todos os seguintes)
     this.materials.hose = this.materials.cable.clone();
     for (const k of Object.keys(S)) this.materials.hose.uniforms[k] = S[k];
+    // os tons dos corpos em malha contínua (world/flesh.js): a pele humana, o couro das botas e das
+    // correias — cópias do pálido e do pano (idem: fora do sorteio)
+    const tone = (src, base, streaks) => {
+      const m = src.clone();
+      m.uniforms = { ...src.uniforms }; // (os mesmos uniforms — as texturas assadas não se clonam — menos os dois abaixo)
+      m.uniforms.uBaseColor = { value: base };
+      m.uniforms.uStreaks = { value: streaks };
+      return m;
+    };
+    this.materials.skin = tone(this.materials.pale, C(0.3, 0.235, 0.2), 0.1);
+    this.materials.leather = tone(this.materials.cloth, C(0.075, 0.062, 0.052), 0.3);
+    this.materials.garb = tone(this.materials.cloth, C(0.12, 0.108, 0.094), 0.35); // o pano das roupas
+    this.materials.mantle = tone(this.materials.cloth, C(0.085, 0.08, 0.072), 0.5); // a capa, mais gasta
     // variantes para os chunks LOD: mesmas receitas, fade no fim do alcance
     this.lodMaterials = {};
     this._recipes = { concrete, darkConcrete, steel, deck, rubber, megaWall };
