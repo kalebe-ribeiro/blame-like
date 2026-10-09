@@ -17,7 +17,13 @@ Reorganizada em 2026-10-03. Três listas: **a implementar** (decidido, na ordem)
 | 2b | **Movimento dos inimigos** — arranque com aceleração até uma velocidade terminal (o médio e o alto mais rápidos que a sua corrida); curvas custam velocidade | [[Movimento-dos-inimigos]] | **feita** (2026-10-04) |
 | 3 | **Recuperar o braço** — câmara de reconstrução (única nova), prótese (loot), moradores das vilas (troca), a saída garantida sem braços e o aviso de um braço só | [[Recuperar-o-braco]] | **feita** (2026-10-04) — inclusive a prótese nos depósitos |
 | 4 | **Gene de terminal** — o objetivo final: pistas longas até onde está guardado (protegido ou esquecido; NPCs podem pegá-lo), um humano com o gene (amostra com ele vivo) e o analisador de genes; implantar na câmara de reconstrução; o controle da Cidade; três finais | [[Gene-terminal]] | **feito** (2026-10-04) — `check:gene` 9/9 |
-| 5 | **Rework gráfico** — texturas, modelos de NPCs, animações variadas (as do golpe por ângulo e tipo de NPC; design e animação de cada hostil pelo nível, com variações no mesmo nível) | [[Rework-grafico]] | só **depois de toda a gameplay** |
+| 5 | **Rework gráfico** — texturas, modelos de NPCs, animações variadas (as do golpe por ângulo e tipo de NPC; design e animação de cada hostil pelo nível, com variações no mesmo nível) | [[Rework-grafico]] | **feito na branch `rework-grafico`** (2026-10-09, frentes 1–6) — aguardando revisão e merge do usuário |
+
+### Do playtest do rework (2026-10-09, fotos do usuário)
+| # | o quê | nota | estado |
+|---|---|---|---|
+| 6 | **Pendurado no corrimão, não anda de lado** — dá para se agarrar no corrimão (guarda-corpo), mas o movimento lateral pendurado não funciona nele (nas quinas comuns funciona — [[Mobilidade]]) | ![[playtest-corrimao.png]] | pendente |
+| 7 | **Os braços em primeira pessoa continuam errados** — pendurado, os dois braços sobem do meio de baixo da tela e se **cruzam em X** (os ombros parecem sair do mesmo ponto, o defeito da frente 1 que a frente 4 deveria ter resolvido: `app/limbs.js`, o IK do ombro até a mão da quina). Conferir também com o aparelho, a lanterna e o emissor | ![[playtest-bracos-x.png]] | pendente |
 
 ### Regras novas que a barra de vida tem de respeitar (2026-10-03)
 - **O próprio coice do emissor contra uma parede não tira vida** — o baque, o tremor e o som ficam. Só o **arremesso de um hostil** contra um obstáculo tira vida. Se o empurrão do emissor te tira de uma plataforma, a **queda** conta.
