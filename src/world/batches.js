@@ -64,7 +64,8 @@ const RESORT_DIST = 8; // m que a câmera anda até refazer a ordem de frente pa
 
 const IDENTITY = new THREE.Matrix4();
 /** Desenhos individuais emitidos (o ANGLE emula o multi-draw: um por vaga). Para --stats. */
-export const subDraws = { main: 0, reflection: 0 };
+export const subDraws = { main: 0, reflection: 0, shadow: 0 };
+const newView = () => ({ order: [], at: new THREE.Vector3(), seen: -1, changed: true, count: -1, tex: null });
 const _m = new THREE.Matrix4();
 const _frustum = new THREE.Frustum();
 const _cam = new THREE.Vector3();
@@ -87,16 +88,19 @@ function fastLists(renderer, scene, camera, geometry) {
     L.ver++;
     this._visibilityChanged = false;
   }
-  // a lista desta câmera (0 = a principal, 1 = o reflexo), com a sua textura
-  const [v0, v1] = L.views;
-  // a textura da página que não é a do reflexo é a principal (setInstanceCount a recria)
-  if (this._indirectTexture !== v1.tex && this._indirectTexture !== v0.tex) {
+  // a lista desta câmera (0 = a principal, 1 = o reflexo, 2+ = as sombras — camera.userData.batchView),
+  // com a sua textura
+  const vi = camera.userData.batchView ?? (camera.userData.cull ? 1 : 0);
+  while (L.views.length <= vi) L.views.push(newView());
+  const v0 = L.views[0];
+  // a textura da página que não é de nenhuma outra vista é a principal (setInstanceCount a recria)
+  if (!L.views.some((v) => v.tex === this._indirectTexture)) {
     v0.tex = this._indirectTexture;
     v0.seen = -1;
   }
-  const view = camera.userData.cull ? v1 : v0;
+  const view = L.views[vi];
   const main = v0.tex.image.data.length;
-  if (view === v1 && (!view.tex || view.tex.image.data.length !== main)) {
+  if (vi > 0 && (!view.tex || view.tex.image.data.length !== main)) {
     view.tex?.dispose();
     const size = Math.sqrt(main);
     view.tex = new THREE.DataTexture(new Uint32Array(main), size, size, THREE.RedIntegerFormat, THREE.UnsignedIntType);
@@ -172,7 +176,8 @@ function fastLists(renderer, scene, camera, geometry) {
   if (n !== view.count) changed = true;
   view.count = n;
   this._multiDrawCount = n;
-  if (camera.userData.cull) subDraws.reflection += n;
+  if (vi === 1) subDraws.reflection += n;
+  else if (vi > 1) subDraws.shadow += n;
   else subDraws.main += n;
   // a textura de índices só volta para a GPU quando a lista mudou
   if (changed) view.tex.needsUpdate = true;
@@ -181,11 +186,11 @@ function fastLists(renderer, scene, camera, geometry) {
   this._indirectTexture = view.tex;
 }
 
-/** Devolve a textura principal à página (antes de setInstanceCount/dispose). */
+/** Devolve a textura principal à página (antes de setInstanceCount/dispose). → as outras vistas. */
 function restoreMainTexture(page) {
-  const [v0, v1] = page._lists.views;
+  const [v0, ...rest] = page._lists.views;
   if (v0.tex) page._indirectTexture = v0.tex;
-  return v1;
+  return rest;
 }
 
 /** Esfera da vaga em coordenadas do mundo (a matriz é só translação). */
@@ -231,8 +236,7 @@ class MaterialBatch {
     page.sortObjects = !this.material.transparent; // opacos de frente para trás (early-z)
     page.renderOrder = this.renderOrder;
     /** @type {any} */ (page).freeV = 0; // vértices reservados em vagas livres nesta página
-    const view = () => ({ order: [], at: new THREE.Vector3(), seen: -1, changed: true, count: -1, tex: null });
-    /** @type {any} */ (page)._lists = { sph: new Float32Array(START_INSTANCES * 4), dist: new Float32Array(START_INSTANCES), local: [], ver: 0, views: [view(), view()] };
+    /** @type {any} */ (page)._lists = { sph: new Float32Array(START_INSTANCES * 4), dist: new Float32Array(START_INSTANCES), local: [], ver: 0, views: [newView(), newView()] };
     page.onBeforeRender = fastLists;
     this.pages.push(page);
     this.set.parent.add(page);
@@ -269,7 +273,7 @@ class MaterialBatch {
       // vazia e sobra folga nas outras: descarta a página
       this.pages.splice(this.pages.indexOf(page), 1);
       page.removeFromParent();
-      restoreMainTexture(page).tex?.dispose();
+      for (const v of restoreMainTexture(page)) v.tex?.dispose();
       page.dispose();
       return;
     }
@@ -442,7 +446,7 @@ export class BatchSet {
   dispose() {
     for (const mb of this.batches.values()) {
       for (const p of mb.pages) {
-        restoreMainTexture(p).tex?.dispose();
+        for (const v of restoreMainTexture(p)) v.tex?.dispose();
         p.dispose();
         p.removeFromParent();
       }

@@ -91,6 +91,7 @@ export default {
   'settings.sensitivity': 'sensibilidade do mouse',
   'settings.resolution': 'resolução (densidade de pixels)',
   'settings.ssao': 'oclusão de ambiente (SSAO)',
+  'settings.shadows': 'sombras das lâmpadas',
   'settings.taa': 'antialiasing temporal (TAA)',
   'settings.shafts': 'raios de luz na névoa',
   'settings.reflections': 'reflexo da água (setores inundados)',

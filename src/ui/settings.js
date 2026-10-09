@@ -23,6 +23,7 @@ export const DEFAULTS = {
   safeguards: false, // Safeguards no modo Livre (na Peregrinação eles sempre existem — fase 6)
   health: false, // a vida no modo Livre (na Peregrinação ela sempre existe — app/health.js)
   ssao: true, // oclusão de ambiente
+  shadows: true, // sombras das lâmpadas mais perto (render/shadows.js)
   taa: true, // antialiasing temporal
   shafts: true, // raios de luz na névoa
   reflections: true, // reflexo da água nos setores inundados
@@ -41,6 +42,7 @@ const FIELDS = [
   { key: 'sensitivity', type: 'range', min: 0.3, max: 3, step: 0.05, fmt: (v) => `${v.toFixed(2)}×` },
   { key: 'resolution', type: 'range', min: 0.5, max: 2, step: 0.05, fmt: (v) => `${v.toFixed(2)}×` },
   { key: 'ssao', type: 'toggle' },
+  { key: 'shadows', type: 'toggle' },
   { key: 'taa', type: 'toggle' },
   { key: 'shafts', type: 'toggle' },
   { key: 'reflections', type: 'toggle' },

@@ -171,6 +171,7 @@ export class ChunkBuilder {
     const l = { x, y, z, color, intensity, mode, phase: Math.abs((x * 0.013 + y * 0.029 + z * 0.071) % 100) };
     if (!grid) l.grid = false; // energia própria: não apaga com a rede do setor
     this.lights.push(l);
+    return l;
   }
 
   /**
@@ -201,7 +202,10 @@ export class ChunkBuilder {
   lamp(x, y, z, color, intensity, mode = 'steady', { to = null, size = 1, far = false, grid = true } = {}) {
     // a luminária (ou a haste dela) cortada: nem a peça nem a luz
     if (this.cutAt(x, y, z, 0.6) || (to && this.cutAt(to[0], to[1], to[2], 0.3))) return;
-    this.light(x, y, z, color, intensity, mode, grid);
+    const lt = this.light(x, y, z, color, intensity, mode, grid);
+    // (a luminária ilumina para baixo: a carcaça escura em cima — o facho na névoa e as superfícies acima
+    //  dela ficam no escuro; shaders/chunks.js e materials.js, uLightDown)
+    if (lt) lt.down = 1;
     if (this.lod) return;
     const s = size;
     const L = this.L(x, y, z);

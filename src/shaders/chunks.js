@@ -107,6 +107,7 @@ uniform float uTime;
 uniform vec3  uLightPos[LIGHT_COUNT];
 uniform vec3  uLightColor[LIGHT_COUNT];   // cor * intensidade
 uniform vec3  uLightFog[LIGHT_COUNT];     // cor * intensidade * atenuação até a câmera (CPU)
+uniform float uLightDown[LIGHT_COUNT];    // 1 = luminária: ilumina para baixo (o facho na névoa é um cone)
 uniform vec3  uFlashPos;                  // a lanterna: a lente (cena)
 uniform vec3  uFlashDir;                  //   para onde aponta
 uniform vec3  uFlashColor;                //   cor · intensidade (0 = apagada)
@@ -304,7 +305,16 @@ vec3 applyFog(vec3 col, vec3 wpos, float k, vec2 fade) {
   for (int i = 0; i < LIGHT_COUNT; i++) {
     vec3 lf = uLightFog[i];
     if (lf.r + lf.g + lf.b < 1e-6) continue; // vaga vazia ou luz sumida na névoa
-    scatter += lf * airlight(ro, rd, t, uLightPos[i]);
+    float cone = 1.0;
+    if (uLightDown[i] > 0.5) {
+      // o facho para baixo: pela direção do ponto do raio mais perto da luz (forte embaixo da luminária,
+      // quase nada em cima — a carcaça escura; o rework gráfico, frente 2)
+      vec3 q = ro - uLightPos[i];
+      vec3 c = q + rd * clamp(-dot(rd, q), 0.0, t);
+      float down = -c.y / max(length(c), 1e-3);
+      cone = 0.12 + 1.7 * smoothstep(0.05, 0.9, down);
+    }
+    scatter += lf * airlight(ro, rd, t, uLightPos[i]) * cone;
   }
   // o brilho em volta das luzes vem da poeira: sem névoa, sem halo
   scatter *= uScatter * dm * (uFogDensity / 0.0075);

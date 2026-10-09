@@ -91,6 +91,7 @@ export default {
   'settings.sensitivity': 'mouse sensitivity',
   'settings.resolution': 'resolution (pixel density)',
   'settings.ssao': 'ambient occlusion (SSAO)',
+  'settings.shadows': 'lamp shadows',
   'settings.taa': 'temporal antialiasing (TAA)',
   'settings.shafts': 'light shafts in the fog',
   'settings.reflections': 'water reflections (flooded sectors)',

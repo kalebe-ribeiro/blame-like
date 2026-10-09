@@ -17,6 +17,7 @@
 import * as THREE from 'three';
 import { NOISE_GLSL, SHARED_UNIFORMS_GLSL, FOG_GLSL } from './chunks.js';
 import { SURF } from '../render/surfaceBaker.js';
+import { shadowUniforms } from '../render/shadows.js';
 
 /** Quantidade de luzes pontuais suportadas pelos shaders (ver world/lights.js). */
 export const LIGHT_COUNT = 16;
@@ -36,6 +37,7 @@ export function createSharedUniforms() {
     uLightPos: { value: Array.from({ length: LIGHT_COUNT }, () => new THREE.Vector3(0, -1e5, 0)) },
     uLightColor: { value: Array.from({ length: LIGHT_COUNT }, () => new THREE.Vector3()) },
     uLightFog: { value: Array.from({ length: LIGHT_COUNT }, () => new THREE.Vector3()) }, // cor · atenuação até a câmera
+    uLightDown: { value: new Array(LIGHT_COUNT).fill(0) }, // 1 = luminária (ilumina para baixo), 0 = em todas as direções
     // apagões de setor (world/outages.js): A = centro (cena) + frente da queda; B = frente do religamento, raio
     uOutageA: { value: Array.from({ length: 4 }, () => new THREE.Vector4(0, 0, 0, -1)) },
     uOutageB: { value: Array.from({ length: 4 }, () => new THREE.Vector4()) },
@@ -70,6 +72,7 @@ export function createSharedUniforms() {
     uSurfB: { value: null },
     uSurfOn: { value: 0 },
     uAgeSeed: { value: 0 }, // a idade por região: o deslocamento do ruído, pela seed do mundo
+    ...shadowUniforms(), // as sombras das lâmpadas (render/shadows.js)
   };
 }
 
@@ -165,6 +168,12 @@ uniform vec2  uFadeRange;     // distância (início, fim) em que se dissolve na
 uniform float uCutout;        // recorte: 0 nada · 1 degraus de escada · 2 grade vazada · 3 pichação
 uniform float uWet;           // 0..1 superfície molhada (poças)
 uniform float uAgeSeed;       // a idade por região (a seed do mundo)
+// as sombras das lâmpadas (render/shadows.js): a distância até a luz guardada por 3 câmeras olhando para baixo
+uniform sampler2D uShadowMap0;
+uniform sampler2D uShadowMap1;
+uniform sampler2D uShadowMap2;
+uniform float uShadowIdx[3];
+uniform mat4 uShadowVP[3];
 #ifdef USE_SURF_TEX
 uniform highp sampler2DArray uSurfA;  // cor (rgb, 0,5 = o tom do material) + altura (a)
 uniform highp sampler2DArray uSurfB;  // normal no plano da textura (rgb) + aspereza (a)
@@ -195,6 +204,34 @@ varying vec3 vPatN;
 varying float vTop;
 
 #include <clipping_planes_pars_fragment>
+
+// a luz que passa (1) ou não (0) da lâmpada que tem o mapa j até P: 4 amostras (bordas macias)
+float shadowSample(sampler2D m, mat4 vp, vec3 P, float dist, float slope) {
+  vec4 c = vp * vec4(P, 1.0);
+  float lit = 1.0;
+  if (c.w > 0.0) {
+    vec2 uv = c.xy / c.w * 0.5 + 0.5;
+    if (uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0) {
+      // (a precisão do half float cai com a distância, e um texel de 512 a 150° cobre ~0,5% dela)
+      float bias = 0.05 + dist * (0.004 + 0.012 * slope);
+      float tx = 1.0 / 512.0;
+      float s = 0.0;
+      s += step(dist - bias, texture2D(m, uv + vec2(-0.6, -0.6) * tx).r);
+      s += step(dist - bias, texture2D(m, uv + vec2(0.6, -0.6) * tx).r);
+      s += step(dist - bias, texture2D(m, uv + vec2(-0.6, 0.6) * tx).r);
+      s += step(dist - bias, texture2D(m, uv + vec2(0.6, 0.6) * tx).r);
+      lit = s * 0.25;
+    }
+  }
+  return lit;
+}
+float shadowFor(float i, vec3 P, float dist, float slope) {
+  float lit = 1.0;
+  if (i == uShadowIdx[0]) lit = shadowSample(uShadowMap0, uShadowVP[0], P, dist, slope);
+  else if (i == uShadowIdx[1]) lit = shadowSample(uShadowMap1, uShadowVP[1], P, dist, slope);
+  else if (i == uShadowIdx[2]) lit = shadowSample(uShadowMap2, uShadowVP[2], P, dist, slope);
+  return lit;
+}
 
 #ifdef USE_SURF_TEX
 // uma família do forno em triplanar: cor+altura (A), aspereza e a normal no espaço do desenho (np)
@@ -440,10 +477,18 @@ void main() {
     float att = exp(-uFogDensity * d) / (1.0 + d2);
     vec3 lc = uLightColor[i] * att;
     if (lc.r + lc.g + lc.b < 1e-5) continue; // não contribui: pula o especular
+    // (a luminária: o que está acima dela só recebe o pouco que vaza da carcaça)
+    if (uLightDown[i] > 0.5) lc *= mix(0.1, 1.0, smoothstep(-0.25, 0.3, L.y));
     float ndl = max(dot(N, L), 0.0);
-    lit += lc * ndl;
+    // a sombra (só as lâmpadas com mapa — render/shadows.js); o declive da face aumenta a tolerância
+    // (a amostra afastada da face pela normal: sem isso a face se sombreia a si mesma)
+    vec3 Ps = vWorldPos + Ng * (0.03 + 0.004 * d);
+    float sh = shadowFor(float(i), Ps, length(uLightPos[i] - Ps), 1.0 - abs(dot(Ng, L)));
+    // a luz rebatida: a lâmpada enche um pouco o espaço em volta (o que está de costas e na sombra
+    // não fica preto — o concreto devolve a luz), sem apagar o contraste
+    lit += lc * (ndl * sh + 0.06);
     vec3 H = normalize(L + V);
-    spec += lc * pow(max(dot(N, H), 0.0), gloss);
+    spec += lc * pow(max(dot(N, H), 0.0), gloss) * sh;
   }
 
   // a lanterna: um cone com centro forte, anéis do refletor e manchas da lente

@@ -95,6 +95,14 @@ O bulbo (`gen/chunkgen.js` buildSegment: prisma aberto + cone em cima + cone vir
 - **Anisotropia 4×** (8× custava mais e não se via diferença).
 - **Janelas da colmeia removidas** (eram uma grade em todas as paredes internas).
 
+## Frente 2 — luz e atmosfera (2026-10-09, autonomia do Claude)
+- **Sombras das lâmpadas** (`render/shadows.js`): as 3 lâmpadas que mais iluminam perto da câmera (a força que chega a ela) ganham um mapa de sombra — câmera em perspectiva de 150° olhando para baixo (as luminárias iluminam para baixo), distância até a luz num alvo half float 512². Escolha estável (quem continua escolhido fica no mesmo mapa); um mapa refeito a cada dois quadros, em rodízio. Cada câmera de sombra tem a sua lista de recorte nos lotes (`world/batches.js`, `userData.batchView` — antes só havia a principal e a do reflexo). **Só a geometria do mundo projeta** (as páginas de lotes na camada 2): desenhar também os seres e objetos soltos custava ~25 ms de CPU na vila. Sem sombra: feixes, água, lentes, pichação, telas, letreiros. Plano próximo a 0,5 m (a carcaça ou a peça que segura a luz não a tampa); no shader, a amostra afastada pela normal e uma tolerância que cresce com a distância (o half float perde precisão), 4 amostras (bordas macias). Opção nas configurações: **sombras das lâmpadas** (`settings.shadows`).
+- **A luminária ilumina para baixo** (`uLightDown`; `gen/chunkgen.js` lamp marca a luz `down`): o brilho na névoa vira um **facho em cone** (forte embaixo, quase nada em cima — a carcaça escura) e as superfícies acima da luminária só recebem o que vaza (10%). Brasas, telas, soldas continuam em todas as direções.
+- **Luz rebatida**: cada luz enche um pouco o espaço em volta (6% sem depender da direção) — o que está de costas ou na sombra não vira preto.
+- A lanterna **sem** sombra: está praticamente no olho, a sombra dela quase não apareceria.
+- Medido: profile parado na teia 176 fps, na vila 58 fps (antes 65–72; a vila é a mais pesada pela CPU dos seres). `check` 31/31 (111 fps), `check:pad` 31 + 30.
+- Decisões do Claude: 3 sombras (a escolha do usuário foi "2–4"); só o mundo projeta (seres sem sombra de lâmpada — custo); o cone das luminárias; 6% de rebatida; a lanterna sem sombra.
+
 ## Quando
 **Depois de finalizar todos os aspectos da gameplay.** Até lá, o visual é o de agora — formas geométricas, materiais procedurais (`shaders/materials.js`), corpos simples dos seres (`world/bodies.js`) e animações únicas. As features de gameplay continuam sendo feitas com esse visual e **não** esperam o rework (nem o antecipam).
 

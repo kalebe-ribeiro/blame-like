@@ -87,15 +87,17 @@ export class LightRig {
     }
 
     // grava os uniforms
-    const { uLightPos, uLightColor } = this.shared;
+    const { uLightPos, uLightColor, uLightDown } = this.shared;
     let i = 0;
     for (const l of this.fixed) {
+      if (uLightDown) uLightDown.value[i] = 0;
       this._animateFixed(l, time, dt, camera, observerScale);
       uLightPos.value[i].copy(l.pos);
       uLightColor.value[i].copy(l.color).multiplyScalar(l.intensity * flicker(l, time));
       i++;
     }
     for (const s of this.slots) {
+      if (uLightDown) uLightDown.value[i] = s.light?.down ? 1 : 0;
       if (s.light) {
         const l = s.light;
         uLightPos.value[i].set(l.x - origin.x, l.y - origin.y, l.z - origin.z);

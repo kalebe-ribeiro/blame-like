@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { createSurfaceBake } from '../render/surfaceBaker.js';
 import { soloMaterial, movingMaterial } from '../shaders/materials.js';
+import { ShadowSystem } from '../render/shadows.js';
 import { t } from '../i18n/index.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -48,7 +49,9 @@ export function setupRender(ctx) {
   const reflection = new ReflectionSystem(shared);
   reflection.attach(world.materials.flood);
   reflection.hidden.push(ctx.dust);
-  Object.assign(ctx, { composer, scenePass, lens, signal, reflection });
+  // as sombras das lâmpadas (render/shadows.js — o rework gráfico, frente 2)
+  const shadows = new ShadowSystem(renderer, shared);
+  Object.assign(ctx, { composer, scenePass, lens, signal, reflection, shadows });
   window.addEventListener('resize', () => resize(ctx));
   resize(ctx);
 }
@@ -152,8 +155,28 @@ export function onWorldBuilt(ctx) {
   resize(ctx);
 }
 
+// os materiais de lote que não projetam sombra: luz, água, lentes, pichação, telas
+const NO_SHADOW_MATS = ['beam', 'colossusBeam', 'cascade', 'flood', 'pool', 'water', 'lamp', 'lampFar', 'graffiti', 'screen', 'sign'];
+/** As sombras das lâmpadas (render/shadows.js): escolhe as lâmpadas e refaz um mapa. */
+function renderShadows(ctx) {
+  const { world, scene, camera } = ctx;
+  if (!ctx.shadows) return;
+  ctx.shadows.enabled = ctx.settings.shadows !== false;
+  if (!ctx._noShadow || ctx._noShadowFor !== world.materials) {
+    ctx._noShadow = new Set(NO_SHADOW_MATS.flatMap((k) => [world.materials[k], world.lodMaterials?.[k]]).filter(Boolean));
+    ctx._noShadowFor = world.materials;
+  }
+  const skip = ctx._noShadow;
+  // (só as páginas de lotes projetam: entram na camada das sombras — as páginas novas também, a cada quadro)
+  const pages = [];
+  for (const b of world.batches.batches.values()) for (const p of b.pages) pages.push(p);
+  ShadowSystem.layerPages(pages, (m) => !skip.has(m));
+  ctx.shadows.update(scene, camera, world.lights.fixed.length, pages);
+}
+
 /** Tudo que precisa estar pronto antes da cena: a máscara das silhuetas e o reflexo da água. */
 export function renderViews(ctx) {
+  renderShadows(ctx);
   ctx.world.silhouettes.renderMask(ctx.renderer, ctx.camera);
   ctx.reflection.render(ctx.renderer, ctx.scene, ctx.camera, ctx.world.origin);
 }
