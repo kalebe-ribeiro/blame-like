@@ -16,6 +16,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { NOISE_GLSL, SHARED_UNIFORMS_GLSL, FOG_GLSL } from './chunks.js';
+import { SURF } from '../render/surfaceBaker.js';
 
 /** Quantidade de luzes pontuais suportadas pelos shaders (ver world/lights.js). */
 export const LIGHT_COUNT = 16;
@@ -68,6 +69,7 @@ export function createSharedUniforms() {
     uSurfA: { value: null },
     uSurfB: { value: null },
     uSurfOn: { value: 0 },
+    uAgeSeed: { value: 0 }, // a idade por região: o deslocamento do ruído, pela seed do mundo
   };
 }
 
@@ -86,6 +88,7 @@ varying vec3 vWorldPos;
 varying vec3 vNormalW;
 varying vec3 vPatPos;   // onde o desenho (placas, ferrugem, escorridos) é calculado
 varying vec3 vPatN;
+varying float vTop;  // m abaixo da borda de cima da face (o gerador põe no comprimento da normal; 24 = longe)
 #ifdef USE_SURF_TEX
 varying vec3 vAxX;   // os eixos do desenho, no mundo (o relevo das texturas volta ao mundo por eles)
 varying vec3 vAxY;
@@ -98,6 +101,7 @@ varying vec3 vAxZ;
 void main() {
   vec3 p = position;
   vec3 n = normal;
+  vTop = (clamp(length(normal), 0.5, 1.0) - 0.5) * 48.0;   // (gen/chunkgen.js markTopEdges: 0,5 → 1 = 0 → 24 m)
   #ifdef USE_INSTANCING
     p = (instanceMatrix * vec4(p, 1.0)).xyz;
     n = mat3(instanceMatrix) * n;
@@ -160,11 +164,14 @@ uniform float uFogAmount;     // 1 = névoa normal; < 1 = fura a névoa
 uniform vec2  uFadeRange;     // distância (início, fim) em que se dissolve na névoa
 uniform float uCutout;        // recorte: 0 nada · 1 degraus de escada · 2 grade vazada · 3 pichação
 uniform float uWet;           // 0..1 superfície molhada (poças)
+uniform float uAgeSeed;       // a idade por região (a seed do mundo)
 #ifdef USE_SURF_TEX
 uniform highp sampler2DArray uSurfA;  // cor (rgb, 0,5 = o tom do material) + altura (a)
 uniform highp sampler2DArray uSurfB;  // normal no plano da textura (rgb) + aspereza (a)
 uniform float uSurfOn;
 uniform float uSurfLayer;     // a família (render/surfaceBaker.js SURF)
+uniform float uSurfLayerTop;  // a família das faces viradas para cima (o piso de uma ponte, p. ex.)
+uniform float uSurfScaleTop;
 uniform float uSurfScale;     // 1 / (m por ladrilho)
 uniform float uSurfBump;      // força do relevo
 varying vec3 vAxX;
@@ -185,8 +192,62 @@ varying vec3 vWorldPos;
 varying vec3 vNormalW;
 varying vec3 vPatPos;
 varying vec3 vPatN;
+varying float vTop;
 
 #include <clipping_planes_pars_fragment>
+
+#ifdef USE_SURF_TEX
+// uma família do forno em triplanar: cor+altura (A), aspereza e a normal no espaço do desenho (np)
+// (as caixas da Cidade são alinhadas aos eixos: quase sempre uma projeção só)
+// (textureGrad com as derivadas de W tiradas antes: a chamada pode ficar dentro de um desvio — a ferrugem só onde
+//  há ferrugem — sem errar o mipmap nas bordas)
+void surfTri(vec3 W, vec3 dWx, vec3 dWy, vec3 pn, vec3 bw, float layer, float layerTop, float sc, float scTop, out vec4 A, out float rgh, out vec3 np) {
+  A = vec4(0.0);
+  rgh = 0.0;
+  vec3 tnX = vec3(0.0, 0.0, 1.0);
+  vec3 tnY = vec3(0.0, 0.0, 1.0);
+  vec3 tnZ = vec3(0.0, 0.0, 1.0);
+  if (bw.x > 0.01) {
+    vec3 uvw = vec3(W.zy * sc, layer);
+    vec2 gx = dWx.zy * sc;
+    vec2 gy = dWy.zy * sc;
+    vec4 b = textureGrad(uSurfB, uvw, gx, gy);
+    A += textureGrad(uSurfA, uvw, gx, gy) * bw.x;
+    rgh += b.w * bw.x;
+    vec3 tn = b.xyz * 2.0 - 1.0;
+    tn.xy *= uSurfBump;
+    tnX = vec3(tn.xy + pn.zy, abs(tn.z) * pn.x);
+  }
+  if (bw.y > 0.01) {
+    // (as faces de cima podem ser de outra família: o piso — só as quase horizontais: a metade de cima de um
+    //  corrimão redondo continua a do resto)
+    bool top = pn.y > 0.97;
+    float k = top ? scTop : sc;
+    vec3 uvw = vec3(W.xz * k, top ? layerTop : layer);
+    vec2 gx = dWx.xz * k;
+    vec2 gy = dWy.xz * k;
+    vec4 b = textureGrad(uSurfB, uvw, gx, gy);
+    A += textureGrad(uSurfA, uvw, gx, gy) * bw.y;
+    rgh += b.w * bw.y;
+    vec3 tn = b.xyz * 2.0 - 1.0;
+    tn.xy *= uSurfBump;
+    tnY = vec3(tn.xy + pn.xz, abs(tn.z) * pn.y);
+  }
+  if (bw.z > 0.01) {
+    vec3 uvw = vec3(W.xy * sc, layer);
+    vec2 gx = dWx.xy * sc;
+    vec2 gy = dWy.xy * sc;
+    vec4 b = textureGrad(uSurfB, uvw, gx, gy);
+    A += textureGrad(uSurfA, uvw, gx, gy) * bw.z;
+    rgh += b.w * bw.z;
+    vec3 tn = b.xyz * 2.0 - 1.0;
+    tn.xy *= uSurfBump;
+    tnZ = vec3(tn.xy + pn.xy, abs(tn.z) * pn.z);
+  }
+  // (o blend "whiteout" — sem tangentes)
+  np = normalize(tnX.zyx * bw.x + tnY.xzy * bw.y + tnZ.xyz * bw.z);
+}
+#endif
 
 void main() {
   #include <clipping_planes_fragment>
@@ -208,50 +269,40 @@ void main() {
   bool onY = !onX && an.y > an.z;
   vec2 uvP = onX ? W.zy : (onY ? W.xz : W.xy);
 
+  // a idade do lugar (manchas de ~400 m, pela seed do mundo): quanto escorrido e quanta ferrugem
+  float age = smoothstep(-0.6, 0.6, snoise(W * 0.0025 + uAgeSeed));
+  float rust = clamp(smoothstep(0.25, 0.75, snoise(W * uNoiseScale * 0.6 + 5.0)) * uAccent * (0.3 + 1.4 * age), 0.0, 1.0);
+
   // ── as texturas assadas (render/surfaceBaker.js): triplanar, relevo na luz ──
   float surfH = 0.5;
   float surfRough = -1.0;
   vec3 surfCol = vec3(0.5);
+  float rustTone = 0.5;
   #ifdef USE_SURF_TEX
   if (uSurfOn > 0.5) {
     vec3 pn = normalize(vPatN);
     vec3 bw = pow(abs(pn), vec3(8.0));
     bw /= bw.x + bw.y + bw.z;
-    vec4 A = vec4(0.0);
-    float rgh = 0.0;
-    vec3 tnX = vec3(0.0, 0.0, 1.0);
-    vec3 tnY = vec3(0.0, 0.0, 1.0);
-    vec3 tnZ = vec3(0.0, 0.0, 1.0);
-    // (uma projeção só, quase sempre: as caixas da Cidade são alinhadas aos eixos)
-    if (bw.x > 0.01) {
-      vec3 uvw = vec3(W.zy * uSurfScale, uSurfLayer);
-      vec4 b = texture(uSurfB, uvw);
-      A += texture(uSurfA, uvw) * bw.x;
-      rgh += b.w * bw.x;
-      vec3 tn = b.xyz * 2.0 - 1.0;
-      tn.xy *= uSurfBump;
-      tnX = vec3(tn.xy + pn.zy, abs(tn.z) * pn.x);
+    vec4 A;
+    float rgh;
+    vec3 np;
+    vec3 dWx = dFdx(W);
+    vec3 dWy = dFdy(W);
+    surfTri(W, dWx, dWy, pn, bw, uSurfLayer, uSurfLayerTop, uSurfScale, uSurfScaleTop, A, rgh, np);
+    #ifdef USE_SURF_RUST
+    if (rust > 0.15) {
+      // onde a ferrugem toma conta, o relevo e a aspereza passam a ser os dela (só lá: a segunda amostragem custava)
+      vec4 RA;
+      float rR;
+      vec3 npR;
+      surfTri(W, dWx, dWy, pn, bw, SURF_RUST_LAYER, SURF_RUST_LAYER, SURF_RUST_SCALE, SURF_RUST_SCALE, RA, rR, npR);
+      float m = smoothstep(0.15, 0.6, rust);
+      A = mix(A, RA, m);
+      rgh = mix(rgh, rR, m);
+      np = normalize(mix(np, npR, m));
+      rustTone = RA.r;
     }
-    if (bw.y > 0.01) {
-      vec3 uvw = vec3(W.xz * uSurfScale, uSurfLayer);
-      vec4 b = texture(uSurfB, uvw);
-      A += texture(uSurfA, uvw) * bw.y;
-      rgh += b.w * bw.y;
-      vec3 tn = b.xyz * 2.0 - 1.0;
-      tn.xy *= uSurfBump;
-      tnY = vec3(tn.xy + pn.xz, abs(tn.z) * pn.y);
-    }
-    if (bw.z > 0.01) {
-      vec3 uvw = vec3(W.xy * uSurfScale, uSurfLayer);
-      vec4 b = texture(uSurfB, uvw);
-      A += texture(uSurfA, uvw) * bw.z;
-      rgh += b.w * bw.z;
-      vec3 tn = b.xyz * 2.0 - 1.0;
-      tn.xy *= uSurfBump;
-      tnZ = vec3(tn.xy + pn.xy, abs(tn.z) * pn.z);
-    }
-    // (o blend "whiteout" — sem tangentes)
-    vec3 np = normalize(tnX.zyx * bw.x + tnY.xzy * bw.y + tnZ.xyz * bw.z);
+    #endif
     vec3 nw = normalize(vAxX * np.x + vAxY * np.y + vAxZ * np.z);
     if (dot(nw, V) < 0.0) nw = -nw;
     N = normalize(mix(nw, Nd, 0.08));
@@ -300,8 +351,7 @@ void main() {
   float mott = fbmAA(P, length(fwidth(P)));
   // escorrimentos: ruído esticado na vertical (chuva, óleo, séculos)
   float streak = snoise(vec3(W.x * 0.3, W.y * 0.01, W.z * 0.3) + uSeed);
-  float stain = smoothstep(0.05, 0.85, streak) * uStreaks * (onY ? 0.3 : 1.0);
-  float rust = smoothstep(0.25, 0.75, snoise(W * uNoiseScale * 0.6 + 5.0)) * uAccent;
+  float stain = smoothstep(0.05, 0.85, streak) * uStreaks * (onY ? 0.3 : 1.0) * (0.45 + 1.1 * age);
 
   vec3 concrete = uBaseColor * (0.7 + 0.34 * tone + 0.22 * mott);
   if (surfRough >= 0.0) {
@@ -309,8 +359,21 @@ void main() {
     concrete *= mix(0.72, 1.0, smoothstep(0.3, 0.55, surfH));   // o fundo das juntas e das covas
     // (as juntas grandes das placas continuam as do material: a textura é o detalhe dentro delas)
   }
-  concrete = mix(concrete, uAccentColor, rust * 0.85);
+  concrete = mix(concrete, uAccentColor * (rustTone / 0.5), rust * 0.85);
   concrete *= 1.0 - stain * 0.55;
+  // ── os escorridos das bordas (o rework gráfico, etapa 4): a água que desce das quinas e dos beirais
+  //    deixa faixas — mais longas nos lugares velhos —, e a sujeira junta logo abaixo da quina ──
+  if (vTop < 23.5 && !onY) {
+    float u = onX ? W.z : W.x;
+    float lane = snoise(vec3(u * 0.35, 0.0, uSeed + 31.0)) * 0.5 + 0.5;   // (faixas de ~3 m: de longe, 1 m virava um borrão)
+    float lenN = snoise(vec3(u * 0.13, 1.7, uSeed + 7.0)) * 0.5 + 0.5;
+    float L = mix(1.0, 10.0, lenN) * (0.5 + age);
+    float fall = 1.0 - smoothstep(0.0, L, vTop + 0.6 * snoise(vec3(u * 3.0, vTop * 0.4, uSeed)));
+    float drip = smoothstep(0.5, 0.85, lane) * fall + 0.18 * (1.0 - smoothstep(0.05, 0.3, vTop));
+    drip *= 0.3 + 0.7 * uStreaks;
+    concrete = mix(concrete, uAccentColor * 0.8, drip * uAccent * 0.5);   // (no metal, a ferrugem escorre junto)
+    concrete *= 1.0 - drip * 0.26;
+  }
   concrete *= 1.0 - seam * 0.6;
   // poeira depositada clareia o que está virado para cima
   concrete *= 1.0 + 0.2 * smoothstep(0.75, 1.0, vNormalW.y);
@@ -484,12 +547,12 @@ export function createSurfaceMaterial(shared, params = {}) {
     reflect: false, // água parada: lê o reflexo planar (render/reflection.js)
     wet: 0,
     heat: false, // as faces do corte do emissor: em brasa depois do tiro (só o material 'cut')
-    surf: null, // { layer, tile, bump }: as texturas assadas (render/surfaceBaker.js SURF)
+    surf: null, // { layer, tile, bump, top?: { layer, tile }, rust?: true }: as texturas assadas (render/surfaceBaker.js SURF)
     side: THREE.FrontSide,
     ...params,
   };
   return new THREE.ShaderMaterial({
-    defines: { LIGHT_COUNT, ...(p.cutout ? { USE_CUTOUT: 1 } : {}), ...(p.reflect ? { USE_REFLECTION: 1 } : {}), ...(p.heat ? { USE_HEAT: 1 } : {}), ...(p.surf ? { USE_SURF_TEX: 1 } : {}) },
+    defines: { LIGHT_COUNT, ...(p.cutout ? { USE_CUTOUT: 1 } : {}), ...(p.reflect ? { USE_REFLECTION: 1 } : {}), ...(p.heat ? { USE_HEAT: 1 } : {}), ...(p.surf ? { USE_SURF_TEX: 1 } : {}), ...(p.surf?.rust ? { USE_SURF_RUST: 1, SURF_RUST_LAYER: `${SURF.rust.layer}.0`, SURF_RUST_SCALE: `${1 / SURF.rust.tile}` } : {}) },
     uniforms: {
       ...shared,
       uBaseColor: { value: p.base },
@@ -512,6 +575,8 @@ export function createSurfaceMaterial(shared, params = {}) {
       uWet: { value: p.wet },
       uSurfLayer: { value: p.surf?.layer ?? 0 },
       uSurfScale: { value: p.surf ? 1 / p.surf.tile : 1 },
+      uSurfLayerTop: { value: p.surf?.top?.layer ?? p.surf?.layer ?? 0 },
+      uSurfScaleTop: { value: p.surf ? 1 / (p.surf.top?.tile ?? p.surf.tile) : 1 },
       uSurfBump: { value: p.surf?.bump ?? 1 },
       uReflTex: { value: null },
       uReflOn: { value: 0 },

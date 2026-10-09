@@ -16,8 +16,11 @@ export const SURF = {
   concrete: { layer: 0, tile: 4.8 }, // concreto: a pele contínua (ondulação, grão, poros)
   plate: { layer: 1, tile: 3.0 }, // chapa de aço: placas, rebites, soldas, amassados, riscos
   tread: { layer: 2, tile: 1.2 }, // piso de chapa xadrez: ressaltos alternados, sujeira nos sulcos
+  steel: { layer: 3, tile: 2.4 }, // aço laminado: carepa, pites, riscos finos, ondulação leve (sem grade)
+  rust: { layer: 4, tile: 2.0 }, // ferrugem pesada: crostas que descascam, crateras, escorrido
+  weave: { layer: 5, tile: 0.6 }, // trama de tecido grosso (os panos): fios de 3 mm, puídos
 };
-const LAYERS = 3;
+const LAYERS = 6;
 const SIZE = 1024;
 
 
@@ -174,6 +177,60 @@ float hTread(vec2 uv, out vec3 col, out float rough) {
   return h;
 }
 
+float hSteel(vec2 uv, out vec3 col, out float rough) {
+  // carepa de laminação: manchas largas, um pouco mais escuras e lisas, de borda irregular
+  float scale = smoothstep(0.05, 0.25, pfbm4(uv, 5.0));
+  // pites: pequenas covas de corrosão, raras
+  float ph = hash21(floor(uv * 90.0) + 2.3);
+  float pitR = step(0.9, ph) * mix(0.0015, 0.004, fract(ph * 5.31)) / uTile;
+  float pit = (1.0 - smoothstep(0.0, 0.0006, pcell(uv, 90.0) - pitR)) * step(0.9, ph);
+  // riscos finos, na horizontal numas regiões e na vertical noutras (alinhados ao ladrilho: sem emenda)
+  float sx = abs(pnoise(vec2(uv.x * 6.0, uv.y * 260.0), vec2(6.0, 260.0)));
+  float sy = abs(pnoise(vec2(uv.x * 260.0, uv.y * 6.0), vec2(260.0, 6.0)));
+  float dir = smoothstep(-0.15, 0.15, pnoise(uv * 3.0, vec2(3.0)));
+  float scr = smoothstep(0.86, 1.0, mix(sx, sy, dir)) * smoothstep(0.0, 0.3, pnoise(uv * 7.0, vec2(7.0)));
+  float wave = pfbm3(uv, 3.0) * 0.003;
+  float h = wave + scale * 0.0004 - pit * 0.002 - scr * 0.00025;
+  float tone = 0.5 + 0.05 * pfbm4(uv, 6.0) - 0.06 * scale - 0.18 * pit + 0.06 * scr;
+  col = vec3(tone);
+  rough = 0.6 - 0.15 * scale + 0.25 * pit - 0.2 * scr;
+  return h;
+}
+
+float hRust(vec2 uv, out vec3 col, out float rough) {
+  // crostas: placas de óxido que levantam e descascam (Worley), crateras onde caíram
+  float c1 = pcell(uv, 14.0) * 14.0;
+  float crust = smoothstep(0.15, 0.6, c1) * smoothstep(-0.1, 0.35, pfbm4(uv, 7.0));
+  float crater = 1.0 - smoothstep(0.0, 0.2, c1);
+  float rough1 = pfbm4(uv, 28.0);
+  float h = crust * 0.004 - crater * 0.003 + rough1 * 0.0015 + pfbm3(uv, 4.0) * 0.003;
+  float tone = 0.5 + 0.12 * pfbm4(uv, 9.0) + 0.1 * crust - 0.15 * crater;
+  col = vec3(tone);
+  rough = 0.95 - 0.1 * crater;
+  return h;
+}
+
+float hWeave(vec2 uv, out vec3 col, out float rough) {
+  // trama de tela: fios de 3 mm, por cima e por baixo alternando — fraca e irregular (de perto, numa luva,
+  // a trama forte lia como um xadrez): fios de espessura variável, puídos, o tecido amarrotado por cima
+  vec2 m = uv * uTile / 0.003;
+  vec2 c = floor(m);
+  vec2 f = fract(m) - 0.5;
+  float over = mod(c.x + c.y, 2.0);
+  float jx = 0.7 + 0.6 * hash21(vec2(c.y, 3.1));   // cada fio com a sua espessura
+  float jy = 0.7 + 0.6 * hash21(vec2(c.x, 7.7));
+  float wx = clamp(1.0 - f.y * f.y * 4.0 / jx, 0.0, 1.0) * (0.75 + 0.25 * over);
+  float wy = clamp(1.0 - f.x * f.x * 4.0 / jy, 0.0, 1.0) * (0.75 + 0.25 * (1.0 - over));
+  float thread = max(wx, wy);
+  float wear = smoothstep(0.1, 0.5, pfbm4(uv, 6.0));
+  float crumple = pfbm4(uv, 5.0);
+  float h = thread * 0.00025 * (1.0 - 0.7 * wear) + crumple * 0.005;
+  float tone = 0.47 + 0.035 * thread + 0.1 * pfbm4(uv, 3.0) - 0.08 * wear;
+  col = vec3(tone);
+  rough = 0.95;
+  return h;
+}
+
 void main() {
   vec3 col = vec3(0.5);
   float rough = 0.8;
@@ -182,8 +239,14 @@ void main() {
   float h = hConcrete(uv, col, rough);
   #elif FAMILY == 1
   float h = hPlate(uv, col, rough);
-  #else
+  #elif FAMILY == 2
   float h = hTread(uv, col, rough);
+  #elif FAMILY == 3
+  float h = hSteel(uv, col, rough);
+  #elif FAMILY == 4
+  float h = hRust(uv, col, rough);
+  #else
+  float h = hWeave(uv, col, rough);
   #endif
   // (half float: a altura em "unidades" de 4 cm, sem perder o milímetro)
   gl_FragColor = vec4(col.r, h * 25.0, rough, 1.0);
@@ -223,11 +286,20 @@ void main() {
 }
 `;
 
+/** Os materiais do passe de altura, um por família — guardados entre um forno e outro (descartá-los
+ *  fazia o próximo mundo recompilar os programas: ~0,8 s de quadro parado). A seed é um uniform. */
+const HEIGHT_MATS = new Map();
+
+/** Faixas por família no passe de altura: uma por passo (cada passo um quadro — o Windows reinicia o
+ *  driver se a GPU passa ~2 s num lote só: as 6 famílias juntas derrubavam o processo da GPU). */
+const STRIPS = 4;
+
 /**
- * Assa as famílias pela seed. → { a: DataArrayTexture-like, b: ..., ms } (as texturas dos dois
- * render targets de array). Chamar de novo (outra seed) reaproveita os alvos.
+ * O forno em passos, pela seed: `step()` faz um pedaço (uma faixa da altura de uma família, ou o passe
+ * final dela) e devolve true quando acabou. → { rtA, rtB, a, b, step, dispose, ms }
+ * Os alvos de um forno anterior (`prev`) são reaproveitados.
  */
-export function bakeSurfaces(renderer, seed, prev = null) {
+export function createSurfaceBake(renderer, seed, prev = null) {
   const t0 = performance.now();
   const mk = () => {
     const rt = new THREE.WebGLArrayRenderTarget(SIZE, SIZE, LAYERS, { depthBuffer: false });
@@ -238,7 +310,8 @@ export function bakeSurfaces(renderer, seed, prev = null) {
     tex.minFilter = THREE.LinearMipmapLinearFilter;
     tex.magFilter = THREE.LinearFilter;
     tex.generateMipmaps = true;
-    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    // (4×: o 8× custava mais GPU por quadro, quase sem diferença na imagem)
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
     tex.colorSpace = THREE.NoColorSpace;
     return rt;
   };
@@ -261,36 +334,107 @@ export function bakeSurfaces(renderer, seed, prev = null) {
     depthTest: false,
     depthWrite: false,
   });
-  const prevRT = renderer.getRenderTarget();
-  const prevAuto = renderer.autoClear;
-  renderer.autoClear = false;
-  const mats = [final];
+  // a lista de passos: por família, as faixas da altura e o passe final
+  const steps = [];
   for (const f of Object.values(SURF)) {
-    // um programa por família (o ANGLE compila cada um pequeno, sem desvio por família)
-    const hm = new THREE.ShaderMaterial({
-      defines: { FAMILY: f.layer },
-      vertexShader: VERT,
-      fragmentShader: FRAG,
-      uniforms: { uSeed: { value: (seed % 997) + 0.5 }, uTile: { value: f.tile } },
-      depthTest: false,
-      depthWrite: false,
-    });
-    mats.push(hm);
-    quad.material = hm;
-    renderer.setRenderTarget(rtH);
-    renderer.render(scene, cam);
-    quad.material = final;
-    final.uniforms.uTile.value = f.tile;
-    for (const [pass, rt] of [[0, rtA], [1, rtB]]) {
-      final.uniforms.uPass.value = pass;
-      renderer.setRenderTarget(rt, f.layer);
-      renderer.render(scene, cam);
-    }
+    for (let k = 0; k < STRIPS; k++) steps.push({ f, strip: k });
+    steps.push({ f, strip: -1 });
   }
-  renderer.setRenderTarget(prevRT);
-  renderer.autoClear = prevAuto;
-  for (const m of mats) m.dispose();
-  quad.geometry.dispose();
-  rtH.dispose();
-  return { rtA, rtB, a: rtA.texture, b: rtB.texture, ms: performance.now() - t0 };
+  // os programas do forno compilados antes do primeiro passo, sem travar (KHR_parallel_shader_compile —
+  // renderer.compileAsync): o da ferrugem travava ~0,7 s compilando no meio da chegada
+  let ready = !renderer.compileAsync;
+  const readyBy = performance.now() + 5000; // (sem resposta em 5 s, segue: compila no passo, como antes)
+  if (!ready) {
+    const sc = new THREE.Scene();
+    for (const f of Object.values(SURF)) {
+      let hm = HEIGHT_MATS.get(f.layer);
+      if (!hm) {
+        hm = new THREE.ShaderMaterial({
+          defines: { FAMILY: f.layer },
+          vertexShader: VERT,
+          fragmentShader: FRAG,
+          uniforms: { uSeed: { value: (seed % 997) + 0.5 }, uTile: { value: f.tile } },
+          depthTest: false,
+          depthWrite: false,
+        });
+        HEIGHT_MATS.set(f.layer, hm);
+      }
+      const q = new THREE.Mesh(quad.geometry, hm);
+      q.frustumCulled = false;
+      sc.add(q);
+    }
+    const qf = new THREE.Mesh(quad.geometry, final);
+    qf.frustumCulled = false;
+    sc.add(qf);
+    renderer
+      .compileAsync(sc, cam)
+      .catch(() => {})
+      .finally(() => (ready = true));
+  }
+  let i = 0;
+  const job = {
+    rtA,
+    rtB,
+    a: rtA.texture,
+    b: rtB.texture,
+    ms: 0,
+    /** Um passo. → true quando o forno acabou. */
+    step() {
+      if (i >= steps.length) return true;
+      if (!ready && performance.now() < readyBy) return false;
+      const { f, strip } = steps[i++];
+      const prevRT = renderer.getRenderTarget();
+      const prevAuto = renderer.autoClear;
+      const prevScissor = renderer.getScissorTest();
+      renderer.autoClear = false;
+      if (strip >= 0) {
+        // um programa por família (o ANGLE compila cada um pequeno, sem desvio por família)
+        let hm = HEIGHT_MATS.get(f.layer);
+        if (!hm) {
+          hm = new THREE.ShaderMaterial({
+            defines: { FAMILY: f.layer },
+            vertexShader: VERT,
+            fragmentShader: FRAG,
+            uniforms: { uSeed: { value: (seed % 997) + 0.5 }, uTile: { value: f.tile } },
+            depthTest: false,
+            depthWrite: false,
+          });
+          HEIGHT_MATS.set(f.layer, hm);
+        }
+        hm.uniforms.uSeed.value = (seed % 997) + 0.5;
+        quad.material = hm;
+        const h = SIZE / STRIPS;
+        rtH.scissor.set(0, strip * h, SIZE, h);
+        rtH.scissorTest = true;
+        renderer.setRenderTarget(rtH);
+        renderer.render(scene, cam);
+        rtH.scissorTest = false;
+      } else {
+        quad.material = final;
+        final.uniforms.uTile.value = f.tile;
+        for (const [pass, rt] of [[0, rtA], [1, rtB]]) {
+          final.uniforms.uPass.value = pass;
+          renderer.setRenderTarget(rt, f.layer);
+          renderer.render(scene, cam);
+        }
+      }
+      renderer.setRenderTarget(prevRT);
+      renderer.autoClear = prevAuto;
+      renderer.setScissorTest(prevScissor);
+      const done = i >= steps.length;
+      if (done) {
+        job.ms = performance.now() - t0;
+        job.dispose();
+      }
+      return done;
+    },
+    /** Larga o que é só do forno (os alvos rtA/rtB ficam: são as texturas). */
+    dispose() {
+      final.dispose();
+      quad.geometry.dispose();
+      rtH.dispose();
+      i = steps.length;
+    },
+  };
+  return job;
 }

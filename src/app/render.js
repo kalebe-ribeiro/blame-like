@@ -6,7 +6,8 @@
 //  névoa, render/pipeline.js) → bloom → tone mapping → filme (grão, vinheta).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { bakeSurfaces } from '../render/surfaceBaker.js';
+import { createSurfaceBake } from '../render/surfaceBaker.js';
+import { soloMaterial, movingMaterial } from '../shaders/materials.js';
 import { t } from '../i18n/index.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -69,15 +70,77 @@ export function resize(ctx) {
   hud?.resize();
 }
 
+/**
+ * Compila de antemão, sem travar (KHR_parallel_shader_compile — renderer.compileAsync), os programas das
+ * superfícies: cada material do mundo em lote (BatchedMesh: os chunks), de longe (LOD), numa malha comum
+ * (soloMaterial) e preso ao objeto (movingMaterial). Sem isto, cada um compilava na hora em que o primeiro
+ * chunk dele aparecia — engasgos na chegada; com o cache de shaders frio, dezenas de segundos.
+ * (o rework gráfico, etapa 5; app/beamfx.js warm() faz o mesmo para o primeiro tiro.)
+ */
+export function warmSurfaces(ctx) {
+  const r = ctx.renderer;
+  const w = ctx.world;
+  if (!r.compileAsync || !w?.materials) return;
+  const sc = new THREE.Scene();
+  const tri = new THREE.BufferGeometry();
+  tri.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
+  tri.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(9), 3));
+  tri.setIndex([0, 1, 2]);
+  const batches = [];
+  const mats = new Set([...Object.values(w.materials), ...Object.values(w.lodMaterials ?? {})]);
+  for (const m of mats) {
+    if (!m?.isShaderMaterial) continue;
+    const bm = new THREE.BatchedMesh(1, 3, 3, m);
+    bm.addGeometry(tri);
+    bm.frustumCulled = false;
+    sc.add(bm);
+    batches.push(bm);
+    for (const v of [soloMaterial(m), movingMaterial(m)]) {
+      const o = new THREE.Mesh(tri, v);
+      o.frustumCulled = false;
+      sc.add(o);
+    }
+  }
+  r.compileAsync(sc, ctx.camera)
+    .catch(() => {})
+    .finally(() => {
+      for (const b of batches) b.dispose();
+      tri.dispose();
+    });
+}
+
 /** As texturas das superfícies pela seed do mundo (render/surfaceBaker.js): para todos os materiais
- *  (os uniforms compartilhados — ctx.shared). Os alvos são reaproveitados de um mundo para o outro. */
+ *  (os uniforms compartilhados — ctx.shared). O forno vai em passos, um por quadro (ctx.frameHooks);
+ *  até acabar, as superfícies ficam com o desenho procedural (uSurfOn 0). Os alvos são reaproveitados. */
 export function bakeWorldSurfaces(ctx) {
-  const r = bakeSurfaces(ctx.renderer, ctx.seed, ctx._surf);
-  ctx._surf = r;
-  ctx.shared.uSurfA.value = r.a;
-  ctx.shared.uSurfB.value = r.b;
-  ctx.shared.uSurfOn.value = 1;
-  if (new URLSearchParams(location.search).get('stats')) console.warn(`SURF: forno ${r.ms.toFixed(1)} ms`);
+  warmSurfaces(ctx); // (os materiais são novos a cada mundo)
+  // a mesma seed (um mundo refeito — o salvamento, os testes): as texturas seriam as mesmas
+  //  (com o forno ainda em curso, ele continua)
+  if (ctx._surf && ctx._surfSeed === ctx.seed) {
+    if (!ctx._surfHook) ctx.shared.uSurfOn.value = 1;
+    return;
+  }
+  ctx._surfSeed = ctx.seed;
+  if (ctx._surfHook) {
+    ctx.frameHooks.delete(ctx._surfHook);
+    ctx._surf?.dispose();
+  }
+  ctx.frameHooks ??= new Set();
+  const job = createSurfaceBake(ctx.renderer, ctx.seed, ctx._surf);
+  ctx._surf = job;
+  ctx.shared.uSurfOn.value = 0;
+  ctx.shared.uSurfA.value = job.a;
+  ctx.shared.uSurfB.value = job.b;
+  ctx.shared.uAgeSeed.value = (ctx.seed % 1000) * 0.731; // a idade por região (shaders/materials.js)
+  const hook = () => {
+    if (!job.step()) return;
+    ctx.frameHooks.delete(hook);
+    ctx._surfHook = null;
+    ctx.shared.uSurfOn.value = 1;
+    if (new URLSearchParams(location.search).get('stats')) console.warn(`SURF: forno ${job.ms.toFixed(1)} ms`);
+  };
+  ctx._surfHook = hook;
+  ctx.frameHooks.add(hook);
 }
 
 /** Um mundo novo: o reflexo passa a ler o material de água dele; as superfícies, a seed dele. */

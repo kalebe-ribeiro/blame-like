@@ -41,6 +41,37 @@ Roteiro fixo de 20 capturas (seed abc: 12 lugares, 4 com névoa 0, 4 com lantern
 
 O bulbo (`gen/chunkgen.js` buildSegment: prisma aberto + cone em cima + cone virado embaixo) e a ponta invertida sob os pilares (buildRoot): o cone virado com `rx: π` espelha o giro em y — com `ry: +spin` a base dele saía girada em relação ao corpo (cantos para fora, aberturas mostrando o oco). Agora `ry: -spin`: os cantos batem (conferido pelos vértices e por captura antes × depois — `--bulbcam`, o bulbo mais perto visto de baixo). `GEN_VERSION` g3 (cache de cortes). `check` 31/31.
 
+### Etapa 3 — todas as famílias e receitas (2026-10-09, aprovada a etapa 2)
+- **6 famílias** no forno (`render/surfaceBaker.js` SURF): `concrete` (4,8 m), `plate` (chapas rebitadas, 3 m), `tread` (chapa xadrez, 1,2 m), `steel` (aço laminado: carepa, pites raros, riscos finos por região — 2,4 m), `rust` (crostas que descascam, crateras — 2 m), `weave` (trama de 3 mm, fraca e irregular — de perto, numa luva, a trama forte lia como xadrez — 0,6 m).
+- **O forno em passos** (`createSurfaceBake`, um passo por quadro em `ctx.frameHooks`): 4 faixas da altura + o passe final por família. As 6 famílias num quadro só passavam do limite do Windows (TDR, ~2 s) e o processo da GPU caía. ~1 s espalhado; até acabar, `uSurfOn` 0 (o desenho procedural).
+- **O shader**: `surfTri` (a triplanar numa função, com `textureGrad` e as derivadas de W tiradas antes — pode ficar dentro de um desvio); **faces de cima** com outra família (`top`: o piso da ponte é xadrez, o resto aço — só faces com normal y > 0,97: o corrimão redondo não pega o xadrez); **a idade do lugar** (`uAgeSeed`, manchas de ~400 m pela seed) regula escorrido e ferrugem; nos metais (`rust: true`) a **ferrugem toma o relevo** (a 2ª amostragem só onde há ferrugem, rust > 0,15).
+- **Receitas** (world.js): concreto — torre, bloco, laje, praça, colmeia, escadaria, entulho (`dress`); concreto em escala maior (9,6 m) — paredes/pisos/quadros colossais, maciço, monólito, barreira; aço — nervuras, tubos, condutos, degraus, grades, portas; chapa rebitada — máquinas, colossos, dutos; aço com piso xadrez — pontes; ferrugem — barracos; trama — panos (e a luva da mão). Sem textura: cabos, corte (brasa), água, lâmpadas, telas, letreiros, pichação, a pele dos Safeguards.
+- A colmeia perdeu a grade de janelas (o usuário: nada de grade em todo lugar). Anisotropia 4× (8× custava mais e não se via).
+- **Desempenho** (A/B intercalado na mesma sessão contra `d627b3d`, a máquina varia muito de uma hora para outra): com o mundo carregado, ~+0,3 ms de GPU (maciço, camada); na chegada, +10 programas de shader (as variantes com ferrugem) e o programa da ferrugem do forno (~0,7 s uma vez) — o aquecimento fica para a etapa 5. Com o cache de shaders frio (a primeira vez depois de mudar o shader) a chegada demora muito mais (32 s medidos) — etapa 5.
+- `check` 31/31.
+
+### Etapa 4 — desgaste pela geometria e o longe (2026-10-09, noite — autonomia do Claude)
+- **As bordas no comprimento da normal** (`gen/chunkgen.js` `markTopEdges`, no `finish` de cada chunk): em cada face vertical de cada peça, a distância de cada vértice até a borda de cima da face (o plano: direção horizontal + distância à origem) vai no COMPRIMENTO da normal — 0,5 na borda, 1 a partir de 24 m. Normais de comprimento 1 (tudo que não vem do gerador) = longe de qualquer borda; as luzes normalizam. Fora: os feixes (o "ao longo" em normal.y), as cascatas e as faces do corte. Zero memória a mais (o canal de enchimento das normais de 8 bits não dava: o three declara `normal` como vec3). `GEN_VERSION` g4.
+- **Os escorridos** (shader, `vTop`): faixas verticais de ~3 m que descem das quinas e beirais, de comprimento variável ao longo da borda (1–10 m) e mais longas nos lugares velhos (a idade), e uma faixa fina de sujeira logo abaixo da quina; no metal, a ferrugem escorre junto (a cor de acento). Conferido com a cor de depuração (listras de 2 m de vTop: crescem para baixo em cada face).
+- **O longe**: as cópias LOD dos materiais (os chunks de longe) sem as texturas assadas — a névoa e o mip mais alto já apagam o detalhe a 500 m+.
+
+### Etapa 5 — desempenho e acabamento (2026-10-09, noite — autonomia do Claude)
+- **Aquecimento** (`app/render.js` `warmSurfaces`): assim que o mundo é montado, `renderer.compileAsync` (KHR_parallel_shader_compile) compila todas as variantes de todos os materiais — em lote (BatchedMesh), de longe, numa malha comum (soloMaterial) e presa ao objeto (movingMaterial). Medido na teia com o cache quente: **sem ele, um engasgo de 8,5 s** na chegada (cada programa compilando na hora do primeiro chunk dele); **com ele, o pior 0,4 s**.
+- **O forno** espera os programas dele compilarem (compileAsync, até 5 s) antes do primeiro passo, e os guarda entre um mundo e outro (`HEIGHT_MATS`); um mundo refeito com a mesma seed não refaz o forno (as texturas seriam as mesmas).
+- O cache de shaders frio (a primeira vez depois de mudar um shader — no desenvolvimento, ou a primeira abertura de uma versão nova) ainda custa: a compilação inteira dos programas novos (~10–30 s medidos nesta máquina). Fica registrado.
+
+### Decisões do Claude (2026-10-09, autonomia dada pelo usuário — revisar)
+> O usuário: "te dou permissão pra prosseguir com o plano até finalizar o rework gráfico completo (todas as etapas)… já que você vai fazer a maioria das decisões, ponha elas destacadas como suas e faça os commits numa branch secundária." Tudo na branch **`rework-grafico`** (a `main` ficou no 5efcef3).
+- **Escopo**: "todas as etapas" = as etapas 1–5 da frente 1 (superfícies), o plano aprovado. Hostis/NPCs e animações ficaram de fora — têm planos próprios que dependem de escolhas do usuário.
+- **Famílias**: concreto, chapa rebitada, chapa xadrez, aço laminado, ferrugem, trama. Sem pré-moldado em painéis (seria uma grade em todo lugar — o pedido do usuário foi o contrário).
+- **Receitas**: a lista da etapa 3 (qual material ganhou qual família) é minha; a mais discutível: `dress` (entulho) como concreto, `door` como aço, `bridge` com aço nas laterais e xadrez só nas faces de cima.
+- **Escalas**: concreto 4,8 m (9,6 m nas estruturas colossais), aço 2,4 m, chapa 3 m, xadrez 1,2 m, ferrugem 2 m, trama 0,6 m.
+- **Idade por região**: um ruído de ~400 m no shader (pela seed), não o Field — o mesmo efeito, sem custo no gerador.
+- **Escorridos**: só das bordas de cima das faces verticais (água que desce); sem sujeira junto do chão (a oclusão do SSAO já escurece o pé das paredes).
+- **Longe**: sem textura nos chunks LOD; a variação macro é a que já havia (o tom em manchas de 3 placas e a idade).
+- **Anisotropia 4×** (8× custava mais e não se via diferença).
+- **Janelas da colmeia removidas** (eram uma grade em todas as paredes internas).
+
 ## Quando
 **Depois de finalizar todos os aspectos da gameplay.** Até lá, o visual é o de agora — formas geométricas, materiais procedurais (`shaders/materials.js`), corpos simples dos seres (`world/bodies.js`) e animações únicas. As features de gameplay continuam sendo feitas com esse visual e **não** esperam o rework (nem o antecipam).
 

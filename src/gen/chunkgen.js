@@ -279,6 +279,7 @@ export class ChunkBuilder {
     this._dropLoose();
     const meshes = [];
     for (const [mat, list] of Object.entries(this.parts)) {
+      if (!EDGE_SKIP.has(mat)) for (const piece of list) markTopEdges(piece);
       const g = mergeAll(list);
       if (!g) continue;
       g.computeBoundingSphere();
@@ -312,6 +313,50 @@ export class ChunkBuilder {
       }
     }
     return { meshes, lights: this.lights, emitters: this.emitters, debris: this.debris, cutStats: this.cutStats, bounds, pieceBoxes: new Float32Array(this.boxes) };
+  }
+}
+
+/**
+ * O desgaste pela geometria (o rework gráfico, etapa 4 — o cofre, Rework-grafico): em cada face VERTICAL de
+ * uma peça, a distância de cada vértice até a borda de cima da face vai no COMPRIMENTO da normal — 0,5 na
+ * borda, 1 a partir de EDGE_MAX m. O shader de superfície (shaders/materials.js, vTop) desenha os escorridos
+ * que descem das quinas e beirais. Em todo o resto a normal continua unitária (= longe de qualquer borda): as
+ * luzes normalizam, e o que vem de fora do gerador não muda. Idempotente (a peça memorizada de um corte pode
+ * passar por aqui de novo). A "face" é o plano: a direção (horizontal) e a distância à origem.
+ */
+const EDGE_MAX = 24;
+// os que leem a normal para outra coisa (os feixes: o "ao longo" em normal.y), e as faces frescas do corte
+const EDGE_SKIP = new Set(['beam', 'colossusBeam', 'cascade', 'cut']);
+function markTopEdges(g) {
+  const P = g.attributes.position.array;
+  const N = g.attributes.normal.array;
+  const n = P.length / 3;
+  const key = new Array(n);
+  const top = new Map();
+  for (let i = 0; i < n; i++) {
+    const nx = N[i * 3];
+    const ny = N[i * 3 + 1];
+    const nz = N[i * 3 + 2];
+    const l = Math.hypot(nx, ny, nz) || 1;
+    if (Math.abs(ny / l) > 0.5) continue;
+    const hx = nx / l;
+    const hz = nz / l;
+    const k = `${Math.round(hx * 24)},${Math.round(hz * 24)},${Math.round((hx * P[i * 3] + hz * P[i * 3 + 2]) * 2)}`;
+    key[i] = k;
+    const y = P[i * 3 + 1];
+    const t = top.get(k);
+    if (t === undefined || y > t) top.set(k, y);
+  }
+  for (let i = 0; i < n; i++) {
+    const nx = N[i * 3];
+    const ny = N[i * 3 + 1];
+    const nz = N[i * 3 + 2];
+    const l = Math.hypot(nx, ny, nz) || 1;
+    const k = key[i];
+    const s = k === undefined ? 1 : 0.5 + 0.5 * Math.min(1, (top.get(k) - P[i * 3 + 1]) / EDGE_MAX);
+    N[i * 3] = (nx / l) * s;
+    N[i * 3 + 1] = (ny / l) * s;
+    N[i * 3 + 2] = (nz / l) * s;
   }
 }
 

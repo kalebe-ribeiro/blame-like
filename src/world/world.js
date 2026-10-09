@@ -221,6 +221,16 @@ export class World {
     const mk = (params) => createSurfaceMaterial(S, { seed: seed + n++ * 13.7, ...params });
     const C = linearColor;
 
+    // ── as superfícies (render/surfaceBaker.js — o rework gráfico, frente 1): família + escala + relevo;
+    //    'top': outra família nas faces de cima; 'rust': a ferrugem da idade do lugar toma o relevo ──
+    const sConcrete = { ...SURF.concrete, bump: 1 };
+    const sConcreteBig = { ...SURF.concrete, tile: 9.6, bump: 0.8 }; // (as estruturas colossais: a pele em escala maior)
+    const sSteel = { ...SURF.steel, bump: 1, rust: true };
+    const sPlate = { ...SURF.plate, bump: 1, rust: true };
+    const sDeck = { ...SURF.steel, bump: 1, rust: true, top: SURF.tread };
+    const sRust = { ...SURF.rust, bump: 1.2 };
+    const sCloth = { ...SURF.weave, bump: 0.8 };
+
     // ── receitas (o "catálogo de materiais" da Cidade) ──
     const concrete = { base: C(0.26, 0.25, 0.235), panel: 4, streaks: 0.6, accentAmount: 0.08 };
     const darkConcrete = { base: C(0.16, 0.155, 0.148), panel: 8, streaks: 0.8, accentAmount: 0.05 };
@@ -238,38 +248,38 @@ export class World {
 
     this.materials = {
       // ── camada chunk (somem na névoa perto do raio de carregamento) ──
-      tower: mk({ ...concrete, panel: 3, windows: 0.035, windowSize: [2.4, 3.6], noiseScale: 0.05, fogAmount: 0.85, fade: fadeNear, surf: { ...SURF.concrete, bump: 1 } }),
-      bridge: mk({ ...deck, fade: fadeNear, surf: { ...SURF.tread, bump: 1 } }),
-      rib: mk({ ...steel, fade: fadeNear }),
+      tower: mk({ ...concrete, panel: 3, windows: 0.035, windowSize: [2.4, 3.6], noiseScale: 0.05, fogAmount: 0.85, fade: fadeNear, surf: sConcrete }),
+      bridge: mk({ ...deck, fade: fadeNear, surf: sDeck }),
+      rib: mk({ ...steel, fade: fadeNear, surf: sSteel }),
       cable: mk({ ...rubber, fade: fadeNear }),
-      duct: mk({ ...steel, panel: 3, fade: fadeNear }),
-      dress: mk({ ...concrete, panel: 5, fade: fadeNear }),
-      block: mk({ ...concrete, base: C(0.24, 0.232, 0.22), panel: 3, windows: 0.16, windowSize: [2.6, 3.2], fade: fadeNear }),
-      slab: mk({ ...darkConcrete, panel: 6, fogAmount: 0.7, fade: fadeNear }),
-      monolith: mk({ ...darkConcrete, base: C(0.07, 0.07, 0.07), panel: 12, fogAmount: 0.6, fade: fadeNear }),
-      plaza: mk({ ...concrete, base: C(0.28, 0.27, 0.255), panel: 3, circuitAmount: 0.2, circuitScale: 0.8, fade: fadeNear }),
-      tube: mk({ ...steel, panel: 2, windows: 0.02, windowSize: [1.5, 1.2], side: THREE.DoubleSide, fade: fadeNear }),
+      duct: mk({ ...steel, panel: 3, fade: fadeNear, surf: sPlate }),
+      dress: mk({ ...concrete, panel: 5, fade: fadeNear, surf: sConcrete }),
+      block: mk({ ...concrete, base: C(0.24, 0.232, 0.22), panel: 3, windows: 0.16, windowSize: [2.6, 3.2], fade: fadeNear, surf: sConcrete }),
+      slab: mk({ ...darkConcrete, panel: 6, fogAmount: 0.7, fade: fadeNear, surf: sConcrete }),
+      monolith: mk({ ...darkConcrete, base: C(0.07, 0.07, 0.07), panel: 12, fogAmount: 0.6, fade: fadeNear, surf: sConcreteBig }),
+      plaza: mk({ ...concrete, base: C(0.28, 0.27, 0.255), panel: 3, circuitAmount: 0.2, circuitScale: 0.8, fade: fadeNear, surf: sConcrete }),
+      tube: mk({ ...steel, panel: 2, windows: 0.02, windowSize: [1.5, 1.2], side: THREE.DoubleSide, fade: fadeNear, surf: sSteel }),
       // ── camada macro (visível a quilômetros) ──
-      wall: mk({ ...megaWall, fogAmount: 0.28, fade: fadeMacro }),
-      floor: mk({ ...darkConcrete, panel: 12, windows: 0.03, windowSize: [4, 5], noiseScale: 0.008, fogAmount: 0.3, fade: fadeMacro }),
-      frame: mk({ ...darkConcrete, base: C(0.17, 0.168, 0.162), panel: 6, fogAmount: 0.35, fade: fadeMacro }),
-      stairway: mk({ ...concrete, panel: 6, fogAmount: 0.4, fade: fadeMacro }),
-      macro: mk({ ...darkConcrete, base: C(0.09, 0.09, 0.09), panel: 16, windows: 0.015, fogAmount: 0.3, fade: fadeMacro }),
+      wall: mk({ ...megaWall, fogAmount: 0.28, fade: fadeMacro, surf: sConcreteBig }),
+      floor: mk({ ...darkConcrete, panel: 12, windows: 0.03, windowSize: [4, 5], noiseScale: 0.008, fogAmount: 0.3, fade: fadeMacro, surf: sConcreteBig }),
+      frame: mk({ ...darkConcrete, base: C(0.17, 0.168, 0.162), panel: 6, fogAmount: 0.35, fade: fadeMacro, surf: sConcreteBig }),
+      stairway: mk({ ...concrete, panel: 6, fogAmount: 0.4, fade: fadeMacro, surf: sConcrete }),
+      macro: mk({ ...darkConcrete, base: C(0.09, 0.09, 0.09), panel: 16, windows: 0.015, fogAmount: 0.3, fade: fadeMacro, surf: sConcreteBig }),
       // ── regiões fechadas e condutos ──
-      hive: mk({ ...concrete, base: C(0.22, 0.214, 0.205), panel: 3, windows: 0.015, windowSize: [2.5, 3], fade: fadeNear }),
-      massif: mk({ ...megaWall, panel: 6, windows: 0.08, windowSize: [3, 4], noiseScale: 0.02, fogAmount: 0.7, fade: fadeNear }),
-      conduit: mk({ ...steel, base: C(0.14, 0.142, 0.145), panel: 4, windows: 0.01, windowSize: [2, 2], side: THREE.DoubleSide, fogAmount: 0.4, fade: fadeMacro }),
+      hive: mk({ ...concrete, base: C(0.22, 0.214, 0.205), panel: 3, fade: fadeNear, surf: sConcrete }), // (sem a grade de janelas: o usuário, 2026-10-09)
+      massif: mk({ ...megaWall, panel: 6, windows: 0.08, windowSize: [3, 4], noiseScale: 0.02, fogAmount: 0.7, fade: fadeNear, surf: sConcreteBig }),
+      conduit: mk({ ...steel, base: C(0.14, 0.142, 0.145), panel: 4, windows: 0.01, windowSize: [2, 2], side: THREE.DoubleSide, fogAmount: 0.4, fade: fadeMacro, surf: sSteel }),
       // ── camadas, escala humana, vestígios ──
       // as faces abertas pelo emissor de feixe (a arma de Killy): metal fundido, escuro
       // (a brasa que esfria vem nos efeitos — o cofre, Arma-do-Killy §7.5)
       cut: mk({ ...steel, base: C(0.075, 0.07, 0.068), accent: C(0.16, 0.08, 0.04), accentAmount: 0.6, panel: 100, streaks: 0.2, fade: fadeNear, heat: true }), // (em brasa depois do tiro — app/beamfx.js)
-      barrier: mk({ ...darkConcrete, base: C(0.13, 0.126, 0.12), panel: 16, streaks: 0.9, noiseScale: 0.006, fogAmount: 0.35, fade: fadeMacro }),
-      rungs: mk({ ...steel, panel: 100, cutout: 1, side: THREE.DoubleSide, fade: fadeNear }),
-      grate: mk({ ...steel, panel: 100, cutout: 2, side: THREE.DoubleSide, fade: fadeNear }),
-      door: mk({ base: C(0.012, 0.012, 0.013), panel: 100, streaks: 0.2, accentAmount: 0, fade: fadeNear }),
+      barrier: mk({ ...darkConcrete, base: C(0.13, 0.126, 0.12), panel: 16, streaks: 0.9, noiseScale: 0.006, fogAmount: 0.35, fade: fadeMacro, surf: sConcreteBig }),
+      rungs: mk({ ...steel, panel: 100, cutout: 1, side: THREE.DoubleSide, fade: fadeNear, surf: sSteel }),
+      grate: mk({ ...steel, panel: 100, cutout: 2, side: THREE.DoubleSide, fade: fadeNear, surf: sSteel }),
+      door: mk({ base: C(0.012, 0.012, 0.013), panel: 100, streaks: 0.2, accentAmount: 0, fade: fadeNear, surf: sSteel }),
       sign: mk({ ...steel, panel: 100, windows: 0.55, windowSize: [0.16, 0.2], windowColor: C(0.9, 0.85, 0.7), fade: fadeNear }),
-      shack: mk({ ...steel, base: C(0.15, 0.13, 0.11), accentAmount: 0.8, panel: 0.8, fade: fadeNear }),
-      cloth: mk({ base: C(0.2, 0.17, 0.14), accent: C(0.18, 0.08, 0.06), accentAmount: 0.5, panel: 100, streaks: 0.5, side: THREE.DoubleSide, fade: fadeNear }),
+      shack: mk({ ...steel, base: C(0.15, 0.13, 0.11), accentAmount: 0.8, panel: 0.8, fade: fadeNear, surf: sRust }),
+      cloth: mk({ base: C(0.2, 0.17, 0.14), accent: C(0.18, 0.08, 0.06), accentAmount: 0.5, panel: 100, streaks: 0.5, side: THREE.DoubleSide, fade: fadeNear, surf: sCloth }),
       screen: mk({ base: C(0.01, 0.015, 0.012), panel: 100, windows: 0.9, windowSize: [0.05, 0.03], windowColor: C(0.35, 0.6, 0.45), fade: fadeNear }),
       graffiti: mk({ base: C(0.09, 0.025, 0.02), panel: 100, streaks: 0.3, accentAmount: 0, cutout: 3, fade: fadeNear }),
       water: mk({ base: C(0.05, 0.05, 0.055), panel: 100, streaks: 0, wet: 1, fade: fadeNear }),
@@ -280,12 +290,12 @@ export class World {
       flood: mk({ base: C(0.03, 0.032, 0.034), panel: 100, streaks: 0, accentAmount: 0, wet: 1, fogAmount: 0.6, fade: fadeMacro, reflect: true }),
       // a pele dos Safeguards: pálida, lisa, sem placas (fase 6)
       pale: mk({ base: C(0.5, 0.49, 0.46), panel: 100, streaks: 0.15, accentAmount: 0, fogAmount: 0.9 }),
-      machine: mk({ ...steel, base: C(0.1, 0.1, 0.105), accentAmount: 0.6, panel: 2.5, fogAmount: 0.6, surf: { ...SURF.plate, bump: 1 } }),
+      machine: mk({ ...steel, base: C(0.1, 0.1, 0.105), accentAmount: 0.6, panel: 2.5, fogAmount: 0.6, surf: sPlate }),
       // a lente das luminárias: clara, acesa pela própria luz logo abaixo dela
       lamp: mk({ base: C(0.85, 0.82, 0.74), panel: 100, streaks: 0, accentAmount: 0, fogAmount: 0.5, fade: fadeNear }),
       lampFar: mk({ base: C(0.85, 0.82, 0.74), panel: 100, streaks: 0, accentAmount: 0, fogAmount: 0.35, fade: fadeMacro }),
       // máquinas colossais nas trincheiras do teto (vistas a quilômetros)
-      colossus: mk({ ...steel, base: C(0.085, 0.085, 0.09), accentAmount: 0.5, panel: 7, windows: 0.04, windowSize: [4, 2.5], windowColor: C(0.95, 0.62, 0.32), fogAmount: 0.35, fade: fadeMacro }),
+      colossus: mk({ ...steel, base: C(0.085, 0.085, 0.09), accentAmount: 0.5, panel: 7, windows: 0.04, windowSize: [4, 2.5], windowColor: C(0.95, 0.62, 0.32), fogAmount: 0.35, fade: fadeMacro, surf: sPlate }),
       beam: createBeamMaterial(S, { color: new THREE.Vector3(0.95, 0.88, 0.75), intensity: 0.05, fade: fadeMacro }),
       colossusBeam: createBeamMaterial(S, { color: new THREE.Vector3(1.0, 0.7, 0.42), intensity: 0.14, fade: fadeMacro }),
     };
@@ -301,6 +311,8 @@ export class World {
       const mat = src.clone();
       // clone() copia os uniforms: religa os compartilhados (tempo, luzes, névoa...)
       for (const k of Object.keys(S)) mat.uniforms[k] = S[k];
+      // (longe, sem as texturas assadas: a névoa e o mip mais alto apagam o detalhe — o rework gráfico, etapa 4)
+      for (const k of ['USE_SURF_TEX', 'USE_SURF_RUST', 'SURF_RUST_LAYER', 'SURF_RUST_SCALE']) delete mat.defines[k];
       this.lodMaterials[name] = mat;
     }
     return this.materials;

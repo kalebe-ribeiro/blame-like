@@ -193,7 +193,7 @@ ctx.safeguards = createSafeguards(ctx); // rondas, caçadas, captura (fase 6)
 ctx.people = createPeople(ctx); // conversa, trocas, cargas (fase 7)
 ctx.gene = createGene(ctx); // o gene de terminal: o objetivo final (o cofre, Gene-terminal)
 /** Avisados a cada quadro DESENHADO (os testes medem por aqui: um rAF pode passar a vez — o laço abaixo). */
-ctx.frameHooks = new Set();
+ctx.frameHooks ??= new Set(); // (o forno das superfícies — app/render.js — já pode ter posto o dele)
 setupDev(ctx);
 
 // ─── loop ───────────────────────────────────────────────────────────────────
