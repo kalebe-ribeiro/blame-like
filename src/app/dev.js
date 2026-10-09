@@ -548,6 +548,47 @@ export function setupDev(ctx) {
       await /** @type {any} */ (window).cybercosmic?.devCapture?.('bulb.png');
     }, Number(params.get('bulbcam')) * 1000);
   }
+  // --beingsheet=N: aos N s, uma fileira dos corpos (o rework gráfico, frentes 5 e 6 — world/kits.js) à frente
+  // da câmera, no chão: os Safeguards baixo/médio/alto (dois de cada), a vida de silício baixa/média/alta, os
+  // quatro grupos humanos (dois de cada) e dois andarilhos — parados, em pose de caminhada. Captura beings.png
+  if (params.get('beingsheet')) {
+    setTimeout(async () => {
+      const B = await import('../world/bodies.js');
+      const { TRIBES } = await import('../world/kits.js');
+      const M = world.materials;
+      const list = [];
+      for (const lv of ['low', 'low', 'mid', 'mid', 'high', 'high']) list.push(B.buildSafeguardLevel(M, lv, 'sg' + list.length));
+      for (const lv of ['low', 'mid', 'high']) list.push(B.buildSiliconLevel(M, lv, 'si' + list.length));
+      for (const tr of TRIBES) for (let k = 0; k < 2; k++) list.push(B.buildHumanOf(M, `vl:${tr}x:${k}`, tr));
+      for (let k = 0; k < 2; k++) list.push(B.buildTranshumanOf(M, 'wd:' + k));
+      // (o grupo pelo nome da vila: força cada grupo — tribeOf é por hash; aqui o id da vila é o do grupo)
+      const { tribeOf } = await import('../world/kits.js');
+      console.warn('BEINGSHEET grupos: ' + TRIBES.map((tr) => tribeOf(tr + 'x')).join(','));
+      const fwd = new THREE.Vector3();
+      camera.getWorldDirection(fwd);
+      fwd.y = 0;
+      fwd.normalize();
+      const side = new THREE.Vector3(-fwd.z, 0, fwd.x);
+      const col = ctx.controls.walker.col;
+      col._t = -1e9;
+      col.refresh(camera.position, 40);
+      const n = list.length;
+      list.forEach((rig, i) => {
+        const p = camera.position.clone().addScaledVector(fwd, 9).addScaledVector(side, (i - (n - 1) / 2) * 1.25);
+        const hit = col.ray(p.clone().setY(camera.position.y + 1), new THREE.Vector3(0, -1, 0), 20);
+        if (hit) p.y = hit.point.y;
+        rig.group.position.copy(p);
+        rig.group.rotation.y = Math.atan2(-fwd.x, -fwd.z);
+        rig.animate(0.3, 1.2, true);
+        ctx.scene.add(rig.group);
+      });
+      ctx.controls.canFly = true;
+      ctx.controls.setMode('fly');
+      if (!ctx.carried.lanternOn) ctx.carried.toggleLantern();
+      await new Promise((r) => setTimeout(r, 2500));
+      await /** @type {any} */ (window).cybercosmic?.devCapture?.('beings.png');
+    }, Number(params.get('beingsheet')) * 1000);
+  }
   // --rayprobe=N: aos N s, um raio do centro da tela por todas as malhas de colisão (os dois lados das faces):
   // o material, a distância e se a face está de COSTAS para a câmera (uma face de costas na frente de uma de
   // frente: a peça é oca vista dali)

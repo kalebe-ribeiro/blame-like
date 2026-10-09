@@ -176,9 +176,11 @@ export class SafeguardSystem {
   _spawnPatrol(c) {
     const s = c.phase + this.clock() * PATROL.speed;
     const p = circuitAt(c, s);
-    const e = this.ents.spawn({ id: `sg:${c.id}`, kind: 'safeguard', feet: p, yaw: p.yaw, persist: false, brain: this });
     const p0 = c.pts[0];
-    e.level = levelAt(this.field, p0.x, p0.y, p0.z, 0);
+    // (o nível antes de nascer: o corpo é o do nível — world/kits.js)
+    const level = levelAt(this.field, p0.x, p0.y, p0.z, 0);
+    const e = this.ents.spawn({ id: `sg:${c.id}`, kind: 'safeguard', feet: p, yaw: p.yaw, persist: false, brain: this, level });
+    e.level = level;
     e.walker.speedScale = PATROL_SCALE;
     e.sg = { c, s, state: 'patrol', unseen: 0, lastSeen: null, searchT: 0, percT: Math.random() * 0.2, sees: false, stepAcc: 0, stuckT: 0 };
     this.byTerritory.set(c.id, e);
@@ -609,8 +611,9 @@ export class SafeguardSystem {
     panel.userData.noCollide = true;
     this.group.add(panel);
     const id = `sgh:${Math.round(this.time * 1000)}:${this.hunters.size}`;
-    const e = this.ents.spawn({ id, kind: 'safeguard', feet: spot.wall.clone().addScaledVector(spot.nrm, -0.2), yaw: Math.atan2(spot.nrm.x, spot.nrm.z) + Math.PI, persist: false, brain: this });
-    e.level = levelAt(this.field, spot.wall.x, spot.wall.y, spot.wall.z, 1);
+    const level = levelAt(this.field, spot.wall.x, spot.wall.y, spot.wall.z, 1);
+    const e = this.ents.spawn({ id, kind: 'safeguard', feet: spot.wall.clone().addScaledVector(spot.nrm, -0.2), yaw: Math.atan2(spot.nrm.x, spot.nrm.z) + Math.PI, persist: false, brain: this, level });
+    e.level = level;
     e.sg = {
       c: null, state: 'emerge', unseen: 0, lastSeen: new THREE.Vector3(g.x, g.y - 1.7, g.z), searchT: 0, percT: 1.8, sees: false, stepAcc: 0, stuckT: 0,
       panel: { mesh: panel, wall: spot.wall, nrm: spot.nrm, front: spot.front, t: 0 },

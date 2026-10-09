@@ -39,7 +39,7 @@ import { Walker } from '../controls/walker.js';
 import { CollisionWorld } from './collision.js';
 import { NavGraph } from '../gen/nav.js';
 import { ElevatorSystem } from './elevators.js';
-import { buildTestBody, buildSafeguardBody, buildHumanBody, buildTranshumanBody, buildSiliconBody } from './bodies.js';
+import { buildTestBody, buildSafeguardLevel, buildHumanOf, buildTranshumanOf, buildSiliconLevel } from './bodies.js';
 
 const NEAR = 110; // m: física completa
 const FAR = 130; // m: volta ao abstrato (histerese)
@@ -82,7 +82,7 @@ export class EntitySystem {
    * brain: quem decide para onde o corpo vai (world/safeguards.js); sem brain, o corpo segue e.path.
    */
   spawn(def) {
-    const rig = this._rig(def.kind);
+    const rig = this._rig(def.kind, def);
     this.group.add(rig.group);
     const walker = new Walker(new CollisionWorld(this.world));
     walker.canClimb = false; // (ligado só quando o corpo decide usar uma escada — senão um rumo de lado a pegaria)
@@ -156,14 +156,14 @@ export class EntitySystem {
     this.bus?.emit('being:die', { id: e.id, kind: e.kind, cause, x: e.feet.x, y: e.feet.y, z: e.feet.z });
   }
 
-  /** O corpo de cada tipo de ser. */
-  _rig(kind) {
+  /** O corpo de cada tipo de ser (e: o ser — o nível e a identidade fazem o corpo dos hostis, world/kits.js). */
+  _rig(kind, e = null) {
     const M = this.materials;
     const dark = (this._void ??= new THREE.MeshBasicMaterial({ color: 0x030303 })); // o escuro sem luz (dentro do capuz)
-    if (kind === 'safeguard') return buildSafeguardBody(M.pale, M.door);
-    if (kind === 'human') return buildHumanBody(M.cloth, M.cloth, dark);
-    if (kind === 'transhuman') return buildTranshumanBody(M.cloth, M.machine, dark);
-    if (kind === 'silicon') return buildSiliconBody(M.monolith);
+    if (kind === 'safeguard') return buildSafeguardLevel(M, e?.level ?? 'low', e?.id);
+    if (kind === 'human') return buildHumanOf(M, e?.id);
+    if (kind === 'transhuman') return buildTranshumanOf(M, e?.id);
+    if (kind === 'silicon') return buildSiliconLevel(M, e?.level ?? 'low', e?.id);
     return buildTestBody(M.machine);
   }
 
@@ -171,7 +171,7 @@ export class EntitySystem {
   replaceRig(e, kind) {
     this.group.remove(e.rig.group);
     e.rig.dispose();
-    e.rig = this._rig(kind);
+    e.rig = this._rig(kind, e);
     this.group.add(e.rig.group);
     e.kind = kind;
     if (kind === 'silicon') e.walker.eye = 1.9;

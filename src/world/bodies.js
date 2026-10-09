@@ -13,6 +13,7 @@
 //  pés não "patinam"); parado, tudo volta ao repouso.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { safeguardKit, siliconKit, humanKit, transhumanKit, tribeOf } from './kits.js';
 
 const TEST = {
   hip: 0.95, // altura do quadril
@@ -39,69 +40,40 @@ function joint(parent, x, y, z) {
   return j;
 }
 
-/** O Safeguard: mais alto, membros longos, passada maior. */
-const SAFEGUARD = {
-  hip: 1.2,
-  thigh: 0.6,
-  shin: 0.58,
-  torso: 0.7,
-  shoulderW: 0.22,
-  hipW: 0.1,
-  upperArm: 0.42,
-  forearm: 0.46,
-  stride: 1.9,
-};
-
 /** O corpo de teste: { group, animate(dt, speed, grounded), dispose() }. Os pés ficam em y = 0. */
 export function buildTestBody(material) {
   return buildBody(material, TEST);
 }
 
-/** Um humano (fase 7): mais baixo, curvado, de capuz e manto (`cloth`); o rosto some no escuro do capuz. */
-const HUMAN = {
-  hip: 0.86,
-  thigh: 0.42,
-  shin: 0.4,
-  torso: 0.5,
-  shoulderW: 0.18,
-  hipW: 0.09,
-  upperArm: 0.27,
-  forearm: 0.28,
-  stride: 1.15,
-};
-
-export function buildHumanBody(material, cloth, dark) {
-  return buildBody(material, HUMAN, null, { cloth, dark });
+/** Os hostis por nível (o rework gráfico, frente 5 — world/kits.js): M os materiais, level, id. */
+export function buildSafeguardLevel(M, level, id) {
+  const { D, kit } = safeguardKit(level, M, id);
+  return buildBody(M.pale, D, null, null, kit);
+}
+/** Um morador: o grupo vem da vila (o id `vl:<vila>:<n>` — world/npcs.js); sem vila, um abrigado. */
+export function buildHumanOf(M, id, tribe = null) {
+  const s = String(id ?? '');
+  const vid = s.startsWith('vl:') ? s.slice(3, s.lastIndexOf(':')) : '';
+  const { D, kit } = humanKit(tribe ?? (vid ? tribeOf(vid) : 'abrigado'), M, id);
+  return buildBody(M.cloth, D, null, null, kit);
+}
+/** Um andarilho transumano (as próteses dele). */
+export function buildTranshumanOf(M, id) {
+  const { D, kit } = transhumanKit(M, id);
+  return buildBody(M.cloth, D, null, null, kit);
+}
+export function buildSiliconLevel(M, level, id) {
+  const { D, kit } = siliconKit(level, M, id);
+  return buildBody(M.monolith, D, null, null, kit);
 }
 
-/** Um andarilho transumano (fase 7): proporções de gente, um braço de máquina mais longo, capuz. */
-export function buildTranshumanBody(cloth, machine, dark) {
-  return buildBody(cloth, TEST, null, { cloth, dark, mech: machine, short: true });
-}
-
-/** A vida de silício, revelada: magra, escura, braços longos demais, cabeça pequena e alongada. */
-const SILICON = {
-  hip: 1.1,
-  thigh: 0.56,
-  shin: 0.56,
-  torso: 0.62,
-  shoulderW: 0.16,
-  hipW: 0.09,
-  upperArm: 0.55,
-  forearm: 0.66,
-  stride: 1.8,
-};
-
-export function buildSiliconBody(dark) {
-  return buildBody(dark, SILICON, null, { silicon: true });
-}
-
-/** O Safeguard (pálido; `slit`: o material escuro da fenda no rosto). */
-export function buildSafeguardBody(material, slit) {
-  return buildBody(material, SAFEGUARD, slit);
-}
-
-function buildBody(material, D, slitMat = null, dress = null) {
+/**
+ * kit (opcional — world/kits.js): head(neck, add) no lugar da cabeça; hand(el, lado, antebraço, add) na
+ * ponta de cada braço; deco({ root, spine, neck, add }) as peças do corpo; strike(w)/rest() a reação ao
+ * golpe (o núcleo); dispose(). D.girth engrossa tronco e membros; D.extraArms pares de braços a mais.
+ */
+function buildBody(material, D, slitMat = null, dress = null, kit = null) {
+  const G = D.girth ?? 1;
   const group = new THREE.Group();
   const root = joint(group, 0, D.hip, 0); // o quadril (sobe e desce com a passada)
   const meshes = [];
@@ -115,19 +87,22 @@ function buildBody(material, D, slitMat = null, dress = null) {
   add(root, new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.16, 0.18), material));
   const spine = joint(root, 0, 0.06, 0);
   spine.rotation.x = 0.08;
-  const chest = new THREE.CylinderGeometry(0.19, 0.13, D.torso, 7);
+  const chest = new THREE.CylinderGeometry(0.19 * G, 0.13 * G, D.torso, 7);
   chest.scale(1, 1, 0.62);
   chest.translate(0, D.torso / 2, 0);
   add(spine, new THREE.Mesh(chest, material));
   // pescoço e cabeça: lisa, sem rosto
   const neck = joint(spine, 0, D.torso, 0.01);
-  add(neck, limb(0.1, 0.045, 0.05, material)).position.y = 0.1;
-  const head = new THREE.SphereGeometry(0.12, 10, 8);
-  head.scale(0.92, slitMat ? 1.55 : 1.28, 1.05);
-  head.translate(0, slitMat ? 0.24 : 0.21, 0.02);
-  // dentro do capuz a cabeça é só escuro (nenhum rosto)
-  if (dress?.silicon) head.scale(0.7, 1.25, 0.85);
-  add(neck, new THREE.Mesh(head, dress?.dark ?? material));
+  add(neck, limb(0.1, 0.045 * G, 0.05 * G, material)).position.y = 0.1;
+  if (kit?.head) kit.head(neck, add);
+  else {
+    const head = new THREE.SphereGeometry(0.12, 10, 8);
+    head.scale(0.92, slitMat ? 1.55 : 1.28, 1.05);
+    head.translate(0, slitMat ? 0.24 : 0.21, 0.02);
+    // dentro do capuz a cabeça é só escuro (nenhum rosto)
+    if (dress?.silicon) head.scale(0.7, 1.25, 0.85);
+    add(neck, new THREE.Mesh(head, dress?.dark ?? material));
+  }
   if (dress?.cloth) {
     // o capuz (aberto na frente: dentro, só escuro) e o manto caindo dos ombros até os joelhos
     // aberto na frente (+z é φ = π/2 no SphereGeometry): uma abertura de ~100°
@@ -147,29 +122,33 @@ function buildBody(material, D, slitMat = null, dress = null) {
     add(neck, new THREE.Mesh(slit, slitMat));
   }
 
-  // braços
+  // braços (e os pares a mais — a vida de silício alta: uma massa de membros)
   const arms = [];
-  for (const s of [-1, 1]) {
-    // o braço de máquina do transumano (o direito): mais longo, de aço
-    const mech = dress?.mech && s > 0;
-    const ua = D.upperArm * (mech ? 1.12 : 1);
-    const fa = D.forearm * (mech ? 1.3 : 1);
-    const mat = mech ? dress.mech : material;
-    const sh = joint(spine, s * D.shoulderW, D.torso - 0.06, 0);
-    sh.rotation.z = s * 0.06;
-    add(sh, limb(ua, mech ? 0.06 : 0.05, 0.042, mat));
-    const el = joint(sh, 0, -ua, 0);
-    add(el, limb(fa, mech ? 0.05 : 0.04, 0.03, mat));
-    arms.push({ sh, el, s });
+  for (let pair = 0; pair <= (D.extraArms ?? 0); pair++) {
+    const k = pair ? 0.85 : 1;
+    for (const s of [-1, 1]) {
+      // o braço de máquina do transumano (o direito): mais longo, de aço
+      const mech = dress?.mech && s > 0;
+      const ua = D.upperArm * (mech ? 1.12 : 1) * k;
+      const fa = D.forearm * (mech ? 1.3 : 1) * k;
+      const mat = mech ? dress.mech : material;
+      const sh = joint(spine, s * D.shoulderW * (pair ? 0.85 : 1), D.torso * (pair ? 0.62 : 1) - 0.06, 0);
+      sh.rotation.z = s * 0.06;
+      add(sh, limb(ua, (mech ? 0.06 : 0.05) * G, 0.042 * G, mat));
+      const el = joint(sh, 0, -ua, 0);
+      add(el, limb(fa, (mech ? 0.05 : 0.04) * G, 0.03 * G, mat));
+      if (kit?.hand) kit.hand(el, s, fa, add);
+      arms.push({ sh, el, s, extra: pair > 0 });
+    }
   }
 
   // pernas
   const legs = [];
   for (const s of [-1, 1]) {
     const hp = joint(root, s * D.hipW, -0.04, 0);
-    add(hp, limb(D.thigh, 0.075, 0.055, material));
+    add(hp, limb(D.thigh, 0.075 * G, 0.055 * G, material));
     const kn = joint(hp, 0, -D.thigh, 0);
-    add(kn, limb(D.shin, 0.052, 0.04, material));
+    add(kn, limb(D.shin, 0.052 * G, 0.04 * G, material));
     const an = joint(kn, 0, -D.shin, 0);
     const foot = new THREE.BoxGeometry(0.09, 0.06, 0.24);
     foot.translate(0, -0.03, 0.06);
@@ -178,6 +157,7 @@ function buildBody(material, D, slitMat = null, dress = null) {
   }
   // de pé, o pé encosta em y = 0: quadril − (coxa + canela) − 0,04 − 0,06 (o pé)
   root.position.y = D.thigh + D.shin + 0.04 + 0.06;
+  kit?.deco?.({ root, spine, neck, add });
 
   for (const m of meshes) m.userData.noCollide = true;
 
@@ -200,11 +180,12 @@ function buildBody(material, D, slitMat = null, dress = null) {
         L.an.rotation.x = -L.hp.rotation.x * 0.3 - L.kn.rotation.x * 0.4;
       }
       for (const A of arms) {
-        const p = phase + (A.s > 0 ? 0 : Math.PI);
+        const p = phase + (A.s > 0 ? 0 : Math.PI) + (A.extra ? Math.PI * 0.5 : 0);
         A.sh.rotation.x = -Math.sin(p) * 0.32 * a;
-        A.sh.rotation.z = A.s * 0.06;
+        A.sh.rotation.z = A.s * (A.extra ? 0.35 : 0.06);
         A.el.rotation.x = -0.25 - Math.max(0, -Math.sin(p)) * 0.3 * a;
       }
+      kit?.rest?.();
       // o quadril fica na altura em que o pé mais baixo encosta no chão (nada de pés no ar)
       let reach = 0;
       for (const L of legs) {
@@ -253,9 +234,11 @@ function buildBody(material, D, slitMat = null, dress = null) {
       spine.rotation.y = 0.45 * w * (1 - s) - 0.35 * s;
       spine.rotation.x += 0.2 * w;
       neck.rotation.x = 0.15 * w;
+      kit?.strike?.(w);
     },
     dispose() {
-      for (const m of meshes) m.geometry.dispose();
+      group.traverse((/** @type {any} */ o) => o.geometry?.dispose?.());
+      kit?.dispose?.();
     },
   };
 }
