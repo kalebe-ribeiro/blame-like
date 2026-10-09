@@ -331,7 +331,7 @@ function markTopEdges(g) {
   const P = g.attributes.position.array;
   const N = g.attributes.normal.array;
   const n = P.length / 3;
-  const key = new Array(n);
+  const key = new Float64Array(n).fill(-1);
   const top = new Map();
   for (let i = 0; i < n; i++) {
     const nx = N[i * 3];
@@ -341,7 +341,8 @@ function markTopEdges(g) {
     if (Math.abs(ny / l) > 0.5) continue;
     const hx = nx / l;
     const hz = nz / l;
-    const k = `${Math.round(hx * 24)},${Math.round(hz * 24)},${Math.round((hx * P[i * 3] + hz * P[i * 3 + 2]) * 2)}`;
+    // (a chave numérica: direção em 1/24, distância em 0,5 m — a de texto custava caro nas malhas grandes da macro)
+    const k = Math.round(hx * 24) + 24 + 49 * (Math.round(hz * 24) + 24 + 49 * (Math.round((hx * P[i * 3] + hz * P[i * 3 + 2]) * 2) + 1e6));
     key[i] = k;
     const y = P[i * 3 + 1];
     const t = top.get(k);
@@ -353,7 +354,7 @@ function markTopEdges(g) {
     const nz = N[i * 3 + 2];
     const l = Math.hypot(nx, ny, nz) || 1;
     const k = key[i];
-    const s = k === undefined ? 1 : 0.5 + 0.5 * Math.min(1, (top.get(k) - P[i * 3 + 1]) / EDGE_MAX);
+    const s = k < 0 ? 1 : 0.5 + 0.5 * Math.min(1, (top.get(k) - P[i * 3 + 1]) / EDGE_MAX);
     N[i * 3] = (nx / l) * s;
     N[i * 3 + 1] = (ny / l) * s;
     N[i * 3 + 2] = (nz / l) * s;

@@ -590,10 +590,24 @@ async function run(ctx) {
       }
     }
     const ids1 = world.cuts.map((c) => c.id).sort().join(',');
+    // (o diagnóstico: os chunks perto que a caixa dos cortes pega — chegaram? têm as caixas das peças?)
+    let inBox = 0;
+    let inBoxRec = 0;
+    let inBoxBoxes = 0;
+    for (const L of [...world.layers, world.macroLayer]) {
+      for (const e of L.chunks.values()) {
+        const s2 = L.size;
+        if (!world.field.cutsInBox(e.cx * s2, e.cy * s2, e.cz * s2, (e.cx + 1) * s2, (e.cy + 1) * s2, (e.cz + 1) * s2).length) continue;
+        inBox++;
+        if (e.received) inBoxRec++;
+        if (e.pieceBoxes) inBoxBoxes++;
+      }
+    }
+    const gb = camera.position.clone().add(world.origin);
     report({
       kind: 'salvar',
       ok: ids0 === ids1 && world.field.cuts.length === world.cuts.length && cut > 0 && jobs === 0,
-      why: `${world.cuts.length} cortes de volta (ids ${ids0 === ids1 ? 'iguais' : 'DIFERENTES'}) · ${cut} chunks com cortes em volta · ${cached} do cache · ${jobs} cortados de novo (CSG) · ${cut - cached - jobs} sem peça atingida`,
+      why: `${world.cuts.length} cortes de volta (ids ${ids0 === ids1 ? 'iguais' : 'DIFERENTES'}) · ${cut} chunks com cortes em volta · ${cached} do cache · ${jobs} cortados de novo (CSG) · ${cut - cached - jobs} sem peça atingida · na caixa dos cortes ${inBox} (chegaram ${inBoxRec}, com caixas de peças ${inBoxBoxes}) · câmera ${[gb.x, gb.y, gb.z].map(Math.round)} (antes ${[back.x, back.y, back.z].map(Math.round)})`,
     });
   }
   if (!part) await (await import('./damagetest.js')).runDamage(ctx, report);

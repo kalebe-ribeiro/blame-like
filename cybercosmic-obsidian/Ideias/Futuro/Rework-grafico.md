@@ -60,6 +60,13 @@ O bulbo (`gen/chunkgen.js` buildSegment: prisma aberto + cone em cima + cone vir
 - **O forno** espera os programas dele compilarem (compileAsync, até 5 s) antes do primeiro passo, e os guarda entre um mundo e outro (`HEIGHT_MATS`); um mundo refeito com a mesma seed não refaz o forno (as texturas seriam as mesmas).
 - O cache de shaders frio (a primeira vez depois de mudar um shader — no desenvolvimento, ou a primeira abertura de uma versão nova) ainda custa: a compilação inteira dos programas novos (~10–30 s medidos nesta máquina). Fica registrado.
 
+### Regressão final da frente 1 (2026-10-09, manhã)
+- **`npm run profile`** (parado, média de 9 lugares): **quadro 9,5 ms · GPU 8,0 ms** — a linha de base era 11,8 / 8,8 (o aquecimento tirou os engasgos de chegada da medição); o pior lugar, a vila, 72 fps. Sem avisos X4000/X3595.
+- **`check` 31/31** (119 fps), **`check:pilgrimage` 31/31** (116 fps), **`check:beam --beampart=f1` 16/16** (lotes: 13,3 → 8,5 milhões de vértices, capacidade ~757 → ~645 MB).
+- Instáveis, sem ligação com o rework: **`tempo`** (o p95 de 10 tiros é o pior tiro; reprovou 2× numa hora em que a máquina estava lenta — a própria base deu 16,2 ms de quadro nessa hora contra 11,8 antes — e passou com 155/486 ms depois; o worker que regera o chunk é a maior parte); **`salvar`** (depois dos tiros de colapso, só 1–2 chunks perto têm cortes — reprovou 2 de 5 vezes com 0; a base, numa rodada, passou com 1). O relatório do `salvar` agora traz os chunks na caixa dos cortes e as posições, para a próxima vez.
+- Corrigido no caminho: o worker marcava as bordas com uma chave de texto por vértice (caro nas malhas grandes da macro: um tiro inteiro de 2,3 s) — agora numérica.
+- Capturas, antes (main) × depois (esta branch): ![[Imagens/rework/vistas-antes-depois.jpg]] · o bulbo dos pilares: ![[Imagens/rework/bulbo-antes-depois.png]] · o protótipo (a torre): ![[Imagens/rework/prototipo-torre.png]]. O roteiro das 20 vistas: `--capture` com `--seed=abc --delay=26 --show --goto=<lugar>` (+ `--fog=0`, ou `--lantern --game=pilgrimage`); de perto: `--surfcam=<material>`, `--bulbcam=N`.
+
 ### Decisões do Claude (2026-10-09, autonomia dada pelo usuário — revisar)
 > O usuário: "te dou permissão pra prosseguir com o plano até finalizar o rework gráfico completo (todas as etapas)… já que você vai fazer a maioria das decisões, ponha elas destacadas como suas e faça os commits numa branch secundária." Tudo na branch **`rework-grafico`** (a `main` ficou no 5efcef3).
 - **Escopo**: "todas as etapas" = as etapas 1–5 da frente 1 (superfícies), o plano aprovado. Hostis/NPCs e animações ficaram de fora — têm planos próprios que dependem de escolhas do usuário.
