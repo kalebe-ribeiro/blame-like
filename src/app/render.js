@@ -6,6 +6,7 @@
 //  névoa, render/pipeline.js) → bloom → tone mapping → filme (grão, vinheta).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { bakeSurfaces } from '../render/surfaceBaker.js';
 import { t } from '../i18n/index.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -68,8 +69,20 @@ export function resize(ctx) {
   hud?.resize();
 }
 
-/** Um mundo novo: o reflexo passa a ler o material de água dele. */
+/** As texturas das superfícies pela seed do mundo (render/surfaceBaker.js): para todos os materiais
+ *  (os uniforms compartilhados — ctx.shared). Os alvos são reaproveitados de um mundo para o outro. */
+export function bakeWorldSurfaces(ctx) {
+  const r = bakeSurfaces(ctx.renderer, ctx.seed, ctx._surf);
+  ctx._surf = r;
+  ctx.shared.uSurfA.value = r.a;
+  ctx.shared.uSurfB.value = r.b;
+  ctx.shared.uSurfOn.value = 1;
+  if (new URLSearchParams(location.search).get('stats')) console.warn(`SURF: forno ${r.ms.toFixed(1)} ms`);
+}
+
+/** Um mundo novo: o reflexo passa a ler o material de água dele; as superfícies, a seed dele. */
 export function onWorldBuilt(ctx) {
+  bakeWorldSurfaces(ctx);
   ctx.scenePass.reset();
   ctx.reflection.materials = [];
   ctx.reflection.attach(ctx.world.materials.flood);

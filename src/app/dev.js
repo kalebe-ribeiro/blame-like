@@ -425,6 +425,78 @@ export function setupDev(ctx) {
       await /** @type {any} */ (window).cybercosmic?.devCapture?.('hose.png');
     }, Number(params.get('hosetest')) * 1000);
   }
+  // --surfcam=mat: aos 12 s, uma superfície do material 'mat' de perto (o rework gráfico, frente 1 — o cofre,
+  // Rework-grafico): a face mais perto de uma malha dele, a câmera de viés a 2,5 e a 8 m; cada vista com as
+  // texturas do forno desligadas e ligadas (uSurfOn: o antes e o depois no mesmo quadro), e de perto com a
+  // lanterna. Capturas surf-<mat>-<dist>[-lanterna]-<antes|depois>.png
+  if (params.get('surfcam')) {
+    setTimeout(async () => {
+      const mat = params.get('surfcam');
+      const shot = (name) => /** @type {any} */ (window).cybercosmic?.devCapture?.(name);
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const meshes = [];
+      // (espera os chunks: a chegada varia de uma execução para outra)
+      for (let k = 0; k < 40 && !meshes.length; k++) {
+        if (k) await wait(500);
+        for (const e of world.chunkLayer.chunks.values()) for (const m of e.group?.children ?? []) if (m.userData.mat === mat) meshes.push(m);
+      }
+      await wait(2000);
+      const o = camera.position.clone();
+      const rc = new THREE.Raycaster();
+      let best = null;
+      for (const m of meshes) {
+        // (a malha é o chunk inteiro: o centro cai no vazio; mira o vértice mais perto)
+        const P = m.geometry.attributes.position;
+        const v = new THREE.Vector3();
+        const c = new THREE.Vector3();
+        let cd = Infinity;
+        for (let i = 0; i < P.count; i += 3) {
+          v.fromBufferAttribute(P, i).applyMatrix4(m.matrixWorld);
+          const dd = v.distanceToSquared(o);
+          if (dd < cd) (cd = dd), c.copy(v);
+        }
+        rc.set(o, c.clone().sub(o).normalize());
+        rc.far = 200;
+        const hit = rc.intersectObject(m, false)[0];
+        if (!hit?.face || hit.distance < 1) continue;
+        if (!best || hit.distance < best.d) {
+          const n = hit.face.normal.clone().transformDirection(m.matrixWorld);
+          if (n.dot(rc.ray.direction) > 0) n.negate();
+          best = { d: hit.distance, p: hit.point.clone(), n };
+        }
+      }
+      if (!best) return console.warn(`SURFCAM: nenhuma face de ${mat} (${meshes.length} malhas)`);
+      console.warn(`SURFCAM: ${mat} a ${best.d.toFixed(1)} m · normal ${best.n.toArray().map((x) => x.toFixed(2))}`);
+      ctx.controls.canFly = true;
+      ctx.controls.setMode('fly');
+      // um lado da face (perpendicular à normal) e o "acima" dela
+      const up = Math.abs(best.n.y) > 0.8 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+      const side = new THREE.Vector3().crossVectors(best.n, up).normalize();
+      const look = (dist) => {
+        const pos = best.p.clone().addScaledVector(best.n, dist * 0.6).addScaledVector(side, dist * 0.7).addScaledVector(up, dist * 0.25 * (Math.abs(best.n.y) > 0.8 ? 0 : 1));
+        if (Math.abs(best.n.y) > 0.8) pos.y = best.p.y + Math.sign(best.n.y) * Math.max(1.7, dist * 0.6);
+        const d = best.p.clone().sub(pos);
+        ctx.controls.setView({ pos, yaw: Math.atan2(-d.x, -d.z), pitch: Math.atan2(d.y, Math.hypot(d.x, d.z)), scale: 1 });
+      };
+      const both = async (name) => {
+        for (const on of [0, 1]) {
+          ctx.shared.uSurfOn.value = on;
+          await wait(400);
+          await shot(`surf-${mat}-${name}-${on ? 'depois' : 'antes'}.png`);
+        }
+      };
+      for (const dist of [2.5, 8]) {
+        look(dist);
+        await wait(1500);
+        await both(String(dist));
+      }
+      look(2.5);
+      if (!ctx.carried.lanternOn) ctx.carried.toggleLantern();
+      await wait(1200);
+      await both('2.5-lanterna');
+      console.warn('SURFCAM: fim');
+    }, 12000);
+  }
   // --holdstats=N: aos N s, o levantamento dos APOIOS (o cofre, Mobilidade §4) nas paredes em volta (40 m):
   // em colunas de parede de 0,5 a 14 m de altura, os rebordos onde cabe a mão (a face recua acima, um
   // topo plano de ≥ 5 cm); uma coluna é "escalável" se tem apoios encadeados (até 1,5 m um do outro)

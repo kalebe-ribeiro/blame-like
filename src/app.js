@@ -30,7 +30,7 @@ import { loadProfile, storeProfile, migrateLegacy, loadSlot, newSlot, storeSlot,
 import { Lexicon } from './lang/lexicon.js';
 import { rulesFor } from './app/modes.js';
 import { createPlayerState } from './app/player.js';
-import { createRenderer, setupRender, renderFrame } from './app/render.js';
+import { createRenderer, setupRender, renderFrame, bakeWorldSurfaces } from './app/render.js';
 import { createBody } from './app/body.js';
 import { createWorldSound } from './app/sound.js';
 import { createTravel } from './app/travel.js';
@@ -122,6 +122,7 @@ ctx.world.lexicon = ctx.lexicon;
 ctx.world.worldState = ctx.worldState; // o que o jogador mudou (setores religados…) — lido no build
 ctx.world.cuts = (ctx.slot.cuts ?? []).slice(); // os cortes do emissor (o cofre, Arma-do-Killy)
 ctx.world.build(ctx.seed);
+bakeWorldSurfaces(ctx); // as texturas das superfícies pela seed (render/surfaceBaker.js)
 ctx.dust = createDust();
 ctx.scene.add(ctx.dust);
 

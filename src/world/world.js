@@ -22,6 +22,7 @@ import * as THREE from 'three';
 import { DynamicCuts } from './dynamic.js';
 import { RNG } from '../core/rng.js';
 import { PALETTE, createSurfaceMaterial, createSkyMaterial, createBeamMaterial, createCascadeMaterial, linearColor, soloMaterial } from '../shaders/materials.js';
+import { SURF } from '../render/surfaceBaker.js';
 import { ElevatorSystem } from './elevators.js';
 import { BuilderSystem } from './builders.js';
 import { ParticleSystem } from './particles.js';
@@ -237,8 +238,8 @@ export class World {
 
     this.materials = {
       // ── camada chunk (somem na névoa perto do raio de carregamento) ──
-      tower: mk({ ...concrete, panel: 3, windows: 0.035, windowSize: [2.4, 3.6], noiseScale: 0.05, fogAmount: 0.85, fade: fadeNear }),
-      bridge: mk({ ...deck, fade: fadeNear }),
+      tower: mk({ ...concrete, panel: 3, windows: 0.035, windowSize: [2.4, 3.6], noiseScale: 0.05, fogAmount: 0.85, fade: fadeNear, surf: { ...SURF.concrete, bump: 1 } }),
+      bridge: mk({ ...deck, fade: fadeNear, surf: { ...SURF.tread, bump: 1 } }),
       rib: mk({ ...steel, fade: fadeNear }),
       cable: mk({ ...rubber, fade: fadeNear }),
       duct: mk({ ...steel, panel: 3, fade: fadeNear }),
@@ -279,7 +280,7 @@ export class World {
       flood: mk({ base: C(0.03, 0.032, 0.034), panel: 100, streaks: 0, accentAmount: 0, wet: 1, fogAmount: 0.6, fade: fadeMacro, reflect: true }),
       // a pele dos Safeguards: pálida, lisa, sem placas (fase 6)
       pale: mk({ base: C(0.5, 0.49, 0.46), panel: 100, streaks: 0.15, accentAmount: 0, fogAmount: 0.9 }),
-      machine: mk({ ...steel, base: C(0.1, 0.1, 0.105), accentAmount: 0.6, panel: 2.5, fogAmount: 0.6 }),
+      machine: mk({ ...steel, base: C(0.1, 0.1, 0.105), accentAmount: 0.6, panel: 2.5, fogAmount: 0.6, surf: { ...SURF.plate, bump: 1 } }),
       // a lente das luminárias: clara, acesa pela própria luz logo abaixo dela
       lamp: mk({ base: C(0.85, 0.82, 0.74), panel: 100, streaks: 0, accentAmount: 0, fogAmount: 0.5, fade: fadeNear }),
       lampFar: mk({ base: C(0.85, 0.82, 0.74), panel: 100, streaks: 0, accentAmount: 0, fogAmount: 0.35, fade: fadeMacro }),

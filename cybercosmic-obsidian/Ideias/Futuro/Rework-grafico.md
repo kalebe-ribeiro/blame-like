@@ -1,5 +1,5 @@
 ---
-status: futuro — decidido que vem DEPOIS de toda a gameplay (usuário, 2026-10-03)
+status: em andamento — frente 1 (as superfícies) começou em 2026-10-08
 prioridade: depois da gameplay
 tags: [futuro, grafico, texturas, modelos, animacao, npcs]
 ---
@@ -7,6 +7,25 @@ tags: [futuro, grafico, texturas, modelos, animacao, npcs]
 # O grande rework gráfico
 
 > Usuário (2026-10-03): "deixe notado que após finalizarmos todos os aspectos da gameplay, haverá um grande rework gráfico, adicionando texturas variadas, modelos de NPCs detalhados e variados, e animações diversas variadas."
+
+## Decisões (usuário, 2026-10-08)
+- **Continua 100% procedural**: nada de imagens ou modelos externos; tudo sai da seed.
+- **Estilo**: o de hoje, muito mais rico (evolução, não mudança de rumo).
+- **Começa pelas superfícies do mundo**; hostis/NPCs e animações vêm depois, em planos próprios.
+- **Orçamento**: ~60 fps estáveis.
+
+## Frente 1 — as superfícies (plano aprovado em 2026-10-08)
+**Texturas procedurais "assadas" na GPU pela seed** (um forno, `render/surfaceBaker.js`: cor+altura e normal+aspereza em arrays de textura, por família — concreto moldado, pré-moldado, chapa de aço, aço estrutural, grade, chapa xadrez, ferrugem, fuligem, poeira) **+ amostragem triplanar com normal mapping** no shader de superfície (sem tangentes; o padrão preso ao objeto que se move continua). Cada material vira uma receita (família + desgaste + escala + tom); um fator de **idade por região** sai do Field; desgaste pela geometria (escorridos sob bordas, sujeira junto do chão); variação macro e LOD no longe. Etapas: (1) linha de base de capturas e `profile`; (2) protótipo em 3 materiais para o usuário aprovar; (3) todas as famílias e receitas; (4) desgaste e longe; (5) desempenho e acabamento.
+
+### Etapa 1 — linha de base (2026-10-08)
+Roteiro fixo de 20 capturas (seed abc: 12 lugares, 4 com névoa 0, 4 com lanterna na Peregrinação) e `npm run profile` (no plano de energia Equilibrado — o de economia derrubava tudo pela metade): **parado, média de 9 lugares: quadro 11,8 ms · GPU 8,8 ms**.
+
+### Etapa 2 — protótipo (2026-10-08, aguardando o usuário)
+- **O forno** (`render/surfaceBaker.js`): 3 famílias — `concrete` (tábuas de forma 1,2×2,4 m, veio da madeira, furos de tirante, bolhas raras de 2–6 mm), `plate` (chapas 1,5×1 m sobrepostas, rebites a cada 7,5 cm, amassados, riscos), `tread` (chapa xadrez, ressaltos de 3 cm) — em 1024², ruído periódico (sem emenda). Um programa por família (por define); um passe de altura em half float e a normal pelos vizinhos (Sobel) — recalcular a altura 5× por pixel num shader só travou a GPU do ANGLE (3 s compilando e o processo da GPU caindo). ~0,6 s no início do mundo (compilação; a dividir na etapa 5).
+- **O shader** (`USE_SURF_TEX`): triplanar com pesos afiados, normal "whiteout" sem tangentes (os eixos do objeto que se move: `vAxX/Y/Z`), a cor da textura modula o tom do material, as covas escurecem, a aspereza no especular. As **juntas grandes das placas continuam as do material** (zerar trocava o piso por um cinza liso).
+- Nos materiais `tower` (concreto), `machine` (chapa) e `bridge` (xadrez).
+- **`--surfcam=mat`**: a face mais perto do material, de viés, a 2,5 e 8 m e com lanterna; cada vista com o forno desligado e ligado no mesmo quadro (`uSurfOn`).
+- Desempenho: média parado **9,5 ms · GPU 8,5 ms** (sem perda — dentro da variação da máquina); sem avisos X4000/X3595.
 
 ## Quando
 **Depois de finalizar todos os aspectos da gameplay.** Até lá, o visual é o de agora — formas geométricas, materiais procedurais (`shaders/materials.js`), corpos simples dos seres (`world/bodies.js`) e animações únicas. As features de gameplay continuam sendo feitas com esse visual e **não** esperam o rework (nem o antecipam).
