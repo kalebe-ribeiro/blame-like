@@ -1,5 +1,5 @@
 ---
-status: em andamento (1–3 feitas; 4 espera decisão)
+status: feita (1–3); 4 pendente — 2026-10-08: nada novo de mobilidade por ora
 prioridade: alta
 tags: [gameplay, movimento, corpo]
 ---
