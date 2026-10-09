@@ -14,6 +14,22 @@ tags: [futuro, grafico, texturas, modelos, animacao, npcs]
 - **Começa pelas superfícies do mundo**; hostis/NPCs e animações vêm depois, em planos próprios.
 - **Orçamento**: ~60 fps estáveis.
 
+## O resto do rework (decidido com o usuário em 2026-10-09)
+- **Modelos** (hostis por nível, NPCs, andarilhos, vida de silício, os braços do jogador): **procedural articulado** — corpos montados por peças (segmentos, placas, juntas, cabos) com proporções corretas, variando pela seed e pelo nível. Continua 100% código.
+- **Animações**: **procedural + poses-chave** — IK nos pés e nas mãos (pisam no chão de verdade, agarram bordas), poses-chave em código para golpes, quedas e morte, misturadas por física simples (peso, inércia); variações pela seed e pelo nível.
+- **Frentes novas** (além de modelos e animações): **luz e atmosfera**, **efeitos**, **primeira pessoa**.
+- **Ordem**: (2) luz e atmosfera → (3) efeitos → (4) primeira pessoa → (5) hostis → (6) humanos e transumanos. As animações vêm junto com cada tipo de ser.
+- **Sombras**: poucas sombras reais — só as 2–4 lâmpadas mais fortes perto do jogador e a lanterna; o resto, aproximado (oclusão). ~60 fps.
+- **Referências**: o Claude pesquisa na web (o navegador embutido) e registra no cofre uma **ficha por tipo de ser** e por elemento de luz/arquitetura — o que caracteriza cada um, proporções, silhuetas — sem copiar imagens.
+- **Acompanhamento**: **autonomia total** — o Claude faz todas as frentes em sequência na branch `rework-grafico`, decisões marcadas como dele (as seções "Decisões do Claude"), e o usuário revisa no fim.
+- **O usuário** (2026-10-09): "para o design de silicon life, transhuman, human, safeguards, tome inspiração direta dos designs de Blame!… tem que ter variedade. Blame! se passa milhares de anos no futuro, onde os humanos se separaram e evoluíram de maneira divergente entre cada grupo. Então além da variedade dos NPCs hostis e transumanos, tem que ter bastante variedade dos humanos. Sempre busca na fonte (Blame!) sempre que for tomar uma decisão de design."
+
+### Notas do usuário depois da frente 1 (2026-10-09, fotos da seed 5ctslq)
+- **As "faíscas" que andam pelo chão não fazem sentido** — as linhas técnicas com pulsos de luz do material das pontes (`circuitAmount`), mais visíveis agora sem a grade de placas. A corrigir.
+- **Os braços não fazem sentido anatomicamente** ("parece que saem da mesma origem") — fica para a frente de primeira pessoa.
+- **Dá para atravessar os cabos pretos maiores** (os arcos grossos) — a corrigir.
+- "De resto ficou tudo muito bom."
+
 ## Frente 1 — as superfícies (plano aprovado em 2026-10-08)
 **Texturas procedurais "assadas" na GPU pela seed** (um forno, `render/surfaceBaker.js`: cor+altura e normal+aspereza em arrays de textura, por família — concreto moldado, pré-moldado, chapa de aço, aço estrutural, grade, chapa xadrez, ferrugem, fuligem, poeira) **+ amostragem triplanar com normal mapping** no shader de superfície (sem tangentes; o padrão preso ao objeto que se move continua). Cada material vira uma receita (família + desgaste + escala + tom); um fator de **idade por região** sai do Field; desgaste pela geometria (escorridos sob bordas, sujeira junto do chão); variação macro e LOD no longe. Etapas: (1) linha de base de capturas e `profile`; (2) protótipo em 3 materiais para o usuário aprovar; (3) todas as famílias e receitas; (4) desgaste e longe; (5) desempenho e acabamento.
 
