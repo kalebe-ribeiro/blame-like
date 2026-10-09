@@ -126,19 +126,7 @@ export function createHands(ctx, { device, flashlight }) {
   }
   // as que agarram (filhas da câmera; no lugar certo do mundo a cada quadro)
   const grip = [buildHand(glove, -1, { arm: true }), buildHand(glove, 1, { arm: true })];
-  // os braços: do punho até o ombro (abaixo e ao lado dos olhos), esticando conforme a mão vai
-  const armGeo = new THREE.CylinderGeometry(0.036, 0.042, 1, 8);
-  armGeo.translate(0, 0.5, 0); // a base no punho, crescendo para +y (até o ombro)
-  const arms = grip.map(() => {
-    const m = new THREE.Mesh(armGeo, glove);
-    m.visible = false;
-    camera.add(m);
-    return m;
-  });
-  const SHOULDER = [new THREE.Vector3(-0.2, -0.42, 0.08), new THREE.Vector3(0.2, -0.42, 0.08)];
-  const _wr = new THREE.Vector3();
-  const _dir = new THREE.Vector3();
-  const _up = new THREE.Vector3(0, 1, 0);
+  // (os braços até o ombro: app/limbs.js — o mesmo para todas as mãos)
   for (const h of grip) {
     h.group.visible = false;
     camera.add(h.group);
@@ -171,7 +159,6 @@ export function createHands(ctx, { device, flashlight }) {
         paintHand(holdLantern[s].group, mat);
         const i = s > 0 ? 1 : 0; // (grip[0] é a esquerda)
         paintHand(grip[i].group, mat);
-        arms[i].material = mat;
       }
     },
     /** Qual mão segura cada coisa (1 direita · −1 esquerda · 0 nenhuma — app/inventory.js). */
@@ -180,6 +167,10 @@ export function createHands(ctx, { device, flashlight }) {
         holdDevice[s].group.visible = deviceSide === s;
         holdLantern[s].group.visible = lanternSide === s;
       }
+    },
+    /** As mãos deste lado (1 direita · −1 esquerda) — app/limbs.js desenha o braço da que estiver à vista. */
+    handGroups(side) {
+      return [grip[side > 0 ? 1 : 0].group, holdDevice[side].group, holdLantern[side].group];
     },
     /** Pendurado ou subindo (o aparelho e a lanterna saem das mãos). */
     get busy() {
@@ -197,7 +188,6 @@ export function createHands(ctx, { device, flashlight }) {
       for (let i = 0; i < 2; i++) {
         const h = grip[i];
         h.group.visible = !!held && out < 1;
-        arms[i].visible = h.group.visible;
         if (!h.group.visible) continue;
         // o lugar dela: ao longo da quina, uma de cada lado (a tangente da parede)
         const n = held.nrm;
@@ -228,14 +218,6 @@ export function createHands(ctx, { device, flashlight }) {
         camera.getWorldQuaternion(_qc);
         h.group.quaternion.copy(_qc.invert().multiply(_q));
         h.pose(move[i] ? 0.15 : st?.kind === 'climb' ? 0.35 : 0.6, 0.5); // trocando de lugar ou empurrando, a mão abre
-        // o braço: do punho (atrás da palma, no espaço da câmera) até o ombro
-        h.group.updateMatrix();
-        _wr.set(0, 0, 0.09).applyMatrix4(h.group.matrix);
-        _dir.copy(SHOULDER[i]).sub(_wr);
-        const len = _dir.length();
-        arms[i].position.copy(_wr);
-        arms[i].quaternion.setFromUnitVectors(_up, _dir.divideScalar(len || 1));
-        arms[i].scale.set(1, len, 1);
       }
     },
   };

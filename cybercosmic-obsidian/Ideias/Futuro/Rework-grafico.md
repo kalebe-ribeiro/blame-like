@@ -109,6 +109,15 @@ O bulbo (`gen/chunkgen.js` buildSegment: prisma aberto + cone em cima + cone vir
 - **As gotas d'água respingam**: as gotas perto (as que já avisavam o som ao tocar o chão) soltam 3–5 gotinhas que saltam e caem de volta.
 - Decisões do Claude: o rework dos efeitos ficou nestes três; o tiro, os anéis de poeira, a brasa do corte, os detritos e o vapor já seguiam a direção e ficaram como estavam (o que se via de "sem sentido" — as linhas técnicas com pulsos de luz no chão — saiu antes, a pedido do usuário).
 
+## Frente 4 — primeira pessoa (2026-10-09, autonomia do Claude)
+- **O defeito que o usuário viu** ("os braços parecem sair da mesma origem"): não havia braço nenhum — o que se lia como braço era o corpo do emissor e do aparelho entrando na tela de baixo para o meio, com as mãos abaixo da borda.
+- **Os braços** (`app/limbs.js`): cada mão visível (a do aparelho, da lanterna, do emissor ou a que agarra uma quina) ganha braço, cotovelo e antebraço — IK de dois segmentos (0,30 + 0,28 m) do OMBRO (fora da tela, ao lado, abaixo e um pouco atrás dos olhos) até o PULSO, o cotovelo para fora e para baixo; manga de tecido, ou metal no lado da prótese (R4). O braço reto das mãos nas quinas (`app/hands.js`) saiu (o mesmo IK serve a todas).
+- **O enquadramento**: o emissor, o aparelho e a lanterna seguros mais para os lados e mais alto (a mão à vista perto da borda de baixo, o antebraço entrando pelo canto) — conferido com as mangas pintadas de vermelho numa captura.
+- **O detalhe**: o emissor com o bloco de trás, aletas, guarda-mato, a coroa da boca, os painéis e o cabo para o pulso; a lanterna com os anéis da empunhadura e a tampa; o aparelho com as quinas de borracha e o conector.
+- **O corpo ao olhar para baixo**: o tronco, a aba do casaco e as pernas com botas, seguindo a câmera só no giro; as pernas balançam com o passo. Só a pé (não pendurado, não voando).
+- `check:climb` 14/14, `check:arms` 8/8.
+- Decisões do Claude: as medidas do braço e a posição dos ombros; o enquadramento novo; o casaco longo (Killy).
+
 ## Quando
 **Depois de finalizar todos os aspectos da gameplay.** Até lá, o visual é o de agora — formas geométricas, materiais procedurais (`shaders/materials.js`), corpos simples dos seres (`world/bodies.js`) e animações únicas. As features de gameplay continuam sendo feitas com esse visual e **não** esperam o rework (nem o antecipam).
 

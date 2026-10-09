@@ -134,6 +134,24 @@ function buildEmitter(m) {
   grip.position.set(0, -0.06, 0.03);
   grip.rotation.x = 0.25;
   g.add(grip);
+  // (o rework gráfico, frente 4: o corpo maciço da arma de Killy — o bloco de trás mais largo, as aletas
+  //  em cima, o guarda-mato, a coroa pesada na boca, os painéis dos lados e o cabo que sai para o pulso)
+  const add = (geo, x, y, z, rx = 0, mat = m.machine) => {
+    const o = new THREE.Mesh(geo, mat);
+    o.position.set(x, y, z);
+    o.rotation.x = rx;
+    g.add(o);
+    return o;
+  };
+  add(new THREE.BoxGeometry(0.06, 0.07, 0.07), 0, 0.002, 0.045);
+  for (let i = 0; i < 6; i++) add(new THREE.BoxGeometry(0.044, 0.008, 0.01), 0, 0.034, -0.1 + i * 0.022);
+  add(new THREE.BoxGeometry(0.008, 0.006, 0.055), 0, -0.052, -0.005); // o guarda-mato: a barra de baixo
+  add(new THREE.BoxGeometry(0.008, 0.03, 0.006), 0, -0.038, -0.03); //   e a da frente
+  add(new THREE.CylinderGeometry(0.027, 0.027, 0.024, 12), 0, 0.012, -0.315, Math.PI / 2); // a coroa da boca
+  for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.004, 0.034, 0.12), sx * 0.026, 0, -0.05); // os painéis
+  // o cabo: do pé do cabo da arma para trás e para baixo (some no punho da manga)
+  const cable = add(new THREE.CylinderGeometry(0.006, 0.006, 0.12, 6), 0, -0.1, 0.09, -0.9, m.cable ?? m.machine);
+  cable.position.z = 0.1;
   const muzzle = new THREE.Object3D();
   muzzle.position.set(0, 0.012, -0.33);
   g.add(muzzle);
@@ -457,6 +475,8 @@ export function createBeam(ctx) {
   });
 
   return {
+    /** A mão deste lado no cabo do emissor (app/limbs.js). */
+    handGroups: (side) => [grips[side].group],
     get state() {
       return state;
     },
@@ -609,7 +629,9 @@ export function createBeam(ctx) {
       em.group.visible = !!side && !busy && !ctx.wake?.active;
       if (em.group.visible) {
         const shake = state === 'charging' ? 0.0025 * k + 0.006 * stage + 0.012 * (stage >= 4 ? 1 : 0) + 0.01 * Math.max(0, stage - 4) : 0;
-        em.group.position.set(0.15 * side + (Math.random() - 0.5) * shake, -0.14 + kick * 0.01 + (Math.random() - 0.5) * shake, -0.3 + kick * 0.05);
+        // (mais para o lado e mais alto: a mão e o antebraço entram pelo canto de baixo — app/limbs.js; antes o
+        //  corpo da arma vinha do meio de baixo e lia como um braço saindo do centro — o usuário, 2026-10-09)
+        em.group.position.set(0.17 * side + (Math.random() - 0.5) * shake, -0.095 + kick * 0.01 + (Math.random() - 0.5) * shake, -0.36 + kick * 0.05);
         em.group.rotation.set(kick * 0.15, 0, 0);
         const lit = state === 'charging' ? k * 5 : 0;
         // (as bobinas tomam a cor da sobrecarga: branco quente → azul → violeta — beamfx.js beamColors)

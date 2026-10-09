@@ -56,7 +56,7 @@ export function createCarried(ctx) {
   // ── o aparelho, preso à câmera (a câmera entra na cena para ele aparecer) ──
   if (!camera.parent) scene.add(camera);
   const device = new THREE.Group();
-  device.position.set(0.12, -0.11, -0.28);
+  device.position.set(0.14, -0.1, -0.32);
   device.rotation.set(0.75, -0.15, 0); // a tela virada para os olhos
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.04, 0.16), m.machine);
   const canvas = document.createElement('canvas');
@@ -69,6 +69,18 @@ export function createCarried(ctx) {
   screen.rotation.x = -Math.PI / 2;
   screen.position.set(0, 0.0205, 0.015);
   device.add(body, screen);
+  // (as quinas de borracha e o conector de trás — o rework gráfico, frente 4)
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const c = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.046, 0.018), m.cable ?? m.machine);
+      c.position.set(sx * 0.038, 0, sz * 0.073);
+      device.add(c);
+    }
+  }
+  const plug = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.016, 8), m.machine);
+  plug.rotation.x = Math.PI / 2;
+  plug.position.set(0.02, 0, 0.086);
+  device.add(plug);
 
   // ── a lanterna: um objeto à parte, na mão esquerda ──
   //  Guardada (fora da vista, embaixo) até ser ligada: sobe para a frente, e
@@ -96,10 +108,20 @@ export function createCarried(ctx) {
   const button = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.005, 0.012), m.machine);
   button.position.set(0, 0.016, -0.02);
   flashlight.add(flBody, flHead, bezel, lens, knurl, button);
+  // (o rework gráfico, frente 4: os anéis da empunhadura e a tampa de trás)
+  for (let i = 0; i < 3; i++) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.0168, 0.0016, 5, 14), m.machine);
+    ring.position.z = 0.017 + i * 0.013;
+    flashlight.add(ring);
+  }
+  const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.015, 0.012, 12), m.machine);
+  tail.rotation.x = Math.PI / 2;
+  tail.position.z = 0.066;
+  flashlight.add(tail);
   flashlight.visible = false;
   // guardada · na mão (em relação à câmera); x vira de lado conforme a mão (−1 esquerda, 1 direita)
   const FL_DOWN = new THREE.Vector3(0.2, -0.36, -0.2);
-  const FL_UP = new THREE.Vector3(0.13, -0.12, -0.3);
+  const FL_UP = new THREE.Vector3(0.15, -0.1, -0.34); // (a mão e o antebraço à vista no canto — app/limbs.js)
   const _flDown = new THREE.Vector3();
   const _flUp = new THREE.Vector3();
   const _qDowns = { 1: new THREE.Quaternion().setFromEuler(new THREE.Euler(-1.1, -0.5, -0.4)), [-1]: new THREE.Quaternion().setFromEuler(new THREE.Euler(-1.1, 0.5, 0.4)) };
@@ -320,6 +342,8 @@ export function createCarried(ctx) {
   return {
     toggleLantern,
     togglePlug,
+    /** As mãos deste lado (app/limbs.js). */
+    handGroups: (side) => hands.handGroups(side),
     /** Um aviso curto na telinha do aparelho (s segundos). */
     say(text, s = 3) {
       note = { text, until: (ctx.time ?? 0) + s };
@@ -355,7 +379,7 @@ export function createCarried(ctx) {
       if (lSide) flSide = lSide;
       hands.setHolding(dSide, lSide);
       device.visible = !!dSide && stow < 1;
-      device.position.set(0.12 * (dSide || 1), -0.11 - 0.32 * stow * stow, -0.28);
+      device.position.set(0.14 * (dSide || 1), -0.1 - 0.32 * stow * stow, -0.32);
       device.rotation.set(0.75, -0.15 * (dSide || 1), 0);
       if (!lSide && lanternWant) {
         // a lanterna foi guardada: apaga
