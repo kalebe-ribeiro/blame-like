@@ -234,8 +234,19 @@ export class EntitySystem {
         if (dist < NEAR) this._settleCorpse(e, dt, origin);
         const r = e.rig.group;
         r.visible = dist < VISIBLE;
-        r.position.set(e.feet.x - origin.x, e.feet.y - origin.y + 0.16, e.feet.z - origin.z);
-        r.rotation.set(-Math.PI / 2, e.yaw + Math.PI, 0, 'YXZ');
+        // a queda (o rework gráfico): ~0,7 s tombando — de costas pelo emissor (o golpe empurra), senão
+        // para a frente ou para trás pelo jeito do ser; o corpo amolece enquanto cai
+        e.deathT = (e.deathT ?? 0) + dt;
+        const k = Math.min(1, e.deathT / 0.7);
+        const fall = k * k; // (acelera: a gravidade)
+        if (e.fallDir === undefined) {
+          let h = 0;
+          for (const ch of String(e.id)) h = (h * 31 + ch.charCodeAt(0)) | 0;
+          e.fallDir = e.cause === 'beam' || e.cause === 'fall' || h % 2 === 0 ? -1 : 1;
+        }
+        r.position.set(e.feet.x - origin.x, e.feet.y - origin.y + 0.16 * fall, e.feet.z - origin.z);
+        r.rotation.set(e.fallDir * (Math.PI / 2) * fall, e.yaw + Math.PI, 0, 'YXZ');
+        if (r.visible && k < 1.01) e.rig.slump?.(Math.min(1, k * 1.4));
         continue;
       }
       if (e.tier === 'far' && dist < NEAR && this.world.chunkLayer.isReadyAround(e.feet, 30)) this._toNear(e, origin);
@@ -256,7 +267,7 @@ export class EntitySystem {
         e.rig.animate(dt, e.speed, e.tier === 'far' || e.walker.grounded);
         if (e.staggerT > 0) e.rig.stagger?.(Math.sin((e.staggerT / STAGGER) * Math.PI));
         if (e.grabPose) e.rig.grab?.(e.grabPose); // agarrando alguém (app/wake.js)
-        else if (e.strikePose) e.rig.strike?.(e.strikePose.w, e.strikePose.s); // o golpe (world/safeguards.js)
+        else if (e.strikePose) e.rig.strike?.(e.strikePose.w, e.strikePose.s, e.strikePose.kind); // o golpe (world/safeguards.js)
       }
     }
   }
@@ -723,10 +734,6 @@ export class EntitySystem {
         if (still(V.from) && Math.abs(ElevatorSystem.heightAt(d, car.clock + 5) - V.from) < 0.01) V.phase = 'board';
       } else if (V.phase === 'board') {
         go(d.x + V.sx * (d.w / 2 - 3), d.z, 0.8, false); // (perto da borda: a saída lá é do mesmo lado)
-        if (w.groundObj?.userData.elevator && Math.abs(e.feet.x - d.x) < d.w / 2 - 0.6 && Math.abs(e.feet.z - d.z) < d.d / 2 - 0.6) {
-          V.phase = 'ride';
-          this.bus?.emit('being:board', { id: e.id, lift: V.id });
-        } else if (!still(V.from)) V.phase = 'wait';
       } else if (V.phase === 'ride') {
         this._walk(e, dt, origin, time, e.yaw, 0);
         if (still(V.to) && Math.abs(e.feet.y - V.to) < 1) {

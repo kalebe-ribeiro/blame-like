@@ -49,6 +49,20 @@ const SIGHT_MAX = 105; // m: ninguém vê além disso (a névoa, a poeira)
 const CATCH = 1.0; // m (horizontal)
 /** O golpe: alcance para começar, alcance no impacto (você pode sair na preparação), os tempos (s). */
 export const STRIKE = { reach: 1.5, hit: 2.3, windup: 0.35, swing: 0.15, recover: 0.4, waitMin: 1.5, waitMax: 2 };
+
+/**
+ * A variante do golpe (o rework gráfico — só a pose; o tempo e o alcance são os mesmos): o alvo mais
+ * baixo → 'low'; senão uma das três, sorteada a cada golpe com o jeito do ser (a identidade puxa para
+ * uma preferida — dois do mesmo nível não golpeiam igual). dy: a altura do alvo menos a dos pés.
+ */
+export function strikeKindFor(e, dy) {
+  if (dy < -0.6) return 'low';
+  const KINDS = ['swing', 'overhead', 'lunge'];
+  let h = 0;
+  for (const ch of String(e.id)) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  const fav = KINDS[Math.abs(h) % 3];
+  return Math.random() < 0.55 ? fav : KINDS[Math.floor(Math.random() * 3)];
+}
 const LOST_AFTER = 1.5; // s sem ver → vai ao último ponto visto
 const SEARCH_TIME = 7; // s procurando em volta
 const MAX_HUNTERS = 3;
@@ -326,6 +340,7 @@ export class SafeguardSystem {
       S.state = 'strike';
       S.strikeT = 0;
       S.struck = false;
+      S.strikeKind = strikeKindFor(e, feet.y - e.feet.y);
       this.bus?.emit('safeguard:strike', { x: e.feet.x, y: e.feet.y, z: e.feet.z });
       return;
     }
@@ -368,7 +383,7 @@ export class SafeguardSystem {
     const w = Math.min(1, t / STRIKE.windup);
     const sw = Math.max(0, Math.min(1, (t - STRIKE.windup) / STRIKE.swing));
     const back = Math.max(0, Math.min(1, (t - STRIKE.windup - STRIKE.swing) / STRIKE.recover));
-    e.strikePose = { w: w * (1 - back), s: sw * (1 - back) };
+    e.strikePose = { w: w * (1 - back), s: sw * (1 - back), kind: S.strikeKind };
     if (!S.struck && t >= STRIKE.windup + STRIKE.swing * 0.6) {
       S.struck = true;
       const hit = Math.hypot(feet.x - e.feet.x, feet.z - e.feet.z) < STRIKE.hit && Math.abs(feet.y - e.feet.y) < 2;

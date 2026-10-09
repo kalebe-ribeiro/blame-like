@@ -181,7 +181,7 @@ function buildBody(material, D, slitMat = null, dress = null, kit = null) {
       }
       for (const A of arms) {
         const p = phase + (A.s > 0 ? 0 : Math.PI) + (A.extra ? Math.PI * 0.5 : 0);
-        A.sh.rotation.x = -Math.sin(p) * 0.32 * a;
+        A.sh.rotation.x = -Math.sin(p) * 0.32 * a * (D.swing ?? 1);
         A.sh.rotation.z = A.s * (A.extra ? 0.35 : 0.06);
         A.el.rotation.x = -0.25 - Math.max(0, -Math.sin(p)) * 0.3 * a;
       }
@@ -193,7 +193,8 @@ function buildBody(material, D, slitMat = null, dress = null, kit = null) {
         reach = Math.max(reach, D.thigh * Math.cos(h) + D.shin * Math.cos(h + L.kn.rotation.x) + 0.06);
       }
       root.position.y = 0.04 + reach;
-      spine.rotation.x = 0.08 + 0.06 * a;
+      root.position.z = 0;
+      spine.rotation.x = 0.08 + (D.lean ?? 0) + 0.06 * a;
       spine.rotation.y = 0; // (o golpe torce o tronco — strike)
       neck.rotation.x = 0;
     },
@@ -217,11 +218,50 @@ function buildBody(material, D, slitMat = null, dress = null, kit = null) {
       spine.rotation.x -= 0.35 * k;
       neck.rotation.x = -0.3 * k;
     },
-    /** O golpe: w (0..1) recolhe o braço direito para trás e torce o tronco; s (0..1) o braço vem
-     *  para a frente, de lado, na altura do peito (o arremesso). */
-    strike(w, s) {
+    /**
+     * O golpe: w (0..1) a preparação; s (0..1) o golpe vindo. kind (o rework gráfico — a variedade):
+     *   'swing'    o braço direito recolhe para trás, o tronco torce, o braço vem de lado (o arremesso)
+     *   'overhead' os dois braços sobem e descem juntos, o tronco se curva
+     *   'lunge'    o braço direito recua junto ao corpo e estoca reto para a frente, o corpo avança
+     *   'low'      o alvo está mais baixo: o tronco se dobra e a garra varre de cima para baixo
+     */
+    strike(w, s, kind = 'swing') {
       const A = arms.find((a) => a.s > 0);
       const B = arms.find((a) => a.s < 0);
+      if (kind === 'overhead') {
+        for (const X of arms) {
+          X.sh.rotation.x = -2.6 * w * (1 - s) - 0.6 * s;
+          X.sh.rotation.z = X.s * (0.06 + 0.25 * w * (1 - s));
+          X.el.rotation.x = -0.6 * w * (1 - s) - 0.1 * s;
+        }
+        spine.rotation.x += -0.15 * w * (1 - s) + 0.45 * s;
+        neck.rotation.x = 0.2 * s;
+        kit?.strike?.(w);
+        return;
+      }
+      if (kind === 'lunge' && A) {
+        A.sh.rotation.x = 0.35 * w * (1 - s) - 1.55 * s;
+        A.sh.rotation.z = A.s * 0.06;
+        A.el.rotation.x = -1.6 * w * (1 - s);
+        if (B) {
+          B.sh.rotation.x = 0.4 * w;
+          B.el.rotation.x = -0.5 * w;
+        }
+        spine.rotation.x += 0.1 * w + 0.25 * s;
+        root.position.z = 0.25 * s;
+        kit?.strike?.(w);
+        return;
+      }
+      if (kind === 'low' && A) {
+        A.sh.rotation.x = -1.8 * w * (1 - s) - 0.4 * s;
+        A.sh.rotation.z = A.s * (0.1 + 0.3 * w);
+        A.el.rotation.x = -0.9 * w * (1 - s) - 0.2 * s;
+        spine.rotation.x += 0.35 * w + 0.5 * s;
+        neck.rotation.x = 0.35 * (w + s) * 0.5;
+        for (const L of legs) L.kn.rotation.x += 0.35 * w;
+        kit?.strike?.(w);
+        return;
+      }
       if (A) {
         A.sh.rotation.x = 0.9 * w * (1 - s) - 1.5 * s;
         A.sh.rotation.z = A.s * (0.06 + 0.5 * w * (1 - s) - 0.25 * s);
@@ -235,6 +275,22 @@ function buildBody(material, D, slitMat = null, dress = null, kit = null) {
       spine.rotation.x += 0.2 * w;
       neck.rotation.x = 0.15 * w;
       kit?.strike?.(w);
+    },
+    /** Morrendo / morto (k 0..1): o corpo amolece — braços abertos e soltos, joelhos dobrados, a cabeça caída. */
+    slump(k) {
+      for (const A of arms) {
+        A.sh.rotation.x = 0.5 * k;
+        A.sh.rotation.z = A.s * (0.06 + 1.1 * k);
+        A.el.rotation.x = -0.6 * k;
+      }
+      for (const L of legs) {
+        L.hp.rotation.x = -0.25 * k * L.s;
+        L.kn.rotation.x = 0.7 * k;
+      }
+      spine.rotation.x = 0.08 - 0.15 * k;
+      neck.rotation.x = -0.5 * k;
+      root.position.z = 0;
+      kit?.rest?.();
     },
     dispose() {
       group.traverse((/** @type {any} */ o) => o.geometry?.dispose?.());

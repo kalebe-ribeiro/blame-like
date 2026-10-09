@@ -104,6 +104,8 @@ export function safeguardKit(level, M, id) {
     forearm: 0.46 * scale * lerp(0.95, 1.12, r()),
     stride: 1.9 * scale,
     girth: [1, 1.25, 1.6][L] * lean, // a grossura do tronco e dos membros
+    lean: [0.22, 0.12, 0.03][L] * lerp(0.8, 1.2, r()), // o andar: o baixo curvado (caça), o alto ereto
+    swing: [1.35, 1.0, 0.6][L],
   };
   const skin = M.pale;
   const dark = M.door;
@@ -191,6 +193,8 @@ export function siliconKit(level, M, id) {
     stride: 1.8 * scale,
     girth: [1, 1.35, 1.8][L],
     extraArms: L === 2 ? 1 : 0,
+    lean: 0.16,
+    swing: [1.1, 0.8, 0.5][L],
     headDrop: L === 2 ? 0.22 : 0, // a cabeça afundada entre os ombros
   };
   const metal = M.machine;
@@ -276,6 +280,8 @@ export function humanKit(tribe, M, id) {
     forearm: 0.28 * h,
     stride: 1.15 * h,
     girth: G,
+    lean: tribe === 'abrigado' ? 0.14 : tribe === 'seco' ? 0.05 : tribe === 'trabalhador' ? 0.08 : 0.02,
+    swing: tribe === 'seco' ? 1.3 : tribe === 'armadura' ? 0.6 : 1,
   };
   const cloth = M.cloth;
   const metal = M.machine;

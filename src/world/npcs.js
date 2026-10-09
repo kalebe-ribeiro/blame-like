@@ -27,7 +27,7 @@ import { hash4 } from '../gen/hash.js';
 import { villageLayout, villageFrame, villageInhabited } from '../gen/villages.js';
 import { territoryAt, patrolCircuit, circuitAt, circuitNearest, PATROL, WANDER, wandererOf } from '../gen/patrols.js';
 import { levelAt, MOVE, accelerate } from './levels.js';
-import { STRIKE } from './safeguards.js';
+import { STRIKE, strikeKindFor } from './safeguards.js';
 import { villageCarrier } from '../gen/gene.js';
 
 const KEEP = 600; // m: vilas mantidas em volta do jogador
@@ -274,7 +274,7 @@ export class NpcSystem {
       const w = Math.min(1, t / STRIKE.windup);
       const sw = Math.max(0, Math.min(1, (t - STRIKE.windup) / STRIKE.swing));
       const back = Math.max(0, Math.min(1, (t - STRIKE.windup - STRIKE.swing) / STRIKE.recover));
-      e.strikePose = { w: w * (1 - back), s: sw * (1 - back) };
+      e.strikePose = { w: w * (1 - back), s: sw * (1 - back), kind: N.strikeKind };
       if (!N.struck && t >= STRIKE.windup + STRIKE.swing * 0.6) {
         N.struck = true;
         const hit = Math.hypot(feet.x - e.feet.x, feet.z - e.feet.z) < STRIKE.hit && Math.abs(feet.y - e.feet.y) < 2;
@@ -305,6 +305,7 @@ export class NpcSystem {
     if (dp < STRIKE.reach && level) {
       N.strikeT = 0;
       N.struck = false;
+      N.strikeKind = strikeKindFor(e, feet.y - e.feet.y);
       this.bus?.emit('villager:strike', { x: e.feet.x, y: e.feet.y, z: e.feet.z });
     }
   }

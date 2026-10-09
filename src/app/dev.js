@@ -580,6 +580,13 @@ export function setupDev(ctx) {
         rig.group.position.copy(p);
         rig.group.rotation.y = Math.atan2(-fwd.x, -fwd.z);
         rig.animate(0.3, 1.2, true);
+        // (as poses: os Safeguards nas quatro variantes do golpe, um caído — o rework gráfico)
+        const POSES = ['swing', 'overhead', 'lunge', 'low'];
+        if (i < 4) rig.strike(0.55, 0.45, POSES[i]);
+        if (i === 4 || i === n - 1) {
+          rig.slump(1);
+          rig.group.rotation.x = -Math.PI / 2;
+        }
         ctx.scene.add(rig.group);
       });
       ctx.controls.canFly = true;

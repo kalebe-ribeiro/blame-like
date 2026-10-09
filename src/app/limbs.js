@@ -94,10 +94,12 @@ export function createLimbs(ctx) {
     leg.rotation.x = Math.PI; // (cresce para baixo)
     leg.scale.set(1, 0.72, 1);
     leg.frustumCulled = false;
+    leg.userData.noCollide = true;
     hip.add(leg);
     const boot = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.09, 0.26), world.materials.machine);
     boot.position.set(0, -0.72, -0.08);
     boot.frustumCulled = false;
+    boot.userData.noCollide = true;
     hip.add(boot);
     return hip;
   });

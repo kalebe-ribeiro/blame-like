@@ -356,7 +356,10 @@ export async function runSafeguardTest(ctx) {
       const g = here();
       let car = null;
       for (const c of world.elevators.cars.values()) if (c.def.kind === 'grand' && (!car || Math.hypot(c.def.x - g.x, c.def.z - g.z) < Math.hypot(car.def.x - g.x, car.def.z - g.z))) car = c;
-      const x = [...sg.byTerritory.values()][0];
+      // (o Safeguard de território mais perto do elevador — antes o primeiro da lista, que dependia da ordem
+      //  em que nasceram: um ritmo de quadros diferente trocava o Safeguard do teste e o caminho dele)
+      let x = null;
+      if (car) for (const c of sg.byTerritory.values()) if (!x || Math.hypot(c.feet.x - car.def.x, c.feet.z - car.def.z) < Math.hypot(x.feet.x - car.def.x, x.feet.z - car.def.z)) x = c;
       if (car && x) {
         const d = car.def;
         const outages = world.elevators.outages;
