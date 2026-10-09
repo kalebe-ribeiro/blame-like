@@ -656,7 +656,7 @@ export function setupDev(ctx) {
       for (const [k, i] of [['sg', 1], ['hu', 6]]) {
         list.forEach((rig, j) => (rig.group.visible = j === i));
         const rig = list[i];
-        const p = camera.position.clone().addScaledVector(fwd, i === 1 ? 2.9 : 1.9);
+        const p = camera.position.clone().addScaledVector(fwd, i === 1 ? 2.9 : 2.5);
         const hit = col.ray(p.clone().setY(camera.position.y + 1), new THREE.Vector3(0, -1, 0), 20);
         if (hit) p.y = hit.point.y;
         rig.group.position.copy(p);
@@ -664,6 +664,18 @@ export function setupDev(ctx) {
         await new Promise((r) => setTimeout(r, 800));
         await cap?.(`flesh_${k}.png`);
       }
+      // os três humanos novos juntos, de perto (as variantes)
+      list.forEach((rig, j) => (rig.group.visible = j >= 6));
+      [6, 7, 8].forEach((i, k) => {
+        const rig = list[i];
+        const p = camera.position.clone().addScaledVector(fwd, 2.8).addScaledVector(side, (k - 1) * 0.75);
+        const hit = col.ray(p.clone().setY(camera.position.y + 1), new THREE.Vector3(0, -1, 0), 20);
+        if (hit) p.y = hit.point.y;
+        rig.group.position.copy(p);
+        rig.group.rotation.y = Math.atan2(-fwd.x, -fwd.z) + (k - 1) * 0.6;
+      });
+      await new Promise((r) => setTimeout(r, 800));
+      await cap?.('flesh_hu3.png');
     }, Number(params.get('fleshsheet')) * 1000);
   }
   // --rayprobe=N: aos N s, um raio do centro da tela por todas as malhas de colisão (os dois lados das faces):

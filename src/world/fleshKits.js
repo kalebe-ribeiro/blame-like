@@ -179,61 +179,66 @@ export function safeguardFlesh(level, M, id) {
 }
 
 /**
- * Um humano em malha contínua — o protótipo: o povo "abrigado" (capuz, manto, óculos/respirador).
+ * Um humano em malha contínua — CARICATO (o usuário, 2026-10-09: "nao precisa tentar ir pro lado
+ * realista… um approach mais caricato/cartoon"; as roupas sem cor por enquanto). O povo "abrigado":
+ * a cabeça grande num capuz pontudo que cai para trás, o rosto redondo com óculos enormes, o corpo
+ * pequeno num casaco em sino até o meio da coxa (aberto na frente para as pernas), mangas que abrem no
+ * punho, luvas grossas, pernas finas e botas grandes; às vezes cachecol, mochila com o rolo de dormir.
  * → { D, kit }
  */
 export function humanFlesh(tribe, M, id) {
   const r = rngOf(id, 3);
   const v = Math.floor(r() * 4);
-  const q = rngVar(23, v);
-  const h = lerp(0.94, 1.06, q());
-  const wide = lerp(0.9, 1.12, q());
+  const q = rngVar(29, v);
+  const h = lerp(0.95, 1.06, q());
+  const wide = lerp(0.92, 1.15, q());
   const D = {
-    hip: 0.93 * h,
-    thigh: 0.44 * h,
-    shin: 0.42 * h,
-    torso: 0.52 * h,
-    shoulderW: 0.185 * wide,
-    hipW: 0.09 * wide,
-    upperArm: 0.28 * h,
-    forearm: 0.27 * h,
-    stride: 1.3 * h,
+    hip: 0.74 * h,
+    thigh: 0.33 * h,
+    shin: 0.31 * h,
+    torso: 0.42 * h,
+    shoulderW: 0.15 * wide,
+    hipW: 0.075 * wide,
+    upperArm: 0.23 * h,
+    forearm: 0.21 * h,
+    stride: 1.05 * h,
     girth: 1,
-    lean: 0.16,
-    swing: 0.8,
+    lean: 0.12,
+    swing: 0.9,
   };
   const skin = movingMaterial(M.skin);
-  const cloth = movingMaterial(M.garb);
-  const mantle = movingMaterial(M.mantle);
+  const coat = movingMaterial(M.garb);
+  const hoodM = movingMaterial(M.mantle);
   const leather = movingMaterial(M.leather);
   const metal = M.machine;
   const dark = M.door;
-  const hem = lerp(0.35, 0.85, q()); // o comprimento do manto (0: na cintura · 1: abaixo do joelho)
-  const resp = r() < 0.5; // respirador ou óculos e lenço
-  const scarf = q() < 0.6;
+  const coatLen = lerp(0.12, 0.26, q()); // m abaixo do quadril
+  const scarf = v !== 1;
+  const pack = v === 0 || v === 3;
+  const resp = r() < 0.4;
+  const HR = 0.115; // o raio da cabeça (grande)
   const kit = {
     head(neck, add) {
-      // os óculos de proteção (duas lentes redondas num aro) e, às vezes, o respirador
+      // os óculos enormes: dois aros grossos com lentes escuras
       for (const s of [-1, 1]) {
-        const g = new THREE.CylinderGeometry(0.022, 0.024, 0.022, 10);
+        const g = new THREE.CylinderGeometry(0.036, 0.04, 0.03, 14);
         g.rotateX(Math.PI / 2);
-        g.translate(s * 0.034, 0.215, 0.088);
+        g.translate(s * 0.045, 0.2, HR * 0.92);
         add(neck, mesh(g, metal));
-        const lens = new THREE.CircleGeometry(0.017, 10);
-        lens.translate(s * 0.034, 0.215, 0.1);
+        const lens = new THREE.CircleGeometry(0.029, 14);
+        lens.translate(s * 0.045, 0.2, HR * 0.92 + 0.0155);
         add(neck, mesh(lens, dark));
       }
       if (resp) {
-        const g = new THREE.CylinderGeometry(0.03, 0.038, 0.05, 8);
+        // o respirador: um focinho curto com o filtro redondo
+        const g = new THREE.CylinderGeometry(0.035, 0.045, 0.06, 10);
         g.rotateX(Math.PI / 2);
-        g.translate(0, 0.145, 0.095);
+        g.translate(0, 0.125, HR * 0.85);
         add(neck, mesh(g, metal));
-        for (const s of [-1, 1]) {
-          const c = new THREE.CylinderGeometry(0.018, 0.018, 0.03, 8);
-          c.rotateZ(Math.PI / 2);
-          c.translate(s * 0.05, 0.135, 0.085);
-          add(neck, mesh(c, metal));
-        }
+        const f = new THREE.CylinderGeometry(0.03, 0.03, 0.02, 12);
+        f.rotateX(Math.PI / 2);
+        f.translate(0, 0.125, HR * 0.85 + 0.04);
+        add(neck, mesh(f, dark));
       }
     },
     hand() {},
@@ -242,124 +247,112 @@ export function humanFlesh(tribe, M, id) {
     flesh(J) {
       const { root, spine, neck, arms, legs } = J;
       const T = D.torso;
-      const capeLen = lerp(0.45, 0.95, hem); // a capa: das omoplatas até a cintura ou o quadril
-      const hood = v !== 2; // o capuz levantado (uma variante anda de cabeça descoberta, o lenço no pescoço)
-      return [
+      const layers = [
         {
-          // a pele: só o que aparece — o rosto e as mãos
-          key: `hu:abrigado:skin:${v}`,
+          // o rosto (redondo, quase sem feições: os óculos fazem o rosto)
+          key: `hu2:skin:${v}`,
           mat: skin,
-          cell: 0.012,
-          build(F) {
-            F.blob(neck, [0, 0.215, 0.0], [0.078, 0.104, 0.092], 0.03); // o crânio
-            F.blob(neck, [0, 0.165, 0.018], [0.064, 0.062, 0.068], 0.03); // as maçãs e o maxilar
-            F.blob(neck, [0, 0.128, 0.04], [0.032, 0.026, 0.03], 0.025); // o queixo
-            F.cone(neck, [0, 0.205, 0.084], [0, 0.17, 0.098], 0.011, 0.014, 0.012); // o nariz
-            for (const s of [-1, 1]) {
-              F.carveBlob(neck, [s * 0.032, 0.215, 0.093], [0.02, 0.012, 0.015], 0.012); // as órbitas
-              F.blob(neck, [s * 0.075, 0.195, -0.005], [0.012, 0.025, 0.018], 0.015); // as orelhas
-            }
-            F.cone(neck, [0, 0.0, -0.01], [0, 0.13, -0.005], 0.045, 0.04, 0.03);
-            for (const A of arms) {
-              const fa = D.forearm;
-              F.blob(A.el, [0, -fa - 0.045, 0.005], [0.038, 0.05, 0.017], 0.02); // a palma
-              for (let i = 0; i < 4; i++) {
-                const x = (i - 1.5) * 0.0175;
-                F.cone(A.el, [x, -fa - 0.085, 0.006], [x * 1.05, -fa - 0.12, 0.016], 0.0085, 0.0078, 0.008);
-                F.cone(A.el, [x * 1.05, -fa - 0.12, 0.016], [x * 1.08, -fa - 0.145 + Math.abs(i - 1.5) * 0.008, 0.038], 0.0078, 0.0068, 0.008);
-              }
-              F.cone(A.el, [-A.s * 0.03, -fa - 0.03, 0.012], [-A.s * 0.048, -fa - 0.08, 0.045], 0.0105, 0.0085, 0.012); // o polegar
-            }
-          },
-        },
-        {
-          // a jaqueta justa no corpo: a anatomia por baixo (peito, cintura, ombros), a gola alta, a carcela,
-          // os bolsos, as mangas com punho; às vezes o lenço
-          key: `hu:abrigado:cloth:${v}`,
-          mat: cloth,
-          cell: 0.014,
-          build(F) {
-            F.blob(root, [0, -0.03, 0], [0.135 * wide, 0.1, 0.095], 0.04); // a bacia
-            F.cone(root, [0, -0.02, 0.0], [0, -0.16, 0.0], 0.14 * wide, 0.15 * wide, 0.03); // a aba
-            F.cut(root, [0, -0.17, 0], [0, -1, 0], 0.008);
-            F.cone(spine, [0, 0.0, 0.0], [0, T * 0.45, 0.01], 0.12 * wide, 0.13 * wide, 0.05); // a cintura
-            F.blob(spine, [0, T * 0.67, 0.012], [0.14 * wide, 0.15, 0.095], 0.05); // o peito
-            for (const s of [-1, 1]) {
-              F.cone(spine, [s * 0.05, T * 0.9, 0.0], [s * D.shoulderW * 0.92, T - 0.04, -0.005], 0.05, 0.05, 0.04); // o trapézio
-              F.blob(spine, [s * D.shoulderW * 0.95, T - 0.06, 0], [0.052, 0.05, 0.055], 0.04); // o ombro
-              F.blob(spine, [s * 0.075, T * 0.6, 0.09], [0.04, 0.04, 0.018], 0.01); // o bolso do peito
-            }
-            F.cone(spine, [0.012, T * 0.08, 0.11], [0.012, T * 0.95, 0.09], 0.01, 0.01, 0.01); // a carcela
-            // a gola alta, aberta na frente
-            F.cone(neck, [0, -0.02, -0.005], [0, 0.07, -0.01], 0.07, 0.062, 0.03);
-            F.carveBlob(neck, [0, 0.07, 0.07], [0.035, 0.05, 0.04], 0.01);
-            if (scarf) for (let i = 0; i < 9; i++) {
-              const a = (i / 9) * Math.PI * 2;
-              F.blob(neck, [Math.sin(a) * 0.055, 0.05 + (i % 2) * 0.014, Math.cos(a) * 0.05], [0.03, 0.026, 0.03], 0.02);
-            }
-            // as mangas, com o punho e o cotovelo
-            for (const A of arms) {
-              const ua = -A.el.position.y;
-              F.cone(A.sh, [0, 0.0, 0], [0, -ua, 0], 0.05, 0.043, 0.03);
-              F.blob(A.el, [0, 0, -0.012], [0.043, 0.04, 0.042], 0.02);
-              F.cone(A.el, [0, 0.01, 0], [0, -D.forearm * 0.85, 0.0], 0.042, 0.037, 0.03);
-              F.blob(A.el, [0, -D.forearm * 0.82, 0], [0.043, 0.028, 0.04], 0.01); // o punho
-            }
-          },
-        },
-        {
-          // a capa curta com o capuz (à parte: o corte da barra e a abertura da frente só valem para ela)
-          key: `hu:abrigado:cape:${v}`,
-          mat: mantle,
           cell: 0.016,
           build(F) {
-            // a gola do capuz: o pano caído em volta do pescoço e sobre o alto dos ombros
-            F.blob(spine, [0, T * 0.97, -0.03], [0.13 * wide, 0.05, 0.1], 0.04);
-            F.carveBlob(spine, [0, T * 0.97, 0.1], [0.06, 0.07, 0.06], 0.01);
-            if (hood) {
-              // o capuz: em volta da cabeça, mais fundo atrás, a boca aberta na frente
-              F.blob(neck, [0, 0.215, -0.02], [0.102, 0.128, 0.122], 0.05);
-              F.blob(neck, [0, 0.26, -0.085], [0.055, 0.06, 0.055], 0.04); // a ponta caída atrás
-              F.carveBlob(neck, [0, 0.19, 0.12], [0.078, 0.11, 0.1], 0.02);
-              F.carveBlob(neck, [0, 0.2, 0.0], [0.082, 0.105, 0.098], 0.01); // (oco: a cabeça dentro)
-            } else {
-              F.blob(neck, [0, 0.03, -0.075], [0.11, 0.045, 0.06], 0.04); // o capuz baixado nas costas
-            }
+            F.blob(neck, [0, 0.18, 0.012], [HR * 0.9, HR * 0.95, HR * 0.92], 0.03);
+            F.blob(neck, [0, 0.165, HR * 0.9], [0.018, 0.016, 0.016], 0.02); // o nariz (um botão)
           },
         },
         {
-          // as calças: folgadas, com joelheiras (à parte: os cortes da jaqueta e da capa não as pegam)
-          key: `hu:abrigado:legs:${v}`,
-          mat: cloth,
-          cell: 0.016,
-          build(F) {
-            F.blob(root, [0, -0.06, 0], [0.13 * wide, 0.09, 0.095], 0.04);
-            for (const Lg of legs) {
-              F.cone(Lg.hp, [0, 0.0, 0], [0, -D.thigh, 0.0], 0.08, 0.06, 0.04);
-              F.cone(Lg.kn, [0, 0, 0], [0, -D.shin * 0.75, 0], 0.058, 0.05, 0.04);
-            }
-          },
-        },
-        {
-          // o couro: as botas, o cinto com as bolsas, a alça atravessada no peito, as joelheiras
-          key: `hu:abrigado:leather:${v}`,
+          // as luvas: mitenes grossas com o polegar
+          key: `hu2:gloves:${v}`,
           mat: leather,
           cell: 0.014,
           build(F) {
-            F.cone(root, [0, 0.0, 0], [0, -0.045, 0.0], 0.158 * wide, 0.16 * wide, 0.01);
-            for (const s of [-1, 1]) F.blob(root, [s * 0.13 * wide, -0.06, 0.06], [0.04, 0.05, 0.03], 0.012); // as bolsas
-            F.blob(root, [0.02, -0.06, -0.13], [0.06, 0.045, 0.03], 0.012);
-            F.cone(spine, [-D.shoulderW * 0.85, T * 0.95, 0.06], [0.12 * wide, T * 0.05, 0.13], 0.013, 0.013, 0.008); // a alça
-            F.cone(spine, [-D.shoulderW * 0.85, T * 0.95, -0.05], [0.12 * wide, T * 0.05, -0.12], 0.013, 0.013, 0.008);
+            for (const A of arms) {
+              const fa = D.forearm;
+              F.blob(A.el, [0, -fa - 0.04, 0.008], [0.042, 0.055, 0.03], 0.03);
+              F.cone(A.el, [-A.s * 0.028, -fa - 0.02, 0.02], [-A.s * 0.045, -fa - 0.06, 0.045], 0.016, 0.014, 0.02);
+            }
+          },
+        },
+        {
+          // o casaco em sino: os ombros caídos, o corpo alargando até a barra; mangas que abrem no punho;
+          // a fenda da frente (as pernas passam); às vezes o cachecol grosso
+          key: `hu2:coat:${v}`,
+          mat: coat,
+          cell: 0.018,
+          build(F) {
+            F.blob(spine, [0, T * 0.62, 0], [0.15 * wide, T * 0.5, 0.115], 0.06); // o peito
+            F.cone(spine, [0, T * 0.6, -0.005], [0, -0.02, -0.01], 0.15 * wide, 0.165 * wide, 0.06);
+            F.cone(root, [0, 0.02, -0.01], [0, -coatLen, -0.02], 0.165 * wide, 0.215 * wide, 0.06); // a saia do casaco
+            F.cut(root, [0, -coatLen + 0.01, 0], [0, -1, 0], 0.012);
+            F.carve(root, [0, -coatLen - 0.05, 0.22], [0, -0.02, 0.17], 0.035, 0.012, 0.02); // a fenda da frente
+            F.carveBlob(root, [0, -coatLen, 0], [0.11 * wide, 0.12, 0.1], 0.02); // (por baixo: oco — as coxas dentro)
+            for (const s of [-1, 1]) F.blob(spine, [s * D.shoulderW, T - 0.05, 0], [0.055, 0.05, 0.06], 0.05); // os ombros caídos
+            for (let i = 0; i < 3; i++) F.blob(spine, [0.03, T * (0.25 + i * 0.22), 0.118], [0.014, 0.014, 0.01], 0.006); // os botões
+            if (scarf) {
+              for (let i = 0; i < 10; i++) {
+                const a = (i / 10) * Math.PI * 2;
+                F.blob(neck, [Math.sin(a) * 0.075, 0.02 + (i % 2) * 0.012, Math.cos(a) * 0.07 - 0.005], [0.042, 0.04, 0.042], 0.03);
+              }
+              F.cone(spine, [0.05, T, 0.1], [0.07, T * 0.55, 0.13], 0.03, 0.035, 0.03); // a ponta caindo na frente
+            }
+            for (const A of arms) {
+              const ua = -A.el.position.y;
+              F.cone(A.sh, [0, 0.0, 0], [0, -ua, 0], 0.048, 0.045, 0.03);
+              F.cone(A.el, [0, 0.01, 0], [0, -D.forearm * 0.92, 0.0], 0.045, 0.058, 0.03); // abre no punho
+              F.carveBlob(A.el, [0, -D.forearm * 0.95, 0], [0.04, 0.05, 0.04], 0.01); // (a boca da manga)
+            }
+          },
+        },
+        {
+          // o capuz pontudo: em volta da cabeça grande, a ponta caindo para trás; a boca redonda na frente
+          key: `hu2:hood:${v}`,
+          mat: hoodM,
+          cell: 0.016,
+          build(F) {
+            F.blob(neck, [0, 0.19, -0.005], [HR + 0.03, HR + 0.035, HR + 0.03], 0.04);
+            F.cone(neck, [0, 0.24, -0.06], [0, 0.29 + 0.03 * v, -0.2], 0.075, 0.018, 0.06); // a ponta
+            F.blob(neck, [0, 0.03, -0.02], [0.13 * wide, 0.05, 0.11], 0.05); // a gola do capuz nos ombros
+            F.carveBlob(neck, [0, 0.18, HR + 0.05], [HR * 0.82, HR * 0.9, 0.08], 0.015); // a boca do capuz
+            F.carveBlob(neck, [0, 0.18, 0.01], [HR + 0.005, HR + 0.01, HR + 0.005], 0.01); // (oco: a cabeça dentro)
+          },
+        },
+        {
+          // as pernas finas (as calças)
+          key: `hu2:legs:${v}`,
+          mat: coat,
+          cell: 0.016,
+          build(F) {
+            F.blob(root, [0, -0.04, 0], [0.11 * wide, 0.07, 0.08], 0.04);
             for (const Lg of legs) {
-              F.blob(Lg.kn, [0, -0.01, 0.055], [0.045, 0.055, 0.02], 0.012); // a joelheira
-              F.cone(Lg.kn, [0, -D.shin * 0.6, 0], [0, -D.shin, 0.0], 0.06, 0.054, 0.03);
-              F.cone(Lg.an, [0, -0.03, -0.04], [0, -0.04, 0.13], 0.054, 0.046, 0.03);
-              F.cut(Lg.an, [0, -0.085, 0], [0, -1, 0], 0.008); // a sola reta
+              F.cone(Lg.hp, [0, 0.0, 0], [0, -D.thigh, 0.0], 0.055, 0.045, 0.03);
+              F.cone(Lg.kn, [0, 0, 0], [0, -D.shin * 0.7, 0], 0.045, 0.04, 0.03);
+            }
+          },
+        },
+        {
+          // as botas grandes e o cinto largo
+          key: `hu2:boots:${v}`,
+          mat: leather,
+          cell: 0.016,
+          build(F) {
+            for (const Lg of legs) {
+              F.cone(Lg.kn, [0, -D.shin * 0.55, 0], [0, -D.shin, 0.0], 0.056, 0.062, 0.03); // o cano
+              F.blob(Lg.an, [0, -0.035, 0.04], [0.065, 0.055, 0.115], 0.04); // o pé redondo e grande
+              F.cut(Lg.an, [0, -0.075, 0], [0, -1, 0], 0.01); // a sola reta
             }
           },
         },
       ];
+      if (pack)
+        layers.push({
+          // a mochila com o rolo de dormir por cima
+          key: `hu2:pack:${v}`,
+          mat: hoodM,
+          cell: 0.018,
+          build(F) {
+            F.blob(spine, [0, T * 0.5, -0.19], [0.13 * wide, 0.15, 0.08], 0.03);
+            F.cone(spine, [-0.15 * wide, T * 0.75, -0.2], [0.15 * wide, T * 0.75, -0.2], 0.055, 0.055, 0.01);
+          },
+        });
+      return layers;
     },
     dispose() {},
   };

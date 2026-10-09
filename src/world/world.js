@@ -311,12 +311,13 @@ export class World {
       m.uniforms = { ...src.uniforms }; // (os mesmos uniforms — as texturas assadas não se clonam — menos os dois abaixo)
       m.uniforms.uBaseColor = { value: base };
       m.uniforms.uStreaks = { value: streaks };
+      m.uniforms.uAccent = { value: 0 }; // (sem ferrugem colorida: os corpos em cinza por enquanto)
       return m;
     };
     this.materials.skin = tone(this.materials.pale, C(0.3, 0.235, 0.2), 0.1);
-    this.materials.leather = tone(this.materials.cloth, C(0.075, 0.062, 0.052), 0.3);
-    this.materials.garb = tone(this.materials.cloth, C(0.12, 0.108, 0.094), 0.35); // o pano das roupas
-    this.materials.mantle = tone(this.materials.cloth, C(0.085, 0.08, 0.072), 0.5); // a capa, mais gasta
+    this.materials.leather = tone(this.materials.cloth, C(0.05, 0.05, 0.05), 0.3);
+    this.materials.garb = tone(this.materials.cloth, C(0.13, 0.13, 0.13), 0.35); // o pano das roupas (sem cor por enquanto: o usuário)
+    this.materials.mantle = tone(this.materials.cloth, C(0.085, 0.085, 0.085), 0.5); // o capuz e a mochila, mais escuros
     // variantes para os chunks LOD: mesmas receitas, fade no fim do alcance
     this.lodMaterials = {};
     this._recipes = { concrete, darkConcrete, steel, deck, rubber, megaWall };
