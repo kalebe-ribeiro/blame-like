@@ -235,7 +235,8 @@ export class World {
     const concrete = { base: C(0.26, 0.25, 0.235), panel: 4, streaks: 0.6, accentAmount: 0.08 };
     const darkConcrete = { base: C(0.16, 0.155, 0.148), panel: 8, streaks: 0.8, accentAmount: 0.05 };
     const steel = { base: C(0.17, 0.175, 0.18), accent: C(0.22, 0.11, 0.06), accentAmount: 0.45, panel: 1.5, streaks: 0.4 };
-    const deck = { base: C(0.22, 0.212, 0.2), panel: 2, streaks: 0.3, accentAmount: 0.15, circuitAmount: 0.25, circuitScale: 1.2 };
+    // (sem as linhas técnicas com pulsos de luz: o usuário, 2026-10-09 — "faíscas andando pelo chão não fazem sentido")
+    const deck = { base: C(0.22, 0.212, 0.2), panel: 2, streaks: 0.3, accentAmount: 0.15 };
     const rubber = { base: C(0.035, 0.035, 0.035), panel: 100, streaks: 0, accentAmount: 0 };
     const megaWall = {
       ...darkConcrete,
@@ -257,7 +258,7 @@ export class World {
       block: mk({ ...concrete, base: C(0.24, 0.232, 0.22), panel: 3, windows: 0.16, windowSize: [2.6, 3.2], fade: fadeNear, surf: sConcrete }),
       slab: mk({ ...darkConcrete, panel: 6, fogAmount: 0.7, fade: fadeNear, surf: sConcrete }),
       monolith: mk({ ...darkConcrete, base: C(0.07, 0.07, 0.07), panel: 12, fogAmount: 0.6, fade: fadeNear, surf: sConcreteBig }),
-      plaza: mk({ ...concrete, base: C(0.28, 0.27, 0.255), panel: 3, circuitAmount: 0.2, circuitScale: 0.8, fade: fadeNear, surf: sConcrete }),
+      plaza: mk({ ...concrete, base: C(0.28, 0.27, 0.255), panel: 3, fade: fadeNear, surf: sConcrete }),
       tube: mk({ ...steel, panel: 2, windows: 0.02, windowSize: [1.5, 1.2], side: THREE.DoubleSide, fade: fadeNear, surf: sSteel }),
       // ── camada macro (visível a quilômetros) ──
       wall: mk({ ...megaWall, fogAmount: 0.28, fade: fadeMacro, surf: sConcreteBig }),

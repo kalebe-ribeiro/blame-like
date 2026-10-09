@@ -787,7 +787,10 @@ function buildWalk(F, B, axis, u, y, t0, t1, w, salt, anchors) {
       const [ax, ay, az] = G(ts + len / 2, -1.2, (w.track ? -w.track.side : r.sign()) * hw);
       anchors.push({ kind: 'point', gx: ax, gy: ay, gz: az });
     }
-    if (r.chance(0.05)) B.add('cable', plumbLine(P(ts + len / 2, -2, r.sign() * hw * 0.8), r.float(100, 300), { rng: r, radius: r.float(0.06, 0.18) }));
+    if (r.chance(0.05)) {
+      const rad = r.float(0.06, 0.18);
+      B.add(cableMat(rad), plumbLine(P(ts + len / 2, -2, r.sign() * hw * 0.8), r.float(100, 300), { rng: r, radius: rad }));
+    }
   }
 }
 

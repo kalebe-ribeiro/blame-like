@@ -18,7 +18,7 @@
 import * as THREE from '../lib/three.js';
 import { NODE, WALK, EDGE_DIRS } from './field.js';
 import { place, cylinderBetween, buildTaperedTube, slabBetween } from '../world/geometry.js';
-import { catenaryCable } from '../world/cables.js';
+import { catenaryCable, cableMat } from '../world/cables.js';
 import { FLUORO, SODIUM, COLD } from './colors.js';
 import { rngAt } from './hash.js';
 
@@ -234,7 +234,7 @@ const EDGES = {
     const sd = side(s, t).multiplyScalar(w / 2);
     for (const sgn of [-1, 1]) {
       const o = sd.clone().multiplyScalar(sgn);
-      B.add('cable', catenaryCable(s.clone().add(o).add(new THREE.Vector3(0, 1.3, 0)), t.clone().add(o).add(new THREE.Vector3(0, 1.3, 0)), {
+      B.add(cableMat(0.12), catenaryCable(s.clone().add(o).add(new THREE.Vector3(0, 1.3, 0)), t.clone().add(o).add(new THREE.Vector3(0, 1.3, 0)), {
         rng: e.r, noise3: F.noise3, radius: 0.12, sag: (sag + 0.5) / Math.max(len, 1), points: 14,
       }));
     }

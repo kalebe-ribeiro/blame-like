@@ -50,7 +50,8 @@ export function plumbLine(top, length, { rng, radius = 0.12 }) {
  * passa por eles); grosso ('hose', o mesmo desenho) colide — um cabo de 0,4 a 3 m de grossura é um
  * tubo, não um fio (achado no playtest: catenárias de até 1,6 m de raio atravessadas pelo corpo).
  */
-export const HOSE_R = 0.2;
+// (0,1 m: um cabo de 20 cm de grossura já é um obstáculo — o usuário atravessou os de 0,12–0,18, 2026-10-09)
+export const HOSE_R = 0.1;
 export function cableMat(radius) {
   return radius >= HOSE_R ? 'hose' : 'cable';
 }
