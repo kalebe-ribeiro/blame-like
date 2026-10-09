@@ -497,6 +497,28 @@ export function setupDev(ctx) {
       console.warn('SURFCAM: fim');
     }, 12000);
   }
+  // --rayprobe=N: aos N s, um raio do centro da tela por todas as malhas de colisão (os dois lados das faces):
+  // o material, a distância e se a face está de COSTAS para a câmera (uma face de costas na frente de uma de
+  // frente: a peça é oca vista dali)
+  if (params.get('rayprobe')) {
+    setTimeout(() => {
+      const objs = [];
+      for (const e of world.chunkLayer.chunks.values()) for (const m of e.group?.children ?? []) objs.push(m);
+      const rc = new THREE.Raycaster();
+      rc.setFromCamera(new THREE.Vector2(0, 0), camera);
+      rc.far = 300;
+      const mats = new Set(objs.map((m) => m.material));
+      const sides = new Map([...mats].map((m) => [m, m.side]));
+      for (const m of mats) m.side = THREE.DoubleSide;
+      const hits = rc.intersectObjects(objs, false).slice(0, 6);
+      for (const [m, sd] of sides) m.side = sd;
+      for (const h of hits) {
+        const n = h.face.normal.clone().transformDirection(h.object.matrixWorld);
+        const back = n.dot(rc.ray.direction) > 0;
+        console.warn(`RAYPROBE: ${h.object.userData.mat} a ${h.distance.toFixed(1)} m · ${back ? 'DE COSTAS' : 'de frente'} · ponto ${world.toGlobal(h.point.clone()).toArray().map((x) => x.toFixed(1))}`);
+      }
+    }, Number(params.get('rayprobe')) * 1000);
+  }
   // --holdstats=N: aos N s, o levantamento dos APOIOS (o cofre, Mobilidade §4) nas paredes em volta (40 m):
   // em colunas de parede de 0,5 a 14 m de altura, os rebordos onde cabe a mão (a face recua acima, um
   // topo plano de ≥ 5 cm); uma coluna é "escalável" se tem apoios encadeados (até 1,5 m um do outro)

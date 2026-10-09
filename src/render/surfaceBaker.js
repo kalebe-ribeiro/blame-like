@@ -13,7 +13,7 @@ import * as THREE from 'three';
 
 /** As famílias (a camada do array) e o tamanho, em metros, de um ladrilho de textura. */
 export const SURF = {
-  concrete: { layer: 0, tile: 4.8 }, // concreto moldado: tábuas da forma, furos de tirante, bolhas, junta de concretagem
+  concrete: { layer: 0, tile: 4.8 }, // concreto: a pele contínua (ondulação, grão, poros)
   plate: { layer: 1, tile: 3.0 }, // chapa de aço: placas, rebites, soldas, amassados, riscos
   tread: { layer: 2, tile: 1.2 }, // piso de chapa xadrez: ressaltos alternados, sujeira nos sulcos
 };
@@ -103,31 +103,21 @@ float pcell(vec2 uv, float n) {
 // ── as famílias: altura (m, relativa) e cor (cinza médio 0,5 = o tom do material), aspereza ──
 // m = posição em metros dentro do ladrilho
 float hConcrete(vec2 uv, out vec3 col, out float rough) {
-  vec2 m = uv * uTile;
-  // tábuas da forma: 1,2 m × 2,4 m; a junta funda 1 cm; cada tábua um pouco mais alta ou baixa
-  vec2 bw = vec2(1.2, 2.4);
-  vec2 bc = floor(m / bw);
-  vec2 bf = fract(m / bw) * bw;
-  float edge = min(min(bf.x, bw.x - bf.x), min(bf.y, bw.y - bf.y));
-  float seam = 1.0 - smoothstep(0.006, 0.02, edge);
-  float board = (hash21(mod(bc, uTile / bw)) - 0.5) * 0.004;
-  // veio da madeira da forma (horizontal, fraco)
-  float grain = pnoise(vec2(uv.x * 6.0, uv.y * 90.0), vec2(6.0, 90.0)) * 0.0012;
-  // furos de tirante: nos cantos internos das tábuas, a 0,3 m das bordas
-  vec2 tp = mod(m, vec2(0.6, 0.8)) - vec2(0.3, 0.4);
-  float tie = 1.0 - smoothstep(0.012, 0.018, length(tp));
-  // bolhas (poros): pequenas covas espalhadas
-  // (só uma célula em sete tem bolha, de 2 a 6 mm de raio — em fração do ladrilho)
+  // concreto contínuo: sem grade de tábuas nem de furos (o usuário, 2026-10-09: nada de "tiles" em todo
+  // lugar — os padrões regulares ficam para onde o contexto pede)
+  // veio fraco e irregular da forma (horizontal, some e volta)
+  float grain = pnoise(vec2(uv.x * 6.0, uv.y * 90.0), vec2(6.0, 90.0)) * 0.0008 * smoothstep(-0.2, 0.4, pnoise(uv * 5.0, vec2(5.0)));
+  // bolhas (poros): só uma célula em sete tem bolha, de 2 a 6 mm de raio (em fração do ladrilho)
   float bh = hash21(floor(uv * 70.0) + 5.7);
   float bugR = step(0.86, bh) * mix(0.002, 0.006, fract(bh * 7.13)) / uTile;
   float bug = (1.0 - smoothstep(0.0, 0.0008, pcell(uv, 70.0) - bugR)) * step(0.86, bh);
-  // a pele do concreto: ondulações grandes e o grão fino
+  // a pele do concreto: ondulações grandes, médias e o grão fino
   float big = pfbm3(uv, 3.0) * 0.006;
+  float mid = pfbm3(uv, 12.0) * 0.002;
   float fine = pfbm3(uv, 48.0) * 0.0015;
-  float h = big + fine + board + grain - seam * 0.01 - tie * 0.02 - bug * 0.004;
-  float tone = 0.5 + 0.05 * (hash21(mod(bc, uTile / bw) + 3.1) - 0.5) + 0.06 * pfbm4(uv, 6.0);
-  // a junta e os furos guardam sujeira
-  tone *= 1.0 - 0.35 * seam - 0.5 * tie - 0.25 * bug;
+  float h = big + mid + fine + grain - bug * 0.004;
+  float tone = 0.5 + 0.08 * pfbm4(uv, 4.0) + 0.04 * pfbm3(uv, 20.0);
+  tone *= 1.0 - 0.25 * bug;
   col = vec3(tone);
   rough = 0.88;
   return h;

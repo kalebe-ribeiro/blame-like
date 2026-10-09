@@ -27,6 +27,15 @@ Roteiro fixo de 20 capturas (seed abc: 12 lugares, 4 com névoa 0, 4 com lantern
 - **`--surfcam=mat`**: a face mais perto do material, de viés, a 2,5 e 8 m e com lanterna; cada vista com o forno desligado e ligado no mesmo quadro (`uSurfOn`).
 - Desempenho: média parado **9,5 ms · GPU 8,5 ms** (sem perda — dentro da variação da máquina); sem avisos X4000/X3595.
 
+### Sem "tiles" em todo lugar (usuário, 2026-10-09)
+> "gostaria que esses tiles fossem removidos — as divisões claras dos blocos de textura, deixando algo natural. Pode haver padrões dessa forma dependendo do contexto, mas do jeito atual eles estão em todo lugar."
+- A grade de juntas e o tom por placa do shader viraram o parâmetro `seams` (0..1, **0 por padrão**): sem ele, o tom é uma mancha larga e contínua (`snoise` na escala de 3 placas). Placas, juntas e grades regulares só onde o contexto pede (receitas da etapa 3: chapas de aço, pisos de grade, painéis pré-moldados), nunca como padrão.
+- A família `concrete` do forno perdeu as tábuas de forma e os furos de tirante alinhados: só a pele (ondulação grande/média, grão, veio fraco e intermitente, poros raros).
+- Fica para a etapa 3: as janelas da colmeia (os quadrados escuros em grade — `windows`) e a escala/repetição do ladrilho de 4,8 m (variação macro).
+
+### As capturas de desenvolvimento num perfil à parte (2026-10-09)
+`--capture` usava o perfil de verdade (o mundo salvo e o diário de quem joga), e o `taskkill` antes de cada execução fecha qualquer Electron — inclusive o jogo aberto. Agora `--capture` usa `%TEMP%/cybercosmic-capture`, com o armazenamento zerado a cada execução (os caches de shader e de chunks ficam). O save de 2026-10-08 (seed l5rg5b) não está mais no perfil.
+
 ## Quando
 **Depois de finalizar todos os aspectos da gameplay.** Até lá, o visual é o de agora — formas geométricas, materiais procedurais (`shaders/materials.js`), corpos simples dos seres (`world/bodies.js`) e animações únicas. As features de gameplay continuam sendo feitas com esse visual e **não** esperam o rework (nem o antecipam).
 

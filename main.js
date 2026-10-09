@@ -75,6 +75,19 @@ const checkMode = process.argv.includes('--check') || !!argValue('check');
 // a saída do terminal pode ser fechada antes do fim (um `| head`): não é erro do jogo
 for (const st of [process.stdout, process.stderr]) st?.on?.('error', () => {});
 if (checkMode) app.setPath('userData', path.join(require('os').tmpdir(), 'cybercosmic-check'));
+// --capture: as capturas de desenvolvimento também num perfil à parte — nunca leem nem gravam o mundo
+// salvo de quem joga (uma captura gravava por cima do save e do diário de verdade)
+else if (capturePath) {
+  // (o armazenamento vazio a cada execução: um mundo salvo de uma captura anterior passaria por cima do
+  //  --goto/--pos; os caches — shaders, chunks — ficam, senão a chegada demora mais que o --delay)
+  const dir = path.join(require('os').tmpdir(), 'cybercosmic-capture');
+  for (const sub of ['Local Storage', 'Session Storage', 'IndexedDB']) {
+    try {
+      fs.rmSync(path.join(dir, sub), { recursive: true, force: true });
+    } catch {}
+  }
+  app.setPath('userData', dir);
+}
 
 // --profile=pasta: perfil separado (salvamento, diário, configurações) — para testes
 if (argValue('profile')) app.setPath('userData', path.resolve(argValue('profile')));
@@ -163,7 +176,7 @@ function createWindow() {
   if (process.argv.includes('--nonpcs')) query.set('nonpcs', '1');
   if (process.argv.includes('--wreveal')) query.set('wreveal', '1');
   if (process.argv.includes('--sgwatch')) query.set('sgwatch', '1');
-  for (const k of ['sgnear', 'sgdist', 'sgemerge', 'sgcam', 'talk', 'talkpick', 'wcam', 'hang', 'ledgestats', 'ambient', 'climbonly', 'shimmy', 'inventory', 'equip', 'grabtest', 'grabfreeze', 'moveonly', 'movetrace', 'profplaces', 'profres', 'sgtrace', 'golink', 'golinkat', 'cutshot', 'cutrange', 'cutr', 'beampart', 'beamhold', 'beamfire', 'profshot', 'fxshots', 'fxfar', 'fxhold', 'profhold', 'healthpart', 'healthtrace', 'strikepose', 'hurt', 'sgpart', 'chambercam', 'vaultcam', 'endingshow', 'sparkshot', 'buildercam', 'cutcar', 'cutobj', 'colreach', 'hitch', 'progswitch', 'cpuprofile', 'hosetest', 'holdstats', 'surfcam']) if (argValue(k)) query.set(k, argValue(k));
+  for (const k of ['sgnear', 'sgdist', 'sgemerge', 'sgcam', 'talk', 'talkpick', 'wcam', 'hang', 'ledgestats', 'ambient', 'climbonly', 'shimmy', 'inventory', 'equip', 'grabtest', 'grabfreeze', 'moveonly', 'movetrace', 'profplaces', 'profres', 'sgtrace', 'golink', 'golinkat', 'cutshot', 'cutrange', 'cutr', 'beampart', 'beamhold', 'beamfire', 'profshot', 'fxshots', 'fxfar', 'fxhold', 'profhold', 'healthpart', 'healthtrace', 'strikepose', 'hurt', 'sgpart', 'chambercam', 'vaultcam', 'endingshow', 'sparkshot', 'buildercam', 'cutcar', 'cutobj', 'colreach', 'hitch', 'progswitch', 'cpuprofile', 'hosetest', 'holdstats', 'surfcam', 'rayprobe']) if (argValue(k)) query.set(k, argValue(k));
   if (argValue('gounique')) query.set('gounique', argValue('gounique'));
   if (argValue('body')) query.set('body', argValue('body')); // --body=6: um corpo de teste aos 6 s (fase 5)
   if (argValue('bodydist')) query.set('bodydist', argValue('bodydist'));

@@ -146,6 +146,7 @@ uniform vec3  uBaseColor;     // concreto / aço
 uniform vec3  uAccentColor;   // ferrugem, fuligem
 uniform float uAccent;        // quanto de ferrugem
 uniform float uPanel;         // tamanho da placa (m)
+uniform float uSeams;         // 0..1: a grade de juntas e o tom por placa (0: superfície contínua)
 uniform float uStreaks;       // escorrimentos verticais
 uniform float uWindows;       // fração de janelas acesas (0 = sem janelas)
 uniform vec3  uWindowColor;
@@ -292,8 +293,10 @@ void main() {
   float fw = max(fwidth(ed), 1e-4);
   float seam = 1.0 - smoothstep(0.035, 0.035 + fw * 1.5, ed);
   seam = mix(seam, 0.12, smoothstep(0.03, 0.25, fw / uPanel));   // longe: só um tom médio
+  seam *= uSeams;
 
-  float tone = hash12(cell + uSeed * 3.1);
+  // o tom: por placa só onde há placas; senão, manchas largas e contínuas (sem a grade de blocos)
+  float tone = mix(0.5 + 0.45 * snoise(vec3(uvP / (uPanel * 3.0), uSeed + 9.0)), hash12(cell + uSeed * 3.1), uSeams);
   float mott = fbmAA(P, length(fwidth(P)));
   // escorrimentos: ruído esticado na vertical (chuva, óleo, séculos)
   float streak = snoise(vec3(W.x * 0.3, W.y * 0.01, W.z * 0.3) + uSeed);
@@ -465,6 +468,7 @@ export function createSurfaceMaterial(shared, params = {}) {
     accent: col(0.11, 0.06, 0.035), // ferrugem
     accentAmount: 0.15,
     panel: 4,
+    seams: 0, // a grade de juntas/placas (0..1): só onde o contexto pede — o usuário, 2026-10-09: "tiles em todo lugar"
     streaks: 0.6,
     windows: 0,
     windowColor: col(1.0, 0.55, 0.22),
@@ -492,6 +496,7 @@ export function createSurfaceMaterial(shared, params = {}) {
       uAccentColor: { value: p.accent },
       uAccent: { value: p.accentAmount },
       uPanel: { value: p.panel },
+      uSeams: { value: p.seams },
       uStreaks: { value: p.streaks },
       uWindows: { value: p.windows },
       uWindowColor: { value: p.windowColor },
