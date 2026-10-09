@@ -13,6 +13,7 @@
 //  pés não "patinam"); parado, tudo volta ao repouso.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { safeguardKit, siliconKit, humanKit, transhumanKit, tribeOf } from './kits.js';
 
 const TEST = {
@@ -38,6 +39,59 @@ function joint(parent, x, y, z) {
   j.position.set(x, y, z);
   parent.add(j);
   return j;
+}
+
+/**
+ * Junta as peças que andam juntas: tudo o que pende de uma mesma junta (sem outra junta no meio) e
+ * usa o mesmo material vira uma malha só, presa à junta. O corpo do rework tem dezenas de peças
+ * (garras, costelas, próteses); assim cada junta custa uma chamada de desenho por material.
+ */
+function fuseParts(group, moving) {
+  group.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4();
+  const rel = new THREE.Matrix4();
+  for (const J of moving) {
+    /** @type {Map<any, any[]>} */
+    const byMat = new Map();
+    const walk = (/** @type {any} */ o) => {
+      for (const c of o.children) {
+        if (moving.has(c)) continue;
+        if (c.isMesh) {
+          const k = byMat.get(c.material) ?? [];
+          k.push(c);
+          byMat.set(c.material, k);
+        }
+        walk(c);
+      }
+    };
+    walk(J);
+    inv.copy(J.matrixWorld).invert();
+    for (const [mat, list] of byMat) {
+      if (list.length < 2) continue;
+      const keys = (/** @type {any} */ g) => Object.keys(g.attributes).sort().join() + (g.index ? '+i' : '');
+      const k0 = keys(list[0].geometry);
+      const ok = list.filter((m) => keys(m.geometry) === k0);
+      if (ok.length < 2) continue;
+      const geos = ok.map((m) => m.geometry.clone().applyMatrix4(rel.multiplyMatrices(inv, m.matrixWorld)));
+      const merged = mergeGeometries(geos);
+      for (const g of geos) g.dispose();
+      if (!merged) continue;
+      for (const m of ok) {
+        m.removeFromParent();
+        m.geometry.dispose();
+      }
+      J.add(new THREE.Mesh(merged, mat));
+    }
+    // os grupos parados que ficaram vazios saem também
+    const prune = (/** @type {any} */ o) => {
+      for (const c of [...o.children]) {
+        if (moving.has(c) || c.isMesh) continue;
+        prune(c);
+        if (!c.children.length) c.removeFromParent();
+      }
+    };
+    prune(J);
+  }
 }
 
 /** O corpo de teste: { group, animate(dt, speed, grounded), dispose() }. Os pés ficam em y = 0. */
@@ -159,7 +213,9 @@ function buildBody(material, D, slitMat = null, dress = null, kit = null) {
   root.position.y = D.thigh + D.shin + 0.04 + 0.06;
   kit?.deco?.({ root, spine, neck, add });
 
-  for (const m of meshes) m.userData.noCollide = true;
+  const moving = new Set([group, root, spine, neck, ...arms.flatMap((A) => [A.sh, A.el]), ...legs.flatMap((L) => [L.hp, L.kn, L.an])]);
+  fuseParts(group, moving);
+  group.traverse((o) => (o.userData.noCollide = true));
 
   let phase = 0;
   let amt = 0; // 0 parado · 1 andando

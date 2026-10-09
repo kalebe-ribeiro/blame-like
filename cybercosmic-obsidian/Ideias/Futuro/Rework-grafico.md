@@ -129,6 +129,13 @@ Fichas de referência: [[Referencias-Blame]]. Tudo em `world/kits.js` (os kits) 
 - `--beingsheet=N`: a fileira de todos os corpos (com as poses do golpe e um caído) para as capturas.
 - Decisões do Claude: os quatro povos (das fichas) e as peças de cada um; as medidas por nível; o núcleo pequeno e embutido (o primeiro, grande e saturado, lia como um olho); a pele no tom apagado do pano (sem material novo); as variantes do golpe; a morte. A colisão dos seres continua a mesma (um Safeguard alto de 3,3 m usa a colisão do baixo).
 
+## Fechamento — regressão final (2026-10-09, autonomia do Claude)
+- **Todas as frentes feitas** (1 superfícies, 2 luz e atmosfera, 3 efeitos, 4 primeira pessoa, 5 e 6 os seres), na branch `rework-grafico` — falta a revisão do usuário e o merge.
+- **O custo dos corpos novos**: o profile final mostrou a vila em ~36–40 fps (antes dos corpos, no mesmo PC e na mesma hora: 47). Cada peça dos kits (dedos das garras, costelas, próteses…) era uma malha — uma chamada de desenho e uma matriz por quadro. **As peças que pendem da mesma junta e usam o mesmo material agora viram uma malha só** (`world/bodies.js fuseParts`, ao montar o corpo; a animação gira só as juntas, então nada muda). Captura da fileira `--beingsheet` antes × depois: idênticas. A vila foi a 77 fps (rodada isolada) / 59 (no profile completo).
+- **Os números finais** (`npm run profile`, parado): teia 70 · colmeia 118 · maciço 115 · vila 59 · camada 102 · transportador 89 · safeguard 54 (114 numa rodada isolada — varia com quantos Safeguards e reflexos estão à vista) · depósito 133 · estrato 95; média 11,8 ms / GPU 8,8 ms. As medidas neste PC variam bastante de rodada para rodada (a mesma vila: 47–77).
+- **Checks**: `check` 31/31 (113 fps), `check:pilgrimage` 31/31 (114 fps), `check:pad` 31 + 30, `check:climb` 14/14, `check:arms` 8/8, `check:beings` 5/5, `check:npcs` 12/12, `check:health` 14/14, `check:beam` dano 18/18, profile 18/18.
+- **Pendência conhecida** ([[Pendencias]] "Em observação"): o Safeguard não embarca no elevador grande no `check:safeguards` (`subir:elevador`) desde a frente 2; a escada passa. Não é dos cabos, do `lt.down`, dos lotes, nem do passe de sombras; a suspeita é o custo de GPU mudando o tempo.
+
 ## Quando
 **Depois de finalizar todos os aspectos da gameplay.** Até lá, o visual é o de agora — formas geométricas, materiais procedurais (`shaders/materials.js`), corpos simples dos seres (`world/bodies.js`) e animações únicas. As features de gameplay continuam sendo feitas com esse visual e **não** esperam o rework (nem o antecipam).
 
