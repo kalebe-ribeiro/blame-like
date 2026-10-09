@@ -69,6 +69,7 @@ export function resize(ctx) {
   signal.uniforms.uRes.value.copy(db);
   dust.material.uniforms.uRes.value.copy(db);
   world.silhouettes.setSize(db.x, db.y);
+  world.particles?.res.copy(db); // (os respingos das gotas: render/burst.js)
   reflection.setSize(db.x, db.y);
   hud?.resize();
 }

@@ -5,14 +5,18 @@
 //  Os emissores vêm dos chunks (gerados nos workers). Aqui juntamos os que
 //  estão perto do observador numa única geometria por tipo; toda a animação é
 //  feita no vertex shader a partir do tempo (nada é atualizado por partícula
-//  na CPU). As gotas próximas também avisam o áudio quando tocam o chão.
+//  na CPU). As gotas próximas também avisam o áudio quando tocam o chão — e respingam (o rework
+//  gráfico, frente 3: gotinhas que saltam e caem de volta, render/burst.js).
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { createDripMaterial, createSteamMaterial } from '../shaders/materials.js';
+import { Burst, now } from '../render/burst.js';
 
 const DROPS_PER_EMITTER = 4;
 const STEAM_PER_EMITTER = 16;
 const RANGE = 160;
+const _g = new THREE.Vector3();
+const _sv = new THREE.Vector3();
 
 export class ParticleSystem {
   constructor(parent) {
@@ -26,6 +30,9 @@ export class ParticleSystem {
     this._timer = 0;
     this._near = []; // gotas perto (para o som)
     this.bus = null; // evento drip { x, y, z } — uma gota tocou o chão
+    this.res = new THREE.Vector2(1920, 1080); // o tamanho do alvo em px (app/render.js resize)
+    this.splash = new Burst(256, { gravity: 9.8, drag: 0.6, a: new THREE.Color(0.55, 0.58, 0.6), b: new THREE.Color(0.3, 0.32, 0.34), alpha: 0.55, soft: 1, bounce: true });
+    this.group.add(this.splash.points);
   }
 
   update(time, dt, g, origin, emitters) {
@@ -40,9 +47,21 @@ export class ParticleSystem {
     // som das gotas mais próximas: detecta quando a fase "dá a volta" (impacto)
     for (const d of this._near) {
       const ph = (time * d.rate + d.phase) % 1;
-      if (ph < d.last) this.bus?.emit('drip', { x: d.x, y: d.y - d.len, z: d.z });
+      if (ph < d.last) {
+        this.bus?.emit('drip', { x: d.x, y: d.y - d.len, z: d.z });
+        // o respingo: 3–5 gotinhas saltando de onde a gota bateu
+        const g = _g.set(d.x, d.y - d.len + 0.01, d.z);
+        const t = now();
+        const n = 3 + Math.floor(Math.random() * 3);
+        for (let k = 0; k < n; k++) {
+          const a = Math.random() * Math.PI * 2;
+          const s = 0.4 + Math.random() * 0.8;
+          this.splash.spawn(g, _sv.set(Math.cos(a) * s, 0.8 + Math.random() * 1.2, Math.sin(a) * s), t, 0.35 + Math.random() * 0.25, 0.012 + Math.random() * 0.01, g.y);
+        }
+      }
       d.last = ph;
     }
+    this.splash.update(origin, now(), this.res);
   }
 
   _rebuild(g, origin, list) {

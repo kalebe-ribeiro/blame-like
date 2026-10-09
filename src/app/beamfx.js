@@ -22,6 +22,7 @@
 import * as THREE from 'three';
 import { movingMaterial } from '../shaders/materials.js';
 import { CollisionWorld } from '../world/collision.js';
+import { Burst, now } from '../render/burst.js';
 
 const DET_SPEED = 1500; // m/s — a detonação ao longo do feixe
 
@@ -63,118 +64,9 @@ const _v = new THREE.Vector3();
 const _w = new THREE.Vector3();
 const _q = new THREE.Vector3();
 const DOWN = new THREE.Vector3(0, -1, 0);
-const now = () => performance.now() / 1000;
+const _fl = new THREE.Vector3();
 
-// ── partículas (pontos) ─────────────────────────────────────────────────────
-
-const BURST_VERT = /* glsl */ `
-attribute vec3 aV;
-attribute vec4 aT;          // nascimento (s), vida (s), tamanho (m), semente
-uniform float uNow;
-uniform float uGravity;
-uniform float uDrag;
-uniform float uGrow;        // o tamanho cresce com a idade (poeira se abrindo)
-uniform float uScale;       // px por m a 1 m
-varying float vU;           // idade / vida
-varying float vSeed;
-void main() {
-  float age = uNow - aT.x;
-  vU = age / aT.y;
-  vSeed = aT.w;
-  if (age < 0.0 || vU > 1.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; return; }
-  // arrasto: a distância percorrida tende a v / drag
-  float k = uDrag > 0.0 ? (1.0 - exp(-uDrag * age)) / uDrag : age;
-  vec3 p = position + aV * k + vec3(0.0, -0.5 * uGravity * age * age, 0.0);
-  vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  gl_Position = projectionMatrix * mv;
-  gl_PointSize = clamp(aT.z * (1.0 + uGrow * vU) * uScale / max(-mv.z, 0.1), 0.0, 900.0);
-}
-`;
-
-const BURST_FRAG = /* glsl */ `
-uniform vec3 uColorA;
-uniform vec3 uColorB;
-uniform float uAlpha;
-uniform float uSoft;       // 1 = disco suave (poeira, clarão); 0 = ponto duro (faísca)
-varying float vU;
-varying float vSeed;
-void main() {
-  vec2 q = gl_PointCoord - 0.5;
-  float r = length(q) * 2.0;
-  float a = mix(step(r, 1.0) * (1.0 - r * r), exp(-r * r * 3.5), uSoft);
-  a *= (1.0 - smoothstep(0.55, 1.0, vU)) * smoothstep(0.0, 0.05, vU + 0.05 * (1.0 - uSoft));
-  vec3 c = mix(uColorA, uColorB, smoothstep(0.0, 0.7, vU));
-  gl_FragColor = vec4(c, a * uAlpha);
-}
-`;
-
-class Burst {
-  /**
-   * @param {number} max
-   * @param {{ additive?: boolean, gravity?: number, drag?: number, grow?: number, a: THREE.Color, b: THREE.Color, alpha?: number, soft?: number }} o
-   */
-  constructor(max, o) {
-    this.max = max;
-    this.i = 0;
-    this.ref = new THREE.Vector3(); // GLOBAL: as posições são relativas a ela
-    this.lastDeath = 0;
-    const g = new THREE.BufferGeometry();
-    this.p = new THREE.BufferAttribute(new Float32Array(max * 3), 3);
-    this.v = new THREE.BufferAttribute(new Float32Array(max * 3), 3);
-    this.t = new THREE.BufferAttribute(new Float32Array(max * 4).fill(-1e9), 4);
-    for (const a of [this.p, this.v, this.t]) a.setUsage(THREE.DynamicDrawUsage);
-    g.setAttribute('position', this.p);
-    g.setAttribute('aV', this.v);
-    g.setAttribute('aT', this.t);
-    this.mat = new THREE.ShaderMaterial({
-      uniforms: {
-        uNow: { value: 0 },
-        uGravity: { value: o.gravity ?? 0 },
-        uDrag: { value: o.drag ?? 0 },
-        uGrow: { value: o.grow ?? 0 },
-        uScale: { value: 600 },
-        uColorA: { value: o.a },
-        uColorB: { value: o.b },
-        uAlpha: { value: o.alpha ?? 1 },
-        uSoft: { value: o.soft ?? 1 },
-      },
-      vertexShader: BURST_VERT,
-      fragmentShader: BURST_FRAG,
-      transparent: true,
-      depthWrite: false,
-      blending: o.additive ? THREE.AdditiveBlending : THREE.NormalBlending,
-    });
-    this.points = new THREE.Points(g, this.mat);
-    this.points.frustumCulled = false;
-    this.points.renderOrder = 11;
-    this.points.userData.noCollide = true;
-    this.dirty = false;
-  }
-
-  /** Uma partícula: g (GLOBAL), velocidade (m/s), nascimento (s), vida (s), tamanho (m). */
-  spawn(g, vel, born, life, size) {
-    const t = now();
-    if (t > this.lastDeath) this.ref.copy(g); // (todas mortas: a referência vem para cá)
-    this.lastDeath = Math.max(this.lastDeath, born + life);
-    const i = this.i;
-    this.i = (this.i + 1) % this.max;
-    this.p.setXYZ(i, g.x - this.ref.x, g.y - this.ref.y, g.z - this.ref.z);
-    this.v.setXYZ(i, vel.x, vel.y, vel.z);
-    this.t.setXYZW(i, born, life, size, Math.random());
-    this.dirty = true;
-  }
-
-  update(origin, t, pxPerM) {
-    this.mat.uniforms.uNow.value = t;
-    this.mat.uniforms.uScale.value = pxPerM;
-    this.points.visible = t < this.lastDeath;
-    this.points.position.copy(this.ref).sub(origin);
-    if (this.dirty) {
-      this.p.needsUpdate = this.v.needsUpdate = this.t.needsUpdate = true;
-      this.dirty = false;
-    }
-  }
-}
+// ── partículas (pontos): render/burst.js ──
 
 // ── anéis de poeira (a onda de choque) ──────────────────────────────────────
 
@@ -268,7 +160,8 @@ export function createBeamFx(ctx) {
   col.buildsPerFrame = 6;
 
   const flashes = new Burst(256, { additive: true, a: new THREE.Color(1.0, 0.95, 0.85), b: new THREE.Color(1.0, 0.55, 0.2), alpha: 0.9 });
-  const sparks = new Burst(1024, { additive: true, gravity: 9.8, drag: 0.4, a: new THREE.Color(1.0, 0.7, 0.3), b: new THREE.Color(1.0, 0.2, 0.02), soft: 0, alpha: 1 });
+  // (as faíscas riscam e quicam no chão — render/burst.js, o rework gráfico, frente 3)
+  const sparks = new Burst(1024, { additive: true, gravity: 9.8, drag: 0.4, a: new THREE.Color(1.0, 0.7, 0.3), b: new THREE.Color(1.0, 0.2, 0.02), soft: 0, alpha: 1, streak: true, bounce: true });
   // (a poeira só se vê onde há luz: clara no começo — o clarão e o metal quente —, depois some no escuro)
   const dust = new Burst(512, { gravity: 0.15, drag: 1.2, grow: 1.6, a: new THREE.Color(0.32, 0.29, 0.25), b: new THREE.Color(0.1, 0.095, 0.09), alpha: 0.3 });
   const rings = new Rings(96);
@@ -324,7 +217,7 @@ export function createBeamFx(ctx) {
   const shots = []; // os tiros recentes (GLOBAIS): luz, brasa, faíscas, detritos
   /** @type {{ mesh: THREE.Mesh, vx: number, vy: number, vz: number, floor: number, rest: boolean, spin: THREE.Vector3, g: THREE.Vector3, bounced: boolean }[]} */
   const falling = [];
-  /** @type {{ g: THREE.Vector3, until: number, rate: number, acc: number }[]} */
+  /** @type {{ g: THREE.Vector3, until: number, rate: number, acc: number, floor: number | null }[]} */
   const drips = []; // pontos de borda quente que pingam faíscas
   const seenDebris = new Set();
   /** @type {any[][]} pedaços esperando para cair (2 por quadro — armBurst) */
@@ -343,7 +236,6 @@ export function createBeamFx(ctx) {
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 
   const free = () => ctx.settings?.distortion !== false;
-  const pxPerM = () => (camera.isPerspectiveCamera ? (ctx.renderer.getDrawingBufferSize(_p2).y * 0.5) / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) : 600);
   const toScreen = (scenePos, out) => {
     _v.copy(scenePos).project(camera);
     return out.set(_v.x * 0.5 + 0.5, _v.y * 0.5 + 0.5);
@@ -355,6 +247,14 @@ export function createBeamFx(ctx) {
    * ela já cobre (uma varredura passa por todas as malhas do mundo — várias por quadro travavam
    * o disparo); senão varre 40 m em volta.
    */
+  /** A altura (GLOBAL) do chão debaixo de g (GLOBAL) — onde as faíscas quicam; null sem chão em 40 m. */
+  function floorAt(g) {
+    const p = _fl.copy(g).sub(world.origin); // (vetor próprio: _q está em uso nos laços dos cortes)
+    ensureCol(p, 12);
+    const hit = col.ray(p, DOWN, 40);
+    return hit ? hit.point.y + world.origin.y : null;
+  }
+
   function ensureCol(pos, r) {
     const fresh = col._at && performance.now() - col._t < 500 && col._at.distanceTo(pos) + r <= col._r;
     if (fresh) return;
@@ -417,7 +317,7 @@ export function createBeamFx(ctx) {
         const hit = col.ray(from, _q, s.r + 0.6);
         if (!hit || Math.abs(hit.distance - s.r) > 0.6) continue;
         const g = hit.point.clone().add(world.origin);
-        drips.push({ g, until: t + 4 + Math.random() * 5, rate: 6 + Math.random() * 10, acc: 0 });
+        drips.push({ g, until: t + 4 + Math.random() * 5, rate: 6 + Math.random() * 10, acc: 0, floor: floorAt(g) });
         if (drips.length > 64) drips.shift();
         if (Math.random() < 0.5 && s.k > 0.2) {
           const c = 0.08 + Math.random() * 0.25 * s.k;
@@ -496,7 +396,8 @@ export function createBeamFx(ctx) {
     /** Um ser ferido pelo feixe (g: GLOBAL, o peito dele): faíscas — os de máquina (Safeguards, silício). */
     hitSparks(g, n = 24) {
       const t = now();
-      for (let i = 0; i < n; i++) sparks.spawn(g, _v.set((Math.random() - 0.5) * 4, Math.random() * 3, (Math.random() - 0.5) * 4), t, 0.3 + Math.random() * 0.6, 0.04 + Math.random() * 0.05);
+      const fl = floorAt(g);
+      for (let i = 0; i < n; i++) sparks.spawn(g, _v.set((Math.random() - 0.5) * 4, Math.random() * 3, (Math.random() - 0.5) * 4), t, 0.3 + Math.random() * 0.6, 0.04 + Math.random() * 0.05, fl);
     },
     /** O braço que atira se desfaz (muzzle: a boca, na cena): pedaços caindo, faíscas, poeira. */
     armBurst(muzzle) {
@@ -508,7 +409,8 @@ export function createBeamFx(ctx) {
         pendingDrops.push([g.clone(), c, c * (1 + Math.random() * 2), c, i % 2 ? 'cloth' : 'machine', v]);
       }
       const t = now();
-      for (let i = 0; i < 40; i++) sparks.spawn(g, _v.set((Math.random() - 0.5) * 5, Math.random() * 4, (Math.random() - 0.5) * 5), t, 0.5 + Math.random() * 0.8, 0.06 + Math.random() * 0.06);
+      const fl = floorAt(g);
+      for (let i = 0; i < 40; i++) sparks.spawn(g, _v.set((Math.random() - 0.5) * 5, Math.random() * 4, (Math.random() - 0.5) * 5), t, 0.5 + Math.random() * 0.8, 0.06 + Math.random() * 0.06, fl);
       dust.spawn(g, _v.set(0, 0.4, 0), t, 2.5, 1.2);
       suck = Math.max(suck, 0.6);
     },
@@ -778,7 +680,7 @@ export function createBeamFx(ctx) {
         d.acc += dt * d.rate * Math.max(0.2, (d.until - t) / 6);
         while (d.acc >= 1) {
           d.acc -= 1;
-          sparks.spawn(d.g, _v.set((Math.random() - 0.5) * 1.2, -Math.random() * 0.5, (Math.random() - 0.5) * 1.2), t, 0.6 + Math.random() * 0.9, 0.09 + Math.random() * 0.07);
+          sparks.spawn(d.g, _v.set((Math.random() - 0.5) * 1.2, -Math.random() * 0.5, (Math.random() - 0.5) * 1.2), t, 0.6 + Math.random() * 0.9, 0.09 + Math.random() * 0.07, d.floor);
         }
       }
       for (let n = 0; n < 2 && pendingDrops.length; n++) {
@@ -825,10 +727,10 @@ export function createBeamFx(ctx) {
           falling.splice(i, 1);
         }
       }
-      const ppm = pxPerM();
-      flashes.update(origin, t, ppm);
-      sparks.update(origin, t, ppm);
-      dust.update(origin, t, ppm);
+      const res = ctx.renderer.getDrawingBufferSize(_p2);
+      flashes.update(origin, t, res);
+      sparks.update(origin, t, res);
+      dust.update(origin, t, res);
       rings.update(origin, t);
     },
 

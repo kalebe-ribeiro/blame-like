@@ -103,6 +103,12 @@ O bulbo (`gen/chunkgen.js` buildSegment: prisma aberto + cone em cima + cone vir
 - Medido: profile parado na teia 176 fps, na vila 58 fps (antes 65–72; a vila é a mais pesada pela CPU dos seres). `check` 31/31 (111 fps), `check:pad` 31 + 30.
 - Decisões do Claude: 3 sombras (a escolha do usuário foi "2–4"); só o mundo projeta (seres sem sombra de lâmpada — custo); o cone das luminárias; 6% de rebatida; a lanterna sem sombra.
 
+## Frente 3 — efeitos (2026-10-09, autonomia do Claude)
+- **As partículas num módulo** (`render/burst.js`, a classe `Burst`, usada pela arma — `app/beamfx.js` — e pelo mundo — `world/particles.js`). O tamanho dos pontos sai da projeção (px por metro = altura do alvo · projeção[1][1] / 2), não de um número passado de fora.
+- **As faíscas riscam**: o vertex shader projeta onde a faísca estava 35 ms antes; o sprite cresce para caber o rastro e o fragmento desenha um segmento fino, mais claro e mais grosso na cabeça (gotas de luz caindo, não pontos). **Quicam**: cada uma guarda a altura do chão (um raio por grupo, no nascimento — `floorAt`); ao bater, um pulinho e escorregam devagar até apagar.
+- **As gotas d'água respingam**: as gotas perto (as que já avisavam o som ao tocar o chão) soltam 3–5 gotinhas que saltam e caem de volta.
+- Decisões do Claude: o rework dos efeitos ficou nestes três; o tiro, os anéis de poeira, a brasa do corte, os detritos e o vapor já seguiam a direção e ficaram como estavam (o que se via de "sem sentido" — as linhas técnicas com pulsos de luz no chão — saiu antes, a pedido do usuário).
+
 ## Quando
 **Depois de finalizar todos os aspectos da gameplay.** Até lá, o visual é o de agora — formas geométricas, materiais procedurais (`shaders/materials.js`), corpos simples dos seres (`world/bodies.js`) e animações únicas. As features de gameplay continuam sendo feitas com esse visual e **não** esperam o rework (nem o antecipam).
 
