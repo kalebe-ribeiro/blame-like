@@ -903,6 +903,73 @@ export function setupDev(ctx) {
       }, 700);
     }, Number(params.get('hang')) * 1000);
   }
+  // --railprobe=N: aos N s, pendura em várias quinas por perto e tenta andar de lado nelas (o playtest de
+  // 2026-10-09: no corrimão, pendurado, não se anda de lado) — quanto andou em cada sentido, e por quê não
+  if (params.get('railprobe')) {
+    setTimeout(async () => {
+      const { scanLedges } = await import('../dev/climbtest.js');
+      const w = ctx.controls.walker;
+      const col = w.col;
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const seen = [];
+      const g = camera.position.clone();
+      col.buildsPerFrame = 600;
+      col.refresh(g, 40);
+      col.buildsPerFrame = 2;
+      const save = w.feet.clone();
+      const cands = [];
+      for (let r = 1.5; r <= 30 && cands.length < 14; r += 1.5) {
+        for (let a = 0; a < 24 && cands.length < 14; a++) {
+          const ang = (a / 24) * Math.PI * 2 + r;
+          const p = new THREE.Vector3(g.x + Math.cos(ang) * r, g.y + 2, g.z + Math.sin(ang) * r);
+          const fl = col.ray(p, new THREE.Vector3(0, -1, 0), 8);
+          if (!fl || !fl.face || fl.face.normal.y < 0.7) continue;
+          w.feet.copy(fl.point);
+          for (let q = 0; q < 8; q++) {
+            const yaw = (q / 8) * Math.PI * 2;
+            const dir = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+            const l = w._findLedge(dir, 1, 1.3, 2.25);
+            if (!l || seen.some((e) => e.distanceTo(l.edge) < 3)) continue;
+            seen.push(l.edge.clone());
+            const hit = col.ray(fl.point.clone().setY(fl.point.y + l.h - 0.1), dir, 1.5);
+            cands.push({ feet: fl.point.clone(), yaw, l, mat: hit?.object?.userData?.mat ?? hit?.object?.name ?? '?' });
+            break;
+          }
+        }
+      }
+      w.feet.copy(save);
+      console.warn(`RAIL: ${cands.length} quinas`);
+      for (const c of cands) {
+        ctx.controls.setMode('walk');
+        ctx.controls.setView({ pos: c.feet.clone().setY(c.feet.y + 1.7), yaw: c.yaw, pitch: 0.05, scale: 1 });
+        await sleep(500);
+        ctx.controls.forceInput = { f: 0, r: 0, jump: true };
+        await sleep(150);
+        ctx.controls.forceInput = { f: 0, r: 0, jump: false };
+        await sleep(900);
+        if (!w.ledge) {
+          console.warn(`RAIL: ${c.mat} h ${c.l.h.toFixed(2)} · não pegou`);
+          continue;
+        }
+        const out = [];
+        for (const r of [1, -1]) {
+          const a = w.feet.clone();
+          w.ledgeWhy = '';
+          ctx.controls.forceInput = { f: 0, r, jump: false };
+          await sleep(1200);
+          ctx.controls.forceInput = { f: 0, r: 0, jump: false };
+          await sleep(100);
+          out.push(`${r > 0 ? 'dir' : 'esq'} ${a.distanceTo(w.feet).toFixed(2)} m${w.ledge ? '' : ' (soltou)'}${w.ledgeWhy ? ' [' + w.ledgeWhy + ']' : ''}`);
+        }
+        console.warn(`RAIL: ${c.mat} h ${c.l.h.toFixed(2)} em ${c.l.edge.toArray().map((v) => v.toFixed(0))} · ${out.join(' · ')}`);
+        ctx.controls.forceInput = { f: -1, r: 0, jump: false, descend: true };
+        await sleep(300);
+        ctx.controls.forceInput = null;
+        await sleep(800);
+      }
+      console.warn('RAIL: fim');
+    }, Number(params.get('railprobe')) * 1000);
+  }
   // --ledgestats=N: aos N s, por que as paredes em volta (22 m) não são quinas (histograma dos motivos)
   if (params.get('ledgestats')) {
     setTimeout(() => {

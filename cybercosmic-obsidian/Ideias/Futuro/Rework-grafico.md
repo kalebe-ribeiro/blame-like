@@ -138,10 +138,12 @@ Fichas de referência: [[Referencias-Blame]]. Tudo em `world/kits.js` (os kits) 
 
 ## Segunda rodada — notas do usuário depois do playtest (2026-10-09, para planejar)
 - **Os seres estão simplistas**: "parecem simplesmente variações do boneco de teste". Os kits (frentes 5–6) só pregaram peças no mesmo esqueleto de cilindros de 6 lados — a silhueta, as proporções e a superfície continuam as do corpo de teste. Precisa de corpos de verdade (formas próprias por tipo, não o boneco com acessórios).
+- **O jogador também** (o usuário, 2026-10-09: "o mesmo que eu disse em relação ao design dos NPCs se aplica ao design do jogador"): os braços, as mãos e o corpo visto ao olhar para baixo (`app/limbs.js`, `app/hands.js`) são cilindros e caixas — entram na frente dos seres, em malha contínua.
 - **A água ficou de fora** — principalmente as **cascatas** (`gen/cascades.js`).
 - **Os objetos e ferramentas ficaram de fora** — o design do que se segura e se encontra (aparelho, lanterna, emissor, as cargas, a prótese, o analisador, os terminais…).
 - **Os efeitos do emissor antes e depois do tiro ficaram de fora** — a carga, a sobrecarga e o que fica depois (o rework dos efeitos só mexeu nas faíscas e nas gotas).
 - Junto: as pendências do playtest em [[Pendencias]] (§1, itens 6 e 7 — o corrimão e os braços em X).
+- **Decisões do usuário (2026-10-09)**: os corpos em **malha contínua** deformada pelo esqueleto (não mais peças soltas); a ordem (1) braços em X + corrimão → (2) seres → (3) água → (4) emissor antes e depois do tiro → (5) objetos e ferramentas; **cada frente com protótipo** mandado ao usuário (notificação com a foto) e só segue com a aprovação. Desempenho: errar a meta por pouco (60 → 56) tudo bem — o notebook fica no modo equilibrado fora do jogo.
 
 ## Quando
 **Depois de finalizar todos os aspectos da gameplay.** Até lá, o visual é o de agora — formas geométricas, materiais procedurais (`shaders/materials.js`), corpos simples dos seres (`world/bodies.js`) e animações únicas. As features de gameplay continuam sendo feitas com esse visual e **não** esperam o rework (nem o antecipam).

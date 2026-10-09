@@ -189,9 +189,11 @@ export function createHands(ctx, { device, flashlight }) {
         const h = grip[i];
         h.group.visible = !!held && out < 1;
         if (!h.group.visible) continue;
-        // o lugar dela: ao longo da quina, uma de cada lado (a tangente da parede)
+        // o lugar dela: ao longo da quina, uma de cada lado (a tangente da parede). De frente para a
+        // parede (olhando para −n), a direita é (n.z, 0, −n.x): grip[1], a mão direita, vai desse lado
+        // (antes ia do outro, e os braços se cruzavam em X — o playtest de 2026-10-09)
         const n = held.nrm;
-        _t.set(-n.z, 0, n.x).multiplyScalar(i ? 0.21 : -0.21);
+        _t.set(n.z, 0, -n.x).multiplyScalar(i ? 0.21 : -0.21);
         _ideal.copy(held.edge).add(_t).addScaledVector(n, -0.05);
         _ideal.y += 0.012;
         // presa onde estava; quando fica longe do lugar dela (andando de lado), troca —
