@@ -136,6 +136,13 @@ Fichas de referência: [[Referencias-Blame]]. Tudo em `world/kits.js` (os kits) 
 - **Checks**: `check` 31/31 (113 fps), `check:pilgrimage` 31/31 (114 fps), `check:pad` 31 + 30, `check:climb` 14/14, `check:arms` 8/8, `check:beings` 5/5, `check:npcs` 12/12, `check:health` 14/14, `check:beam` dano 18/18, profile 18/18.
 - **Pendência conhecida** ([[Pendencias]] "Em observação"): o Safeguard não embarca no elevador grande no `check:safeguards` (`subir:elevador`) desde a frente 2; a escada passa. Não é dos cabos, do `lt.down`, dos lotes, nem do passe de sombras; a suspeita é o custo de GPU mudando o tempo.
 
+## Segunda rodada — notas do usuário depois do playtest (2026-10-09, para planejar)
+- **Os seres estão simplistas**: "parecem simplesmente variações do boneco de teste". Os kits (frentes 5–6) só pregaram peças no mesmo esqueleto de cilindros de 6 lados — a silhueta, as proporções e a superfície continuam as do corpo de teste. Precisa de corpos de verdade (formas próprias por tipo, não o boneco com acessórios).
+- **A água ficou de fora** — principalmente as **cascatas** (`gen/cascades.js`).
+- **Os objetos e ferramentas ficaram de fora** — o design do que se segura e se encontra (aparelho, lanterna, emissor, as cargas, a prótese, o analisador, os terminais…).
+- **Os efeitos do emissor antes e depois do tiro ficaram de fora** — a carga, a sobrecarga e o que fica depois (o rework dos efeitos só mexeu nas faíscas e nas gotas).
+- Junto: as pendências do playtest em [[Pendencias]] (§1, itens 6 e 7 — o corrimão e os braços em X).
+
 ## Quando
 **Depois de finalizar todos os aspectos da gameplay.** Até lá, o visual é o de agora — formas geométricas, materiais procedurais (`shaders/materials.js`), corpos simples dos seres (`world/bodies.js`) e animações únicas. As features de gameplay continuam sendo feitas com esse visual e **não** esperam o rework (nem o antecipam).
 
