@@ -93,12 +93,12 @@ export function paintHand(group, mat) {
 
 /** O material de cada lado: a luva, ou o metal da prótese (app/arms.js — R4). */
 export function handMaterial(world, kind) {
-  return kind === 'prosthesis' ? world.materials.machine : world.materials.cloth;
+  return kind === 'prosthesis' ? world.materials.machine : world.materials.leather; // (a luva de couro, sem cor — o rework gráfico, segunda rodada)
 }
 
 export function createHands(ctx, { device, flashlight }) {
   const { camera, controls, world } = ctx;
-  const glove = world.materials.cloth; // luvas de tecido grosso, gastas
+  const glove = world.materials.leather; // luvas de couro grosso, gastas
   // o aparelho, seguro por baixo, de palma para cima (os dedos para a frente, dobrando um
   // pouco na ponta; o polegar ao lado da tela) — uma mão para cada lado (side: 1 direita, −1 esquerda)
   const holdDevice = {};

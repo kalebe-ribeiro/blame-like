@@ -608,21 +608,21 @@ export function setupDev(ctx) {
         ctx.scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 3));
       }
       const t0 = performance.now();
-      const list = [
-        B.buildSafeguardLevel(M, 'low', 'sgA'),
-        B.buildSafeguardFlesh(M, 'low', 'sgA'),
-        B.buildSafeguardFlesh(M, 'low', 'sgB'),
-        B.buildSafeguardFlesh(M, 'low', 'sgC'),
-        B.buildSafeguardFlesh(M, 'low', 'sgD'),
-        B.buildHumanOf(M, 'vl:abrigadox:0', 'abrigado'),
-        B.buildHumanFlesh(M, 'hA'),
-        B.buildHumanFlesh(M, 'hB'),
-        B.buildHumanFlesh(M, 'hC'),
+      // atrás, os hostis (os Safeguards baixo/médio/alto, dois de cada; a vida de silício nos três níveis);
+      // na frente, os quatro povos humanos (dois de cada) e três andarilhos
+      const back = [
+        ...['low', 'low', 'mid', 'mid', 'high', 'high'].map((lv, i) => B.buildSafeguardFlesh(M, lv, 'sg' + i)),
+        ...['low', 'mid', 'high'].map((lv, i) => B.buildSiliconFlesh(M, lv, 'si' + i)),
       ];
+      const front = [
+        ...['abrigado', 'armadura', 'seco', 'trabalhador'].flatMap((tr) => [0, 1].map((k) => B.buildHumanFlesh(M, `${tr}${k * 7 + 1}`, tr))),
+        ...[0, 1, 2].map((k) => B.buildTranshumanFlesh(M, 'wd' + k * 5)),
+      ];
+      const list = [...back, ...front];
       while (!list.every((r) => r.ready !== false)) await new Promise((r) => setTimeout(r, 50));
       let tris = 0;
       for (const r of list) r.group.traverse((/** @type {any} */ o) => o.isLOD && (tris += (o.levels[0].object.geometry.index?.count ?? 0) / 3));
-      console.warn(`FLESH: ${list.length} corpos em ${(performance.now() - t0).toFixed(0)} ms · ${(tris / 1000).toFixed(1)} mil triângulos de pele`);
+      console.warn(`FLESH: ${list.length} corpos em ${(performance.now() - t0).toFixed(0)} ms · ${(tris / list.length / 1000).toFixed(1)} mil triângulos de pele por corpo`);
       const fwd = new THREE.Vector3();
       camera.getWorldDirection(fwd);
       fwd.y = 0;
@@ -631,52 +631,49 @@ export function setupDev(ctx) {
       const col = ctx.controls.walker.col;
       col._t = -1e9;
       col.refresh(camera.position, 40);
-      const n = list.length;
       const pose = params.get('fleshpose') ?? 'walk';
-      list.forEach((rig, i) => {
-        const p = camera.position.clone().addScaledVector(fwd, 5.2).addScaledVector(side, (i - (n - 1) / 2) * 0.95);
-        const hit = col.ray(p.clone().setY(camera.position.y + 1), new THREE.Vector3(0, -1, 0), 20);
-        if (hit) p.y = hit.point.y;
-        rig.group.position.copy(p);
-        rig.group.rotation.y = Math.atan2(-fwd.x, -fwd.z);
-        rig.animate(pose === 'rest' ? 0 : 0.3, pose === 'rest' ? 0 : 1.2, true);
-        if (i === 2) rig.strike(0.8, 0.2, 'overhead');
-        ctx.scene.add(rig.group);
-      });
+      const place = (row, dist, gap) =>
+        row.forEach((rig, i) => {
+          const p = camera.position.clone().addScaledVector(fwd, dist).addScaledVector(side, (i - (row.length - 1) / 2) * gap);
+          const hit = col.ray(p.clone().setY(camera.position.y + 1), new THREE.Vector3(0, -1, 0), 20);
+          if (hit) p.y = hit.point.y;
+          rig.group.position.copy(p);
+          rig.group.rotation.y = Math.atan2(-fwd.x, -fwd.z);
+          rig.animate(pose === 'rest' ? 0 : 0.3, pose === 'rest' ? 0 : 1.2, true);
+          ctx.scene.add(rig.group);
+        });
+      place(back, 8.5, 1.15);
+      place(front, 4.6, 0.72);
+      back[1].strike(0.8, 0.2, 'overhead');
+      back[3].strike(0.9, 0.0, 'swing');
       ctx.controls.canFly = true;
       ctx.controls.setMode('fly');
       if (!ctx.carried.lanternOn) ctx.carried.toggleLantern();
-      await new Promise((r) => setTimeout(r, 2500));
       const cap = /** @type {any} */ (window).cybercosmic?.devCapture;
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      await wait(2500);
       await cap?.('flesh.png');
-      // de perfil: cada corpo gira 90°
-      for (const rig of list) rig.group.rotation.y += Math.PI / 2;
-      await new Promise((r) => setTimeout(r, 800));
+      // os humanos de perto (a fileira da frente sozinha, mais perto)
+      for (const rig of back) rig.group.visible = false;
+      place(front.slice(0, 6), 2.6, 0.62);
+      for (const rig of front.slice(6)) rig.group.visible = false;
+      await wait(900);
+      await cap?.('flesh_hu_a.png');
+      front.slice(0, 6).forEach((rig) => (rig.group.visible = false));
+      front.slice(6).forEach((rig) => (rig.group.visible = true));
+      place(front.slice(6), 2.6, 0.75);
+      await wait(900);
+      await cap?.('flesh_hu_b.png');
+      // os hostis de perto
+      for (const rig of front) rig.group.visible = false;
+      for (const rig of back) rig.group.visible = true;
+      place(back, 5.2, 0.85);
+      await wait(900);
+      await cap?.('flesh_hostis.png');
+      // de perfil
+      for (const rig of back) rig.group.rotation.y += Math.PI / 2;
+      await wait(700);
       await cap?.('flesh_side.png');
-      // de perto, um de cada vez, de três quartos: o Safeguard novo, o humano novo
-      for (const [k, i] of [['sg', 1], ['hu', 6]]) {
-        list.forEach((rig, j) => (rig.group.visible = j === i));
-        const rig = list[i];
-        const p = camera.position.clone().addScaledVector(fwd, i === 1 ? 2.9 : 2.5);
-        const hit = col.ray(p.clone().setY(camera.position.y + 1), new THREE.Vector3(0, -1, 0), 20);
-        if (hit) p.y = hit.point.y;
-        rig.group.position.copy(p);
-        rig.group.rotation.y = Math.atan2(-fwd.x, -fwd.z) + 0.5;
-        await new Promise((r) => setTimeout(r, 800));
-        await cap?.(`flesh_${k}.png`);
-      }
-      // os três humanos novos juntos, de perto (as variantes)
-      list.forEach((rig, j) => (rig.group.visible = j >= 6));
-      [6, 7, 8].forEach((i, k) => {
-        const rig = list[i];
-        const p = camera.position.clone().addScaledVector(fwd, 2.8).addScaledVector(side, (k - 1) * 0.75);
-        const hit = col.ray(p.clone().setY(camera.position.y + 1), new THREE.Vector3(0, -1, 0), 20);
-        if (hit) p.y = hit.point.y;
-        rig.group.position.copy(p);
-        rig.group.rotation.y = Math.atan2(-fwd.x, -fwd.z) + (k - 1) * 0.6;
-      });
-      await new Promise((r) => setTimeout(r, 800));
-      await cap?.('flesh_hu3.png');
     }, Number(params.get('fleshsheet')) * 1000);
   }
   // --rayprobe=N: aos N s, um raio do centro da tela por todas as malhas de colisão (os dois lados das faces):
@@ -986,6 +983,8 @@ export function setupDev(ctx) {
       }, 700);
     }, Number(params.get('hang')) * 1000);
   }
+  // --lookdown=N: aos N s, olha para baixo (o corpo do jogador — app/limbs.js)
+  if (params.get('lookdown')) setTimeout(() => (ctx.controls.pitch = -1.25), Number(params.get('lookdown')) * 1000);
   // --railprobe=N: aos N s, pendura em várias quinas por perto e tenta andar de lado nelas (o playtest de
   // 2026-10-09: no corrimão, pendurado, não se anda de lado) — quanto andou em cada sentido, e por quê não
   if (params.get('railprobe')) {

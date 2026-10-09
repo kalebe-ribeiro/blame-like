@@ -77,6 +77,8 @@ export function meshArrays(prims, nb, cell = 0.02) {
     lo[i] -= cell * 2;
     hi[i] += cell * 2;
   }
+  // (nenhuma forma que some: a camada é vazia — o andarilho de dois braços de máquina não tem luvas)
+  if (!(hi[0] > lo[0])) return { pos: new Float32Array(0), nrm: new Float32Array(0), sIdx: new Uint16Array(0), sW: new Float32Array(0), idx: new Uint32Array(0) };
   const nx = Math.ceil((hi[0] - lo[0]) / cell) + 1;
   const ny = Math.ceil((hi[1] - lo[1]) / cell) + 1;
   const nz = Math.ceil((hi[2] - lo[2]) / cell) + 1;

@@ -15,8 +15,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FleshLayer, layerGeometry, skinned } from './flesh.js';
-import { safeguardFlesh, humanFlesh } from './fleshKits.js';
-import { safeguardKit, siliconKit, humanKit, transhumanKit, tribeOf } from './kits.js';
+import { safeguardFlesh, humanFlesh, transhumanFlesh, siliconFlesh } from './fleshKits.js';
+import { tribeOf } from './kits.js';
 
 const FAR_LOD = 14; // m: daí em diante, a malha de longe
 
@@ -118,27 +118,31 @@ export function buildHumanFlesh(M, id, tribe = 'abrigado') {
   const { D, kit } = humanFlesh(tribe, M, id);
   return buildBody(M.cloth, D, null, null, kit);
 }
-
-/** Os hostis por nível (o rework gráfico, frente 5 — world/kits.js): M os materiais, level, id. */
-export function buildSafeguardLevel(M, level, id) {
-  const { D, kit } = safeguardKit(level, M, id);
-  return buildBody(M.pale, D, null, null, kit);
+export function buildTranshumanFlesh(M, id) {
+  const { D, kit } = transhumanFlesh(M, id);
+  return buildBody(M.cloth, D, null, null, kit);
 }
-/** Um morador: o grupo vem da vila (o id `vl:<vila>:<n>` — world/npcs.js); sem vila, um abrigado. */
+export function buildSiliconFlesh(M, level, id) {
+  const { D, kit } = siliconFlesh(level, M, id);
+  return buildBody(M.machine, D, null, null, kit);
+}
+
+/** Os hostis por nível (o rework gráfico — os corpos em malha contínua, world/fleshKits.js): M, level, id. */
+export function buildSafeguardLevel(M, level, id) {
+  return buildSafeguardFlesh(M, level, id);
+}
+/** Um morador: o povo vem da vila (o id `vl:<vila>:<n>` — world/npcs.js); sem vila, um abrigado. */
 export function buildHumanOf(M, id, tribe = null) {
   const s = String(id ?? '');
   const vid = s.startsWith('vl:') ? s.slice(3, s.lastIndexOf(':')) : '';
-  const { D, kit } = humanKit(tribe ?? (vid ? tribeOf(vid) : 'abrigado'), M, id);
-  return buildBody(M.cloth, D, null, null, kit);
+  return buildHumanFlesh(M, id, tribe ?? (vid ? tribeOf(vid) : 'abrigado'));
 }
 /** Um andarilho transumano (as próteses dele). */
 export function buildTranshumanOf(M, id) {
-  const { D, kit } = transhumanKit(M, id);
-  return buildBody(M.cloth, D, null, null, kit);
+  return buildTranshumanFlesh(M, id);
 }
 export function buildSiliconLevel(M, level, id) {
-  const { D, kit } = siliconKit(level, M, id);
-  return buildBody(M.monolith, D, null, null, kit);
+  return buildSiliconFlesh(M, level, id);
 }
 
 /**
@@ -210,11 +214,11 @@ function buildBody(material, D, slitMat = null, dress = null, kit = null) {
       const fa = D.forearm * (mech ? 1.3 : 1) * k;
       const mat = mech ? dress.mech : material;
       const sh = joint(spine, s * D.shoulderW * (pair ? 0.85 : 1), D.torso * (pair ? 0.62 : 1) - 0.06, 0);
-      sh.rotation.z = s * 0.06;
+      sh.rotation.z = s * (D.armOut ?? 0.06);
       add(sh, base(limb(ua, (mech ? 0.06 : 0.05) * G, 0.042 * G, mat)));
       const el = joint(sh, 0, -ua, 0);
       add(el, base(limb(fa, (mech ? 0.05 : 0.04) * G, 0.03 * G, mat)));
-      if (kit?.hand) kit.hand(el, s, fa, add);
+      if (kit?.hand) kit.hand(el, s, fa, add, pair > 0);
       arms.push({ sh, el, s, extra: pair > 0 });
     }
   }
@@ -300,7 +304,7 @@ function buildBody(material, D, slitMat = null, dress = null, kit = null) {
       for (const A of arms) {
         const p = phase + (A.s > 0 ? 0 : Math.PI) + (A.extra ? Math.PI * 0.5 : 0);
         A.sh.rotation.x = -Math.sin(p) * 0.32 * a * (D.swing ?? 1);
-        A.sh.rotation.z = A.s * (A.extra ? 0.35 : 0.06);
+        A.sh.rotation.z = A.s * (A.extra ? 0.35 : D.armOut ?? 0.06); // (os largos: os braços abertos do corpo)
         A.el.rotation.x = -0.25 - Math.max(0, -Math.sin(p)) * 0.3 * a;
       }
       kit?.rest?.();
