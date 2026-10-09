@@ -36,6 +36,11 @@ Roteiro fixo de 20 capturas (seed abc: 12 lugares, 4 com névoa 0, 4 com lantern
 ### As capturas de desenvolvimento num perfil à parte (2026-10-09)
 `--capture` usava o perfil de verdade (o mundo salvo e o diário de quem joga), e o `taskkill` antes de cada execução fecha qualquer Electron — inclusive o jogo aberto. Agora `--capture` usa `%TEMP%/cybercosmic-capture`, com o armazenamento zerado a cada execução (os caches de shader e de chunks ficam). O save de 2026-10-08 (seed l5rg5b) não está mais no perfil.
 
+### O bulbo oco dos pilares (usuário, 2026-10-09)
+> "visto de baixo era um tipo de pirâmide inversa, que juntava com uma pirâmide normal em cima, porém a base de ambas, que se encontravam no meio do objeto, não existia — dava para ver o oco."
+
+O bulbo (`gen/chunkgen.js` buildSegment: prisma aberto + cone em cima + cone virado embaixo) e a ponta invertida sob os pilares (buildRoot): o cone virado com `rx: π` espelha o giro em y — com `ry: +spin` a base dele saía girada em relação ao corpo (cantos para fora, aberturas mostrando o oco). Agora `ry: -spin`: os cantos batem (conferido pelos vértices e por captura antes × depois — `--bulbcam`, o bulbo mais perto visto de baixo). `GEN_VERSION` g3 (cache de cortes). `check` 31/31.
+
 ## Quando
 **Depois de finalizar todos os aspectos da gameplay.** Até lá, o visual é o de agora — formas geométricas, materiais procedurais (`shaders/materials.js`), corpos simples dos seres (`world/bodies.js`) e animações únicas. As features de gameplay continuam sendo feitas com esse visual e **não** esperam o rework (nem o antecipam).
 

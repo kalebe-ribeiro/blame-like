@@ -497,6 +497,57 @@ export function setupDev(ctx) {
       console.warn('SURFCAM: fim');
     }, 12000);
   }
+  // --bulbcam=N: aos N s, o "bulbo" de pilar mais perto (gen/chunkgen.js buildSegment: refaz o sorteio do
+  // segmento) visto de baixo, olhando a junção do cone de baixo com o corpo. Captura bulb.png
+  if (params.get('bulbcam')) {
+    setTimeout(async () => {
+      const { rngAt } = await import('../gen/hash.js');
+      const { PILLAR_CELL, SEG_H } = await import('../gen/field.js');
+      const F = world.field;
+      const g = world.toGlobal(camera.position.clone());
+      let best = null;
+      const I = Math.floor(g.x / PILLAR_CELL), K = Math.floor(g.z / PILLAR_CELL), J = Math.floor(g.y / SEG_H);
+      for (let i = I - 8; i <= I + 8; i++) for (let k = K - 8; k <= K + 8; k++) {
+        const p = F.pillar(i, k);
+        if (!p) continue;
+        for (let j = J - 4; j <= J + 4; j++) {
+          if (!F.segmentPresent(p, j)) continue;
+          // (a mesma ordem de sorteios de buildSegment)
+          const r = rngAt(F.seed, p.i, j, p.k, 5);
+          const pieces = r.int(1, 3);
+          for (let m = 0; m < pieces; m++) {
+            const roll = r.next();
+            if (roll < 0.1) {
+              r.float(0.1, 0.25);
+              continue;
+            }
+            if (roll >= 0.22) continue;
+            const y0 = j * SEG_H + (m / pieces) * SEG_H, y1 = j * SEG_H + ((m + 1) / pieces) * SEG_H;
+            const ra = F.pillarRadius(p, j), rb = F.pillarRadius(p, j + 1);
+            const r0 = ra + (rb - ra) * (m / pieces), r1 = ra + (rb - ra) * ((m + 1) / pieces);
+            const big = Math.max(r0, r1) * r.float(2.0, 3.4);
+            const h = (y1 - y0) * r.float(0.4, 0.8);
+            const cA = F.pillarCenter(p, y0), cB = F.pillarCenter(p, y1);
+            const mid = new THREE.Vector3((cA.x + cB.x) / 2, (y0 + y1) / 2, (cA.z + cB.z) / 2);
+            const d = mid.distanceTo(g);
+            if (!best || d < best.d) best = { d, mid, h, big, capH: h * 0.35 };
+          }
+        }
+      }
+      if (!best) return console.warn('BULBCAM: nenhum bulbo por perto');
+      const joint = best.mid.clone().setY(best.mid.y - best.h / 2);
+      const pos = joint.clone().add(new THREE.Vector3(best.big * 1.6, -best.capH - best.big * 0.9, best.big * 0.7));
+      console.warn(`BULBCAM: bulbo a ${best.d.toFixed(0)} m · raio ${best.big.toFixed(1)} · junção ${joint.toArray().map((x) => x.toFixed(0))}`);
+      ctx.controls.canFly = true;
+      ctx.controls.setMode('fly');
+      const L = pos.clone().sub(world.origin);
+      const dv = joint.clone().sub(pos);
+      ctx.controls.setView({ pos: L, yaw: Math.atan2(-dv.x, -dv.z), pitch: Math.atan2(dv.y, Math.hypot(dv.x, dv.z)), scale: 1 });
+      if (!ctx.carried.lanternOn) ctx.carried.toggleLantern();
+      await new Promise((r) => setTimeout(r, 6000));
+      await /** @type {any} */ (window).cybercosmic?.devCapture?.('bulb.png');
+    }, Number(params.get('bulbcam')) * 1000);
+  }
   // --rayprobe=N: aos N s, um raio do centro da tela por todas as malhas de colisão (os dois lados das faces):
   // o material, a distância e se a face está de COSTAS para a câmera (uma face de costas na frente de uma de
   // frente: a peça é oca vista dali)

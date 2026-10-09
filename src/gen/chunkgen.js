@@ -506,7 +506,9 @@ function buildSegment(F, B, p, j, anchors) {
         B.add('tower', place(new THREE.CylinderGeometry(big * 0.85, big, h, p.sides, 3, true), { x: mid.x, y: mid.y, z: mid.z, ry: p.spin }));
         const capH = h * 0.35;
         B.add('tower', place(new THREE.ConeGeometry(big * 0.85, capH, p.sides, 2, true), { x: mid.x, y: mid.y + h / 2 + capH / 2, z: mid.z, ry: p.spin }));
-        B.add('tower', place(new THREE.ConeGeometry(big, capH, p.sides, 2, true), { x: mid.x, y: mid.y - h / 2 - capH / 2, z: mid.z, rx: Math.PI, ry: p.spin }));
+        // (virado com rx = π, o giro em y se espelha: -spin para os cantos baterem com os do bulbo — com
+        //  +spin, a base saía torta e o bulbo ficava aberto embaixo, o oco à vista)
+        B.add('tower', place(new THREE.ConeGeometry(big, capH, p.sides, 2, true), { x: mid.x, y: mid.y - h / 2 - capH / 2, z: mid.z, rx: Math.PI, ry: -p.spin }));
       }
     }
   }
@@ -607,7 +609,8 @@ function buildRoot(F, B, p, y, radius, r) {
   if (r.chance(0.8)) {
     // ponta invertida pendendo no vazio
     const len = r.float(25, 130);
-    B.add('tower', place(new THREE.ConeGeometry(radius, len, p.sides, 8, true), { x: L.x, y: L.y - len / 2, z: L.z, rx: Math.PI, ry: p.spin }));
+    // (-spin: virada, o giro se espelha — ver o bulbo em buildSegment)
+    B.add('tower', place(new THREE.ConeGeometry(radius, len, p.sides, 8, true), { x: L.x, y: L.y - len / 2, z: L.z, rx: Math.PI, ry: -p.spin }));
   } else {
     // corte seco com feixes de cabos pendendo
     B.add('tower', place(new THREE.CylinderGeometry(radius, radius * 0.5, 3, p.sides, 1, false), { x: L.x, y: L.y - 1.5, z: L.z, ry: p.spin }));
