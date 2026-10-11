@@ -152,6 +152,11 @@ Fichas de referência: [[Referencias-Blame]]. Tudo em `world/kits.js` (os kits) 
 - **O jogador**: o braço é uma manga contínua em dois ossos que o IK gira (a prótese: um braço de máquina); o corpo visto de cima (o casaco longo, as calças, as botas) montado depois da largada (no início, junto com o forno das superfícies, travava o driver). As luvas em couro cinza.
 - Capturas: `--fleshsheet=N` (a fileira de todos), `--fleshdebug` (cada camada de uma cor), `--lookdown=N`.
 
+### Segunda rodada, frente da água (2026-10-10)
+- **Cascatas** (`gen/cascades.js`, `shaders/materials.js`): a coluna em **três camadas** (o miolo denso, a cortina e o spray rasgado — a camada no comprimento de normal.xz), a borda ondulando no vertex shader, fios d'água em ritmos diferentes, **pedaços de água** caindo mais rápido, a lanterna acendendo a água. No pé: **anéis de espuma** revolta (`cascadeFoam`) e mais vapor. A **poça** virou água de verdade (`createPoolMaterial`): escura e espelhada, **ondas** saindo de onde a água bate, espuma no meio, o reflexo da própria queda e a água em volta clareada por ela (a posição em relação ao centro e o raio vão nas normais do disco). As que caem no **abismo**: a nuvem de borrifo onde a coluna se desfaz. `GEN_VERSION` g8.
+- **Água parada** (poças e setores inundados — o material molhado): **anéis das gotas** que nascem num ponto sorteado e se abrem (nas poças, perto; nos inundados, espaçados).
+- Capturas: `--nearer=M`, `--cascview=mouth|mist`. `check` 31/31, `check:pilgrimage` 31/31; profile: cascata 125 fps, inundado 72 fps.
+
 ## Quando
 **Depois de finalizar todos os aspectos da gameplay.** Até lá, o visual é o de agora — formas geométricas, materiais procedurais (`shaders/materials.js`), corpos simples dos seres (`world/bodies.js`) e animações únicas. As features de gameplay continuam sendo feitas com esse visual e **não** esperam o rework (nem o antecipam).
 

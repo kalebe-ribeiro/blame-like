@@ -985,6 +985,35 @@ export function setupDev(ctx) {
   }
   // --nearer=M: aos 24 s, anda M metros para a frente (de perto do que o --goto mostra — a cascata)
   if (params.get('nearer')) setTimeout(() => { const f = new THREE.Vector3(); camera.getWorldDirection(f); f.y = 0; f.normalize(); ctx.controls.setView({ pos: camera.position.clone().addScaledVector(f, Number(params.get('nearer'))), yaw: ctx.controls.yaw, pitch: ctx.controls.pitch, scale: 1 }); }, 24000);
+  // --cascview=mouth|mist: aos 26 s, voa até a cascata mais perto e olha a boca do cano (mouth) ou, numa
+  // que cai no abismo, a queda se desfazendo em névoa (mist) — o rework gráfico, a água
+  if (params.get('cascview')) {
+    setTimeout(() => {
+      const g = world.toGlobal(camera.position);
+      const want = params.get('cascview');
+      let best = null;
+      for (const R of [1500, 4000, 9000]) {
+        for (const c of world.field.cascadesNear(g.x, g.y, g.z, R)) if (want !== 'mist' || c.ends === 'mist') if (!best || Math.hypot(c.out.x - g.x, c.out.z - g.z) < Math.hypot(best.out.x - g.x, best.out.z - g.z)) best = c;
+        if (best) break;
+      }
+      if (!best) return console.warn('CASCVIEW: nenhuma cascata');
+      const col = world.field.cascadeColumn(best);
+      let p, look;
+      if (want === 'mist') {
+        const yv = best.bottom + 60;
+        p = new THREE.Vector3(col.x + best.nx * 70, yv, col.z + best.nz * 70);
+        look = new THREE.Vector3(col.x, yv - 20, col.z);
+      } else {
+        p = new THREE.Vector3(best.out.x + best.nx * 26 + best.nz * 14, best.out.y - 4, best.out.z + best.nz * 26 - best.nx * 14);
+        look = new THREE.Vector3(best.out.x + best.nx * 6, best.out.y - 8, best.out.z + best.nz * 6);
+      }
+      const d = look.clone().sub(p);
+      ctx.controls.canFly = true;
+      ctx.controls.setMode('fly');
+      ctx.controls.setView({ pos: p.sub(world.origin), yaw: Math.atan2(-d.x, -d.z), pitch: Math.atan2(d.y, Math.hypot(d.x, d.z)), scale: 1 });
+      console.warn(`CASCVIEW: ${best.id} (${best.ends})`);
+    }, 26000);
+  }
   // --lookdown=N: aos N s, olha para baixo (o corpo do jogador — app/limbs.js)
   if (params.get('lookdown')) setTimeout(() => (ctx.controls.pitch = -1.25), Number(params.get('lookdown')) * 1000);
   // --railprobe=N: aos N s, pendura em várias quinas por perto e tenta andar de lado nelas (o playtest de

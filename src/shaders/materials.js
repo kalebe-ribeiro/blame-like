@@ -472,6 +472,33 @@ void main() {
   if (uWet > 0.001) {
     albedo *= 1.0 - 0.7 * uWet;
     N = normalize(N + vec3(snoise(W * 2.5 + t * 0.6), 0.0, snoise(W * 2.5 - t * 0.5)) * 0.04 * uWet);
+    // as gotas que caem na água parada (o rework gráfico, segunda rodada): anéis que nascem num ponto
+    // sorteado de cada célula e se abrem, apagando; nas poças, perto; nos setores inundados, espaçados
+    if (uWet > 0.9 && Ng.y > 0.8) {
+      #ifdef USE_REFLECTION
+        const float RC = 2.6; const float RON = 0.35;
+      #else
+        const float RC = 0.9; const float RON = 0.8;
+      #endif
+      vec2 rp = W.xz / RC;
+      vec2 cell = floor(rp);
+      vec2 gr = vec2(0.0);
+      for (int dx = -1; dx <= 1; dx++) {
+        for (int dz = -1; dz <= 1; dz++) {
+          vec2 cc = cell + vec2(float(dx), float(dz));
+          float h1 = fract(sin(dot(cc, vec2(127.1, 311.7))) * 43758.55);
+          float h2 = fract(sin(dot(cc, vec2(269.5, 183.3))) * 43758.55);
+          if (h1 > RON) continue;
+          float ph = fract(t * (0.35 + 0.5 * h2) + h1 * 7.0);
+          vec2 d = rp - (cc + vec2(h1, h2) * 0.8 + 0.1);
+          float dl = length(d) + 1e-4;
+          float w = dl - ph * 0.9;
+          float amp = (1.0 - ph) * (1.0 - ph) * exp(-w * w * 120.0);
+          gr += d / dl * sin(w * 70.0) * amp;
+        }
+      }
+      N = normalize(N + vec3(gr.x, 0.0, gr.y) * 0.35);
+    }
   }
 
   // ── iluminação ──

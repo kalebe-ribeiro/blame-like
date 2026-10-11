@@ -143,6 +143,14 @@ function buildCascade(F, B, w) {
 
   // ── a base ──
   const rb = r0 * (1 + 1.6 * alongMax);
+  if (w.ends === 'mist') {
+    // a que cai no abismo: no fim, a água desfeita em borrifo (a nuvem que fica onde a coluna some)
+    const yEnd = w.bottom + 0.38 * (yStart - w.bottom);
+    for (let q = 0; q < 8; q++) {
+      const a = (q / 8) * Math.PI * 2;
+      B.emit({ type: 'steam', x: col.x + Math.cos(a) * rb, y: yEnd, z: col.z + Math.sin(a) * rb, rate: 0.14, h: 30 + (q % 3) * 10 });
+    }
+  }
   if (w.ends === 'pool') {
     // a poça: um disco (o centro e o anel), a posição em relação ao centro em normal.xz e o raio em normal.y
     const R = rb * 3 + 5;
