@@ -21,7 +21,7 @@
 import * as THREE from 'three';
 import { DynamicCuts } from './dynamic.js';
 import { RNG } from '../core/rng.js';
-import { PALETTE, createSurfaceMaterial, createSkyMaterial, createBeamMaterial, createCascadeMaterial, linearColor, soloMaterial } from '../shaders/materials.js';
+import { PALETTE, createSurfaceMaterial, createSkyMaterial, createBeamMaterial, createCascadeMaterial, createFoamMaterial, createPoolMaterial, linearColor, soloMaterial } from '../shaders/materials.js';
 import { SURF } from '../render/surfaceBaker.js';
 import { ElevatorSystem } from './elevators.js';
 import { BuilderSystem } from './builders.js';
@@ -59,7 +59,7 @@ const LOD1_RADIUS = 1300;
 // materiais que somem perto do raio dos chunks / da camada macro
 const NEAR_MATS = ['cut', 'lamp', 'tower', 'bridge', 'rib', 'cable', 'hose', 'duct', 'dress', 'block', 'slab', 'monolith', 'plaza', 'tube', 'hive', 'massif',
   'rungs', 'grate', 'door', 'sign', 'shack', 'cloth', 'screen', 'graffiti', 'water'];
-const FAR_MATS = ['lampFar', 'wall', 'floor', 'frame', 'stairway', 'macro', 'conduit', 'barrier', 'beam', 'cascade', 'pool', 'flood'];
+const FAR_MATS = ['lampFar', 'wall', 'floor', 'frame', 'stairway', 'macro', 'conduit', 'barrier', 'beam', 'cascade', 'cascadeFoam', 'pool', 'flood'];
 /** Período do deslocamento de origem nos shaders (múltiplo de CHUNK). */
 const ORIGIN_PERIOD = CHUNK * 340; // ~65 km: o salto do padrão é raríssimo
 /** Distância da origem da cena que dispara a reindexação. */
@@ -303,6 +303,10 @@ export class World {
     // o cabo grosso (colide — world/cables.js cableMat): o mesmo desenho do fino, uma cópia dele (fora do
     // sorteio das sementes acima: um material novo no meio mudaria o desenho de todos os seguintes)
     this.materials.hose = this.materials.cable.clone();
+    // a água das cascatas (o rework gráfico, segunda rodada): a espuma no pé da queda e a poça com ondas —
+    // (a poça antiga continua no sorteio acima, só trocada aqui: o desenho dos outros não muda)
+    this.materials.cascadeFoam = createFoamMaterial(S, { fade: fadeMacro });
+    this.materials.pool = createPoolMaterial(S, { fade: fadeMacro });
     for (const k of Object.keys(S)) this.materials.hose.uniforms[k] = S[k];
     // os tons dos corpos em malha contínua (world/flesh.js): a pele humana, o couro das botas e das
     // correias — cópias do pálido e do pano (idem: fora do sorteio)

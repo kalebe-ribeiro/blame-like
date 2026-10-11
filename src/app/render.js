@@ -157,7 +157,7 @@ export function onWorldBuilt(ctx) {
 }
 
 // os materiais de lote que não projetam sombra: luz, água, lentes, pichação, telas
-const NO_SHADOW_MATS = ['beam', 'colossusBeam', 'cascade', 'flood', 'pool', 'water', 'lamp', 'lampFar', 'graffiti', 'screen', 'sign'];
+const NO_SHADOW_MATS = ['beam', 'colossusBeam', 'cascade', 'cascadeFoam', 'flood', 'pool', 'water', 'lamp', 'lampFar', 'graffiti', 'screen', 'sign'];
 /** As sombras das lâmpadas (render/shadows.js): escolhe as lâmpadas e refaz um mapa. */
 function renderShadows(ctx) {
   const { world, scene, camera } = ctx;

@@ -983,6 +983,8 @@ export function setupDev(ctx) {
       }, 700);
     }, Number(params.get('hang')) * 1000);
   }
+  // --nearer=M: aos 24 s, anda M metros para a frente (de perto do que o --goto mostra — a cascata)
+  if (params.get('nearer')) setTimeout(() => { const f = new THREE.Vector3(); camera.getWorldDirection(f); f.y = 0; f.normalize(); ctx.controls.setView({ pos: camera.position.clone().addScaledVector(f, Number(params.get('nearer'))), yaw: ctx.controls.yaw, pitch: ctx.controls.pitch, scale: 1 }); }, 24000);
   // --lookdown=N: aos N s, olha para baixo (o corpo do jogador — app/limbs.js)
   if (params.get('lookdown')) setTimeout(() => (ctx.controls.pitch = -1.25), Number(params.get('lookdown')) * 1000);
   // --railprobe=N: aos N s, pendura em várias quinas por perto e tenta andar de lado nelas (o playtest de

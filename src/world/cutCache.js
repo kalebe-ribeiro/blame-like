@@ -29,7 +29,7 @@ function db() {
 
 /** A versão da geração nas chaves: subir quando a geração dos chunks mudar (as entradas velhas deixam de
  *  ser usadas — g2: os cabos grossos passaram a 'hose', que colide; g3: os cones virados dos pilares fecham com eles; g4: as bordas no comprimento da normal — o desgaste; g5: cabos de 0,1 m+ colidem). */
-export const GEN_VERSION = 'g5';
+export const GEN_VERSION = 'g7';
 
 /** A chave de um chunk com estes cortes. */
 export function cutKey(seed, layer, level, cx, cy, cz, cuts) {

@@ -768,11 +768,63 @@ export function createBeamMaterial(shared, { color = new THREE.Vector3(0.9, 0.85
 }
 
 // ─── Cascatas ───────────────────────────────────────────────────────────────
-//  Tubo aberto ao longo da queda (gen/cascades.js); "ao longo" em normal.y.
-//  Fios d'água escorrendo (ruído esticado na vertical, descendo rápido),
-//  mais densos no miolo, iluminados pelas lâmpadas próximas (a água é
-//  translúcida: acende sem depender da normal). Perto do fim a coluna se
-//  desfaz em névoa — nas que caem numa poça, "ao longo" nunca chega lá.
+//  A coluna d'água (gen/cascades.js): três camadas de tubo aberto ao longo da queda — o MIOLO denso,
+//  a CORTINA e o SPRAY de fora, cada vez mais largos e mais rasgados (a camada no comprimento de
+//  normal.xz: 1, 2, 3); "ao longo" em normal.y. Fios d'água descendo rápido (ruído esticado na
+//  vertical), PEDAÇOS de água caindo (bolhas claras que descem mais rápido que os fios), a borda
+//  ondulando (o vértice se afasta e volta, pelo ruído) e rasgada nas camadas de fora. A água é
+//  translúcida: acende com as lâmpadas próximas e com a lanterna, sem depender da normal. Perto do fim
+//  a coluna se desfaz em névoa — nas que caem numa poça, "ao longo" nunca chega lá.
+//  A ESPUMA (o pé da queda): um anel baixo e largo de água revolta subindo e se desfazendo
+//  (o "ao longo" é a altura). A POÇA: escura e espelhada, com as ondas saindo do ponto onde a água
+//  bate e a espuma no meio (a posição em relação ao centro vai em normal.xz; o raio, em normal.y).
+
+const CASCADE_VERT = /* glsl */ `
+${NOISE_GLSL}
+uniform float uTime;
+varying vec3 vWorldPos;
+varying vec3 vN;
+varying float vAlong;
+varying float vLayer;
+#include <batching_pars_vertex>
+void main() {
+  vAlong = normal.y;
+  vLayer = length(normal.xz);
+  vec2 rad = normal.xz / max(vLayer, 1e-4);
+  mat4 M = modelMatrix;
+  #include <batching_vertex>
+  #ifdef USE_BATCHING
+    M = modelMatrix * batchingMatrix;
+  #endif
+  // a borda ondula: o vértice se afasta e volta pelo ruído (mais nas camadas de fora, mais embaixo)
+  vec3 p = position;
+  float wob = snoise(vec3(atan(rad.y, rad.x) * 1.3 + vLayer * 3.1, (p.y + uTime * 18.0) * 0.045, vLayer));
+  p.xz += rad * wob * (0.25 + 0.55 * vLayer) * (0.3 + 1.2 * clamp(vAlong, 0.0, 1.0));
+  vN = normalize(mat3(M) * vec3(rad.x, 0.0, rad.y) + vec3(1e-5));
+  vec4 wp = M * vec4(p, 1.0);
+  vWorldPos = wp.xyz;
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}
+`;
+
+/** A luz que a água translúcida recebe: um pouco de ambiente, as lâmpadas próximas e a lanterna. */
+const WATER_LIGHT_GLSL = /* glsl */ `
+vec3 waterLight(vec3 P, float bright) {
+  vec3 c = uAmbient * 2.2 + uFogColorB * 3.0;
+  for (int i = 0; i < LIGHT_COUNT; i++) {
+    vec3 L = uLightPos[i] - P;
+    float d2 = dot(L, L);
+    c += uLightColor[i] * (0.6 + 0.8 * bright) / (1.0 + d2) * exp(-uFogDensity * sqrt(d2));
+  }
+  if (uFlashColor.r + uFlashColor.g + uFlashColor.b > 1e-4) {
+    vec3 L = uFlashPos - P;
+    float d2 = dot(L, L);
+    float cone = smoothstep(0.82, 0.97, dot(-L / sqrt(d2), uFlashDir));
+    c += min(uFlashColor * cone * (0.5 + 0.8 * bright) * exp(-uFogDensity * 2.0 * sqrt(d2)) / (3.0 + d2), vec3(1.5));
+  }
+  return c;
+}
+`;
 
 const CASCADE_FRAG = /* glsl */ `
 ${SHARED_UNIFORMS_GLSL}
@@ -783,6 +835,8 @@ uniform vec3 uAmbient;
 varying vec3 vWorldPos;
 varying vec3 vN;
 varying float vAlong;
+varying float vLayer;
+${WATER_LIGHT_GLSL}
 void main() {
   vec3 V = cameraPosition - vWorldPos;
   float dist = length(V);
@@ -791,25 +845,137 @@ void main() {
   vec3 vh = normalize(vec3(V.x, 0.0, V.z) + vec3(1e-5));
   float core = pow(abs(dot(n, vh)), 1.5);
   float along = clamp(vAlong, 0.0, 1.0);
+  float layer = floor(vLayer + 0.5); // 1 o miolo · 2 a cortina · 3 o spray
   vec3 W = vWorldPos + uOriginMod;
-  // fios d'água: ruído esticado na vertical, descendo
   float ang = atan(n.z, n.x);
-  float s1 = snoise(vec3(ang * 2.0, (W.y + uTime * 24.0) * 0.03, 0.3));
-  float s2 = snoise(vec3(ang * 6.0, (W.y + uTime * 31.0) * 0.11, 4.1));
-  float streak = smoothstep(-0.35, 0.75, s1) * (0.7 + 0.3 * s2);
+  // fios d'água: ruído esticado na vertical, descendo (cada camada no seu ritmo)
+  float fall = uTime * (22.0 + 6.0 * layer);
+  float s1 = snoise(vec3(ang * (2.0 + layer), (W.y + fall) * 0.03, 0.3 + layer * 7.0));
+  float s2 = snoise(vec3(ang * (6.0 + 3.0 * layer), (W.y + fall * 1.3) * 0.11, 4.1 + layer));
+  float streak = smoothstep(-0.35, 0.75, s1) * (0.65 + 0.35 * s2);
+  // os pedaços de água: manchas claras que caem mais rápido que os fios
+  float clump = smoothstep(0.55, 0.9, snoise(vec3(ang * 1.4 + layer * 2.0, (W.y + uTime * 46.0) * 0.022, 9.0 + layer)));
+  // as camadas de fora: rasgadas (só fiapos e borrifo)
+  float tear = layer < 1.5 ? 1.0 : smoothstep(layer < 2.5 ? -0.1 : 0.25, 0.6, snoise(vec3(ang * 3.0, (W.y + fall * 0.8) * 0.018, layer * 3.3)));
   float mist = smoothstep(0.62, 1.0, along); // fim da queda: a água vira névoa
-  float alpha = (0.18 + 0.62 * streak) * mix(0.35, 1.0, core);
+  float dens = layer < 1.5 ? 1.0 : layer < 2.5 ? 0.55 : 0.28;
+  float alpha = (0.14 + 0.6 * streak + 0.5 * clump) * mix(0.35, 1.0, core) * tear * dens;
   alpha *= smoothstep(0.0, 0.004, along) * (1.0 - mist);
-  // luz: um pouco de ambiente, a poeira iluminada e as lâmpadas próximas
-  vec3 c = uAmbient * 2.2 + uFogColorB * 3.0;
-  for (int i = 0; i < LIGHT_COUNT; i++) {
-    vec3 L = uLightPos[i] - vWorldPos;
-    float d2 = dot(L, L);
-    c += uLightColor[i] * (0.6 + 0.8 * streak) / (1.0 + d2) * exp(-uFogDensity * sqrt(d2));
-  }
+  vec3 c = waterLight(vWorldPos, streak + clump);
   c = applyFog(c, vWorldPos, 1.0, uFadeRange);
   float far = 1.0 - smoothstep(uFadeRange.x, uFadeRange.y, dist);
-  gl_FragColor = vec4(c, alpha * far);
+  gl_FragColor = vec4(c, clamp(alpha, 0.0, 1.0) * far);
+}
+`;
+
+const FOAM_FRAG = /* glsl */ `
+${SHARED_UNIFORMS_GLSL}
+${NOISE_GLSL}
+${FOG_GLSL}
+uniform vec2 uFadeRange;
+uniform vec3 uAmbient;
+varying vec3 vWorldPos;
+varying vec3 vN;
+varying float vAlong;
+varying float vLayer;
+${WATER_LIGHT_GLSL}
+void main() {
+  float dist = length(cameraPosition - vWorldPos);
+  float h = clamp(vAlong, 0.0, 1.0); // 0 no pé · 1 em cima
+  vec3 n = normalize(vec3(vN.x, 0.0, vN.z));
+  float ang = atan(n.z, n.x);
+  vec3 W = vWorldPos + uOriginMod;
+  // a água revolta: bolhas subindo e se abrindo, rasgadas no alto
+  float b1 = snoise(vec3(ang * 4.0 + vLayer, (W.y - uTime * 5.0) * 0.5, uTime * 0.6));
+  float b2 = snoise(vec3(ang * 11.0, (W.y - uTime * 8.0) * 1.4, 3.0 + uTime * 0.9));
+  float foam = smoothstep(-0.2, 0.7, b1) * (0.6 + 0.4 * b2);
+  // (o alto rasgado pelo ruído: a borda de cima não vira um disco)
+  float top = 1.0 - smoothstep(0.1, 0.75, h + 0.25 * b2);
+  float alpha = foam * top * smoothstep(0.0, 0.08, h) * (0.85 - 0.25 * vLayer / 3.0);
+  vec3 c = waterLight(vWorldPos, 0.8 + foam) * 1.15;
+  c = applyFog(c, vWorldPos, 1.0, uFadeRange);
+  float far = 1.0 - smoothstep(uFadeRange.x, uFadeRange.y, dist);
+  gl_FragColor = vec4(c, clamp(alpha, 0.0, 1.0) * far);
+}
+`;
+
+const POOL_VERT = /* glsl */ `
+varying vec3 vWorldPos;
+varying vec2 vRad;    // a posição em relação ao centro (−1..1 no raio)
+varying float vR;     // o raio da poça (m); 0 nas faces de lado
+#include <batching_pars_vertex>
+void main() {
+  bool top = normal.y > 0.5;
+  vRad = top ? normal.xz : vec2(0.0);
+  vR = top ? (normal.y - 1.0) * 100.0 : 0.0;
+  mat4 M = modelMatrix;
+  #include <batching_vertex>
+  #ifdef USE_BATCHING
+    M = modelMatrix * batchingMatrix;
+  #endif
+  vec4 wp = M * vec4(position, 1.0);
+  vWorldPos = wp.xyz;
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}
+`;
+
+const POOL_FRAG = /* glsl */ `
+${SHARED_UNIFORMS_GLSL}
+${NOISE_GLSL}
+${FOG_GLSL}
+uniform vec2 uFadeRange;
+uniform vec3 uAmbient;
+uniform float uCore;  // a fração do raio onde a água bate (a espuma)
+varying vec3 vWorldPos;
+varying vec2 vRad;
+varying float vR;
+void main() {
+  vec3 V = cameraPosition - vWorldPos;
+  float dist = length(V);
+  V /= dist;
+  float r = length(vRad);
+  float rm = r * vR; // m do centro
+  vec3 W = vWorldPos + uOriginMod;
+  // as ondas: anéis saindo do centro (mais fortes perto, morrendo na borda) e o arrepio do borrifo
+  float ring = sin(rm * 2.4 - uTime * 5.0) * exp(-rm * 0.09) + 0.5 * sin(rm * 5.3 - uTime * 7.3 + snoise(W * 0.2) * 2.0) * exp(-rm * 0.18);
+  vec2 dir = r > 1e-4 ? vRad / r : vec2(0.0);
+  vec2 g = dir * ring * 0.16 + vec2(snoise(vec3(W.xz * 1.7, uTime * 1.3)), snoise(vec3(W.xz * 1.7 + 9.0, uTime * 1.3))) * 0.05;
+  vec3 N = normalize(vec3(-g.x, 1.0, -g.y));
+  // a água escura: o reflexo da névoa iluminada (Fresnel) e as lâmpadas espelhadas
+  float fres = 0.04 + 0.96 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
+  vec3 c = vec3(0.006, 0.0065, 0.0075) + (uAmbient * 0.25 + uFogColorB * 0.3) * fres; // (o que a água espelha aqui é quase só escuro)
+  vec3 R = reflect(-V, N);
+  // o reflexo da própria queda: o raio refletido passando perto do eixo da coluna (o centro da poça)
+  if (vR > 0.0) {
+    vec2 C = vWorldPos.xz - vRad * vR;
+    vec2 o = vWorldPos.xz - C;
+    vec2 rd = normalize(R.xz + vec2(1e-5));
+    float tq = max(-dot(o, rd), 0.0);
+    float dax = length(o + rd * tq);
+    float up = R.y * tq / max(length(R.xz), 1e-3); // a altura em que o raio passa pelo eixo
+    float colR = uCore * vR;
+    float hit = exp(-dax * dax / max(colR * colR, 1.0)) * smoothstep(0.0, 4.0, up) * (0.6 + 0.4 * snoise(vec3(dax * 0.5, (up - uTime * 20.0) * 0.05, 1.0)));
+    c += (uAmbient * 2.2 + uFogColorB * 3.0) * hit * 0.9 * fres * 3.0;
+  }
+  for (int i = 0; i < LIGHT_COUNT; i++) {
+    vec3 L = uLightPos[i] - vWorldPos;
+    float d = length(L);
+    vec3 lc = uLightColor[i] * exp(-uFogDensity * d) / (1.0 + d * d * 0.02);
+    c += lc * pow(max(dot(R, L / d), 0.0), 90.0) * 2.0 + lc * 0.002;
+  }
+  if (uFlashColor.r + uFlashColor.g + uFlashColor.b > 1e-4) {
+    vec3 L = uFlashPos - vWorldPos;
+    float d = length(L);
+    c += min(uFlashColor * pow(max(dot(R, L / d), 0.0), 60.0) * 3.0 / (1.0 + d * d * 0.05), vec3(2.0));
+  }
+  // a queda clareia a água em volta dela (a luz que a coluna espalha), mais nas cristas das ondas
+  if (vR > 0.0) c += (uAmbient * 2.2 + uFogColorB * 3.0) * 0.55 * exp(-rm / max(uCore * vR * 1.6, 1.0)) * (0.55 + 0.45 * ring);
+  // a espuma no meio, onde a água bate: manchas claras que se desfazem para fora
+  float fz = 1.0 - smoothstep(uCore * 0.6, uCore * 1.6, r);
+  float fn = smoothstep(-0.1, 0.8, snoise(vec3(W.xz * 0.6, uTime * 0.8)) * 0.6 + snoise(vec3(W.xz * 2.1, uTime * 1.7)) * 0.4);
+  c = mix(c, vec3(0.32, 0.33, 0.34) * (uAmbient * 2.0 + uFogColorB * 3.0 + 0.04), fz * fn * 0.85);
+  c = applyFog(c, vWorldPos, 1.0, uFadeRange);
+  gl_FragColor = vec4(c, 1.0);
 }
 `;
 
@@ -817,11 +983,32 @@ export function createCascadeMaterial(shared, { fade = [1e9, 2e9] } = {}) {
   return new THREE.ShaderMaterial({
     defines: { LIGHT_COUNT },
     uniforms: { ...shared, uFadeRange: { value: new THREE.Vector2(fade[0], fade[1]) } },
-    vertexShader: BEAM_VERT,
+    vertexShader: CASCADE_VERT,
     fragmentShader: CASCADE_FRAG,
     transparent: true,
     depthWrite: false,
     side: THREE.DoubleSide,
+  });
+}
+/** A espuma no pé da queda (o mesmo vértice da coluna: a borda ondula). */
+export function createFoamMaterial(shared, { fade = [1e9, 2e9] } = {}) {
+  return new THREE.ShaderMaterial({
+    defines: { LIGHT_COUNT },
+    uniforms: { ...shared, uFadeRange: { value: new THREE.Vector2(fade[0], fade[1]) } },
+    vertexShader: CASCADE_VERT,
+    fragmentShader: FOAM_FRAG,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+}
+/** A poça no pé da cascata: escura, espelhada, com as ondas e a espuma. */
+export function createPoolMaterial(shared, { fade = [1e9, 2e9] } = {}) {
+  return new THREE.ShaderMaterial({
+    defines: { LIGHT_COUNT },
+    uniforms: { ...shared, uFadeRange: { value: new THREE.Vector2(fade[0], fade[1]) }, uCore: { value: 0.3 } },
+    vertexShader: POOL_VERT,
+    fragmentShader: POOL_FRAG,
   });
 }
 

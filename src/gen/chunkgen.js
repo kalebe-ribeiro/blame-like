@@ -330,7 +330,7 @@ export class ChunkBuilder {
  */
 const EDGE_MAX = 24;
 // os que leem a normal para outra coisa (os feixes: o "ao longo" em normal.y), e as faces frescas do corte
-const EDGE_SKIP = new Set(['beam', 'colossusBeam', 'cascade', 'cut']);
+const EDGE_SKIP = new Set(['beam', 'colossusBeam', 'cascade', 'cascadeFoam', 'pool', 'cut']);
 function markTopEdges(g) {
   const P = g.attributes.position.array;
   const N = g.attributes.normal.array;
