@@ -23,6 +23,7 @@ import * as THREE from 'three';
 import { movingMaterial } from '../shaders/materials.js';
 import { CollisionWorld } from '../world/collision.js';
 import { Burst, now } from '../render/burst.js';
+import { NOISE_GLSL } from '../shaders/chunks.js';
 
 const DET_SPEED = 1500; // m/s — a detonação ao longo do feixe
 
@@ -191,19 +192,89 @@ export function createBeamFx(ctx) {
   let traceOp = { core: 1, halo: 0.35, hole: 0 };
   // a singularidade na mira (estágio 3 em diante): uma esfera preta (a luz não sai) e o anel de
   // acreção — a poeira caindo nela esquenta e brilha (a fonte da luz é a queda)
+  // a singularidade (o rework gráfico, segunda rodada — o usuário: "aprimora também o visual do buraco negro e
+  // a evolução dele conforme a potência"): um quadro voltado para a câmera com o buraco desenhado no shader —
+  // a SOMBRA (o horizonte), o ANEL DE FÓTONS colado nela, o DISCO DE ACREÇÃO quase de lado (a turbulência
+  // girando mais rápido perto do centro, o lado que vem para cá mais claro, o miolo mais quente) e a IMAGEM
+  // da parte de trás do disco, desviada pela gravidade, num arco por cima da sombra. A lente (render/lens.js)
+  // entorta o mundo em volta. Pela potência (uP: 0 no estágio 3 … 1 no colapso): a semente com um anel tênue →
+  // o disco se forma (4) → cresce e esquenta na cor do estágio (5) → instável, clarões girando (6) → no limite
+  // o disco pulsa forte e a sombra cresce (7).
   const sing = new THREE.Group();
   sing.visible = false;
-  const singCore = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-  const singDisk = new THREE.Mesh(
-    new THREE.RingGeometry(1.15, 2.6, 48, 1),
-    new THREE.MeshBasicMaterial({ color: 0xb070ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
-  );
-  sing.add(singCore, singDisk);
-  for (const m of [singCore, singDisk]) {
-    m.userData.noCollide = true;
-    m.frustumCulled = false;
-  }
-  sing.renderOrder = 12;
+  const singMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uP: { value: 0 }, uHot: { value: new THREE.Color(1, 1, 1) }, uWarm: { value: new THREE.Color(0.75, 0.4, 1) } },
+    vertexShader: /* glsl */ `
+      varying vec2 vQ;
+      void main() {
+        vQ = position.xy;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      ${NOISE_GLSL}
+      uniform float uTime;
+      uniform float uP;
+      uniform vec3 uHot;
+      uniform vec3 uWarm;
+      varying vec2 vQ;
+      const float RH = 1.0 / 6.0;      // a sombra (no quadro de lado 2)
+      const float INC = 1.36;          // a inclinação do disco (quase de lado)
+      // o brilho do disco num ponto do plano dele (R em raios da sombra, a o ângulo)
+      vec3 disk(float R, float a, float bright) {
+        float rin = 1.55;
+        float rout = mix(2.2, 5.6, smoothstep(0.1, 0.7, uP));
+        if (R < rin || R > rout) return vec3(0.0);
+        float w = 2.6 / pow(R, 1.5);  // gira mais rápido perto (Kepler)
+        float n = snoise(vec3(R * 2.2, a * 2.0 - uTime * w * 3.0, uTime * 0.3)) * 0.5 + 0.5;
+        float n2 = snoise(vec3(R * 7.0, a * 5.0 - uTime * w * 3.0, 4.0)) * 0.5 + 0.5;
+        float prof = smoothstep(rin, rin + 0.35, R) * (1.0 - smoothstep(rout * 0.6, rout, R)) / (0.4 + R * 0.35);
+        float dop = 1.0 + 0.75 * cos(a + 0.4);   // o lado que vem para cá mais claro
+        float flare = uP > 0.7 ? smoothstep(0.8, 1.0, snoise(vec3(a * 1.5 - uTime * 6.0, R, uTime))) * (uP - 0.7) * 6.0 : 0.0;
+        vec3 col = mix(uWarm, uHot, smoothstep(rout * 0.7, rin, R)); // o miolo mais quente
+        return col * prof * (0.35 + 0.9 * n * n2 + flare) * dop * bright;
+      }
+      void main() {
+        vec2 q = vQ / RH;               // em raios da sombra
+        float r = length(q);
+        float form = smoothstep(0.0, 0.3, uP); // o disco se formando
+        float bright = min(0.5 + 1.3 * uP, 1.5) + (uP > 0.95 ? 0.35 * sin(uTime * 26.0) : 0.0);
+        // o disco visto quase de lado: o plano dele achatado em y
+        vec2 e = vec2(q.x, q.y / cos(INC));
+        float R = length(e);
+        float a = atan(e.y, e.x);
+        bool front = e.y < 0.0;          // a metade de baixo passa NA FRENTE da sombra
+        float shadow = mix(1.0, 1.25, smoothstep(0.85, 1.0, uP)); // no limite a sombra cresce
+        vec3 c = vec3(0.0);
+        float al = 0.0;
+        // a sombra: preta, opaca, a borda macia
+        float inS = 1.0 - smoothstep(shadow * 0.97, shadow * 1.03, r);
+        // o disco (a parte de trás some atrás da sombra)
+        vec3 dc = disk(R, a, bright) * form;
+        if (!front) dc *= 1.0 - inS;
+        // a imagem da parte de trás desviada por cima (e um fio por baixo): um arco abraçando a sombra
+        float ang = atan(q.y, q.x);
+        float lr = (r - shadow * 1.12) / 0.5;
+        float lens = exp(-lr * lr * 3.0) * step(shadow * 1.06, r) * (0.8 * smoothstep(-0.1, 0.7, sin(ang)) + 0.15);
+        vec3 lc = disk(1.75 + abs(lr) * 1.2, ang * 0.5 + 1.0, bright) * lens * form * 2.2;
+        // o anel de fótons: fino, colado na sombra
+        float pr = (r - shadow * 1.04) / 0.035;
+        vec3 ring = mix(uWarm, uHot, 0.6) * exp(-pr * pr) * (0.45 + 1.4 * uP);
+        c = dc + lc + ring;
+        float glow = dot(c, vec3(0.33));
+        al = clamp(max(inS, glow * 1.3), 0.0, 1.0);
+        // (a borda do quadro: nada)
+        float edge = 1.0 - smoothstep(0.8, 1.0, max(abs(vQ.x), abs(vQ.y)));
+        gl_FragColor = vec4(c * edge, al * edge);
+      }`,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide, // (com o teste de profundidade: a arma na mão fica na frente; uma parede mais perto, também)
+  });
+  const singQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), singMat);
+  singQuad.userData.noCollide = true;
+  singQuad.frustumCulled = false;
+  singQuad.renderOrder = 12;
+  sing.add(singQuad);
   group.add(sing);
   /** a onda na lente: { t0, k (força), big (o tiro do limite) } */
   let ripple = null;
@@ -536,13 +607,18 @@ export function createBeamFx(ctx) {
       const st = over <= 0 ? 0 : over < 1 / 3 ? 1 : over < 2 / 3 ? 2 : over < 0.999 ? 3 : over < 4 / 3 - 1e-6 ? 4 : over < 5 / 3 - 1e-6 ? 5 : over < 2 - 1e-6 ? 6 : 7;
       sing.visible = charging && st >= 3;
       if (sing.visible) {
-        const grow = st >= 4 ? (0.34 + 0.18 * (st - 4)) * (1 + (0.1 + 0.04 * (st - 4)) * Math.sin(t * (22 + 6 * (st - 4)))) : 0.05 + 0.2 * ((over - 2 / 3) * 3);
+        const grow = st >= 4 ? (0.34 + 0.18 * (st - 4)) * (1 + (0.03 + 0.02 * (st - 4)) * Math.sin(t * (22 + 6 * (st - 4)))) : 0.05 + 0.2 * ((over - 2 / 3) * 3);
         sing.position.copy(pullAt);
-        sing.scale.setScalar(grow);
+        sing.scale.setScalar(grow * 6); // (o quadro: a sombra é 1/6 dele — o disco cabe em volta)
         sing.quaternion.copy(camera.quaternion);
-        singDisk.rotation.z = t * (st >= 4 ? 9 : 4);
-        // (o anel toma a cor do estágio: violeta → carmim → azul-branco → branco)
-        singDisk.material.color.copy(st >= 5 ? beamColors(1 + over).halo : new THREE.Color(0.75, 0.4, 1)).multiplyScalar(st >= 4 ? 2.4 : 1.3);
+        sing.rotateZ(0.21); // (o disco um pouco inclinado: não fica deitado na horizontal da tela)
+        // a evolução pela potência: 0 no estágio 3 … 1 no colapso; as cores pelo estágio (beamColors)
+        const u = singMat.uniforms;
+        u.uTime.value = t;
+        u.uP.value = Math.max(0, Math.min(1, (over - 2 / 3) / (4 / 3)));
+        const C = beamColors(1 + over);
+        u.uHot.value.copy(C.core).multiplyScalar(1.6);
+        u.uWarm.value.copy(st >= 5 ? C.halo : new THREE.Color(0.75, 0.4, 1)).multiplyScalar(1.3);
       }
       // a visão: fecha um pouco carregando no limite (a luz sendo puxada); depois do tiro, fecha e abre
       suck = Math.max(0, suck - dt / 0.45);
