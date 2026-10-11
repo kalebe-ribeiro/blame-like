@@ -38,6 +38,7 @@ import { t as tr } from '../i18n/index.js';
 import { buildHand, paintHand, handMaterial } from './hands.js';
 import { beamReach } from '../gen/beamreach.js';
 import { createBeamFx, beamColors } from './beamfx.js';
+import { createGunFx } from './gunfx.js';
 import { cutHitsBoxes } from '../gen/cut.js';
 import { CHUNK } from '../gen/field.js';
 import { BEAM_DAMAGE, slamDamage } from './health.js';
@@ -123,12 +124,14 @@ function buildEmitter(m) {
   g.add(barrel);
   // as bobinas: acendem em sequência com a carga (a própria fonte da luz — emissivas)
   const coils = [];
+  const coilMeshes = [];
   for (let i = 0; i < 5; i++) {
     const mat = new THREE.MeshBasicMaterial({ color: 0x0c0b0a });
     const coil = new THREE.Mesh(new THREE.TorusGeometry(0.026, 0.006, 6, 14), mat);
     coil.position.set(0, 0.012, -0.15 - i * 0.03);
     g.add(coil);
     coils.push(mat);
+    coilMeshes.push(coil);
   }
   const grip = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.09, 0.04), m.machine);
   grip.position.set(0, -0.06, 0.03);
@@ -144,10 +147,11 @@ function buildEmitter(m) {
     return o;
   };
   add(new THREE.BoxGeometry(0.06, 0.07, 0.07), 0, 0.002, 0.045);
-  for (let i = 0; i < 6; i++) add(new THREE.BoxGeometry(0.044, 0.008, 0.01), 0, 0.034, -0.1 + i * 0.022);
+  const vents = [];
+  for (let i = 0; i < 6; i++) vents.push(add(new THREE.BoxGeometry(0.044, 0.008, 0.01), 0, 0.034, -0.1 + i * 0.022)); // as aletas
   add(new THREE.BoxGeometry(0.008, 0.006, 0.055), 0, -0.052, -0.005); // o guarda-mato: a barra de baixo
   add(new THREE.BoxGeometry(0.008, 0.03, 0.006), 0, -0.038, -0.03); //   e a da frente
-  add(new THREE.CylinderGeometry(0.027, 0.027, 0.024, 12), 0, 0.012, -0.315, Math.PI / 2); // a coroa da boca
+  const crown = add(new THREE.CylinderGeometry(0.027, 0.027, 0.024, 12), 0, 0.012, -0.315, Math.PI / 2); // a coroa da boca
   for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.004, 0.034, 0.12), sx * 0.026, 0, -0.05); // os painéis
   // o cabo: do pé do cabo da arma para trás e para baixo (some no punho da manga)
   const cable = add(new THREE.CylinderGeometry(0.006, 0.006, 0.12, 6), 0, -0.1, 0.09, -0.9, m.cable ?? m.machine);
@@ -155,7 +159,7 @@ function buildEmitter(m) {
   const muzzle = new THREE.Object3D();
   muzzle.position.set(0, 0.012, -0.33);
   g.add(muzzle);
-  return { group: g, coils, muzzle };
+  return { group: g, coils, coilMeshes, vents, crown, muzzle };
 }
 
 export function createBeam(ctx) {
@@ -203,6 +207,8 @@ export function createBeam(ctx) {
   let afterFire = null;
   let gripKinds = '';
   const fx = createBeamFx(ctx); // o que se vê e se ouve (app/beamfx.js)
+  const gun = createGunFx(ctx, em); // a arma antes e depois do tiro: o brilho, a brasa, a fumaça (app/gunfx.js)
+  const _hc = new THREE.Color();
   const _d = new THREE.Vector3();
   const _a = new THREE.Vector3();
   const _m = new THREE.Vector3();
@@ -382,6 +388,7 @@ export function createBeam(ctx) {
     em.group.updateMatrixWorld(true);
     em.muzzle.getWorldPosition(_m);
     fx.fire(a, end, kk, S.r, _m.clone(), false, oo);
+    gun.shot(kk, oo);
     mark();
     // o coice agora; o som, a vibração e a atenção no próximo quadro (16 ms — ninguém nota; o
     // quadro do tiro fica leve)
@@ -638,8 +645,11 @@ export function createBeam(ctx) {
         const lc = o > 0 ? beamColors(1 + o).halo : LIT;
         // (no limite as bobinas pulsam — a singularidade puxando a própria luz delas)
         const pulse = stage >= 4 ? 0.55 + 0.45 * Math.sin(performance.now() / (stage >= ARM_LOSS_STAGE ? 25 : 45)) : 1;
-        em.coils.forEach((mat, i) => mat.color.copy(DIM).lerp(lc, Math.max(0, Math.min(1, lit - i)) * pulse));
+        // (apagadas, ficam na cor do calor da arma — esfriando depois do tiro)
+        gun.heatColor(_hc);
+        em.coils.forEach((mat, i) => mat.color.copy(DIM).add(_hc).lerp(lc, Math.max(0, Math.min(1, lit - i)) * pulse));
       }
+      gun.update(dt, { visible: em.group.visible, charging: state === 'charging' && chargeK(held) >= 0, k, o, stage, color: o > 0 ? beamColors(1 + o).halo : LIT });
       for (const s of [1, -1]) grips[s].group.visible = side === s;
       // a prótese: a mão de metal segura o emissor (R4)
       const kk = `${player.armKind?.right}|${player.armKind?.left}`;
